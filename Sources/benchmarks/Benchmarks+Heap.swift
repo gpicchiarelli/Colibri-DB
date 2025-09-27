@@ -14,7 +14,7 @@ extension BenchmarkCLI {
             _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
         }
         let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.heapInsert.rawValue, iterations: iterations, elapsed: elapsed)
+        return BenchmarkResult(name: Scenario.heapInsert.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["storage":"InMemory"]) 
     }
 
     static func runHeapScan(iterations: Int) throws -> BenchmarkResult {
@@ -30,7 +30,7 @@ extension BenchmarkCLI {
         let rows = try db.scan("bench")
         precondition(rows.count == iterations)
         let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.heapScan.rawValue, iterations: rows.count, elapsed: elapsed)
+        return BenchmarkResult(name: Scenario.heapScan.rawValue, iterations: rows.count, elapsed: elapsed, metadata: ["storage":"InMemory"]) 
     }
 
     // MARK: - Heap (estesi)
@@ -55,11 +55,11 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed, latenciesMs: lat)
+            return BenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory"]) 
         } else {
             for i in 0..<iterations { total &+= try db.deleteEquals(table: "t", column: "id", value: .int(Int64(i))) }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed)
+            return BenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed, metadata: ["storage":"InMemory"]) 
         }
     }
 
@@ -91,7 +91,7 @@ extension BenchmarkCLI {
             }
             let elapsed = clock.now - start
             precondition(sum >= 0)
-            return BenchmarkResult(name: Scenario.heapReadRID.rawValue, iterations: rids.count, elapsed: elapsed, latenciesMs: lat)
+            return BenchmarkResult(name: Scenario.heapReadRID.rawValue, iterations: rids.count, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory"]) 
         } else {
             for rid in rids {
                 let row = try db.readRow(table: "t", rid: rid)
@@ -99,7 +99,7 @@ extension BenchmarkCLI {
             }
             let elapsed = clock.now - start
             precondition(sum >= 0)
-            return BenchmarkResult(name: Scenario.heapReadRID.rawValue, iterations: rids.count, elapsed: elapsed)
+            return BenchmarkResult(name: Scenario.heapReadRID.rawValue, iterations: rids.count, elapsed: elapsed, metadata: ["storage":"InMemory"]) 
         }
     }
 }

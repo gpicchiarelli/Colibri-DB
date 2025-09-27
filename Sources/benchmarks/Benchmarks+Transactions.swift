@@ -21,7 +21,7 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.txCommit.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat)
+            return BenchmarkResult(name: Scenario.txCommit.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled":"false"]) 
         } else {
             for i in 0..<iterations {
                 let tid = try db.begin()
@@ -29,7 +29,7 @@ extension BenchmarkCLI {
                 try db.commit(tid)
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.txCommit.rawValue, iterations: iterations, elapsed: elapsed)
+            return BenchmarkResult(name: Scenario.txCommit.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["wal_enabled":"false"]) 
         }
     }
 
@@ -51,7 +51,7 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.txRollback.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat)
+            return BenchmarkResult(name: Scenario.txRollback.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled":"false"]) 
         } else {
             for i in 0..<iterations {
                 let tid = try db.begin()
@@ -59,7 +59,7 @@ extension BenchmarkCLI {
                 try db.rollback(tid)
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.txRollback.rawValue, iterations: iterations, elapsed: elapsed)
+            return BenchmarkResult(name: Scenario.txRollback.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["wal_enabled":"false"]) 
         }
     }
 

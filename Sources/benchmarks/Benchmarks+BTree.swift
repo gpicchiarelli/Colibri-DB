@@ -25,7 +25,7 @@ extension BenchmarkCLI {
             precondition(!hits.isEmpty)
         }
         let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed)
+        return BenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40"]) 
     }
 
     // MARK: - B+Tree estesi

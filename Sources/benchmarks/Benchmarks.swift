@@ -274,8 +274,9 @@ struct BenchmarkCLI {
             case .vacuumCompact:
                 result = try runVacuumCompact(iterations: iterations)
             }
-            result.printSummary()
-            result.printReport(format: formatJSON ? .json : .text)
+            let enriched = attachConfigMetadata(result: result)
+            enriched.printSummary()
+            enriched.printReport(format: formatJSON ? .json : .text)
         }
     }
 
@@ -294,5 +295,20 @@ struct BenchmarkCLI {
         print("Esempi:")
         print("  benchmarks 5000 btree-bulk-build")
         print("  benchmarks 20000 tx-contention --workers=8 --granular --json")
+    }
+
+    // MARK: - Metadata enrichment
+    private static func attachConfigMetadata(result: BenchmarkResult) -> BenchmarkResult {
+        var meta = result.metadata
+        // In assenza di un DB dedicato per scenario, logghiamo i default globali
+        let cfg = DBConfig()
+        meta["durability_mode"] = cfg.walEnabled ? (cfg.walFullFSyncEnabled ? "full_fsync" : "fsync") : "none"
+        meta["wal_group_commit_ms"] = String(format: "%.2f", cfg.walGroupCommitMs)
+        meta["page_size"] = String(cfg.pageSizeBytes)
+        meta["fill_factor"] = "n/a" // placeholder per heap
+        meta["split_ratio"] = "0.60/0.40" // B+Tree insert split policy
+        meta["metrics_sampling"] = String(cfg.optimizerStatsSampleRows)
+        meta["warmup_done"] = "false"
+        return BenchmarkResult(name: result.name, iterations: result.iterations, elapsed: result.elapsed, latenciesMs: result.latenciesMs, metadata: meta)
     }
 }
