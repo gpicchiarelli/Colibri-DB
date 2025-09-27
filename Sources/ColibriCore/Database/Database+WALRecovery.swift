@@ -74,11 +74,76 @@ extension Database {
         for rec in records {
             lastDBLSN = max(lastDBLSN, rec.lsn)
             switch rec.type {
+            // V3 global index logging (dual-write)
+            // We piggybacked on insertRow/deleteRid channels for v2 compatibility.
+            // Detect index records by payload shape: table, index, keyBytes, rid
+            // Only REDO if walUseGlobalIndexLogging is enabled.
+            case .insertRow where config.walUseGlobalIndexLogging:
+                // Try parse as indexInsert first; if fail, fallback to heap autoInsert
+                var offIdx = 0
+                if let table = decodeString(from: rec.payload, offset: &offIdx),
+                   let indexName = decodeString(from: rec.payload, offset: &offIdx) {
+                    let keyLen = Int(VarInt.decode(rec.payload, offset: &offIdx))
+                    if offIdx + keyLen + 10 <= rec.payload.count {
+                        let keyBytes = rec.payload.subdata(in: offIdx..<(offIdx+keyLen)); offIdx += keyLen
+                        let pid = rec.payload.subdata(in: offIdx..<(offIdx+8)).withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian; offIdx += 8
+                        let sid = rec.payload.subdata(in: offIdx..<(offIdx+2)).withUnsafeBytes { $0.load(as: UInt16.self) }.bigEndian; offIdx += 2
+                        let rid = RID(pageId: pid, slotId: sid)
+                        // Apply to persistent BTree only; in-memory indexes rebuilt from heap
+                        if var imap = indexes[table], let def = imap[indexName] {
+                            switch def.backend {
+                            case .persistentBTree(let f):
+                                // Decode by arity
+                                if def.columns.count == 1 {
+                                    if let v = KeyBytes.toSingleValue(keyBytes) { try? f.insert(key: v, rid: rid) }
+                                } else {
+                                    if let vs = KeyBytes.toValues(keyBytes, count: def.columns.count) { try? f.insert(composite: vs, rid: rid) }
+                                }
+                                imap[indexName] = (columns: def.columns, backend: .persistentBTree(f))
+                                indexes[table] = imap
+                            default:
+                                break
+                            }
+                        }
+                        continue
+                    }
+                }
+                fallthrough
             case .insertRow:
                 var offset = 0
                 guard let table = decodeString(from: rec.payload, offset: &offset),
                       let row = decodeRow(from: rec.payload, offset: &offset) else { continue }
                 redoOps.append(WALTrackedOp(lsn: rec.lsn, tid: 0, kind: .autoInsert(table: table, row: row), pageId: nil))
+            case .deleteRid where config.walUseGlobalIndexLogging:
+                // Try parse as indexDelete first: table, index, keyBytes, rid
+                var offIdx = 0
+                if let table = decodeString(from: rec.payload, offset: &offIdx),
+                   let indexName = decodeString(from: rec.payload, offset: &offIdx) {
+                    let keyLen = Int(VarInt.decode(rec.payload, offset: &offIdx))
+                    if offIdx + keyLen + 10 <= rec.payload.count {
+                        let keyBytes = rec.payload.subdata(in: offIdx..<(offIdx+keyLen)); offIdx += keyLen
+                        let pid = rec.payload.subdata(in: offIdx..<(offIdx+8)).withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian; offIdx += 8
+                        let sid = rec.payload.subdata(in: offIdx..<(offIdx+2)).withUnsafeBytes { $0.load(as: UInt16.self) }.bigEndian; offIdx += 2
+                        let rid = RID(pageId: pid, slotId: sid)
+                        if var imap = indexes[table], let def = imap[indexName] {
+                            switch def.backend {
+                            case .persistentBTree(let f):
+                                if def.columns.count == 1 {
+                                    if let v = KeyBytes.toSingleValue(keyBytes) { try? f.remove(key: v, rid: rid) }
+                                } else {
+                                    if let vs = KeyBytes.toValues(keyBytes, count: def.columns.count) { try? f.remove(composite: vs, rid: rid) }
+                                }
+                                imap[indexName] = (columns: def.columns, backend: .persistentBTree(f))
+                                indexes[table] = imap
+                            default:
+                                break
+                            }
+                        }
+                        registerDPT(pageId: pid, lsn: rec.lsn)
+                        continue
+                    }
+                }
+                fallthrough
             case .deleteRid:
                 var offset = 0
                 guard let table = decodeString(from: rec.payload, offset: &offset),

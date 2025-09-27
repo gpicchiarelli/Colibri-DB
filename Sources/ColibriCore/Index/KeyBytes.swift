@@ -125,3 +125,84 @@ enum VarInt {
         } while n != 0
     }
 }
+
+// MARK: - Decoders (best-effort)
+extension KeyBytes {
+    public static func toSingleValue(_ data: Data) -> Value? {
+        guard !data.isEmpty else { return nil }
+        let t = data[0]
+        let payload = data.dropFirst()
+        switch t {
+        case 0x00:
+            return .null
+        case 0x01:
+            if let b = payload.first { return .bool(b != 0) }
+        case 0x02:
+            if payload.count >= 8 {
+                let u = payload.withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian
+                let i = Int64(bitPattern: u) &- Int64(bitPattern: 0x8000_0000_0000_0000)
+                return .int(i)
+            }
+        case 0x03:
+            if payload.count >= 8 {
+                var bits = payload.withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian
+                // invert transform
+                if (bits & (1 << 63)) != 0 { bits ^= (1 << 63) } else { bits = ~bits }
+                let d = Double(bitPattern: bits)
+                return .double(d)
+            }
+        case 0x04:
+            return .string(String(data: payload, encoding: .utf8) ?? "")
+        case 0xFE:
+            // composite marker; unsupported in single
+            return nil
+        default:
+            return nil
+        }
+        return nil
+    }
+
+    public static func toValues(_ data: Data, count: Int) -> [Value]? {
+        var vals: [Value] = []
+        if data.first == 0xFE {
+            var off = 1
+            while off < data.count && data[off] != 0xFF && vals.count < count {
+                let len = Int(VarInt.decode(data, offset: &off))
+                if off + len > data.count { return nil }
+                let slice = data.subdata(in: off..<(off+len)); off += len
+                if let v = toSingleValue(slice) { vals.append(v) } else { return nil }
+            }
+            return vals.count == count ? vals : nil
+        }
+        // Fallback: try decode as count singles concatenated
+        var off = 0
+        while off < data.count && vals.count < count {
+            let t = data[off]; off += 1
+            switch t {
+            case 0x00:
+                vals.append(.null)
+            case 0x01:
+                if off < data.count { vals.append(.bool(data[off] != 0)); off += 1 } else { return nil }
+            case 0x02:
+                if off + 8 <= data.count {
+                    let u = data.subdata(in: off..<(off+8)).withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian
+                    let i = Int64(bitPattern: u) &- Int64(bitPattern: 0x8000_0000_0000_0000)
+                    vals.append(.int(i)); off += 8
+                } else { return nil }
+            case 0x03:
+                if off + 8 <= data.count {
+                    var bits = data.subdata(in: off..<(off+8)).withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian
+                    if (bits & (1 << 63)) != 0 { bits ^= (1 << 63) } else { bits = ~bits }
+                    vals.append(.double(Double(bitPattern: bits))); off += 8
+                } else { return nil }
+            case 0x04:
+                let rest = data.suffix(from: off)
+                vals.append(.string(String(data: rest, encoding: .utf8) ?? ""))
+                off = data.count
+            default:
+                return nil
+            }
+        }
+        return vals.count == count ? vals : nil
+    }
+}

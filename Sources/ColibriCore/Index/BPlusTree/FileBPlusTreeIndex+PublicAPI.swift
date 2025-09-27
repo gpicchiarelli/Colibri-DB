@@ -15,7 +15,12 @@ extension FileBPlusTreeIndex {
 
     public func insert(key: Value, rid: RID) throws {
         let k = KeyBytes.fromValue(key).bytes
-        let lsn = try walAppendInsert(key: k, rid: rid)
+        let lsn: UInt64
+        if isInternalWALEnabled() {
+            lsn = try walAppendInsert(key: k, rid: rid)
+        } else {
+            lsn = 0
+        }
         if hdr.root == 0 { // create first leaf root
             let leafId = try allocPage()
             try writeLeaf(pageId: leafId, keys: [k], ridLists: [[rid]], nextLeaf: 0, pageLSN: lsn)
@@ -33,12 +38,31 @@ extension FileBPlusTreeIndex {
             try writeHeader()
         }
         try fh.synchronize()
-        try clearWAL()
+        if isInternalWALEnabled() { try clearWAL() }
+    }
+
+    // Global WAL variant: caller provides pageLSN (single WAL for heap+index)
+    public func insert(key: Value, rid: RID, pageLSN: UInt64) throws {
+        let k = KeyBytes.fromValue(key).bytes
+        if hdr.root == 0 {
+            let leafId = try allocPage()
+            try writeLeaf(pageId: leafId, keys: [k], ridLists: [[rid]], nextLeaf: 0, pageLSN: pageLSN)
+            hdr.root = leafId
+            try writeHeader(); try fh.synchronize(); return
+        }
+        let (promoKey, promoRight) = try insertRecursive(pageId: hdr.root, key: k, rid: rid, lsn: pageLSN)
+        if let pk = promoKey, let right = promoRight {
+            let newRoot = try allocPage(); try writeInternal(pageId: newRoot, keys: [pk], children: [hdr.root, right], pageLSN: pageLSN); hdr.root = newRoot; try writeHeader()
+        }
+        try fh.synchronize()
     }
 
     public func insert(composite: [Value], rid: RID) throws {
         let k = KeyBytes.fromValues(composite).bytes
-        let lsn = try walAppendInsert(key: k, rid: rid)
+        let lsn: UInt64
+        if isInternalWALEnabled() {
+            lsn = try walAppendInsert(key: k, rid: rid)
+        } else { lsn = 0 }
         if hdr.root == 0 {
             let leafId = try allocPage()
             try writeLeaf(pageId: leafId, keys: [k], ridLists: [[rid]], nextLeaf: 0, pageLSN: lsn)
@@ -49,7 +73,22 @@ extension FileBPlusTreeIndex {
         if let pk = pk, let r: UInt64 = right {
             let newRoot = try allocPage(); try writeInternal(pageId: newRoot, keys: [pk], children: [hdr.root, r], pageLSN: lsn); hdr.root = newRoot; try writeHeader()
         }
-        try fh.synchronize(); try clearWAL()
+        try fh.synchronize(); if isInternalWALEnabled() { try clearWAL() }
+    }
+
+    public func insert(composite: [Value], rid: RID, pageLSN: UInt64) throws {
+        let k = KeyBytes.fromValues(composite).bytes
+        if hdr.root == 0 {
+            let leafId = try allocPage()
+            try writeLeaf(pageId: leafId, keys: [k], ridLists: [[rid]], nextLeaf: 0, pageLSN: pageLSN)
+            hdr.root = leafId
+            try writeHeader(); try fh.synchronize(); return
+        }
+        let (pk, right) = try insertRecursive(pageId: hdr.root, key: k, rid: rid, lsn: pageLSN)
+        if let pk = pk, let r: UInt64 = right {
+            let newRoot = try allocPage(); try writeInternal(pageId: newRoot, keys: [pk], children: [hdr.root, r], pageLSN: pageLSN); hdr.root = newRoot; try writeHeader()
+        }
+        try fh.synchronize()
     }
 
     public func searchEquals(_ key: Value) -> [RID] {

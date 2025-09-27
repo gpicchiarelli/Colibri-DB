@@ -28,6 +28,7 @@ public final class FileBPlusTreeIndex {
     let checkpointEvery: Int = 256
     var ioHintsEnabled: Bool
     var walFullSyncEnabled: Bool = false
+    private var internalWALEnabled: Bool = true
 
     struct Header {
         var pageSize: Int
@@ -115,4 +116,9 @@ public final class FileBPlusTreeIndex {
         walFullSyncEnabled = false
 #endif
     }
+
+    /// Enables/disables the internal index WAL. When disabled, index operations
+    /// do not append to the per-index WAL and expect the global WAL to drive recovery.
+    public func setInternalWALEnabled(_ enabled: Bool) { internalWALEnabled = enabled }
+    public func isInternalWALEnabled() -> Bool { internalWALEnabled }
 }
