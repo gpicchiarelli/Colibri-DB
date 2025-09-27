@@ -359,8 +359,47 @@ public final class HashJoinOperator: PlanOperator {
     }
     
     public func next() throws -> PlanRow? {
-        // Implementation would handle join logic
-        // For now, return nil as placeholder
+        while currentLeftIndex < leftRows.count {
+            let leftRow = leftRows[currentLeftIndex]
+            
+            // If we have remaining right rows for current left row, process them
+            if currentRightIndex < currentRightRows.count {
+                let rightRow = currentRightRows[currentRightIndex]
+                currentRightIndex += 1
+                
+                // Combine left and right rows
+                var combinedValues = leftRow.values
+                for (key, value) in rightRow.values {
+                    combinedValues[key] = value
+                }
+                
+                return PlanRow(values: combinedValues)
+            }
+            
+            // Get matching right rows for current left row
+            let leftKey = buildJoinKey(row: leftRow, keys: leftKeys)
+            currentRightRows = hashTable[leftKey] ?? []
+            currentRightIndex = 0
+            
+            // If no matching right rows, move to next left row
+            if currentRightRows.isEmpty {
+                currentLeftIndex += 1
+                continue
+            }
+            
+            // Process first matching right row
+            let rightRow = currentRightRows[currentRightIndex]
+            currentRightIndex += 1
+            
+            // Combine left and right rows
+            var combinedValues = leftRow.values
+            for (key, value) in rightRow.values {
+                combinedValues[key] = value
+            }
+            
+            return PlanRow(values: combinedValues)
+        }
+        
         return nil
     }
     
