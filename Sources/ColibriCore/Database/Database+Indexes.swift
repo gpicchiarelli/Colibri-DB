@@ -80,6 +80,8 @@ extension Database {
     ///   - table: Table name.
     ///   - name: Index name.
     public func dropIndex(table: String, name: String) throws {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(name, table: table)
         let ddlHandle = try lockManager.lock(.ddl("index:\(table).\(name)"), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
         let indexHandle = try lockManager.lock(.index(table: table, name: name), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
         let tableHandle = try lockManager.lock(.table(table), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
@@ -108,7 +110,14 @@ extension Database {
 
     func updateIndexes(table: String, row: Row, rid: RID) {
         guard var map = indexes[table] else { return }
-        for (name, pair) in map {
+        let allowed: Set<String>
+        if let sc = systemCatalog {
+            let objs = sc.logicalObjects(kind: .index).filter { $0.parentName == table }
+            allowed = Set(objs.map { $0.name })
+        } else {
+            allowed = Set(map.keys)
+        }
+        for (name, pair) in map where allowed.contains(name) {
             let cols = pair.columns
             switch pair.backend {
             case .anyString(var idx):
@@ -133,7 +142,14 @@ extension Database {
 
     func removeFromIndexes(table: String, row: Row, rid: RID, skipIndexName: String? = nil) {
         guard var map = indexes[table] else { return }
-        for (name, pair) in map {
+        let allowed: Set<String>
+        if let sc = systemCatalog {
+            let objs = sc.logicalObjects(kind: .index).filter { $0.parentName == table }
+            allowed = Set(objs.map { $0.name })
+        } else {
+            allowed = Set(map.keys)
+        }
+        for (name, pair) in map where allowed.contains(name) {
             if let skip = skipIndexName, skip == name { continue }
             let cols = pair.columns
             switch pair.backend {
@@ -166,6 +182,8 @@ extension Database {
     /// - Returns: Matching RIDs.
     /// - Throws: `DBError.notFound` if index not found.
     public func indexSearchEqualsTyped(table: String, index: String, value: Value) throws -> [RID] {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         guard let map = indexes[table], let pair = map[index] else { throw DBError.notFound("Index \(index)") }
         switch pair.backend {
         case .anyString(let idx):
@@ -184,6 +202,8 @@ extension Database {
     /// - Returns: Matching RIDs.
     /// - Throws: `DBError.notFound`, `DBError.invalidArgument` for unsupported combos.
     public func indexSearchEqualsValues(table: String, index: String, values: [Value]) throws -> [RID] {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         guard let map = indexes[table], let pair = map[index] else { throw DBError.notFound("Index \(index)") }
         switch pair.backend {
         case .anyString:
@@ -203,6 +223,8 @@ extension Database {
     /// - Returns: RIDs within the range.
     /// - Throws: `DBError.notFound` if index not found.
     public func indexRangeTyped(table: String, index: String, lo: Value?, hi: Value?) throws -> [RID] {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         guard let map = indexes[table], let pair = map[index] else { throw DBError.notFound("Index \(index)") }
         switch pair.backend {
         case .anyString(let idx):
@@ -222,6 +244,8 @@ extension Database {
     /// - Returns: RIDs within the range.
     /// - Throws: `DBError.notFound`, `DBError.invalidArgument` if unsupported for index kind.
     public func indexRangeValues(table: String, index: String, lo: [Value]?, hi: [Value]?) throws -> [RID] {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         guard let map = indexes[table], let pair = map[index] else { throw DBError.notFound("Index \(index)") }
         switch pair.backend {
         case .anyString:
@@ -242,6 +266,8 @@ extension Database {
     /// - Returns: Tuple with total rows, indexed rows, and missing count.
     /// - Throws: `DBError.notFound` if index not found.
     public func validateIndex(table: String, index: String) throws -> (total: Int, indexed: Int, missing: Int) {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         guard let pair = indexes[table]?[index] else { throw DBError.notFound("Index \(index)") }
         let rows = try scan(table)
         var indexed = 0
@@ -274,6 +300,8 @@ extension Database {
     ///   - index: Index name.
     /// - Throws: `DBError.notFound`, `DBError.notImplemented` for in‑memory kinds.
     public func rebuildIndex(table: String, index: String) throws {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         let ddlHandle = try lockManager.lock(.ddl("index:\(table).\(index)"), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
         let indexHandle = try lockManager.lock(.index(table: table, name: index), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
         let tableHandle = try lockManager.lock(.table(table), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
@@ -319,6 +347,8 @@ extension Database {
     ///   - index: Index name.
     /// - Throws: `DBError.notFound`, `DBError.notImplemented` for in‑memory kinds.
     public func rebuildIndexBulk(table: String, index: String) throws {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         let ddlHandle = try lockManager.lock(.ddl("index:\(table).\(index)"), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
         let indexHandle = try lockManager.lock(.index(table: table, name: index), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
         let tableHandle = try lockManager.lock(.table(table), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
@@ -372,6 +402,8 @@ extension Database {
     /// - Returns: Human‑readable validation report.
     /// - Throws: `DBError.notFound`.
     public func validateIndexDeep(table: String, index: String) throws -> String {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         guard let pair = indexes[table]?[index] else { throw DBError.notFound("Index \(index)") }
         switch pair.backend {
         case .anyString:
@@ -389,6 +421,8 @@ extension Database {
     /// - Returns: Summary string.
     /// - Throws: `DBError.notFound`.
     public func indexDumpHeader(table: String, index: String, pageId: UInt64?) throws -> String {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         guard let pair = indexes[table]?[index] else { throw DBError.notFound("Index \(index)") }
         switch pair.backend {
         case .anyString:
@@ -406,6 +440,8 @@ extension Database {
     /// - Returns: Multi‑line string with page dumps.
     /// - Throws: `DBError.notFound`.
     public func indexDumpFirstLeaves(table: String, index: String, count: Int) throws -> String {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         guard let pair = indexes[table]?[index] else { throw DBError.notFound("Index \(index)") }
         switch pair.backend {
         case .anyString:
@@ -422,6 +458,8 @@ extension Database {
     /// - Throws: `DBError.notFound`.
     public func flushIndex(_ table: String, _ index: String, fullSync: Bool = false) throws {
         Signpost.event(.flush, name: "DBFlushIndex", message: "\(table).\(index) full=\(fullSync ? 1 : 0)")
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         guard let pair = indexes[table]?[index] else { throw DBError.notFound("Index \(index)") }
         switch pair.backend {
         case .anyString:
@@ -437,6 +475,8 @@ extension Database {
     ///   - index: Index name.
     /// - Throws: `DBError.notFound`, `DBError.notImplemented` for in‑memory kinds.
     public func compactIndex(table: String, index: String) throws {
+        try assertTableRegistered(table)
+        try assertIndexRegistered(index, table: table)
         guard let pair = indexes[table]?[index] else { throw DBError.notFound("Index \(index)") }
         switch pair.backend {
         case .anyString:

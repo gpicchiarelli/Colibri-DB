@@ -61,14 +61,14 @@ La documentazione tecnica è allineata e organizzata in `docs/` e il libro degli
 - `docs/cli.md` e `docs/policies.md` — comandi operativi e automazioni
 - `docs/security.md`, `docs/apple-silicon.md`, `docs/appendices.md` — aspetti trasversali, ottimizzazioni e materiali di supporto
 - `docs/dimensional-limits.md` — vincoli dimensionali (pagine, slot, WAL, buffer) e valori di default
-- `docs/benchmarking.md` — guida ai benchmark micro/macro e al target `benchmarks`
+- `docs/benchmarking.md` — guida ai benchmark micro/macro e al target unificato `benchmarks`
 
 Struttura del repository
 ------------------------
 - `Sources/ColibriCore/` — core engine (storage, WAL, MVCC, indici, policy, util)
 - `Sources/coldb/` — CLI amministrativa
 - `Sources/coldb-server/` — server e wire protocol
-- `Sources/benchmarks/` — harness `benchmarks` per test di performance
+- `Sources/benchmarks/` — harness `benchmarks` unificato (scenari tematici e output leggibile)
 - `Tests/` — suite di test SwiftPM
 - `docs/` — documentazione tecnica
 - `Libro/` — libro degli internals in markdown navigabile su GitHub

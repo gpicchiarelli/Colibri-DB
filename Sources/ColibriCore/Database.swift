@@ -130,6 +130,17 @@ public final class Database {
         }
     }
 
+    internal func isIndexRegistered(_ name: String, table: String) -> Bool {
+        guard let sc = systemCatalog else { return true }
+        return sc.logicalObjects(kind: .index).contains(where: { $0.name == name && $0.parentName == table })
+    }
+
+    internal func assertIndexRegistered(_ name: String, table: String) throws {
+        if !isIndexRegistered(name, table: table) {
+            throw DBError.notFound("Index \(name) not registered in catalog")
+        }
+    }
+
     private func bootstrapSystemCatalogRoles() {
         guard let catalog = systemCatalog else { return }
         _ = catalog.registerRole(name: "admin", kind: .user, members: [], privileges: ["ALL"], metadata: ["builtIn": "true"])

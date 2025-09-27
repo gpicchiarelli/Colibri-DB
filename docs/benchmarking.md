@@ -10,66 +10,57 @@ Questo documento descrive come eseguire benchmark micro/macro del motore Colibr�
 ## Compilazione
 ```
 swift build -c release --product benchmarks
-swift build -c release --product benchmarks-extra
 ```
-I target `benchmarks` e `benchmarks-extra` dipendono da `ColibriCore` e utilizzano configurazioni in‑memory oppure directory temporanee per ridurre l’impatto sulla sandbox del progetto.
+Il target `benchmarks` dipende da `ColibriCore` e utilizza configurazioni in‑memory oppure directory temporanee per ridurre l’impatto sulla sandbox del progetto.
 
 ## Esecuzione
 ```
-.build/release/benchmarks [iterations] [scenario]
-.build/release/benchmarks-extra [iterations] [scenario] [--workers=N] [--json]
+.build/release/benchmarks [iterations] [scenario] [--workers=N] [--granular] [--json]
 ```
 - **iterations** (opzionale): numero di iterazioni per lo scenario; default `10000`.
-- **scenario** (opzionale): uno tra `heap-insert`, `heap-scan`, `btree-lookup`, `planner-join`. Se omesso vengono eseguiti tutti in sequenza.
+- **scenario** (opzionale): vedi tabella completa sotto. Se omesso vengono eseguiti tutti in sequenza.
+- **--workers**: per scenari concorrenti (es. `tx-contention`).
+- **--granular**: stampa statistiche di latenza per singola operazione dove applicabile.
+- **--json**: oltre al riepilogo, emette un report JSON con statistiche complete.
 - Usa `--help` per un riepilogo degli argomenti.
 
-### Scenari disponibili (benchmarks)
-| Scenario | Descrizione | Configurazione |
+### Scenari disponibili (temi)
+| Scenario | Tema | Descrizione breve |
 | --- | --- | --- |
-| `heap-insert` | Inserimento massivo in tabella in-memory | `DBConfig(storageEngine: "InMemory")`, vacuum disabilitato |
-| `heap-scan` | Scan completo dopo popolamento tabella | Same as above |
-| `btree-lookup` | Costruzione indice B+Tree e lookup puntuali | Tabelle su disco temporaneo, indice persistente |
-| `planner-join` | Query pianificata con filtro + join + ORDER BY | Planner Volcano con parallel map (2 worker) |
+| `heap-insert` | Heap | Inserimento massivo in tabella in-memory |
+| `heap-scan` | Heap | Scan completo dopo popolamento tabella |
+| `heap-delete` | Heap | Delete per chiave dopo popolamento |
+| `heap-read-rid` | Heap | Letture puntuali via RID |
+| `fileheap-insert-wal-off` | File/WAL | Insert su heap file senza WAL |
+| `fileheap-insert-wal-fsync` | File/WAL | Insert con WAL e fsync pieno |
+| `wal-append-none/lzfse/zlib` | WAL | Append micro (algoritmo compressione) |
+| `btree-lookup` | B+Tree | Lookup puntuali su indice persistente |
+| `btree-insert` | B+Tree | Insert incrementale con indice presente |
+| `btree-range` | B+Tree | Range scan [lo,hi] su indice persistente |
+| `btree-bulk-build` | B+Tree | Rebuild bulk da table scan |
+| `idx-hash/art/skiplist/lsm` | Indici in‑memory | Lookup/range con vari backend |
+| `tx-commit/tx-rollback` | Transazioni | Begin/commit/rollback ripetuti |
+| `tx-contention` | Transazioni | Throughput in contesa (`--workers`) |
+| `mvcc-snapshot-read` | MVCC | Scan snapshot mentre un writer modifica |
+| `planner-join` | Planner | Query con filtro + join + ORDER BY |
+| `planner-index-scan` | Planner | Accesso via indice con predicate |
+| `planner-sort-limit` | Planner | Sort + limit con parallelismo |
+| `checkpoint` | Manutenzione | Durata checkpoint su dati on‑disk |
+| `vacuum-compact` | Manutenzione | Compattazione pagine heap |
 
-Ogni run stampa per scenario: numero di iterazioni, tempo totale in millisecondi e throughput (operazioni/s).
-Con `benchmarks-extra` viene stampato anche un rapporto parlante con statistiche di latenza (mean, p50, p90, p95, p99, min, max, stddev) e metadati utili. Aggiungendo `--json` il rapporto viene emesso in formato JSON per la CI.
+Ogni run stampa per scenario: numero di iterazioni, tempo totale in millisecondi e throughput (operazioni/s). Con `--granular` vengono riportate anche statistiche di latenza (media, p50, p90, p95, p99, min, max, stddev) e metadati utili. Con `--json` il report viene emesso in formato JSON per la CI.
 
+Esempi:
 Esempi:
 ```
 # Tutti gli scenari con 5k iterazioni
 .build/release/benchmarks 5000
 
-# Solo benchmark B+Tree con 20k lookup
-.build/release/benchmarks 20000 btree-lookup
-```
+# Solo rebuild bulk B+Tree
+.build/release/benchmarks 5000 btree-bulk-build
 
-### Scenari disponibili (benchmarks-extra)
-| Scenario | Categoria | Descrizione breve |
-| --- | --- | --- |
-| heap-delete | Heap | Delete per chiave dopo popolamento |
-| heap-read-rid | Heap | Letture puntuali via RID |
-| fileheap-insert-wal-off | File/WAL | Insert su heap file senza WAL |
-| fileheap-insert-wal-fsync | File/WAL | Insert con WAL e fsync pieno |
-| wal-append-none/lzfse/zlib | WAL | Append micro (algoritmo compressione) |
-| btree-insert | B+Tree | Insert incrementale con indice presente |
-| btree-range | B+Tree | Range scan [lo,hi] su indice persistente |
-| btree-bulk-build | B+Tree | Rebuild bulk da table scan |
-| idx-hash/art/skiplist/lsm | Indici in‑memory | Lookup/range con vari backend |
-| tx-commit/tx-rollback | Transazioni | Begin/commit/rollback ripetuti |
-| tx-contention | Transazioni | Throughput in contesa (flag --workers) |
-| mvcc-snapshot-read | MVCC | Scan snapshot mentre un writer modifica |
-| planner-index-scan | Planner | Accesso via indice con predicate |
-| planner-sort-limit | Planner | Sort + limit con parallelismo |
-| checkpoint | Manutenzione | Durata checkpoint su dati on‑disk |
-| vacuum-compact | Manutenzione | Compattazione pagine heap |
-
-Esempi:
-```
-# Rebuild bulk B+Tree
-.build/release/benchmarks-extra 5000 btree-bulk-build
-
-# Contesa transazionale con 8 worker
-.build/release/benchmarks-extra 20000 tx-contention --workers=8
+# Contesa transazionale con 8 worker in output JSON
+.build/release/benchmarks 20000 tx-contention --workers=8 --granular --json
 ```
 
 ## Linee guida per interpretare i risultati
