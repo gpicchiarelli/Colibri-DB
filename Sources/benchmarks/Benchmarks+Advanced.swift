@@ -5,14 +5,54 @@ extension BenchmarkCLI {
     // MARK: - Benchmark avanzati
 
     static func runWALRecovery(iterations: Int) throws -> BenchmarkResult {
-        // Per ora disabilitiamo il recovery benchmark a causa di un bug nel recovery process
-        // TODO: Fix recovery process and re-enable this benchmark
+        let fm = FileManager.default
+        let tmp = try makeTempDir()
+
+        // Configurazione con WAL attivo
+        var cfg = DBConfig(dataDir: tmp.path, storageEngine: "FileHeap")
+        cfg.walEnabled = true
+        cfg.walFullFSyncEnabled = false
+        cfg.walGroupCommitMs = 2.0
+
+        // 1. Prima esecuzione: generiamo mutazioni e forziamo WAL
+        do {
+            let db = Database(config: cfg)
+            if (try? db.createTable("t")) == nil {
+                // tabella già esistente
+            }
+            for i in 0..<iterations {
+                let tid = try db.begin()
+                _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "data": .string("recovery_test_\(i)")], tid: tid)
+                if i % 2 == 0 {
+                    try db.commit(tid)
+                } else {
+                    try db.rollback(tid)
+                }
+            }
+            try db.close()
+        }
+
+        // 2. Seconda esecuzione: creiamo un nuovo Database che esegue il recovery
+        let start = ContinuousClock().now
+        let recoveredDB = Database(config: cfg) // `replayGlobalWAL()` avviene nel costruttore
+        let elapsed = ContinuousClock().now - start
+
+        // Verifica dati recuperati (non rigida, giusto per mostrare output)
+        let recoveredRows = (try? recoveredDB.scan("t")) ?? []
+        let metrics = SystemMonitor(database: recoveredDB).getCurrentMetrics()
+
+        try? fm.removeItem(at: tmp)
+
         return BenchmarkResult(
             name: Scenario.walRecovery.rawValue,
-            iterations: 0,
-            elapsed: .zero,
-            metadata: ["error": "Recovery benchmark temporarily disabled due to misaligned pointer bug"],
-            systemMetrics: nil
+            iterations: recoveredRows.count,
+            elapsed: elapsed,
+            metadata: [
+                "recovered_rows": String(recoveredRows.count),
+                "recovery_latency_ms": String(format: "%.3f", Double(elapsed.components.seconds) * 1000.0),
+                "wal_path": tmp.appendingPathComponent("global.wal").path
+            ],
+            systemMetrics: metrics
         )
     }
 

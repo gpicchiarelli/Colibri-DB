@@ -16,6 +16,42 @@ import Dispatch
 import Darwin
 #endif
 
+// MARK: - Helpers for safe big-endian conversions
+
+private extension FixedWidthInteger {
+    var bigEndianData: Data {
+        var value = self.bigEndian
+        return Data(bytes: &value, count: MemoryLayout<Self>.size)
+    }
+}
+
+private extension Data {
+    func readUInt32BE(at offset: Int) -> UInt32 {
+        precondition(offset + MemoryLayout<UInt32>.size <= count, "readUInt32BE out of bounds")
+        return withUnsafeBytes { rawPtr -> UInt32 in
+            var temp: UInt32 = 0
+            memcpy(&temp, rawPtr.baseAddress!.advanced(by: offset), MemoryLayout<UInt32>.size)
+            return UInt32(bigEndian: temp)
+        }
+    }
+    func readUInt64BE(at offset: Int) -> UInt64 {
+        precondition(offset + MemoryLayout<UInt64>.size <= count, "readUInt64BE out of bounds")
+        return withUnsafeBytes { rawPtr -> UInt64 in
+            var temp: UInt64 = 0
+            memcpy(&temp, rawPtr.baseAddress!.advanced(by: offset), MemoryLayout<UInt64>.size)
+            return UInt64(bigEndian: temp)
+        }
+    }
+    func readUInt16BE(at offset: Int) -> UInt16 {
+        precondition(offset + MemoryLayout<UInt16>.size <= count, "readUInt16BE out of bounds")
+        return withUnsafeBytes { rawPtr -> UInt16 in
+            var temp: UInt16 = 0
+            memcpy(&temp, rawPtr.baseAddress!.advanced(by: offset), MemoryLayout<UInt16>.size)
+            return UInt16(bigEndian: temp)
+        }
+    }
+}
+
 /// File-based implementation of the global WAL manager
 public final class FileWALManager: WALManager {
     
@@ -358,19 +394,19 @@ public final class FileWALManager: WALManager {
         }
         
         // Validate magic
-        let magic = headerData.withUnsafeBytes { $0.load(fromByteOffset: 0, as: UInt32.self) }.bigEndian
+        let magic = headerData.readUInt32BE(at: 0)
         guard magic == Self.walMagic else {
             throw WALError.corruptedHeader("Invalid magic number")
         }
         
         // Validate version
-        let version = headerData.withUnsafeBytes { $0.load(fromByteOffset: 4, as: UInt16.self) }.bigEndian
+        let version = headerData.readUInt16BE(at: 4)
         guard version == Self.walVersion else {
             throw WALError.incompatibleVersion("Unsupported WAL version: \(version)")
         }
         
         // Validate database ID
-        let fileDbId = headerData.withUnsafeBytes { $0.load(fromByteOffset: 6, as: UInt32.self) }.bigEndian
+        let fileDbId = headerData.readUInt32BE(at: 6)
         guard fileDbId == dbId else {
             throw WALError.mismatchedDatabase("Database ID mismatch: file=\(fileDbId), expected=\(dbId)")
         }
@@ -472,20 +508,16 @@ public final class FileWALManager: WALManager {
         recordData.append(typeByte)
         
         // LSN
-        var lsnBE = record.lsn.bigEndian
-        recordData.append(Data(bytes: &lsnBE, count: 8))
+        recordData.append(record.lsn.bigEndianData)
         
         // Database ID
-        var dbIdBE = record.dbId.bigEndian
-        recordData.append(Data(bytes: &dbIdBE, count: 4))
+        recordData.append(record.dbId.bigEndianData)
         
         // Page ID (optional)
-        var pageIdBE = (record.pageId ?? 0).bigEndian
-        recordData.append(Data(bytes: &pageIdBE, count: 8))
+        recordData.append((record.pageId ?? 0).bigEndianData)
         
         // Payload length
-        var payloadLenBE = UInt32(payload.count).bigEndian
-        recordData.append(Data(bytes: &payloadLenBE, count: 4))
+        recordData.append(UInt32(payload.count).bigEndianData)
         
         // Payload
         recordData.append(payload)
@@ -509,8 +541,8 @@ public final class FileWALManager: WALManager {
             // Try to read CRC
             guard let crcData = try fileHandle.read(upToCount: 4),
                   crcData.count == 4 else { break }
-            
-            let expectedCRC = crcData.withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian
+
+        let expectedCRC = crcData.readUInt32BE(at: 0)
             
             // Read record header (25 bytes: type(1) + lsn(8) + dbId(4) + pageId(8) + length(4))
             guard let headerData = try fileHandle.read(upToCount: 25),
@@ -520,18 +552,19 @@ public final class FileWALManager: WALManager {
             let compressionFlag = (typeByte & 0x80) != 0
             let recordType = typeByte & 0x7F
             
-            let lsn = headerData.withUnsafeBytes { $0.load(fromByteOffset: 1, as: UInt64.self) }.bigEndian
-            let recordDbId = headerData.withUnsafeBytes { $0.load(fromByteOffset: 9, as: UInt32.self) }.bigEndian
-            let pageId = headerData.withUnsafeBytes { $0.load(fromByteOffset: 13, as: UInt64.self) }.bigEndian
-            let payloadLength = headerData.withUnsafeBytes { $0.load(fromByteOffset: 21, as: UInt32.self) }.bigEndian
+            let lsn = headerData.readUInt64BE(at: 1)
+            let recordDbId = headerData.readUInt32BE(at: 9)
+            let pageId = headerData.readUInt64BE(at: 13)
+            let payloadLength = headerData.readUInt32BE(at: 21)
             
             // Read payload
             guard let payloadData = try fileHandle.read(upToCount: Int(payloadLength)),
                   payloadData.count == Int(payloadLength) else { break }
             
             // Verify CRC
-            var recordData = headerData
-            recordData.append(payloadData)
+        var recordData = Data()
+        recordData.append(headerData)
+        recordData.append(payloadData)
             let actualCRC = CRC32.compute(recordData)
             
             guard actualCRC == expectedCRC else {
