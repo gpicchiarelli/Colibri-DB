@@ -21,8 +21,7 @@ public final class FileBPlusTreeIndex {
     let fm = FileManager.default
     var fh: FileHandle
     var buf: LRUBufferPool?
-    let walPath: String
-    var walFH: FileHandle
+    let walPath: String? = nil
     var nextLSN: UInt64 = 1
     var opsSinceCheckpoint: Int = 0
     let checkpointEvery: Int = 256
@@ -63,12 +62,7 @@ public final class FileBPlusTreeIndex {
             fm.createFile(atPath: path, contents: nil)
         }
         self.fh = try FileHandle(forUpdating: url)
-        self.walPath = path + ".wal"
-        if !fm.fileExists(atPath: walPath) {
-            fm.createFile(atPath: walPath, contents: nil)
-        }
-        self.walFH = try FileHandle(forUpdating: URL(fileURLWithPath: walPath))
-        // Note: WAL functionality disabled - using global WAL instead
+        // Legacy per-index WAL removed: durability provided by global WAL.
         if try fh.seekToEnd() == 0 {
             self.hdr = Header(pageSize: pageSize, root: 0, nextPage: 1, checkpointLSN: 0)
             try writeHeader()
@@ -97,7 +91,6 @@ public final class FileBPlusTreeIndex {
         buf?.stopBackgroundFlush()
         try? buf?.flushAll()
         try? fh.close()
-        try? walFH.close()
     }
 
     /// Toggles best-effort sequential hints for WAL replay and cold scans.
@@ -133,9 +126,13 @@ public final class FileBPlusTreeIndex {
         try fh.synchronize()
     }
     
+    /// Returns the underlying file descriptor for IO hinting.
+    var fileDescriptor: Int32? {
+        return fh.fileDescriptor
+    }
+
     /// Close WAL and file handle (additional cleanup)
     public func closeAll() throws {
-        try? walFH.close()
         try? fh.close()
     }
 }
