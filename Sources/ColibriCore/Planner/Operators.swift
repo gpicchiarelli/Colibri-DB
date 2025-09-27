@@ -409,14 +409,22 @@ public final class HashJoinOperator: PlanOperator {
     }
     
     private func buildJoinKey(row: PlanRow, keys: [String]) -> String {
-        let keyParts = keys.map { key in
-            if let value = row[key] {
-                return "\(key):\(value)"
+        func encode(_ v: Value) -> String {
+            switch v {
+            case .int(let i): return "i:\(i)"
+            case .double(let d): return "d:\(d)"
+            case .bool(let b): return b ? "b:1" : "b:0"
+            case .string(let s): return "s:\(s)"
+            case .null: return "n:"
             }
-            return "\(key):null"
         }
-        let result = keyParts.joined(separator: "|")
-        return result
+        var parts: [String] = []
+        parts.reserveCapacity(keys.count)
+        for key in keys {
+            if let value = row[key] { parts.append(encode(value)) }
+            else { parts.append("n:") }
+        }
+        return parts.joined(separator: "|")
     }
 }
 
