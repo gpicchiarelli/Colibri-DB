@@ -126,15 +126,29 @@ extension Database {
                 guard let c = cols.first, let v = row[c] else { continue }
                 let s = stringFromValue(v)
                 idx.insert(key: s, ref: rid)
+                if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                    let kb = Data(s.utf8)
+                    _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: kb, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                }
                 map[name] = (columns: cols, backend: .anyString(idx))
             case .persistentBTree(let f):
                 if cols.count == 1 {
-                    if let v = row[cols[0]] { try? f.insert(key: v, rid: rid) }
+                    if let v = row[cols[0]] {
+                        try? f.insert(key: v, rid: rid)
+                        if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                            _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                        }
+                    }
                 } else {
                     var values: [Value] = []
                     var ok = true
                     for c in cols { guard let v = row[c] else { ok = false; break }; values.append(v) }
-                    if ok { try? f.insert(composite: values, rid: rid) }
+                    if ok {
+                        try? f.insert(composite: values, rid: rid)
+                        if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                            _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                        }
+                    }
                 }
                 map[name] = (columns: cols, backend: .persistentBTree(f))
             }
@@ -159,15 +173,29 @@ extension Database {
                 guard let c = cols.first, let v = row[c] else { continue }
                 let s = stringFromValue(v)
                 idx.remove(key: s, ref: rid)
+                if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                    let kb = Data(s.utf8)
+                    _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: kb, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                }
                 map[name] = (columns: cols, backend: .anyString(idx))
             case .persistentBTree(let f):
                 if cols.count == 1 {
-                    if let v = row[cols[0]] { try? f.remove(key: v, rid: rid) }
+                    if let v = row[cols[0]] {
+                        try? f.remove(key: v, rid: rid)
+                        if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                            _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                        }
+                    }
                 } else {
                     var values: [Value] = []
                     var ok = true
                     for c in cols { guard let v = row[c] else { ok = false; break }; values.append(v) }
-                    if ok { try? f.remove(composite: values, rid: rid) }
+                    if ok {
+                        try? f.remove(composite: values, rid: rid)
+                        if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                            _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                        }
+                    }
                 }
                 map[name] = (columns: cols, backend: .persistentBTree(f))
             }

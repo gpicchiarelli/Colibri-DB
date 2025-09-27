@@ -50,6 +50,7 @@ public struct DBConfig: Codable {
     public var pageFlushCompression: CompressionAlgorithm
     public var walNoCache: Bool
     public var walGroupCommitMs: Double
+    public var walUseGlobalIndexLogging: Bool
 
     enum CodingKeys: String, CodingKey {
         case dataDir
@@ -85,6 +86,7 @@ public struct DBConfig: Codable {
         case pageFlushCompression
         case walNoCache
         case walGroupCommitMs
+        case walUseGlobalIndexLogging
     }
 
     /// Initializes a configuration with defaults suited for development.
@@ -121,7 +123,8 @@ public struct DBConfig: Codable {
         walCompression: CompressionAlgorithm = .none,
         pageFlushCompression: CompressionAlgorithm = .none,
         walNoCache: Bool = false,
-        walGroupCommitMs: Double = 2.0
+        walGroupCommitMs: Double = 2.0,
+        walUseGlobalIndexLogging: Bool = false
     ) {
         self.dataDir = dataDir
         self.maxConnectionsLogical = maxConnectionsLogical
@@ -156,6 +159,7 @@ public struct DBConfig: Codable {
         self.pageFlushCompression = pageFlushCompression
         self.walNoCache = walNoCache
         self.walGroupCommitMs = walGroupCommitMs
+        self.walUseGlobalIndexLogging = walUseGlobalIndexLogging
     }
 
     // Backward-compatible decoding: missing keys fall back to defaults
@@ -196,6 +200,7 @@ public struct DBConfig: Codable {
         self.pageFlushCompression = try c.decodeIfPresent(CompressionAlgorithm.self, forKey: .pageFlushCompression) ?? d.pageFlushCompression
         self.walNoCache = try c.decodeIfPresent(Bool.self, forKey: .walNoCache) ?? d.walNoCache
         self.walGroupCommitMs = try c.decodeIfPresent(Double.self, forKey: .walGroupCommitMs) ?? d.walGroupCommitMs
+        self.walUseGlobalIndexLogging = try c.decodeIfPresent(Bool.self, forKey: .walUseGlobalIndexLogging) ?? d.walUseGlobalIndexLogging
     }
 }
 

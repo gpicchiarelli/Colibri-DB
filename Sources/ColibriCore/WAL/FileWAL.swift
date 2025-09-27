@@ -22,6 +22,7 @@ public final class FileWAL: WALProtocol {
     // v1 Record (legacy): CRC32 u32 | type u8 | LSN u64 | len u32 | payload
     // v2 Record: CRC32 u32 | type u8 | LSN u64 | prevLSN u64 | pageId u64 | len u32 | payload
     public enum RecType: UInt8 { case insertRow = 1, deleteRid = 2, checkpoint = 3, begin = 4, commit = 5, abort = 6, insertPre = 7, insertDone = 8, deleteRow = 9, clr = 10 }
+    public enum RecTypeV3: UInt8 { case indexInsert = 21, indexDelete = 22, catalogUpsert = 23 }
 
     private let url: URL
     private var fh: FileHandle
@@ -312,6 +313,31 @@ public final class FileWAL: WALProtocol {
         p.append(Data(bytes: &pid, count: 8)); p.append(Data(bytes: &sid, count: 2))
         let bytes = try JSONEncoder().encode(row); p.append(VarInt.encode(UInt64(bytes.count))); p.append(bytes)
         return try append(type: .deleteRow, payload: p, prevLSN: prevLSN, pageId: rid.pageId)
+    }
+
+    // MARK: - V3: Index logging (global WAL)
+    public func appendIndexInsert(table: String, index: String, keyBytes: Data, rid: RID, prevLSN: UInt64 = 0) throws -> UInt64 {
+        var p = Data()
+        let tt = table.data(using: .utf8) ?? Data()
+        let ii = index.data(using: .utf8) ?? Data()
+        p.append(VarInt.encode(UInt64(tt.count))); p.append(tt)
+        p.append(VarInt.encode(UInt64(ii.count))); p.append(ii)
+        p.append(VarInt.encode(UInt64(keyBytes.count))); p.append(keyBytes)
+        var pid = rid.pageId.bigEndian; var sid = rid.slotId.bigEndian
+        p.append(Data(bytes: &pid, count: 8)); p.append(Data(bytes: &sid, count: 2))
+        return try append(type: .insertRow, payload: p, prevLSN: prevLSN) // reuse insertRow channel; versioning via catalog
+    }
+
+    public func appendIndexDelete(table: String, index: String, keyBytes: Data, rid: RID, prevLSN: UInt64 = 0) throws -> UInt64 {
+        var p = Data()
+        let tt = table.data(using: .utf8) ?? Data()
+        let ii = index.data(using: .utf8) ?? Data()
+        p.append(VarInt.encode(UInt64(tt.count))); p.append(tt)
+        p.append(VarInt.encode(UInt64(ii.count))); p.append(ii)
+        p.append(VarInt.encode(UInt64(keyBytes.count))); p.append(keyBytes)
+        var pid = rid.pageId.bigEndian; var sid = rid.slotId.bigEndian
+        p.append(Data(bytes: &pid, count: 8)); p.append(Data(bytes: &sid, count: 2))
+        return try append(type: .deleteRid, payload: p, prevLSN: prevLSN)
     }
     // CLR
     public func appendCLRUndoInsert(tid: UInt64, table: String, rid: RID, nextUndoLSN: UInt64, prevLSN: UInt64 = 0) throws -> UInt64 {
