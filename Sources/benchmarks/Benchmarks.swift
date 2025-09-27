@@ -305,10 +305,10 @@ struct BenchmarkCLI {
         meta["durability_mode"] = cfg.walEnabled ? (cfg.walFullFSyncEnabled ? "full_fsync" : "fsync") : "none"
         meta["wal_group_commit_ms"] = String(format: "%.2f", cfg.walGroupCommitMs)
         meta["page_size"] = String(cfg.pageSizeBytes)
-        meta["fill_factor"] = "n/a" // placeholder per heap
-        meta["split_ratio"] = "0.60/0.40" // B+Tree insert split policy
-        meta["metrics_sampling"] = String(cfg.optimizerStatsSampleRows)
-        meta["warmup_done"] = "false"
+        meta["fill_factor"] = meta["fill_factor"] ?? "n/a"
+        meta["split_ratio"] = meta["split_ratio"] ?? "0.60/0.40"
+        meta["metrics_sampling"] = meta["metrics_sampling"] ?? String(cfg.optimizerStatsSampleRows)
+        if meta["warmup_done"] == nil { meta["warmup_done"] = "false" }
         return BenchmarkResult(name: result.name, iterations: result.iterations, elapsed: result.elapsed, latenciesMs: result.latenciesMs, metadata: meta)
     }
 }
