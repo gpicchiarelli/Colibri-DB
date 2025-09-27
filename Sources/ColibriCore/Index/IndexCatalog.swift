@@ -27,6 +27,10 @@ public final class IndexCatalog {
 
     /// Opens/creates an index catalog stored under the provided directory.
     public init(dir: String) throws {
+        let fm = FileManager.default
+        if !fm.fileExists(atPath: dir) {
+            try fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        }
         self.path = URL(fileURLWithPath: dir).appendingPathComponent("indexes.json").path
         try load()
     }
@@ -57,8 +61,14 @@ public final class IndexCatalog {
     }
 
     private func save() throws {
+        let url = URL(fileURLWithPath: path)
+        let dir = url.deletingLastPathComponent().path
+        let fm = FileManager.default
+        if !fm.fileExists(atPath: dir) {
+            try fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        }
         let data = try JSONEncoder().encode(defs)
-        try data.write(to: URL(fileURLWithPath: path), options: .atomic)
+        try data.write(to: url, options: .atomic)
     }
 }
 

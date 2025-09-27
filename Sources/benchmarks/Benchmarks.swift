@@ -9,25 +9,131 @@
 import Foundation
 import ColibriCore
 
-private struct BenchmarkResult {
+struct BenchmarkResult {
     let name: String
     let iterations: Int
     let elapsed: Duration
+    let latenciesMs: [Double]
+    let metadata: [String: String]
+
+    private var totalMs: Double {
+        Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000.0
+    }
 
     var opsPerSecond: Double {
         guard elapsed > .zero else { return 0 }
         let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000_000.0
-        return Double(iterations) / seconds
+        return Double(max(1, iterations)) / seconds
     }
 
+    private var sorted: [Double] { latenciesMs.sorted() }
+    private func percentile(_ p: Double) -> Double {
+        guard !latenciesMs.isEmpty else { return 0 }
+        let s = sorted
+        let rank = max(0, min(s.count - 1, Int(round((p/100.0) * Double(s.count - 1)))))
+        return s[rank]
+    }
+    private var mean: Double {
+        guard !latenciesMs.isEmpty else { return 0 }
+        return latenciesMs.reduce(0, +) / Double(latenciesMs.count)
+    }
+    private var stddev: Double {
+        guard !latenciesMs.isEmpty else { return 0 }
+        let m = mean
+        let v = latenciesMs.reduce(0.0) { $0 + ($1 - m) * ($1 - m) } / Double(latenciesMs.count)
+        return v.squareRoot()
+    }
+    private var minMs: Double { sorted.first ?? 0 }
+    private var maxMs: Double { sorted.last ?? 0 }
+
     func printSummary() {
-        let millis = Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000.0
         let formattedOps = String(format: "%.2f", opsPerSecond)
-        print("[\(name)] iterations=\(iterations) elapsed_ms=\(String(format: "%.3f", millis)) throughput_ops_s=\(formattedOps)")
+        print("[\(name)] iterations=\(iterations) elapsed_ms=\(String(format: "%.3f", totalMs)) throughput_ops_s=\(formattedOps)")
+    }
+
+    enum OutputFormat { case text, json }
+
+    func printReport(format: OutputFormat) {
+        switch format {
+        case .text:
+            let ts = ISO8601DateFormatter().string(from: Date())
+            print("--- Report: \(name) ---")
+            print("quando=\(ts)")
+            print("operazioni=\(latenciesMs.count) totale_ms=\(String(format: "%.3f", totalMs)) ops_al_sec=\(String(format: "%.2f", opsPerSecond))")
+            print("latenza_ms: media=\(String(format: "%.4f", mean)) p50=\(String(format: "%.4f", percentile(50))) p90=\(String(format: "%.4f", percentile(90))) p95=\(String(format: "%.4f", percentile(95))) p99=\(String(format: "%.4f", percentile(99))) min=\(String(format: "%.4f", minMs)) max=\(String(format: "%.4f", maxMs)) stddev=\(String(format: "%.4f", stddev))")
+            if !metadata.isEmpty {
+                print("metadati:")
+                for (k, v) in metadata.sorted(by: { $0.key < $1.key }) {
+                    print("  \(k)=\(v)")
+                }
+            }
+        case .json:
+            struct Payload: Codable {
+                struct Lat: Codable { let count:Int; let total_ms:Double; let mean_ms:Double; let p50_ms:Double; let p90_ms:Double; let p95_ms:Double; let p99_ms:Double; let min_ms:Double; let max_ms:Double; let stddev_ms:Double }
+                let scenario: String
+                let iterations: Int
+                let throughput_ops_s: Double
+                let when: String
+                let latency_ms: Lat
+                let metadata: [String:String]
+            }
+            let ts = ISO8601DateFormatter().string(from: Date())
+            let lat = Payload.Lat(count: latenciesMs.count,
+                                   total_ms: totalMs,
+                                   mean_ms: mean,
+                                   p50_ms: percentile(50),
+                                   p90_ms: percentile(90),
+                                   p95_ms: percentile(95),
+                                   p99_ms: percentile(99),
+                                   min_ms: minMs,
+                                   max_ms: maxMs,
+                                   stddev_ms: stddev)
+            let p = Payload(scenario: name, iterations: iterations, throughput_ops_s: opsPerSecond, when: ts, latency_ms: lat, metadata: metadata)
+            let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+            if let data = try? enc.encode(p), let s = String(data: data, encoding: .utf8) { print(s) }
+        }
+    }
+
+    // Convenienze
+    init(name: String, iterations: Int, elapsed: Duration) {
+        self.name = name
+        self.iterations = iterations
+        self.elapsed = elapsed
+        let ms = Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000.0
+        let count = max(1, iterations)
+        self.latenciesMs = Array(repeating: ms / Double(count), count: count)
+        self.metadata = [:]
+    }
+
+    init(name: String, iterations: Int, elapsed: Duration, metadata: [String:String]) {
+        self.name = name
+        self.iterations = iterations
+        self.elapsed = elapsed
+        let ms = Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000.0
+        let count = max(1, iterations)
+        self.latenciesMs = Array(repeating: ms / Double(count), count: count)
+        self.metadata = metadata
+    }
+
+    init(name: String, iterations: Int, elapsed: Duration, latenciesMs: [Double]) {
+        self.name = name
+        self.iterations = iterations
+        self.elapsed = elapsed
+        self.latenciesMs = latenciesMs
+        self.metadata = [:]
+    }
+
+    init(name: String, iterations: Int, elapsed: Duration, latenciesMs: [Double], metadata: [String:String]) {
+        self.name = name
+        self.iterations = iterations
+        self.elapsed = elapsed
+        self.latenciesMs = latenciesMs
+        self.metadata = metadata
     }
 }
 
 private enum Scenario: String, CaseIterable {
+    // Minimal scenarios supported by this target
     case heapInsert = "heap-insert"
     case heapScan = "heap-scan"
     case btreeLookup = "btree-lookup"
@@ -44,15 +150,26 @@ struct BenchmarkCLI {
             printUsage()
             return
         }
-        let iterations = args.first.flatMap { Int($0) } ?? 10_000
-        let scenarioArg = args.dropFirst().first
-        let scenarios: [Scenario]
-        if let selected = scenarioArg.flatMap({ Scenario.from($0) }) {
-            scenarios = [selected]
-        } else {
-            scenarios = Scenario.allCases
+
+        var iterations = 10_000
+        var selected: Scenario? = nil
+        var workers = ProcessInfo.processInfo.activeProcessorCount
+        var userSetWorkers = false
+        var granular = false
+        var formatJSON = false
+
+        for a in args {
+            if let n = Int(a) { iterations = n; continue }
+            if let s = Scenario.from(a) { selected = s; continue }
+            if a.hasPrefix("--workers=") {
+                let parts = a.split(separator: "=")
+                if let last = parts.last, let n = Int(last) { workers = max(1, n); userSetWorkers = true }
+            }
+            if a == "--granular" { granular = true }
+            if a == "--json" || a == "--format=json" { formatJSON = true }
         }
 
+        let scenarios = selected.map { [$0] } ?? Scenario.allCases
         for scenario in scenarios {
             let result: BenchmarkResult
             switch scenario {
@@ -66,6 +183,7 @@ struct BenchmarkCLI {
                 result = try runPlannerJoin(iterations: iterations)
             }
             result.printSummary()
+            result.printReport(format: formatJSON ? .json : .text)
         }
     }
 
@@ -160,11 +278,14 @@ struct BenchmarkCLI {
     }
 
     private static func printUsage() {
-        print("Usage: benchmarks [iterations] [scenario]")
-        print("  iterations: numero di iterazioni per scenario (default 10000)")
+        print("Uso: benchmarks [iterations] [scenario] [--workers=N] [--granular] [--json]")
+        print("  iterations: numero di iterazioni (default 10000; alcuni scenari sono limitati)")
         print("  scenario:   uno tra \(Scenario.allCases.map { $0.rawValue }.joined(separator: ", ")) oppure omesso per eseguire tutti")
-        print("Examples:")
-        print("  benchmarks 5000 heap-insert")
-        print("  benchmarks 2000")
+        print("  --workers:  per scenari concorrenti (es. tx-contention), default = logical cores")
+        print("  --granular: misura la latenza per singola operazione dove applicabile")
+        print("  --json:     stampa report in formato JSON (oltre al summary)")
+        print("Esempi:")
+        print("  benchmarks 5000 btree-bulk-build")
+        print("  benchmarks 20000 tx-contention --workers=8 --granular --json")
     }
 }
