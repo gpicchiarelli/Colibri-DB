@@ -318,8 +318,12 @@ extension Database {
     }
 
     private func shouldRedo(pageId: UInt64, lsn: UInt64, table: String) -> Bool {
-        if let ft = tablesFile[table], let pageLSN = ft.getPageLSN(pageId) {
-            return pageLSN < lsn
+        // Check if this change was already flushed durably to page
+        if let w = wal, lsn <= w.flushedLSN {
+            // If LSN is already flushed, check page LSN to avoid duplicate redo
+            if let ft = tablesFile[table], let pageLSN = ft.getPageLSN(pageId) {
+                return pageLSN < lsn
+            }
         }
         return true
     }
