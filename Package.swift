@@ -18,10 +18,12 @@ let package = Package(
     products: [
         .library(name: "ColibriCore", targets: ["ColibriCore"]),
         .executable(name: "coldb", targets: ["coldb"]),
+        .executable(name: "coldb-server", targets: ["coldb-server"]),
         .executable(name: "benchmarks-extra", targets: ["benchmarks-extra"]) 
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-testing", exact: "0.10.0")
+        .package(url: "https://github.com/apple/swift-testing", exact: "0.10.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0")
     ],
     targets: [
         .target(
@@ -35,6 +37,15 @@ let package = Package(
         .executableTarget(
             name: "coldb",
             dependencies: ["ColibriCore"]
+        ),
+        .executableTarget(
+            name: "coldb-server",
+            dependencies: [
+                "ColibriCore",
+                .product(name: "NIO", package: "swift-nio"),
+                .product(name: "NIOHTTP1", package: "swift-nio"),
+                .product(name: "NIOSSL", package: "swift-nio")
+            ]
         ),
         .executableTarget(
             name: "benchmarks",
