@@ -68,6 +68,28 @@ extension Database {
         throw DBError.notFound("Table \(name)")
     }
 
+    /// MVP: Updates rows where `matchColumn == matchValue`, setting columns from `set`.
+    /// Returns number of rows updated (append-only update semantics).
+    public func updateEquals(table: String,
+                             matchColumn: String,
+                             matchValue: Value,
+                             set newValues: [String: Value],
+                             tid: UInt64?) throws -> Int {
+        let handle = try lockManager.lock(.table(table), mode: .exclusive, tid: tid ?? 0, timeout: config.lockTimeoutSeconds)
+        defer { if tid == nil { lockManager.unlock(handle) } }
+        var updated = 0
+        for (rid, row) in try scan(table, tid: tid) {
+            if row[matchColumn] == matchValue {
+                var updatedRow = row
+                for (k, v) in newValues { updatedRow[k] = v }
+                // Append-only update: insert new row, leave old for GC
+                _ = try insert(into: table, row: updatedRow, tid: tid)
+                updated += 1
+            }
+        }
+        return updated
+    }
+
     /// Deletes rows where `column == value`.
     /// - Parameters:
     ///   - table: Table name.

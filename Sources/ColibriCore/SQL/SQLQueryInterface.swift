@@ -90,7 +90,18 @@ public final class SQLQueryInterface {
     
     // MARK: - DML Execution
     private func executeInsert(_ statement: InsertStatement) throws -> SQLQueryResult {
-        let row = try buildRowFromValues(statement.values)
+        var row: Row = [:]
+        if let cols = statement.columns {
+            guard cols.count == statement.values.count else {
+                throw SQLQueryError.invalidOperation("INSERT columns/values arity mismatch")
+            }
+            for (name, expr) in zip(cols, statement.values) {
+                row[name] = try evaluateExpression(expr, inRow: nil)
+            }
+        } else {
+            // Fallback: name columns as column_0, column_1, ...
+            row = try buildRowFromValues(statement.values)
+        }
         let rid = try database.insert(into: statement.tableName, row: row)
         
         return SQLQueryResult(
@@ -101,22 +112,36 @@ public final class SQLQueryInterface {
     }
     
     private func executeUpdate(_ statement: UpdateStatement) throws -> SQLQueryResult {
-        // For now, this is a placeholder - the database doesn't have update yet
-        // In a full implementation, this would update rows matching the WHERE clause
+        // MVP: support WHERE column = literal only
+        guard let (matchColumn, matchValue) = try extractEqualsPredicate(statement.whereClause) else {
+            throw SQLQueryError.unsupportedOperation("UPDATE supports only WHERE column = literal in MVP")
+        }
+        var setValues: [String: Value] = [:]
+        for sc in statement.setClauses {
+            setValues[sc.column] = try evaluateExpression(sc.value, inRow: nil)
+        }
+        let affected = try database.updateEquals(table: statement.tableName,
+                                                 matchColumn: matchColumn,
+                                                 matchValue: matchValue,
+                                                 set: setValues,
+                                                 tid: nil)
         return SQLQueryResult(
             statementType: .update,
-            affectedRows: 0,
-            message: "UPDATE not yet implemented"
+            affectedRows: affected,
+            message: "Updated rows: \(affected)"
         )
     }
     
     private func executeDelete(_ statement: DeleteStatement) throws -> SQLQueryResult {
-        // For now, this is a placeholder - the database doesn't have delete with WHERE yet
-        // In a full implementation, this would delete rows matching the WHERE clause
+        // MVP: support WHERE column = literal only
+        guard let (matchColumn, matchValue) = try extractEqualsPredicate(statement.whereClause) else {
+            throw SQLQueryError.unsupportedOperation("DELETE supports only WHERE column = literal in MVP")
+        }
+        let affected = try database.deleteEquals(table: statement.tableName, column: matchColumn, value: matchValue)
         return SQLQueryResult(
             statementType: .delete,
-            affectedRows: 0,
-            message: "DELETE with WHERE not yet implemented"
+            affectedRows: affected,
+            message: "Deleted rows: \(affected)"
         )
     }
     
@@ -133,12 +158,20 @@ public final class SQLQueryInterface {
         var resultRows: [[Value]] = []
         var columns: [String] = []
         
-        if !rows.isEmpty {
+        // Filter by WHERE if any (MVP evaluator)
+        var filtered: [(RID, Row)] = rows
+        if let whereExpr = statement.whereClause {
+            filtered = rows.filter { (_, row) in
+                (try? evaluateWhere(whereExpr, inRow: row)) == true
+            }
+        }
+
+        if !filtered.isEmpty {
             // Extract column names from first row
-            let firstRow = rows.first!.1
+            let firstRow = filtered.first!.1
             columns = Array(firstRow.keys).sorted()
             
-            for (_, row) in rows {
+            for (_, row) in filtered {
                 var resultRow: [Value] = []
                 for column in columns {
                     resultRow.append(row[column] ?? .null)
@@ -169,14 +202,15 @@ public final class SQLQueryInterface {
         
         for (index, expression) in values.enumerated() {
             let columnName = "column_\(index)"
-            let value = try evaluateExpression(expression)
+            let value = try evaluateExpression(expression, inRow: nil)
             row[columnName] = value
         }
         
         return row
     }
     
-    private func evaluateExpression(_ expression: SQLExpression) throws -> Value {
+    // MARK: - Expression evaluation
+    private func evaluateExpression(_ expression: SQLExpression, inRow row: Row?) throws -> Value {
         switch expression {
         case .literal(let literal):
             switch literal {
@@ -187,14 +221,14 @@ public final class SQLQueryInterface {
             case .null: return .null
             }
         case .column(let name):
-            // For now, return null for column references
+            if let row = row { return row[name] ?? .null }
             return .null
         case .binary(let left, let op, let right):
-            let leftValue = try evaluateExpression(left)
-            let rightValue = try evaluateExpression(right)
+            let leftValue = try evaluateExpression(left, inRow: row)
+            let rightValue = try evaluateExpression(right, inRow: row)
             return try evaluateBinaryOperation(leftValue, op, rightValue)
         case .unary(let op, let operand):
-            let operandValue = try evaluateExpression(operand)
+            let operandValue = try evaluateExpression(operand, inRow: row)
             return try evaluateUnaryOperation(op, operandValue)
         case .function(let name, let args):
             return try evaluateFunction(name, args)
@@ -291,14 +325,14 @@ public final class SQLQueryInterface {
     
     private func evaluateCaseWhen(_ whenClauses: [SQLExpression.SQLWhenClause], _ elseExpression: SQLExpression?) throws -> Value {
         for whenClause in whenClauses {
-            let condition = try evaluateExpression(whenClause.condition)
+            let condition = try evaluateExpression(whenClause.condition, inRow: nil)
             if case .bool(true) = condition {
-                return try evaluateExpression(whenClause.result)
+                return try evaluateExpression(whenClause.result, inRow: nil)
             }
         }
         
         if let elseExpr = elseExpression {
-            return try evaluateExpression(elseExpr)
+            return try evaluateExpression(elseExpr, inRow: nil)
         }
         
         return .null
@@ -310,6 +344,32 @@ public final class SQLQueryInterface {
             return name
         case .join(let left, _, _, _):
             return extractTableName(left)
+        }
+    }
+
+    // MARK: - WHERE evaluation helpers (MVP)
+    private func evaluateWhere(_ expr: SQLExpression, inRow row: Row) throws -> Bool {
+        let v = try evaluateExpression(expr, inRow: row)
+        if case .bool(let b) = v { return b }
+        // If expression is equality/relational, evaluateBinaryOperation already returns bool
+        return false
+    }
+
+    private func extractEqualsPredicate(_ expr: SQLExpression?) throws -> (String, Value)? {
+        guard let expr = expr else { return ("", .null) as (String, Value)? }
+        switch expr {
+        case .binary(let l, .equals, let r):
+            if case .column(let name) = l {
+                let rv = try evaluateExpression(r, inRow: nil)
+                return (name, rv)
+            }
+            if case .column(let name) = r {
+                let lv = try evaluateExpression(l, inRow: nil)
+                return (name, lv)
+            }
+            return nil
+        default:
+            return nil
         }
     }
 }
