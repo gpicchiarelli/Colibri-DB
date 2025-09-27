@@ -35,7 +35,7 @@ extension FileBPlusTreeIndex {
     }
 
     func walAppendCheckpoint() throws {
-        let lsn = try walAppendRecord(type: 3, payload: Data())
+        let lsn = try walAppendRecord(type: 3, payload: Data(), skipCheckpointTrigger: true)
         hdr.checkpointLSN = lsn
         try writeHeader()
     }
@@ -64,7 +64,7 @@ extension FileBPlusTreeIndex {
         return p
     }
 
-    func walAppendRecord(type: UInt8, payload: Data) throws -> UInt64 {
+    func walAppendRecord(type: UInt8, payload: Data, skipCheckpointTrigger: Bool = false) throws -> UInt64 {
         try FileBPlusTreeIndex.ensureWALHeader(handle: walFH)
         try walFH.seekToEnd()
         var rec = Data([type])
@@ -80,10 +80,12 @@ extension FileBPlusTreeIndex {
         try walFH.write(contentsOf: out)
         try syncWAL()
         nextLSN &+= 1
-        opsSinceCheckpoint += 1
-        if opsSinceCheckpoint >= checkpointEvery {
-            try walAppendCheckpoint()
-            opsSinceCheckpoint = 0
+        if !skipCheckpointTrigger {
+            opsSinceCheckpoint += 1
+            if opsSinceCheckpoint >= checkpointEvery {
+                try walAppendCheckpoint()
+                opsSinceCheckpoint = 0
+            }
         }
         return lsn
     }
