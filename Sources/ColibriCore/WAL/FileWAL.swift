@@ -233,7 +233,7 @@ public final class FileWAL: WALProtocol {
         
         // Try to read records until we encounter corruption or end of file
         while off + 13 <= data.count {
-            let recordStart = off
+            _ = off
             let crcStored = data.subdata(in: off..<(off+4)).withUnsafeBytes { $0.load(as: UInt32.self) }.bigEndian; off += 4
             let typRaw = data[off]; off += 1
             let algorithm = CompressionFlag.decode(typRaw)
