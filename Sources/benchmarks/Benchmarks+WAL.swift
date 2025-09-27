@@ -25,15 +25,23 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
+            if let w = db.wal {
+                let m = w.recentFlushMetrics()
+                print("[wal-metrics] last_batch=\(m.lastBatch) last_sync_ns=\(m.lastSyncNs) flushes=\(m.flushes) total_batch=\(m.totalBatch) total_sync_ns=\(m.totalSyncNs)")
+            }
             try? fm.removeItem(at: tmp)
             let scenarioName = wal ? (fullSync ? Scenario.fileHeapInsertWalFSync.rawValue : Scenario.fileHeapInsertWalOff.rawValue) : Scenario.fileHeapInsertWalOff.rawValue
-            return BenchmarkResult(name: scenarioName, iterations: n, elapsed: elapsed, latenciesMs: lat)
+            return BenchmarkResult(name: scenarioName, iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled": String(wal), "wal_fullsync": String(fullSync)])
         } else {
             for i in 0..<n { _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "p": .string("v\(i)")]) }
             let elapsed = clock.now - start
+            if let w = db.wal {
+                let m = w.recentFlushMetrics()
+                print("[wal-metrics] last_batch=\(m.lastBatch) last_sync_ns=\(m.lastSyncNs) flushes=\(m.flushes) total_batch=\(m.totalBatch) total_sync_ns=\(m.totalSyncNs)")
+            }
             try? fm.removeItem(at: tmp)
             let scenarioName = wal ? (fullSync ? Scenario.fileHeapInsertWalFSync.rawValue : Scenario.fileHeapInsertWalOff.rawValue) : Scenario.fileHeapInsertWalOff.rawValue
-            return BenchmarkResult(name: scenarioName, iterations: n, elapsed: elapsed)
+            return BenchmarkResult(name: scenarioName, iterations: n, elapsed: elapsed, metadata: ["wal_enabled": String(wal), "wal_fullsync": String(fullSync)])
         }
     }
 

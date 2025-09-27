@@ -14,6 +14,7 @@ import Foundation
 #if os(macOS)
 import Darwin
 #endif
+import Dispatch
 /// File-based Write-Ahead Log (WAL) with CRC and versioned record format.
 
 public final class FileWAL: WALProtocol {
@@ -36,6 +37,12 @@ public final class FileWAL: WALProtocol {
     private let compressionQueue = DispatchQueue(label: "wal.compression", qos: .utility)
     private var groupCommitTimer: DispatchSourceTimer?
     private var groupCommitIntervalMs: Double = 2.0
+    // Metrics
+    private var lastFlushBatchSize: Int = 0
+    private var lastFlushSyncNs: UInt64 = 0
+    private var totalFlushes: Int = 0
+    private var totalFlushedRecords: Int = 0
+    private var totalSyncNs: UInt64 = 0
 
     private enum CompressionFlag {
         static let compressed: UInt8 = 0x80
@@ -147,6 +154,7 @@ public final class FileWAL: WALProtocol {
         if FaultInjector.shared.shouldFail(key: "wal.append") { throw DBError.io("fault injection: wal.append") }
         
         var batchData = Data()
+        let batchCount = records.count
         for record in records {
             var payloadToWrite = record.payload
             var typeByte = record.type.rawValue
@@ -155,8 +163,8 @@ public final class FileWAL: WALProtocol {
             if record.payload.count > 1024 && compressionAlgorithm != .none {
                 compressionQueue.async { [weak self] in
                     guard let self = self else { return }
-                    if let compressed = CompressionCodec.compress(record.payload, algorithm: self.compressionAlgorithm) {
-                        // Compression handled in background
+                    if let _ = CompressionCodec.compress(record.payload, algorithm: self.compressionAlgorithm) {
+                        // background
                     }
                 }
             } else if let compressed = CompressionCodec.compress(record.payload, algorithm: compressionAlgorithm) {
@@ -184,7 +192,14 @@ public final class FileWAL: WALProtocol {
         }
         
         try fh.write(contentsOf: batchData)
+        let t0 = DispatchTime.now().uptimeNanoseconds
         try sync()
+        let t1 = DispatchTime.now().uptimeNanoseconds
+        lastFlushBatchSize = batchCount
+        lastFlushSyncNs = t1 &- t0
+        totalFlushes &+= 1
+        totalFlushedRecords &+= batchCount
+        totalSyncNs &+= lastFlushSyncNs
     }
     
     public func flushPending() throws {
@@ -327,5 +342,10 @@ public final class FileWAL: WALProtocol {
 
     private func sync() throws {
         try IOHints.synchronize(handle: fh, full: fullFSyncEnabled)
+    }
+
+    // MARK: - Metrics API
+    public func recentFlushMetrics() -> (lastBatch: Int, lastSyncNs: UInt64, flushes: Int, totalBatch: Int, totalSyncNs: UInt64) {
+        return (lastFlushBatchSize, lastFlushSyncNs, totalFlushes, totalFlushedRecords, totalSyncNs)
     }
 }
