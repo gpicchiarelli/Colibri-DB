@@ -24,7 +24,8 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-testing", exact: "0.10.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
-        .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.25.0")
+        .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.25.0"),
+        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.0.3")
     ],
     targets: [
         .target(
@@ -53,7 +54,10 @@ let package = Package(
         ),
         .executableTarget(
             name: "benchmarks",
-            dependencies: ["ColibriCore"]
+            dependencies: [
+                "ColibriCore",
+                .product(name: "Atomics", package: "swift-atomics")
+            ]
         ),
         
         .testTarget(
