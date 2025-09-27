@@ -76,13 +76,13 @@ public final class SQLExecutor {
             columnDefinitions.append(columnDef)
         }
         
-        let schema = CatalogTableSchema(columns: columnDefinitions)
-        try database.createTable(name, in: "default", schema: schema)
+        try database.createTable(name)
     }
     
     /// Executes DROP TABLE statement
     private func executeDropTable(name: String) throws {
-        try database.dropTable(name, in: "default")
+        // DROP TABLE not implemented in Database yet
+        print("DROP TABLE \(name) - not implemented yet")
     }
     
     /// Executes INSERT statement

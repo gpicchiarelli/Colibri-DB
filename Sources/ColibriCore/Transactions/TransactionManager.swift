@@ -138,52 +138,7 @@ public final class TransactionManager {
         return activeTransactions[tid]?.status == .active
     }
     
-    /// Creates a snapshot for a transaction
-    public func createSnapshot(tid: UInt64) -> MVCCManager.Snapshot {
-        return mvcc.createSnapshot(tid: tid)
-    }
-    
-    /// Registers an insert operation
-    public func registerInsert(table: String, rid: RID, row: Row, tid: UInt64) {
-        mvcc.registerInsert(table: table, rid: rid, row: row, tid: tid)
-    }
-    
-    /// Registers a delete operation
-    public func registerDelete(table: String, rid: RID, row: Row, tid: UInt64) {
-        mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
-    }
-    
-    /// Acquires a lock
-    public func acquireLock(resource: String, tid: UInt64, type: LockManager.LockType) -> Bool {
-        return lockManager.acquireLock(resource: resource, tid: tid, type: type)
-    }
-    
-    /// Releases a lock
-    public func releaseLock(resource: String, tid: UInt64) {
-        lockManager.releaseLock(resource: resource, tid: tid)
-    }
-    
-    /// Checks if a version is visible to a transaction
-    public func isVisible(version: MVCCManager.Version, tid: UInt64) -> Bool {
-        let snapshot = mvcc.createSnapshot(tid: tid)
-        return mvcc.isVisible(version: version, snapshot: snapshot)
-    }
-    
-    /// Gets the latest visible version of a row
-    public func getLatestVisibleVersion(table: String, rid: RID, tid: UInt64) -> MVCCManager.Version? {
-        let snapshot = mvcc.createSnapshot(tid: tid)
-        return mvcc.getLatestVisibleVersion(table: table, rid: rid, snapshot: snapshot)
-    }
-    
-    /// Gets all versions of a row
-    public func getAllVersions(table: String, rid: RID) -> [MVCCManager.Version] {
-        return mvcc.getAllVersions(table: table, rid: rid)
-    }
-    
-    /// Purges obsolete versions
-    public func purgeObsoleteVersions() {
-        mvcc.purgeObsoleteVersions()
-    }
+    // MVCC operations are handled directly by the database
     
     /// Gets transaction statistics
     public func getStatistics() -> TransactionStatistics {
