@@ -49,9 +49,9 @@ struct BenchmarkResult {
 
     // Aggiunge metriche di sistema per analisi completa
     var cpuUsage: Double { systemMetrics?.cpu.usage ?? 0 }
-    var memoryUsage: Double { systemMetrics?.memory.usagePercent ?? 0 }
-    var ioReadBytes: UInt64 { systemMetrics?.io.readBytes ?? 0 }
-    var ioWriteBytes: UInt64 { systemMetrics?.io.writeBytes ?? 0 }
+    var memoryUsage: Double { systemMetrics?.memory.usage ?? 0 }
+    var ioReadBytes: UInt64 { systemMetrics?.io.readCount ?? 0 }
+    var ioWriteBytes: UInt64 { systemMetrics?.io.writeCount ?? 0 }
 
     func printSummary() {
         let formattedOps = String(format: "%.2f", opsPerSecond)
@@ -100,7 +100,7 @@ struct BenchmarkResult {
                                    min_ms: minMs,
                                    max_ms: maxMs,
                                    stddev_ms: stddev)
-            let sys = systemMetrics.map { Payload.Sys(cpu_percent: $0.cpu.usage, memory_percent: $0.memory.usagePercent, io_read_bytes: $0.io.readBytes, io_write_bytes: $0.io.writeBytes) }
+            let sys = systemMetrics.map { Payload.Sys(cpu_percent: $0.cpu.usage, memory_percent: $0.memory.usage, io_read_bytes: $0.io.readCount, io_write_bytes: $0.io.writeCount) }
             let p = Payload(scenario: name, iterations: iterations, throughput_ops_s: opsPerSecond, when: ts, latency_ms: lat, system_metrics: sys, metadata: metadata)
             let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
             if let data = try? enc.encode(p), let s = String(data: data, encoding: .utf8) { print(s) }
@@ -195,6 +195,8 @@ enum Scenario: String, CaseIterable {
     case systemLoad = "system-load"
     case memoryPressure = "memory-pressure"
     case concurrentLoad = "concurrent-load"
+    case insertVariability = "insert-variability"
+    case queryLatency = "query-latency"
 
     static func from(_ string: String) -> Scenario? { Scenario(rawValue: string.lowercased()) }
 }
@@ -308,6 +310,10 @@ struct BenchmarkCLI {
             case .concurrentLoad:
                 let effWorkers = userSetWorkers ? workers : max(2, ProcessInfo.processInfo.activeProcessorCount / 2)
                 result = try runConcurrentLoad(iterations: iterations, workers: effWorkers, granular: granular)
+            case .insertVariability:
+                result = try runInsertVariability(iterations: iterations, granular: granular)
+            case .queryLatency:
+                result = try runQueryLatency(iterations: iterations, granular: granular)
             }
             let enriched = attachConfigMetadata(result: result)
             enriched.printSummary()

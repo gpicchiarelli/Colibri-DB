@@ -23,7 +23,7 @@ public final class Database {
     // MARK: - Storage state
     var tablesMem: [String: HeapTable] = [:]
     var tablesFile: [String: FileHeapTable] = [:]
-    var globalWAL: FileWALManager?
+    public var globalWAL: FileWALManager?
     var lastDBLSN: UInt64 = 0
 
     /// Backend disponibili per ogni indice registrato.
