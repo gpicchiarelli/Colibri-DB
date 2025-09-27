@@ -13,9 +13,9 @@ import Foundation
 /// Persistent catalog that tracks logical (tables, indexes, views, sequences) and physical
 /// objects (heap files, index files, segments) for ColibrìDB.
 public final class SystemCatalog {
-    public enum LogicalKind: String, Codable { case table, index, view, sequence }
-    public enum PhysicalKind: String, Codable { case heapFile, indexFile, segment, other }
-    public enum RoleKind: String, Codable { case user, group }
+    public enum LogicalKind: String, Codable, Sendable { case table, index, view, sequence }
+    public enum PhysicalKind: String, Codable, Sendable { case heapFile, indexFile, segment, other }
+    public enum RoleKind: String, Codable, Sendable { case user, group }
     public enum StatisticKind: String, Codable { case table, column }
 
     public struct LogicalObject: Codable, Identifiable {
@@ -299,7 +299,8 @@ public final class SystemCatalog {
 
     // MARK: - Convenience removals
     public func removeLogical(name: String, kind: LogicalKind) {
-        queue.async(flags: .barrier) {
+        queue.async(flags: .barrier) { @Sendable [weak self, kind] in
+            guard let self = self else { return }
             self.snapshot.logical.removeAll { $0.name == name && $0.kind == kind }
             try? self.persistLocked()
         }

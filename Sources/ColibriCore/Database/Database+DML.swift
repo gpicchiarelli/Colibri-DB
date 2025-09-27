@@ -153,8 +153,6 @@ extension Database {
                 case .persistentBTree(let f):
                     rids = f.searchEquals(value)
                     skipIndexName = name
-                default:
-                    continue
                 }
 
                 for rid in rids {
@@ -281,8 +279,6 @@ extension Database {
                         rids = f.searchEquals(v)
                         skipIndexName = name
                         break
-                    default:
-                        continue
                     }
                     break
                 }

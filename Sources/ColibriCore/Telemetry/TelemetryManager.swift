@@ -37,7 +37,7 @@ public final class TelemetryManager {
         logger.info("Starting telemetry collection")
         
         // Start collection timer
-        collectionTimer = Timer.scheduledTimer(withTimeInterval: config.collectionInterval, repeats: true) { [weak self] _ in
+        collectionTimer = Timer.scheduledTimer(withTimeInterval: config.collectionInterval, repeats: true) { @Sendable [weak self] _ in
             self?.collectData()
         }
     }

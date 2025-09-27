@@ -123,7 +123,7 @@ public class WALTests {
         
         // Test basic WAL operations
         let tid = try db.begin()
-        try db.insert(into: "test_table", row: ["id": .int(1), "name": .string("test")], tid: tid)
+        _ = try db.insert(into: "test_table", row: ["id": .int(1), "name": .string("test")], tid: tid)
         try db.commit(tid)
         
         // Verify WAL was written
@@ -163,7 +163,7 @@ public class WALTests {
         var tids: [UInt64] = []
         for i in 0..<5 {
             let tid = try db.begin()
-            try db.insert(into: "test_table", row: ["id": .int(Int64(i)), "name": .string("test\(i)")], tid: tid)
+            _ = try db.insert(into: "test_table", row: ["id": .int(Int64(i)), "name": .string("test\(i)")], tid: tid)
             tids.append(tid)
         }
         
@@ -205,7 +205,7 @@ public class WALTests {
             let db = try createTestDatabase(testId: "durability_\(name)", durabilityMode: mode)
             
             let tid = try db.begin()
-            try db.insert(into: "test_table", row: ["id": .int(1), "mode": .string(name)], tid: tid)
+            _ = try db.insert(into: "test_table", row: ["id": .int(1), "mode": .string(name)], tid: tid)
             try db.commit(tid)
             
             // Verify records are persistent
@@ -235,11 +235,11 @@ public class WALTests {
         var metrics = WALTestMetrics()
         
         // Create database and write data
-        let dbPath = "\(testDataDir)/recovery_test"
+        _ = "\(testDataDir)/recovery_test"  // Test database path
         var db = try createTestDatabase(testId: "recovery_test")
         
         let tid = try db.begin()
-        try db.insert(into: "test_table", row: ["id": .int(1), "data": .string("before crash")], tid: tid)
+        _ = try db.insert(into: "test_table", row: ["id": .int(1), "data": .string("before crash")], tid: tid)
         try db.commit(tid)
         
         // Record WAL state before "crash"
@@ -276,12 +276,12 @@ public class WALTests {
         
         // Test transaction commit
         let tid1 = try db.begin()
-        try db.insert(into: "test_table", row: ["id": .int(1), "type": .string("commit")], tid: tid1)
+        _ = try db.insert(into: "test_table", row: ["id": .int(1), "type": .string("commit")], tid: tid1)
         try db.commit(tid1)
         
         // Test transaction rollback
         let tid2 = try db.begin()
-        try db.insert(into: "test_table", row: ["id": .int(2), "type": .string("rollback")], tid: tid2)
+        _ = try db.insert(into: "test_table", row: ["id": .int(2), "type": .string("rollback")], tid: tid2)
         try db.rollback(tid2)
         
         // Verify WAL contains appropriate records
@@ -321,7 +321,7 @@ public class WALTests {
         
         // Insert data that should trigger index logging
         let tid = try db.begin()
-        try db.insert(into: "indexed_table", row: ["id": .int(1), "name": .string("indexed")], tid: tid)
+        _ = try db.insert(into: "indexed_table", row: ["id": .int(1), "name": .string("indexed")], tid: tid)
         try db.commit(tid)
         
         // Verify index operations are logged
@@ -353,7 +353,7 @@ public class WALTests {
         // Insert large data to trigger compression
         let largeData = String(repeating: "compression_test_data_", count: 100)
         let tid = try db.begin()
-        try db.insert(into: "test_table", row: ["id": .int(1), "data": .string(largeData)], tid: tid)
+        _ = try db.insert(into: "test_table", row: ["id": .int(1), "data": .string(largeData)], tid: tid)
         try db.commit(tid)
         
         // Check compression metrics
@@ -385,7 +385,7 @@ public class WALTests {
         // Generate some WAL data
         for i in 0..<5 {
             let tid = try db.begin()
-            try db.insert(into: "test_table", row: ["id": .int(Int64(i)), "data": .string("checkpoint_test_\(i)")], tid: tid)
+            _ = try db.insert(into: "test_table", row: ["id": .int(Int64(i)), "data": .string("checkpoint_test_\(i)")], tid: tid)
             try db.commit(tid)
         }
         
@@ -428,7 +428,7 @@ public class WALTests {
         
         for i in 0..<operationCount {
             let tid = try db.begin()
-            try db.insert(into: "test_table", row: ["id": .int(Int64(i)), "data": .string("perf_test_\(i)")], tid: tid)
+            _ = try db.insert(into: "test_table", row: ["id": .int(Int64(i)), "data": .string("perf_test_\(i)")], tid: tid)
             try db.commit(tid)
         }
         
@@ -459,7 +459,7 @@ public class WALTests {
         for batch in 0..<10 {
             for i in 0..<20 {
                 let tid = try db.begin()
-                try db.insert(into: "test_table", row: ["id": .int(Int64(batch * 20 + i)), "batch": .int(Int64(batch))], tid: tid)
+                _ = try db.insert(into: "test_table", row: ["id": .int(Int64(batch * 20 + i)), "batch": .int(Int64(batch))], tid: tid)
                 try db.commit(tid)
             }
             

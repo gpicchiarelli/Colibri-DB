@@ -266,7 +266,7 @@ public final class TransactionTimeoutHandler {
     }
     
     public func start() {
-        timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { @Sendable [weak self] _ in
             self?.checkTimeouts()
         }
     }

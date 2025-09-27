@@ -48,7 +48,7 @@ public final class SystemMonitor {
         isMonitoring = true
         monitoringInterval = interval
         
-        monitoringTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        monitoringTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { @Sendable [weak self] _ in
             self?.collectMetrics()
         }
         
@@ -77,8 +77,16 @@ public final class SystemMonitor {
             transactions: TransactionMetrics(activeCount: 0, totalCount: 0, averageDuration: 0.0, committedCount: 0, abortedCount: 0)
         )
         
+        // Store metrics for analysis
+        recentMetrics.append(metrics)
+        
+        // Keep only last 100 metrics
+        if recentMetrics.count > 100 {
+            recentMetrics.removeFirst()
+        }
+        
         // Log metrics if needed  
-        logger.debug("System metrics collected")
+        logger.debug("System metrics collected: \(metrics.timestamp)")
     }
     
     /// Gets current system metrics

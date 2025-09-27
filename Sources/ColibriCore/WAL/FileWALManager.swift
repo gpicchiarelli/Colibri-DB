@@ -633,7 +633,7 @@ public final class FileWALManager: WALManager {
     }
     
     private func updateMetrics(operation: WALOperation, latency: TimeInterval, batchSize: Int) {
-        metricsQueue.async { [weak self] in
+        metricsQueue.async { @Sendable [weak self] in
             guard let self = self else { return }
             
             switch operation {

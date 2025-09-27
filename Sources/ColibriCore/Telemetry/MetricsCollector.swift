@@ -40,8 +40,8 @@ public final class MetricsCollector {
         logger.info("Starting metrics monitoring")
         
         // Start monitoring timer
-        monitoringTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.collectMetrics()
+        monitoringTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { @Sendable [weak self] _ in
+            _ = self?.collectMetrics()
         }
     }
     

@@ -156,7 +156,8 @@ public final class LRUBufferPool: BufferPoolProtocol {
         var errors: [Error] = []
         let errorLock = NSLock()
         
-        DispatchQueue.concurrentPerform(iterations: workerCount) { worker in
+        DispatchQueue.concurrentPerform(iterations: workerCount) { @Sendable [weak self] worker in
+            guard let self = self else { return }
             let start = worker * chunkSize
             let end = min(start + chunkSize, dirtyPages.count)
             let chunk = Array(dirtyPages[start..<end])

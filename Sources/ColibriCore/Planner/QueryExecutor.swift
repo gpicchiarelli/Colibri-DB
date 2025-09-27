@@ -119,7 +119,7 @@ public final class QueryExecutor {
         let result = try execute(request: request, context: context)
         
         var updatedCount = 0
-        for row in result.rows {
+        for _ in result.rows {
             // Update the row
             // Row modification not supported in MVP
             // updatedRow[key] = value
@@ -154,7 +154,7 @@ public final class QueryExecutor {
         let result = try execute(request: request, context: context)
         
         var deletedCount = 0
-        for row in result.rows {
+        for _ in result.rows {
             // Delete the row
             // This would need to be implemented in the database
             // For now, just count the rows

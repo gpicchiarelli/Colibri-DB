@@ -27,9 +27,9 @@ public final class TestFramework {
     public func runAllTests() -> TestResult {
         logger.info("Running all tests")
         
-        var passedTests = 0
-        var failedTests = 0
-        var totalDuration: TimeInterval = 0
+        let passedTests = 0
+        let failedTests = 0
+        let totalDuration: TimeInterval = 0
         
         // TODO: Implement actual test execution
         logger.info("Test execution completed: \(passedTests) passed, \(failedTests) failed")

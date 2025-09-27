@@ -293,7 +293,7 @@ public enum ConfigurationError: Error, LocalizedError {
     case fileNotFound(String)
     case fileReadError(String)
     case fileWriteError(String)
-    case invalidValue(String, Any)
+    case invalidValue(String, String) // Changed from Any to String for Sendable compliance
     case missingRequired(String)
     
     public var errorDescription: String? {
@@ -327,52 +327,52 @@ public final class ConfigurationValidator {
         switch key {
         case "storage.pageSize":
             guard let intValue = value as? Int else {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             if intValue < 1024 || intValue > 65536 {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             
         case "buffer.dataPoolPages":
             guard let intValue = value as? Int else {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             if intValue < 10 {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             
         case "transaction.isolationLevel":
             guard let stringValue = value as? String else {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             let validLevels = ["READ_UNCOMMITTED", "READ_COMMITTED", "REPEATABLE_READ", "SERIALIZABLE"]
             if !validLevels.contains(stringValue) {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             
         case "query.maxExecutionTime":
             guard let doubleValue = value as? Double else {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             if doubleValue <= 0 {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             
         case "query.maxMemory":
             guard let intValue = value as? Int else {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             if intValue <= 0 {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             
         case "logging.level":
             guard let stringValue = value as? String else {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             let validLevels = ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]
             if !validLevels.contains(stringValue.uppercased()) {
-                throw ConfigurationError.invalidValue(key, value)
+                throw ConfigurationError.invalidValue(key, String(describing: value))
             }
             
         default:

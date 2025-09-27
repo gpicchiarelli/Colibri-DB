@@ -276,7 +276,7 @@ extension Database {
                 try? ft.remove(rid)
             }
             
-        case .heapDelete(let pageId, let slotId, let rowData):
+        case .heapDelete(_, _, let rowData):
             // Undo of delete = insert
             let row = try JSONDecoder().decode(Row.self, from: rowData)
             for (_, ft) in tablesFile {
@@ -341,7 +341,7 @@ extension Database {
     
     private func undoTransaction(globalWAL: FileWALManager, txId: UInt64, fromLSN: UInt64) throws {
         // Walk backwards through transaction's operations and undo them
-        var currentLSN = fromLSN
+        _ = fromLSN  // Starting LSN for undo
         let records = try globalWAL.iterate(from: 1)
         
         // Collect all records for this transaction
