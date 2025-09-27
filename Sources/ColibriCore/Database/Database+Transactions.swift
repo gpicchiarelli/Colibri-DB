@@ -157,6 +157,21 @@ extension Database {
                 updateIndexes(table: op.table, row: op.row, rid: op.rid)
             }
             mvcc.undoDelete(table: op.table, rid: op.rid, tid: tid)
+        case .update:
+            // For update: restore original row
+            guard let originalRow = op.oldRow else {
+                print("Warning: Cannot undo update operation - original row not tracked")
+                return
+            }
+            let clr = logCLRUndoUpdate(tid: tid, table: op.table, rid: op.rid, oldRow: op.row, newRow: originalRow, nextUndoLSN: txLastLSN[tid] ?? 0)
+            if clr > 0 { txLastLSN[tid] = clr }
+            if var t = tablesMem[op.table] {
+                try? t.update(op.rid, originalRow)
+                tablesMem[op.table] = t
+            } else if let ft = tablesFile[op.table] {
+                try? ft.update(op.rid, originalRow)
+            }
+            // Note: MVCC might need update handling too, but for now we'll skip it
         }
     }
 }

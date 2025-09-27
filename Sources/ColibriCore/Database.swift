@@ -62,7 +62,22 @@ public final class Database {
     // MARK: - Transaction state
     var nextTID: UInt64 = 1
     var activeTIDs: Set<UInt64> = []
-    struct TxOp { enum Kind { case insert, delete }; let kind: Kind; let table: String; let rid: RID; let row: Row }
+    struct TxOp { 
+        enum Kind { case insert, delete, update }
+        let kind: Kind
+        let table: String
+        let rid: RID
+        let row: Row  // For insert/delete: the row. For update: the new row
+        let oldRow: Row?  // For update: the original row
+        
+        init(kind: Kind, table: String, rid: RID, row: Row, oldRow: Row? = nil) {
+            self.kind = kind
+            self.table = table
+            self.rid = rid
+            self.row = row
+            self.oldRow = oldRow
+        }
+    }
     struct TxState {
         var ops: [TxOp] = []
         var savepoints: [String: Int] = [:]

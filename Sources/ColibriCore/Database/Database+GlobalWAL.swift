@@ -189,6 +189,27 @@ extension Database {
         }
     }
     
+    /// Helper to log CLR for undo update operation
+    func logCLRUndoUpdate(tid: UInt64, table: String, rid: RID, oldRow: Row, newRow: Row, nextUndoLSN: UInt64) -> UInt64 {
+        guard let wal = globalWAL else { return 0 }
+        
+        do {
+            let oldRowData = try JSONEncoder().encode(oldRow)
+            
+            let record = WALCLRRecord(
+                dbId: wal.dbId,
+                txId: tid,
+                undoNextLSN: nextUndoLSN,
+                undoneOperationLSN: txLastLSN[tid] ?? 0,
+                undoAction: .heapUpdate(pageId: rid.pageId, slotId: rid.slotId, originalData: oldRowData)
+            )
+            
+            return try wal.append(record)
+        } catch {
+            return 0
+        }
+    }
+
     /// Helper to flush pending WAL records
     func flushWAL() throws {
         try globalWAL?.groupCommitSync()

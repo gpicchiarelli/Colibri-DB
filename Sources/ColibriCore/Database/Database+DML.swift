@@ -83,6 +83,49 @@ extension Database {
     /// - Throws: `DBError.notFound` if table does not exist.
     public func update(table: String, matchColumn: String, matchValue: Value, updateColumn: String, updateValue: Value) throws -> Int { try update(table: table, matchColumn: matchColumn, matchValue: matchValue, updateColumn: updateColumn, updateValue: updateValue, tid: nil) }
 
+    /// Update multiple columns based on a single column match.
+    /// - Parameters:
+    ///   - table: Table name.
+    ///   - matchColumn: Column to match.
+    ///   - matchValue: Value to match.
+    ///   - set: Dictionary of columns and their new values.
+    ///   - tid: Optional transaction id.
+    /// - Returns: Number of rows updated.
+    /// - Throws: `DBError.notFound` if table does not exist.
+    public func updateEquals(table: String, matchColumn: String, matchValue: Value, set: [String: Value], tid: UInt64?) throws -> Int {
+        try assertTableRegistered(table)
+        let handle = try lockManager.lock(.table(table), mode: .exclusive, tid: tid ?? 0, timeout: config.lockTimeoutSeconds)
+        defer { if tid == nil { lockManager.unlock(handle) } }
+        var updated = 0
+        for (rid, row) in try scan(table, tid: tid) {
+            if row[matchColumn] == matchValue {
+                var updatedRow = row
+                for (column, value) in set {
+                    updatedRow[column] = value
+                }
+                // Update the row using the storage layer
+                if var t = tablesMem[table] {
+                    try t.update(rid, updatedRow)
+                    tablesMem[table] = t
+                } else if let ft = tablesFile[table] {
+                    try ft.update(rid, updatedRow)
+                }
+                
+                // Log the WAL record if needed
+                if let tid = tid {
+                    let lsn = logHeapUpdate(tid: tid, table: table, pageId: rid.pageId, slotId: rid.slotId, oldRow: row, newRow: updatedRow)
+                    txLastLSN[tid] = lsn
+                    
+                    var state = txStates[tid] ?? TxState()
+                    state.ops.append(TxOp(kind: .update, table: table, rid: rid, row: updatedRow, oldRow: row))
+                    txStates[tid] = state
+                }
+                updated += 1
+            }
+        }
+        return updated
+    }
+
     /// Transaction-aware update.
     /// - Parameters:
     ///   - table: Table name.
