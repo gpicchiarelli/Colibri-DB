@@ -455,6 +455,29 @@ public final class FileHeapTable: TableStorageProtocol {
         try IOHints.synchronize(handle: fh, full: fullSync)
         writeCompressedSnapshotIfNeeded()
     }
+    
+    /// Flushes dirty pages with WAL consistency check (WAL-ahead-of-page rule).
+    public func flush(fullSync: Bool = false, wal: FileWAL?) throws {
+        let span = Signpost.begin(.flush, name: "HeapFlush", message: fileURL.lastPathComponent)
+        defer { Signpost.end(span, message: fullSync ? "fullsync" : "fsync") }
+        
+        // Verify WAL-ahead-of-page rule for all dirty pages
+        if let wal = wal, let buffer = buf {
+            let flushedLSN = wal.flushedLSN
+            let dirtyPages = buffer.getDirtyPages()
+            
+            for pageId in dirtyPages {
+                if let pageLSN = getPageLSN(pageId) {
+                    assert(pageLSN <= flushedLSN, 
+                          "WAL-ahead-of-page violation: page \(pageId) LSN \(pageLSN) > flushed WAL LSN \(flushedLSN)")
+                }
+            }
+        }
+        
+        try buf?.flushAll()
+        try IOHints.synchronize(handle: fh, full: fullSync)
+        writeCompressedSnapshotIfNeeded()
+    }
 
     private func writeCompressedSnapshotIfNeeded() {
         guard snapshotCompression != .none else { return }

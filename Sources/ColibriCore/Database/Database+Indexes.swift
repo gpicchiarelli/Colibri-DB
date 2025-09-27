@@ -111,7 +111,7 @@ extension Database {
         lastIndexCompaction.removeValue(forKey: "\(table).\(name)")
     }
 
-    func updateIndexes(table: String, row: Row, rid: RID) {
+    func updateIndexes(table: String, row: Row, rid: RID, tid: UInt64? = nil) {
         guard var map = indexes[table] else { return }
         let allowed: Set<String>
         if let sc = systemCatalog {
@@ -129,7 +129,8 @@ extension Database {
                 idx.insert(key: s, ref: rid)
                 if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
                     let kb = Data(s.utf8)
-                    _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: kb, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                    let txId = tid ?? 0
+                    _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: kb, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
                 }
                 map[name] = (columns: cols, backend: .anyString(idx))
             case .persistentBTree(let f):
@@ -137,7 +138,8 @@ extension Database {
                     if let v = row[cols[0]] {
                         try? f.insert(key: v, rid: rid)
                         if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
-                            _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                            let txId = tid ?? 0
+                            _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
                         }
                     }
                 } else {
@@ -147,7 +149,8 @@ extension Database {
                     if ok {
                         try? f.insert(composite: values, rid: rid)
                         if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
-                            _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                            let txId = tid ?? 0
+                            _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
                         }
                     }
                 }
@@ -157,7 +160,7 @@ extension Database {
         indexes[table] = map
     }
 
-    func removeFromIndexes(table: String, row: Row, rid: RID, skipIndexName: String? = nil) {
+    func removeFromIndexes(table: String, row: Row, rid: RID, skipIndexName: String? = nil, tid: UInt64? = nil) {
         guard var map = indexes[table] else { return }
         let allowed: Set<String>
         if let sc = systemCatalog {
@@ -176,7 +179,8 @@ extension Database {
                 idx.remove(key: s, ref: rid)
                 if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
                     let kb = Data(s.utf8)
-                    _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: kb, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                    let txId = tid ?? 0
+                    _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: kb, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
                 }
                 map[name] = (columns: cols, backend: .anyString(idx))
             case .persistentBTree(let f):
@@ -184,7 +188,8 @@ extension Database {
                     if let v = row[cols[0]] {
                         try? f.remove(key: v, rid: rid)
                         if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
-                            _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                            let txId = tid ?? 0
+                            _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
                         }
                     }
                 } else {
@@ -194,7 +199,8 @@ extension Database {
                     if ok {
                         try? f.remove(composite: values, rid: rid)
                         if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
-                            _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid, prevLSN: txLastLSN[0] ?? 0)
+                            let txId = tid ?? 0
+                            _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
                         }
                     }
                 }

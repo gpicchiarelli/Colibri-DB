@@ -27,6 +27,8 @@ public final class FileWAL: WALProtocol {
     private let url: URL
     private var fh: FileHandle
     private var nextLSN: UInt64 = 1
+    private var _flushedLSN: UInt64 = 0
+    private let flushedLSNLock = NSLock()
     private var fullFSyncEnabled = false
     private var ioHintsEnabled = false
     private var compressionAlgorithm: CompressionAlgorithm = .none
@@ -197,6 +199,13 @@ public final class FileWAL: WALProtocol {
         let t0 = DispatchTime.now().uptimeNanoseconds
         try sync()
         let t1 = DispatchTime.now().uptimeNanoseconds
+        
+        // Update flushed LSN after successful sync
+        let maxLSN = records.map { $0.lsn }.max() ?? 0
+        flushedLSNLock.lock()
+        _flushedLSN = max(_flushedLSN, maxLSN)
+        flushedLSNLock.unlock()
+        
         lastFlushBatchSize = batchCount
         lastFlushSyncNs = t1 &- t0
         totalFlushes &+= 1
@@ -365,6 +374,13 @@ public final class FileWAL: WALProtocol {
         try fh.truncate(atOffset: 0)
         try ensureHeader()
         try sync()
+    }
+    
+    /// Thread-safe access to flushed LSN
+    public var flushedLSN: UInt64 {
+        flushedLSNLock.lock()
+        defer { flushedLSNLock.unlock() }
+        return _flushedLSN
     }
 
     private func sync() throws {

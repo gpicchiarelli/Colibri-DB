@@ -346,6 +346,11 @@ public final class LRUBufferPool: BufferPoolProtocol {
     public func pageCount() -> Int { map.count }
     /// Attempts to evict one page; returns true on success.
     public func tryEvictOne() -> Bool { (try? { try evictOne() }()) != nil }
+    
+    /// Returns dirty page IDs for WAL consistency checks
+    public func getDirtyPages() -> Set<PageID> {
+        return dirty
+    }
 }
 
 // MARK: - Namespace quota manager (shared across pools)

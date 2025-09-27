@@ -37,7 +37,7 @@ extension Database {
             let rid = try t.insert(row)
             tablesMem[name] = t
             mvcc.registerInsert(table: name, rid: rid, row: row, tid: tid)
-            updateIndexes(table: name, row: row, rid: rid)
+            updateIndexes(table: name, row: row, rid: rid, tid: tid)
             if let tid = tid {
                 var state = txStates[tid] ?? TxState()
                 state.ops.append(TxOp(kind: .insert, table: name, rid: rid, row: row))
@@ -63,7 +63,7 @@ extension Database {
                 if let w = wal { _ = try? w.appendInsertDone(tid: 0, table: name, rid: rid) }
             }
             mvcc.registerInsert(table: name, rid: rid, row: row, tid: tid)
-            updateIndexes(table: name, row: row, rid: rid)
+            updateIndexes(table: name, row: row, rid: rid, tid: tid)
             return rid
         }
         throw DBError.notFound("Table \(name)")
@@ -193,7 +193,7 @@ extension Database {
                     continue
                 }
                 // Update all indexes for this row
-                removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName)
+                removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName, tid: tid)
                 deleted += 1
             }
             return deleted
@@ -227,7 +227,7 @@ extension Database {
                         mvcc.registerDelete(table: table, rid: rid, row: row, tid: nil)
                     }
                 }
-                removeFromIndexes(table: table, row: row, rid: rid)
+                removeFromIndexes(table: table, row: row, rid: rid, tid: tid)
                 deleted += 1
             }
         }
@@ -359,7 +359,7 @@ extension Database {
                     }
                 } else { continue }
                 // Update indexes (skip predicate index if bulk-removed)
-                removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName)
+                removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName, tid: tid)
                 deleted += 1
             }
             return deleted
@@ -392,7 +392,7 @@ extension Database {
                     mvcc.registerDelete(table: table, rid: rid, row: row, tid: nil)
                 }
             }
-            removeFromIndexes(table: table, row: row, rid: rid)
+            removeFromIndexes(table: table, row: row, rid: rid, tid: tid)
             deleted += 1
         }
         return deleted
