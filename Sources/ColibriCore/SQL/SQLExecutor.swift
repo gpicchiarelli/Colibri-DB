@@ -99,14 +99,55 @@ public final class SQLExecutor {
     
     /// Executes SELECT statement
     private func executeSelect(table: String, columns: [String]?) throws {
-        // For now, just print a message since select method doesn't exist
-        print("SELECT not implemented yet")
+        print("Executing SELECT on table: \(table)")
+        
+        let rows = try database.scan(table)
+        var count = 0
+        
+        for (rid, row) in rows {
+            count += 1
+            if let cols = columns {
+                // Project specific columns
+                var projected: [String: Value] = [:]
+                for col in cols {
+                    if col == "*" {
+                        projected = row
+                        break
+                    } else if let value = row[col] {
+                        projected[col] = value
+                    }
+                }
+                print("RID \(rid): \(projected)")
+            } else {
+                // All columns
+                print("RID \(rid): \(row)")
+            }
+        }
+        
+        print("Total rows: \(count)")
     }
     
     /// Executes DELETE statement
     private func executeDelete(table: String, whereClause: String?) throws {
-        // For now, just print a message since delete method doesn't exist
-        print("DELETE not implemented yet")
+        print("Executing DELETE on table: \(table)")
+        
+        if let whereClause = whereClause {
+            // Parse simple WHERE column = value
+            let parts = whereClause.split(separator: "=").map { $0.trimmingCharacters(in: .whitespaces) }
+            if parts.count == 2 {
+                let column = parts[0]
+                let valueStr = parts[1].trimmingCharacters(in: CharacterSet(charactersIn: "'\""))
+                let value = parseValue(valueStr)
+                
+                let deleted = try database.deleteEquals(table: table, column: column, value: value)
+                print("Deleted \(deleted) rows")
+            } else {
+                print("Simple WHERE column=value syntax supported only")
+            }
+        } else {
+            // Delete all rows - dangerous operation
+            print("DELETE without WHERE not implemented for safety")
+        }
     }
     
     /// Parses a string value into a Value
