@@ -77,14 +77,6 @@ public final class SystemMonitor {
             transactions: TransactionMetrics(activeCount: 0, totalCount: 0, averageDuration: 0.0, committedCount: 0, abortedCount: 0)
         )
         
-        // Store metrics for analysis
-        recentMetrics.append(metrics)
-        
-        // Keep only last 100 metrics
-        if recentMetrics.count > 100 {
-            recentMetrics.removeFirst()
-        }
-        
         // Log metrics if needed  
         logger.debug("System metrics collected: \(metrics.timestamp)")
     }
