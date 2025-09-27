@@ -419,7 +419,7 @@ public final class StorageCompressionManager {
     /// Compresses a page
     public func compressPage(_ page: Page) throws -> Data {
         let originalSize = page.data.count
-        let compressedData = try compressionCodec.compress(page.data)
+        let compressedData = CompressionCodec.compress(page.data, algorithm: .zlib) ?? page.data
         let compressedSize = compressedData.count
         
         // Update statistics
@@ -430,7 +430,7 @@ public final class StorageCompressionManager {
     
     /// Decompresses a page
     public func decompressPage(_ data: Data) throws -> Page {
-        let decompressedData = try compressionCodec.decompress(data)
+        let decompressedData = try CompressionCodec.decompress(data, algorithm: .zlib, expectedSize: 8192)
         
         guard let page = Page(from: decompressedData, pageSize: 8192) else {
             throw StorageError.pageCorrupted(0)

@@ -299,31 +299,7 @@ public struct TransactionContext {
     }
 }
 
-/// Transaction isolation levels
-public enum IsolationLevel: String, Codable, CaseIterable {
-    case readUncommitted = "READ_UNCOMMITTED"
-    case readCommitted = "READ_COMMITTED"
-    case repeatableRead = "REPEATABLE_READ"
-    case serializable = "SERIALIZABLE"
-    
-    public var description: String {
-        return rawValue
-    }
-    
-    /// Whether this isolation level uses a stable snapshot
-    public var usesStableSnapshot: Bool {
-        switch self {
-        case .readUncommitted:
-            return false
-        case .readCommitted:
-            return false
-        case .repeatableRead:
-            return true
-        case .serializable:
-            return true
-        }
-    }
-}
+// IsolationLevel is defined in Isolation.swift
 
 /// Transaction timeout handler
 public final class TransactionTimeoutHandler {
