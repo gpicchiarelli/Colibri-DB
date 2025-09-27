@@ -33,6 +33,14 @@ public struct CLIColors {
         return colorize(text, with: "\u{1B}[1;31m") // Bold Red
     }
     
+    func success(_ text: String) -> String {
+        return colorize(text, with: "\u{1B}[1;32m") // Bold Green
+    }
+    
+    func warning(_ text: String) -> String {
+        return colorize(text, with: "\u{1B}[1;33m") // Bold Yellow
+    }
+    
     func info(_ text: String) -> String {
         return colorize(text, with: "\u{1B}[1;34m") // Bold Blue
     }

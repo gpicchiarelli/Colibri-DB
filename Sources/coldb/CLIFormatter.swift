@@ -104,6 +104,24 @@ public class CLIFormatter {
         printInfo("Timing display \(timingEnabled ? "enabled" : "disabled")")
     }
     
+    // MARK: - Message Display Methods
+    
+    func printSuccess(_ message: String) {
+        print(colors.success("✅ \(message)"))
+    }
+    
+    func printError(_ message: String) {
+        print(colors.error("❌ \(message)"))
+    }
+    
+    func printInfo(_ message: String) {
+        print(colors.info("ℹ️  \(message)"))
+    }
+    
+    func printWarning(_ message: String) {
+        print(colors.warning("⚠️  \(message)"))
+    }
+    
     private func version() -> String {
         #if swift(>=6.0)
         return "6.0+"
