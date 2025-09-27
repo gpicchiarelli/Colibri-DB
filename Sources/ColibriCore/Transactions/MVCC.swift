@@ -17,7 +17,6 @@ public final class MVCCManager {
     // MARK: - Nested types
 
     public enum Status: String, Codable { case inProgress, committed, aborted }
-
     public struct Version: Codable {
         var row: Row
         var beginTID: UInt64
@@ -168,9 +167,8 @@ public final class MVCCManager {
         guard let map = tableVersions[table] else { return [:] }
         var result: [RID: Row] = [:]
         for (rid, chain) in map {
-            if let visible = latestVisibleVersion(chain: chain, snapshot: snapshot, readerTID: readerTID) {
-                result[rid] = visible.row
-            }
+            guard let visible = latestVisibleVersion(chain: chain, snapshot: snapshot, readerTID: readerTID) else { continue }
+            result[rid] = visible.row
         }
         return result
     }
