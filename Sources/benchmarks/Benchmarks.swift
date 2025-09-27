@@ -189,6 +189,13 @@ enum Scenario: String, CaseIterable {
     case checkpoint = "checkpoint"
     case vacuumCompact = "vacuum-compact"
 
+    // Nuovi scenari avanzati
+    case walRecovery = "wal-recovery"
+    case walStress = "wal-stress"
+    case systemLoad = "system-load"
+    case memoryPressure = "memory-pressure"
+    case concurrentLoad = "concurrent-load"
+
     static func from(_ string: String) -> Scenario? { Scenario(rawValue: string.lowercased()) }
 }
 
@@ -290,6 +297,17 @@ struct BenchmarkCLI {
                 result = try runCheckpoint(iterations: iterations)
             case .vacuumCompact:
                 result = try runVacuumCompact(iterations: iterations)
+            case .walRecovery:
+                result = try runWALRecovery(iterations: iterations)
+            case .walStress:
+                result = try runWALStress(iterations: iterations, granular: granular)
+            case .systemLoad:
+                result = try runSystemLoad(iterations: iterations, granular: granular)
+            case .memoryPressure:
+                result = try runMemoryPressure(iterations: iterations)
+            case .concurrentLoad:
+                let effWorkers = userSetWorkers ? workers : max(2, ProcessInfo.processInfo.activeProcessorCount / 2)
+                result = try runConcurrentLoad(iterations: iterations, workers: effWorkers, granular: granular)
             }
             let enriched = attachConfigMetadata(result: result)
             enriched.printSummary()
