@@ -1,0 +1,30 @@
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *' # nightly
+
+jobs:
+  run:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          swift --version
+          swift build -c release --product benchmarks-extra
+      - name: Run benchmarks (subset)
+        run: |
+          mkdir -p bench-out
+          .build/release/benchmarks-extra 2000 wal-append-none --json > bench-out/wal_none.json
+          .build/release/benchmarks-extra 2000 wal-append-lzfse --json > bench-out/wal_lzfse.json
+          .build/release/benchmarks-extra 2000 wal-append-zlib --json > bench-out/wal_zlib.json
+          .build/release/benchmarks-extra 5000 fileheap-insert-wal-off --json > bench-out/fileheap_insert_off.json
+          .build/release/benchmarks-extra 1000 btree-bulk-build --json > bench-out/btree_bulk.json
+          .build/release/benchmarks-extra 500 planner-index-scan --json > bench-out/planner_index_scan.json
+      - name: Upload JSON artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmarks-json
+          path: bench-out/*.json

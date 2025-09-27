@@ -1,0 +1,120 @@
+//
+//  SkipListIndex.swift
+//  ColibrìDB
+//
+//  Created by Giacomo Picchiarelli on 2025-09-25.
+//
+// ColibrìDB — BSD 3-Clause License
+
+// Theme: Skip list playground offering probabilistic indexing.
+
+import Foundation
+
+public final class SkipListIndex<Element: Hashable & Comparable, Reference: Hashable>: IndexProtocol {
+    public typealias Key = Element
+    public typealias Ref = Reference
+
+    private final class Node {
+        let key: Key?
+        var refs: Set<Ref>
+        var next: [Node?]
+        init(key: Key?, refs: Set<Ref>, level: Int) {
+            self.key = key
+            self.refs = refs
+            self.next = Array(repeating: nil, count: level)
+        }
+    }
+
+    private let maxLevel: Int
+    private var head: Node
+    private var level: Int
+
+    public init(maxLevel: Int = 12) {
+        self.maxLevel = max(2, maxLevel)
+        self.level = 1
+        self.head = Node(key: nil, refs: [], level: self.maxLevel)
+    }
+
+    private func randomLevel() -> Int {
+        var lvl = 1
+        while lvl < maxLevel && Int.random(in: 0..<2) == 0 { lvl &+= 1 }
+        return lvl
+    }
+
+    public func insert(_ key: Key, _ ref: Ref) throws {
+        var update = Array<Node?>(repeating: nil, count: maxLevel)
+        var x: Node? = head
+        for i in stride(from: level - 1, through: 0, by: -1) {
+            while let next = x?.next[i], let nextKey = next.key, nextKey < key { x = next }
+            update[i] = x
+        }
+        x = x?.next[0]
+        if let node = x, node.key == key {
+            node.refs.insert(ref)
+            return
+        }
+        let lvl = randomLevel()
+        if lvl > level {
+            for i in level..<lvl { update[i] = head }
+            level = lvl
+        }
+        let node = Node(key: key, refs: [ref], level: lvl)
+        for i in 0..<lvl {
+            node.next[i] = update[i]?.next[i]
+            update[i]?.next[i] = node
+        }
+    }
+
+    public func searchEquals(_ key: Key) throws -> [Ref] {
+        var x: Node? = head
+        for i in stride(from: level - 1, through: 0, by: -1) {
+            while let next = x?.next[i], let nextKey = next.key, nextKey < key { x = next }
+        }
+        x = x?.next[0]
+        if let node = x, node.key == key { return Array(node.refs) }
+        return []
+    }
+
+    public func range(_ lo: Key?, _ hi: Key?) throws -> [Ref] {
+        var result: [Ref] = []
+        var x: Node? = head
+        if let lo = lo {
+            for i in stride(from: level - 1, through: 0, by: -1) {
+                while let next = x?.next[i], let nextKey = next.key, nextKey < lo { x = next }
+            }
+            x = x?.next[0]
+        } else {
+            x = x?.next[0]
+        }
+        while let node = x {
+            guard let nodeKey = node.key else { break }
+            if let hi = hi, nodeKey > hi { break }
+            result.append(contentsOf: node.refs)
+            x = node.next[0]
+        }
+        return result
+    }
+
+    public func remove(_ key: Key, _ ref: Ref) throws {
+        var update = Array<Node?>(repeating: nil, count: maxLevel)
+        var x: Node? = head
+        for i in stride(from: level - 1, through: 0, by: -1) {
+            while let next = x?.next[i], let nextKey = next.key, nextKey < key { x = next }
+            update[i] = x
+        }
+        x = x?.next[0]
+        if let node = x, node.key == key {
+            node.refs.remove(ref)
+            if node.refs.isEmpty {
+                for i in 0..<level {
+                    if update[i]?.next[i] === node {
+                        update[i]?.next[i] = node.next[i]
+                    }
+                }
+                while level > 1 && head.next[level - 1] == nil { level &-= 1 }
+            }
+        }
+    }
+}
+
+

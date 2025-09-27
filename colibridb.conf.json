@@ -1,0 +1,14 @@
+{
+  "dataDir": "./data",
+  "maxConnectionsLogical": 1000000,
+  "maxConnectionsPhysical": 16,
+  "bufferPoolSizeBytes": 1073741824,
+  "pageSizeBytes": 8192,
+  "walEnabled": true,
+  "checksumEnabled": true,
+  "cliEnabled": true,
+  "metricsEnabled": true,
+  "serverEnabled": false,
+  "indexImplementation": "Hash"
+  ,"storageEngine": "FileHeap"
+}

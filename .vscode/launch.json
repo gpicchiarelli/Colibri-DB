@@ -1,0 +1,40 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ColibrìDB}",
+            "name": "Debug coldb",
+            "program": "${workspaceFolder:ColibrìDB}/.build/debug/coldb",
+            "preLaunchTask": "swift: Build Debug coldb"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ColibrìDB}",
+            "name": "Release coldb",
+            "program": "${workspaceFolder:ColibrìDB}/.build/release/coldb",
+            "preLaunchTask": "swift: Build Release coldb"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ColibrìDB}",
+            "name": "Debug benchmarks",
+            "program": "${workspaceFolder:ColibrìDB}/.build/debug/benchmarks",
+            "preLaunchTask": "swift: Build Debug benchmarks"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ColibrìDB}",
+            "name": "Release benchmarks",
+            "program": "${workspaceFolder:ColibrìDB}/.build/release/benchmarks",
+            "preLaunchTask": "swift: Build Release benchmarks"
+        }
+    ]
+}

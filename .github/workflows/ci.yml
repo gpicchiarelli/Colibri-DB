@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift version
+        run: swift --version
+      - name: Build
+        run: swift build -v
+      - name: Smoke test CLI
+        run: |
+          .build/debug/coldb --config colibridb.conf.json << 'EOF'
+          \create table ci
+          \insert ci id=1,name=ok
+          \scan ci
+          \exit
+          EOF
+
