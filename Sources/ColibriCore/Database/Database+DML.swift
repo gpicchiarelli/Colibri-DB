@@ -119,9 +119,17 @@ extension Database {
         var ridsFromIndex: [RID] = []
         var skipIndexName: String? = nil
         if let tableMap = indexes[table] {
+            // Gate by system catalog: only consider indexes registered for this table
+            let allowed: Set<String>
+            if let sc = systemCatalog {
+                let objs = sc.logicalObjects(kind: .index).filter { $0.parentName == table }
+                allowed = Set(objs.map { $0.name })
+            } else {
+                allowed = Set(tableMap.keys)
+            }
             // Find best index: single-column index on 'column'
             var best: (name: String, def: (columns: [String], backend: IndexBackend))? = nil
-            for (name, def) in tableMap {
+            for (name, def) in tableMap where allowed.contains(name) {
                 guard def.columns.count == 1, def.columns[0] == column else { continue }
                 if case .persistentBTree = def.backend { best = (name, def); break }
                 if best == nil { best = (name, def) }
@@ -138,7 +146,7 @@ extension Database {
                 }
             } else {
                 // Try composite persistent BTree with leading column = predicate
-                for (name, def) in tableMap {
+                for (name, def) in tableMap where allowed.contains(name) {
                     guard def.columns.count > 1, def.columns.first == column else { continue }
                     if case .persistentBTree(let f) = def.backend {
                         skipIndexName = name
@@ -254,8 +262,15 @@ extension Database {
         var rids: [RID] = []
         var skipIndexName: String? = nil
         if let tableMap = indexes[table] {
+            let allowed: Set<String>
+            if let sc = systemCatalog {
+                let objs = sc.logicalObjects(kind: .index).filter { $0.parentName == table }
+                allowed = Set(objs.map { $0.name })
+            } else {
+                allowed = Set(tableMap.keys)
+            }
             // Exact composite BTree match (all columns present, any order)
-            for (name, def) in tableMap {
+            for (name, def) in tableMap where allowed.contains(name) {
                 guard case .persistentBTree(let f) = def.backend else { continue }
                 guard def.columns.count == predCols.count else { continue }
                 var values: [Value] = []
@@ -270,7 +285,7 @@ extension Database {
             }
             // Prefixed composite BTree (leading columns present in order)
             if rids.isEmpty {
-                for (_, def) in tableMap {
+                for (name, def) in tableMap where allowed.contains(name) {
                     guard case .persistentBTree(let f) = def.backend else { continue }
                     guard def.columns.count > predCols.count else { continue }
                     var prefixValues: [Value] = []
@@ -288,7 +303,7 @@ extension Database {
             }
             // Single-column index (use first predicate that has an index)
             if rids.isEmpty {
-                for (name, def) in tableMap {
+                for (name, def) in tableMap where allowed.contains(name) {
                     guard def.columns.count == 1, let v = predMap[def.columns[0]] else { continue }
                     switch def.backend {
                     case .anyString(let idx):

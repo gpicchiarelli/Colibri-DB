@@ -192,12 +192,20 @@ public final class QueryPlanner {
     }
 
     private func bestIndex(for table: String, using hint: String?, equality: [String: Value]) -> (name: String, columns: [String])? {
-        if let hint, let entry = database.indexes[table]?[hint] {
+        guard let map = database.indexes[table] else { return nil }
+        // Gate by system catalog: consider only indexes registered for this table
+        let allowed: Set<String>
+        if let sc = database.systemCatalog {
+            let objs = sc.logicalObjects(kind: .index).filter { $0.parentName == table }
+            allowed = Set(objs.map { $0.name })
+        } else {
+            allowed = Set(map.keys)
+        }
+        if let hint, allowed.contains(hint), let entry = map[hint] {
             return (hint, entry.columns)
         }
-        guard let map = database.indexes[table] else { return nil }
         var bestMatch: (String, [String], Int)? = nil
-        for (name, entry) in map {
+        for (name, entry) in map where allowed.contains(name) {
             let prefixMatch = entry.columns.prefix { equality[$0] != nil }
             if prefixMatch.isEmpty { continue }
             let score = prefixMatch.count

@@ -132,7 +132,7 @@ struct BenchmarkResult {
     }
 }
 
-private enum Scenario: String, CaseIterable {
+enum Scenario: String, CaseIterable {
     // Heap (base)
     case heapInsert = "heap-insert"
     case heapScan = "heap-scan"
