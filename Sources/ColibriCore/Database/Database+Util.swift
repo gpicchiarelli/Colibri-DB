@@ -26,6 +26,8 @@ extension Database {
         case .double(let d): return String(d)
         case .bool(let b): return String(b)
         case .null: return ""
+        case .decimal(let d): return String(describing: d)
+        case .date(let d): return ISO8601DateFormatter().string(from: d)
         }
     }
 }
