@@ -13,12 +13,12 @@ import Foundation
 /// Multi-version concurrency control manager responsible for tracking row versions,
 /// transaction visibility and garbage-collecting obsolete tuples once they become invisible
 /// to every active transaction.
-final class MVCCManager {
+public final class MVCCManager {
     // MARK: - Nested types
 
-    enum Status: String, Codable { case inProgress, committed, aborted }
+    public enum Status: String, Codable { case inProgress, committed, aborted }
 
-    struct Version: Codable {
+    public struct Version: Codable {
         var row: Row
         var beginTID: UInt64
         var beginStatus: Status
@@ -29,7 +29,7 @@ final class MVCCManager {
         var isDeleted: Bool { endTID != nil && endStatus != .aborted }
     }
 
-    struct Snapshot {
+    public struct Snapshot {
         let tid: UInt64?
         let activeTIDs: Set<UInt64>
         let committedTIDs: Set<UInt64>
