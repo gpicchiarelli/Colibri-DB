@@ -68,6 +68,7 @@ extension Database {
 
     /// Scans a table and returns an array of (RID, Row) visible to the caller.
     public func scan(_ name: String, tid: UInt64? = nil) throws -> [(RID, Row)] {
+        try assertTableRegistered(name)
         let handle = try lockManager.lock(.table(name), mode: .shared, tid: tid ?? 0, timeout: config.lockTimeoutSeconds)
         defer { if tid == nil { lockManager.unlock(handle) } }
         let cutoff = tid.flatMap { txContexts[$0]?.snapshotCutoff }

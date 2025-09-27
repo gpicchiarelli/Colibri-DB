@@ -118,6 +118,18 @@ public final class Database {
         }
     }
 
+    // MARK: - Catalog gating helpers
+    internal func isTableRegistered(_ name: String) -> Bool {
+        guard let sc = systemCatalog else { return true }
+        return sc.logicalObjects(kind: .table).contains(where: { $0.name == name })
+    }
+
+    internal func assertTableRegistered(_ name: String) throws {
+        if !isTableRegistered(name) {
+            throw DBError.notFound("Table \(name) not registered in catalog")
+        }
+    }
+
     private func bootstrapSystemCatalogRoles() {
         guard let catalog = systemCatalog else { return }
         _ = catalog.registerRole(name: "admin", kind: .user, members: [], privileges: ["ALL"], metadata: ["builtIn": "true"])

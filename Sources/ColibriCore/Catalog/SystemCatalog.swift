@@ -297,6 +297,14 @@ public final class SystemCatalog {
         }
     }
 
+    // MARK: - Convenience removals
+    public func removeLogical(name: String, kind: LogicalKind) {
+        queue.async(flags: .barrier) {
+            self.snapshot.logical.removeAll { $0.name == name && $0.kind == kind }
+            try? self.persistLocked()
+        }
+    }
+
     public func physicalObjects(kind: PhysicalKind? = nil) -> [PhysicalObject] {
         queue.sync {
             guard let kind = kind else { return snapshot.physical }

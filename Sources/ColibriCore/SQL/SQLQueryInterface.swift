@@ -69,8 +69,15 @@ public final class SQLQueryInterface {
     
     // MARK: - DDL Execution
     private func executeCreateTable(_ statement: CreateTableStatement) throws -> SQLQueryResult {
-        // For now, create a simple table without schema validation
-        // In a full implementation, this would create the table with proper schema
+        // Register table in catalog first, then create physical if needed
+        if let sc = database.systemCatalog {
+            _ = sc.registerTable(name: statement.tableName,
+                                  schema: "public",
+                                  storage: database.config.storageEngine,
+                                  physicalPath: nil,
+                                  pageSize: database.config.pageSizeBytes,
+                                  inMemory: database.config.storageEngine == "InMemory")
+        }
         try database.createTable(statement.tableName)
         
         return SQLQueryResult(
@@ -80,8 +87,10 @@ public final class SQLQueryInterface {
     }
     
     private func executeDropTable(_ statement: DropTableStatement) throws -> SQLQueryResult {
-        // For now, this is a placeholder - the database doesn't have dropTable yet
-        // In a full implementation, this would drop the table
+        // MVP: mark as dropped in catalog only (physical drop not implemented here)
+        if let sc = database.systemCatalog {
+            sc.removeLogical(name: statement.tableName, kind: .table)
+        }
         return SQLQueryResult(
             statementType: .dropTable,
             message: "Table '\(statement.tableName)' dropped successfully"

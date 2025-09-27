@@ -30,6 +30,7 @@ extension Database {
     /// - Returns: RID of the inserted row.
     /// - Throws: `DBError.notFound` if table does not exist.
     public func insert(into name: String, row: Row, tid: UInt64?) throws -> RID {
+        try assertTableRegistered(name)
         let tableHandle = try lockManager.lock(.table(name), mode: .exclusive, tid: tid ?? 0, timeout: config.lockTimeoutSeconds)
         defer { if tid == nil { lockManager.unlock(tableHandle) } }
         if var t = tablesMem[name] {
@@ -111,6 +112,7 @@ extension Database {
     /// - Returns: Number of rows deleted.
     /// - Throws: `DBError.notFound` if table does not exist.
     public func deleteEquals(table: String, column: String, value: Value, tid: UInt64?) throws -> Int {
+        try assertTableRegistered(table)
         let handle = try lockManager.lock(.table(table), mode: .exclusive, tid: tid ?? 0, timeout: config.lockTimeoutSeconds)
         defer { if tid == nil { lockManager.unlock(handle) } }
         // Try to use an index on the given column (prefer persistent BTree)

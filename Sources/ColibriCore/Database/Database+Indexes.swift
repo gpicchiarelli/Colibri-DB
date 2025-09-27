@@ -30,6 +30,7 @@ extension Database {
     ///   - kind: Index kind (e.g. "BTree", in‑memory kinds). Composite supported only for B+Tree.
     /// - Throws: `DBError.notFound`, `DBError.conflict`, `DBError.invalidArgument`.
     public func createIndex(name: String, on table: String, columns: [String], using kind: String) throws {
+        try assertTableRegistered(table)
         let ddlHandle = try lockManager.lock(.ddl("index:\(table).\(name)"), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
         let indexHandle = try lockManager.lock(.index(table: table, name: name), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
         let tableHandle = try lockManager.lock(.table(table), mode: .exclusive, tid: 0, timeout: config.lockTimeoutSeconds)
