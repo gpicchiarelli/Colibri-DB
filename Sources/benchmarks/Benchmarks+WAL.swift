@@ -48,29 +48,45 @@ extension BenchmarkCLI {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         let walPath = tmp.appendingPathComponent("wal.log").path
-        let wal = try FileWAL(path: walPath)
-        wal.setFullFSync(enabled: false)
-        wal.setCompression(algorithm)
-        var payload = Data(count: 64)
-        payload.withUnsafeMutableBytes { buf in
-            guard let p = buf.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
-            for i in 0..<buf.count { p[i] = UInt8(truncatingIfNeeded: i &* 31) }
-        }
+
+        // Crea configurazione per WAL globale
+        var cfg = DBConfig(dataDir: tmp.path)
+        cfg.walEnabled = true
+        cfg.walFullFSyncEnabled = false
+        cfg.walGroupCommitMs = 5.0
+        cfg.walCompression = algorithm
+        cfg.autoCompactionEnabled = false
+
+        let db = Database(config: cfg)
+        let globalWAL = db.globalWAL!
+
+        // Prepara payload realistico (simula record WAL)
+        let testRecord = WALHeapInsertRecord(
+            dbId: 1,
+            txId: 1,
+            tableId: "test_table",
+            pageId: 1,
+            slotId: 1,
+            rowData: Data("test_data_12345678901234567890".utf8)
+        )
+
         let clock = ContinuousClock(); let start = clock.now
         if granular {
             var lat: [Double] = []; lat.reserveCapacity(iterations)
             for _ in 0..<iterations {
                 let t0 = clock.now
-                _ = try wal.append(record: payload)
+                _ = try globalWAL.append(testRecord)
                 let t1 = clock.now
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: "wal-append-\(algorithm.rawValue)", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["compression":"\(algorithm.rawValue)"])
+            try? fm.removeItem(at: tmp)
+            return BenchmarkResult(name: "wal-append-\(algorithm.rawValue)", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["compression":"\(algorithm.rawValue)", "wal_type":"global"])
         } else {
-            for _ in 0..<iterations { _ = try wal.append(record: payload) }
+            for _ in 0..<iterations { _ = try globalWAL.append(testRecord) }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: "wal-append-\(algorithm.rawValue)", iterations: iterations, elapsed: elapsed)
+            try? fm.removeItem(at: tmp)
+            return BenchmarkResult(name: "wal-append-\(algorithm.rawValue)", iterations: iterations, elapsed: elapsed, metadata: ["compression":"\(algorithm.rawValue)", "wal_type":"global"])
         }
     }
 }

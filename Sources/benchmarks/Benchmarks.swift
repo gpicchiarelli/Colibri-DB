@@ -15,6 +15,7 @@ struct BenchmarkResult {
     let elapsed: Duration
     let latenciesMs: [Double]
     let metadata: [String: String]
+    let systemMetrics: SystemMetrics?
 
     private var totalMs: Double {
         Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000.0
@@ -46,6 +47,12 @@ struct BenchmarkResult {
     private var minMs: Double { sorted.first ?? 0 }
     private var maxMs: Double { sorted.last ?? 0 }
 
+    // Aggiunge metriche di sistema per analisi completa
+    var cpuUsage: Double { systemMetrics?.cpu.usage ?? 0 }
+    var memoryUsage: Double { systemMetrics?.memory.usagePercent ?? 0 }
+    var ioReadBytes: UInt64 { systemMetrics?.io.readBytes ?? 0 }
+    var ioWriteBytes: UInt64 { systemMetrics?.io.writeBytes ?? 0 }
+
     func printSummary() {
         let formattedOps = String(format: "%.2f", opsPerSecond)
         print("[\(name)] iterations=\(iterations) elapsed_ms=\(String(format: "%.3f", totalMs)) throughput_ops_s=\(formattedOps)")
@@ -61,6 +68,9 @@ struct BenchmarkResult {
             print("quando=\(ts)")
             print("operazioni=\(latenciesMs.count) totale_ms=\(String(format: "%.3f", totalMs)) ops_al_sec=\(String(format: "%.2f", opsPerSecond))")
             print("latenza_ms: media=\(String(format: "%.4f", mean)) p50=\(String(format: "%.4f", percentile(50))) p90=\(String(format: "%.4f", percentile(90))) p95=\(String(format: "%.4f", percentile(95))) p99=\(String(format: "%.4f", percentile(99))) min=\(String(format: "%.4f", minMs)) max=\(String(format: "%.4f", maxMs)) stddev=\(String(format: "%.4f", stddev))")
+            if systemMetrics != nil {
+                print("sistema: cpu=\(String(format: "%.1f", cpuUsage))% memoria=\(String(format: "%.1f", memoryUsage))% io_read=\(ioReadBytes) io_write=\(ioWriteBytes)")
+            }
             if !metadata.isEmpty {
                 print("metadati:")
                 for (k, v) in metadata.sorted(by: { $0.key < $1.key }) {
@@ -70,11 +80,13 @@ struct BenchmarkResult {
         case .json:
             struct Payload: Codable {
                 struct Lat: Codable { let count:Int; let total_ms:Double; let mean_ms:Double; let p50_ms:Double; let p90_ms:Double; let p95_ms:Double; let p99_ms:Double; let min_ms:Double; let max_ms:Double; let stddev_ms:Double }
+                struct Sys: Codable { let cpu_percent:Double; let memory_percent:Double; let io_read_bytes:UInt64; let io_write_bytes:UInt64 }
                 let scenario: String
                 let iterations: Int
                 let throughput_ops_s: Double
                 let when: String
                 let latency_ms: Lat
+                let system_metrics: Sys?
                 let metadata: [String:String]
             }
             let ts = ISO8601DateFormatter().string(from: Date())
@@ -88,14 +100,15 @@ struct BenchmarkResult {
                                    min_ms: minMs,
                                    max_ms: maxMs,
                                    stddev_ms: stddev)
-            let p = Payload(scenario: name, iterations: iterations, throughput_ops_s: opsPerSecond, when: ts, latency_ms: lat, metadata: metadata)
+            let sys = systemMetrics.map { Payload.Sys(cpu_percent: $0.cpu.usage, memory_percent: $0.memory.usagePercent, io_read_bytes: $0.io.readBytes, io_write_bytes: $0.io.writeBytes) }
+            let p = Payload(scenario: name, iterations: iterations, throughput_ops_s: opsPerSecond, when: ts, latency_ms: lat, system_metrics: sys, metadata: metadata)
             let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
             if let data = try? enc.encode(p), let s = String(data: data, encoding: .utf8) { print(s) }
         }
     }
 
     // Convenienze
-    init(name: String, iterations: Int, elapsed: Duration) {
+    init(name: String, iterations: Int, elapsed: Duration, systemMetrics: SystemMetrics? = nil) {
         self.name = name
         self.iterations = iterations
         self.elapsed = elapsed
@@ -103,9 +116,10 @@ struct BenchmarkResult {
         let count = max(1, iterations)
         self.latenciesMs = Array(repeating: ms / Double(count), count: count)
         self.metadata = [:]
+        self.systemMetrics = systemMetrics
     }
 
-    init(name: String, iterations: Int, elapsed: Duration, metadata: [String:String]) {
+    init(name: String, iterations: Int, elapsed: Duration, metadata: [String:String], systemMetrics: SystemMetrics? = nil) {
         self.name = name
         self.iterations = iterations
         self.elapsed = elapsed
@@ -113,22 +127,25 @@ struct BenchmarkResult {
         let count = max(1, iterations)
         self.latenciesMs = Array(repeating: ms / Double(count), count: count)
         self.metadata = metadata
+        self.systemMetrics = systemMetrics
     }
 
-    init(name: String, iterations: Int, elapsed: Duration, latenciesMs: [Double]) {
+    init(name: String, iterations: Int, elapsed: Duration, latenciesMs: [Double], systemMetrics: SystemMetrics? = nil) {
         self.name = name
         self.iterations = iterations
         self.elapsed = elapsed
         self.latenciesMs = latenciesMs
         self.metadata = [:]
+        self.systemMetrics = systemMetrics
     }
 
-    init(name: String, iterations: Int, elapsed: Duration, latenciesMs: [Double], metadata: [String:String]) {
+    init(name: String, iterations: Int, elapsed: Duration, latenciesMs: [Double], metadata: [String:String], systemMetrics: SystemMetrics? = nil) {
         self.name = name
         self.iterations = iterations
         self.elapsed = elapsed
         self.latenciesMs = latenciesMs
         self.metadata = metadata
+        self.systemMetrics = systemMetrics
     }
 }
 
@@ -309,6 +326,6 @@ struct BenchmarkCLI {
         meta["split_ratio"] = meta["split_ratio"] ?? "0.60/0.40"
         meta["metrics_sampling"] = meta["metrics_sampling"] ?? String(cfg.optimizerStatsSampleRows)
         if meta["warmup_done"] == nil { meta["warmup_done"] = "false" }
-        return BenchmarkResult(name: result.name, iterations: result.iterations, elapsed: result.elapsed, latenciesMs: result.latenciesMs, metadata: meta)
+        return BenchmarkResult(name: result.name, iterations: result.iterations, elapsed: result.elapsed, latenciesMs: result.latenciesMs, metadata: meta, systemMetrics: result.systemMetrics)
     }
 }
