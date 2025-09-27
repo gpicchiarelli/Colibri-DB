@@ -200,4 +200,9 @@ extension Database {
             }
         }
     }
+    
+    /// Close the database and release resources
+    public func close() throws {
+        try globalWAL?.close()
+    }
 }

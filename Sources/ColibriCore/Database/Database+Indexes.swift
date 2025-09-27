@@ -98,7 +98,7 @@ extension Database {
         case .anyString:
             break
         case .persistentBTree(let index):
-            index.close()
+            try? index.closeAll()
             let fm = FileManager.default
             try? fm.removeItem(atPath: index.path)
             try? fm.removeItem(atPath: index.path + ".wal")

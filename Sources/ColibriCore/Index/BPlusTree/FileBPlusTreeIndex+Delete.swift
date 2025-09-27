@@ -15,13 +15,13 @@ extension FileBPlusTreeIndex {
 
     public func remove(key: Value, rid: RID) throws {
         let k = KeyBytes.fromValue(key).bytes
-        let lsn = try walAppendDelete(key: k, rid: rid)
+        let lsn: UInt64 = 0  // WAL functionality disabled - using global WAL
         try removeBytesKey(k, rid: rid, lsn: lsn)
     }
 
     public func remove(composite: [Value], rid: RID) throws {
         let k = KeyBytes.fromValues(composite).bytes
-        let lsn = try walAppendDelete(key: k, rid: rid)
+        let lsn: UInt64 = 0  // WAL functionality disabled - using global WAL
         try removeBytesKey(k, rid: rid, lsn: lsn)
     }
 

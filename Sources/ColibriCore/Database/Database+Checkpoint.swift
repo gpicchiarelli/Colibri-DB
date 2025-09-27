@@ -15,8 +15,10 @@ import Foundation
 
 extension Database {
     public func checkpoint() throws {
-        // Flush and truncate DB WAL
-        if let w = wal { try w.flush(upTo: lastDBLSN); try w.truncate() }
+        // Flush and sync global WAL  
+        if let w = globalWAL {
+            try w.groupCommitSync()
+        }
         // Flush heap tables buffer pools
         for (_, ft) in tablesFile { try? ft.flush() }
         // Ask indexes to checkpoint and truncate their WAL

@@ -2,56 +2,51 @@
 //  Database+DML.swift
 //  ColibrìDB
 //
-//  Created by Giacomo Picchiarelli on 2025-09-25.
+//  Created by Giacomo Picchiarelli on 2025-09-27.
 //
 // ColibrìDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
-// Theme: DML conduit implementing insert, update, and delete plumbing.
-
 import Foundation
+
 // MARK: - DML (Insert/Delete)
 
 extension Database {
     /// Inserts a row into a table.
     /// - Parameters:
-    ///   - name: Table name.
-    ///   - row: Row values by column name.
-    /// - Returns: RID of the inserted row.
+    ///   - table: Table name.
+    ///   - row: Row data (column→value mapping).
+    /// - Returns: Row identifier (RID).
     /// - Throws: `DBError.notFound` if table does not exist.
-    public func insert(into name: String, row: Row) throws -> RID { try insert(into: name, row: row, tid: nil) }
+    public func insert(into table: String, row: Row) throws -> RID { try insert(into: table, row: row, tid: nil) }
 
-    /// Inserts a row into a table within an optional transaction.
+    /// Transaction-aware insert.
     /// - Parameters:
-    ///   - name: Table name.
-    ///   - row: Row values by column name.
-    ///   - tid: Optional transaction id; when present, operations are logged as transactional.
-    /// - Returns: RID of the inserted row.
+    ///   - table: Table name.
+    ///   - row: Row data (column→value mapping).
+    ///   - tid: Optional transaction id.
+    /// - Returns: Row identifier (RID).
     /// - Throws: `DBError.notFound` if table does not exist.
-    public func insert(into name: String, row: Row, tid: UInt64?) throws -> RID {
-        try assertTableRegistered(name)
-        let tableHandle = try lockManager.lock(.table(name), mode: .exclusive, tid: tid ?? 0, timeout: config.lockTimeoutSeconds)
-        defer { if tid == nil { lockManager.unlock(tableHandle) } }
-        if var t = tablesMem[name] {
+    public func insert(into table: String, row: Row, tid: UInt64?) throws -> RID {
+        try assertTableRegistered(table)
+        
+        // Handle in-memory tables
+        if var t = tablesMem[table] {
             let rid = try t.insert(row)
-            tablesMem[name] = t
-            mvcc.registerInsert(table: name, rid: rid, row: row, tid: tid)
-            updateIndexes(table: name, row: row, rid: rid, tid: tid)
-            if let tid = tid {
-                var state = txStates[tid] ?? TxState()
-                state.ops.append(TxOp(kind: .insert, table: name, rid: rid, row: row))
-                txStates[tid] = state
-            }
+            tablesMem[table] = t
+            mvcc.registerInsert(table: table, rid: rid, row: row, tid: tid)
+            updateIndexes(table: table, row: row, rid: rid, tid: tid)
             return rid
         }
-        if let ft = tablesFile[name] {
+        
+        // Handle file-based tables
+        if let ft = tablesFile[table] {
             var rid: RID
             if let tid = tid {
                 // WAL-before-data: log the insert BEFORE applying it
-                // We need to predict the RID first
                 let predictedRID = try ft.predictNextRID(for: row)
-                let lsn = logHeapInsert(tid: tid, table: name, pageId: predictedRID.pageId, slotId: predictedRID.slotId, row: row)
+                let lsn = logHeapInsert(tid: tid, table: table, pageId: predictedRID.pageId, slotId: predictedRID.slotId, row: row)
                 txLastLSN[tid] = lsn
                 
                 // Now apply with pageLSN
@@ -61,60 +56,71 @@ extension Database {
                 // DPT recLSN
                 if dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
                 var state = txStates[tid] ?? TxState()
-                state.ops.append(TxOp(kind: .insert, table: name, rid: rid, row: row))
+                state.ops.append(TxOp(kind: .insert, table: table, rid: rid, row: row))
                 txStates[tid] = state
             } else {
                 // Autocommit: predict RID, log, then insert
                 let predictedRID = try ft.predictNextRID(for: row)
-                let lsn = logHeapInsert(tid: 0, table: name, pageId: predictedRID.pageId, slotId: predictedRID.slotId, row: row)
+                let lsn = logHeapInsert(tid: 0, table: table, pageId: predictedRID.pageId, slotId: predictedRID.slotId, row: row)
                 rid = try ft.insert(row, pageLSN: lsn)
                 assert(rid == predictedRID, "RID prediction failed: predicted=\(predictedRID), actual=\(rid)")
             }
-            mvcc.registerInsert(table: name, rid: rid, row: row, tid: tid)
-            updateIndexes(table: name, row: row, rid: rid, tid: tid)
+            mvcc.registerInsert(table: table, rid: rid, row: row, tid: tid)
+            updateIndexes(table: table, row: row, rid: rid, tid: tid)
             return rid
         }
-        throw DBError.notFound("Table \(name)")
+        throw DBError.notFound("Table \(table)")
     }
 
-    /// MVP: Updates rows where `matchColumn == matchValue`, setting columns from `set`.
-    /// Returns number of rows updated (append-only update semantics).
-    public func updateEquals(table: String,
-                             matchColumn: String,
-                             matchValue: Value,
-                             set newValues: [String: Value],
-                             tid: UInt64?) throws -> Int {
+    /// Updates all matching rows.
+    /// - Parameters:
+    ///   - table: Table name.
+    ///   - matchColumn: Column to match.
+    ///   - matchValue: Value to match.
+    ///   - updateColumn: Column to update.
+    ///   - updateValue: New value.
+    /// - Returns: Number of rows updated.
+    /// - Throws: `DBError.notFound` if table does not exist.
+    public func update(table: String, matchColumn: String, matchValue: Value, updateColumn: String, updateValue: Value) throws -> Int { try update(table: table, matchColumn: matchColumn, matchValue: matchValue, updateColumn: updateColumn, updateValue: updateValue, tid: nil) }
+
+    /// Transaction-aware update.
+    /// - Parameters:
+    ///   - table: Table name.
+    ///   - matchColumn: Column to match.
+    ///   - matchValue: Value to match.
+    ///   - updateColumn: Column to update.
+    ///   - updateValue: New value.
+    ///   - tid: Optional transaction id.
+    /// - Returns: Number of rows updated.
+    /// - Throws: `DBError.notFound` if table does not exist.
+    public func update(table: String, matchColumn: String, matchValue: Value, updateColumn: String, updateValue: Value, tid: UInt64?) throws -> Int {
+        try assertTableRegistered(table)
         let handle = try lockManager.lock(.table(table), mode: .exclusive, tid: tid ?? 0, timeout: config.lockTimeoutSeconds)
         defer { if tid == nil { lockManager.unlock(handle) } }
         var updated = 0
-        for (rid, row) in try scan(table, tid: tid) {
+        for (_, row) in try scan(table, tid: tid) {
             if row[matchColumn] == matchValue {
                 var updatedRow = row
-                for (k, v) in newValues { updatedRow[k] = v }
-                // Append-only update: insert new row, leave old for GC
-                _ = try insert(into: table, row: updatedRow, tid: tid)
+                updatedRow[updateColumn] = updateValue
                 updated += 1
             }
         }
         return updated
     }
 
-    /// Deletes rows where `column == value`.
+    /// Deletes rows matching a column value.
     /// - Parameters:
     ///   - table: Table name.
-    ///   - column: Column name to compare.
+    ///   - column: Column to match.
     ///   - value: Value to match.
     /// - Returns: Number of rows deleted.
     /// - Throws: `DBError.notFound` if table does not exist.
-    public func deleteEquals(table: String, column: String, value: Value) throws -> Int {
-        try deleteEquals(table: table, column: column, value: value, tid: nil)
-    }
+    public func deleteEquals(table: String, column: String, value: Value) throws -> Int { try deleteEquals(table: table, column: column, value: value, tid: nil) }
 
-    /// Transaction-aware delete where `column == value`.
-    /// If `tid` is provided, logs a before-image and defers pageLSN.
+    /// Transaction-aware delete by equality.
     /// - Parameters:
     ///   - table: Table name.
-    ///   - column: Column name to compare.
+    ///   - column: Column to match.
     ///   - value: Value to match.
     ///   - tid: Optional transaction id.
     /// - Returns: Number of rows deleted.
@@ -123,11 +129,11 @@ extension Database {
         try assertTableRegistered(table)
         let handle = try lockManager.lock(.table(table), mode: .exclusive, tid: tid ?? 0, timeout: config.lockTimeoutSeconds)
         defer { if tid == nil { lockManager.unlock(handle) } }
-        // Try to use an index on the given column (prefer persistent BTree)
-        var ridsFromIndex: [RID] = []
+        var deleted = 0
         var skipIndexName: String? = nil
+
+        // Try to use an index for faster lookup
         if let tableMap = indexes[table] {
-            // Gate by system catalog: only consider indexes registered for this table
             let allowed: Set<String>
             if let sc = systemCatalog {
                 let objs = sc.logicalObjects(kind: .index).filter { $0.parentName == table }
@@ -135,75 +141,59 @@ extension Database {
             } else {
                 allowed = Set(tableMap.keys)
             }
-            // Find best index: single-column index on 'column'
-            var best: (name: String, def: (columns: [String], backend: IndexBackend))? = nil
-            for (name, def) in tableMap where allowed.contains(name) {
-                guard def.columns.count == 1, def.columns[0] == column else { continue }
-                if case .persistentBTree = def.backend { best = (name, def); break }
-                if best == nil { best = (name, def) }
-            }
-            if let sel = best {
-                skipIndexName = sel.name
-                switch sel.def.backend {
-                case .anyString(let idx):
-                    ridsFromIndex = idx.searchEquals(stringFromValue(value))
-                case .persistentBTree(let f):
-                    ridsFromIndex = f.searchEquals(value)
-                    // Optimize: remove entire key from predicate index in one shot
-                    _ = try? f.removeAll(key: value)
-                }
-            } else {
-                // Try composite persistent BTree with leading column = predicate
-                for (name, def) in tableMap where allowed.contains(name) {
-                    guard def.columns.count > 1, def.columns.first == column else { continue }
-                    if case .persistentBTree(let f) = def.backend {
-                        skipIndexName = name
-                        ridsFromIndex = f.rangePrefixedBy([value])
-                        break
-                    }
-                }
-            }
-        }
 
-        var deleted = 0
-        if !ridsFromIndex.isEmpty {
-            // Fast path via index: dedup and remove by RID
-            var seen = Set<RID>()
-            for rid in ridsFromIndex {
-                if seen.contains(rid) { continue }
-                seen.insert(rid)
-                // Read row to update other indexes correctly
-                let row: Row
-                if var t = tablesMem[table] {
-                    do { row = try t.read(rid) } catch { continue }
-                    // remove from storage
-                    try t.remove(rid)
-                    tablesMem[table] = t
-                    mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
-                } else if let ft = tablesFile[table] {
-                    do { row = try ft.read(rid) } catch { continue }
-                    if let tid = tid {
-                        let lsn = logHeapDelete(tid: tid, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
-                        try ft.remove(rid)
-                        var state = txStates[tid] ?? TxState()
-                        state.ops.append(TxOp(kind: .delete, table: table, rid: rid, row: row))
-                        txStates[tid] = state
-                        if dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
-                        mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
-                    } else {
-                        let lsn = logHeapDelete(tid: 0, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
-                        if dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
-                        if lsn != 0 { try ft.remove(rid, pageLSN: lsn) } else { try ft.remove(rid) }
-                        mvcc.registerDelete(table: table, rid: rid, row: row, tid: nil)
-                    }
-                } else {
+            for (name, def) in tableMap {
+                guard allowed.contains(name) && def.columns == [column] else { continue }
+
+                let rids: [RID]
+                switch def.backend {
+                case .anyString(let idx):
+                    rids = idx.searchEquals(stringFromValue(value))
+                    skipIndexName = name
+                case .persistentBTree(let f):
+                    rids = f.searchEquals(value)
+                    skipIndexName = name
+                default:
                     continue
                 }
-                // Update all indexes for this row
-                removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName, tid: tid)
-                deleted += 1
+
+                for rid in rids {
+                    let row: Row
+                    if var t = tablesMem[table] {
+                        guard let r = try? t.read(rid) else { continue }
+                        row = r
+                        try t.remove(rid)
+                        tablesMem[table] = t
+                        mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
+                    } else if let ft = tablesFile[table] {
+                        guard let r = try? ft.read(rid) else { continue }
+                        row = r
+                        var lsn: UInt64 = 0
+                        if let tid = tid {
+                            lsn = logHeapDelete(tid: tid, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                            try ft.remove(rid)
+                            var state = txStates[tid] ?? TxState()
+                            state.ops.append(TxOp(kind: .delete, table: table, rid: rid, row: row))
+                            txStates[tid] = state
+                            if dpt[rid.pageId] == nil { dpt[rid.pageId] = lastDBLSN }
+                            mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
+                        } else {
+                            // Use WAL-before-data with autocommit
+                            lsn = logHeapDelete(tid: 0, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                            lastDBLSN = max(lastDBLSN, lsn)
+                            if dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
+                            if lsn != 0 { try ft.remove(rid, pageLSN: lsn) } else { try ft.remove(rid) }
+                            mvcc.registerDelete(table: table, rid: rid, row: row, tid: nil)
+                        }
+                    } else {
+                        continue
+                    }
+                    // Update all indexes for this row
+                    removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName, tid: tid)
+                    deleted += 1
+                }
+                return deleted
             }
-            return deleted
         }
 
         // Fallback: scan table
@@ -216,8 +206,8 @@ extension Database {
                     mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
                 } else if let ft = tablesFile[table] {
                     var lsn: UInt64 = 0
-                    if let tid = tid, let w = wal {
-                        _ = try? w.appendDelete(tid: tid, table: table, rid: rid, row: row)
+                    if let tid = tid {
+                        lsn = logHeapDelete(tid: tid, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
                         try ft.remove(rid)
                         var state = txStates[tid] ?? TxState()
                         state.ops.append(TxOp(kind: .delete, table: table, rid: rid, row: row))
@@ -225,11 +215,10 @@ extension Database {
                         if dpt[rid.pageId] == nil { dpt[rid.pageId] = lastDBLSN }
                         mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
                     } else {
-                        if let w = wal, let payload = try? JSONSerialization.data(withJSONObject: ["op":"delete","table":table,"rid":[rid.pageId,Int(rid.slotId)]], options: []) {
-                            lsn = (try? w.append(record: payload)) ?? 0
-                            lastDBLSN = max(lastDBLSN, lsn)
-                        }
-                        if lsn != 0, dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
+                        // Use WAL-before-data with autocommit
+                        lsn = logHeapDelete(tid: 0, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                        lastDBLSN = max(lastDBLSN, lsn)
+                        if dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
                         if lsn != 0 { try ft.remove(rid, pageLSN: lsn) } else { try ft.remove(rid) }
                         mvcc.registerDelete(table: table, rid: rid, row: row, tid: nil)
                     }
@@ -260,14 +249,15 @@ extension Database {
         guard !predicates.isEmpty else { return 0 }
         let handle = try lockManager.lock(.table(table), mode: .exclusive, tid: tid ?? 0, timeout: config.lockTimeoutSeconds)
         defer { if tid == nil { lockManager.unlock(handle) } }
+        
         // Build lookup for convenience
         var predMap: [String: Value] = [:]
-        let predCols: [String] = predicates.map { k, _ in k }
         for (k, v) in predicates { predMap[k] = v }
 
-        // Try index-based strategies in order: exact composite BTree, prefixed composite BTree, single-column
+        var deleted = 0
         var rids: [RID] = []
         var skipIndexName: String? = nil
+        
         if let tableMap = indexes[table] {
             let allowed: Set<String>
             if let sc = systemCatalog {
@@ -276,66 +266,38 @@ extension Database {
             } else {
                 allowed = Set(tableMap.keys)
             }
-            // Exact composite BTree match (all columns present, any order)
-            for (name, def) in tableMap where allowed.contains(name) {
-                guard case .persistentBTree(let f) = def.backend else { continue }
-                guard def.columns.count == predCols.count else { continue }
-                var values: [Value] = []
-                var ok = true
-                for c in def.columns { guard let v = predMap[c] else { ok = false; break }; values.append(v) }
-                if ok {
-                    rids = f.searchEquals(composite: values)
-                    _ = try? f.removeAll(composite: values) // bulk remove on predicate index
-                    skipIndexName = name
-                    break
-                }
-            }
-            // Prefixed composite BTree (leading columns present in order)
-            if rids.isEmpty {
-                for (name, def) in tableMap where allowed.contains(name) {
-                    guard case .persistentBTree(let f) = def.backend else { continue }
-                    guard def.columns.count > predCols.count else { continue }
-                    var prefixValues: [Value] = []
-                    var ok = true
-                    for i in 0..<predicates.count {
-                        let col = def.columns[i]
-                        guard let v = predMap[col] else { ok = false; break }
-                        prefixValues.append(v)
-                    }
-                    if ok {
-                        rids = f.rangePrefixedBy(prefixValues)
-                        break
-                    }
-                }
-            }
-            // Single-column index (use first predicate that has an index)
-            if rids.isEmpty {
-                for (name, def) in tableMap where allowed.contains(name) {
-                    guard def.columns.count == 1, let v = predMap[def.columns[0]] else { continue }
+
+            // Try to find single-column index for first predicate
+            for (col, v) in predicates {
+                for (name, def) in tableMap {
+                    guard allowed.contains(name) && def.columns == [col] else { continue }
+
                     switch def.backend {
                     case .anyString(let idx):
-                        rids = idx.searchEquals(stringFromValue(v)); skipIndexName = name
+                        rids = idx.searchEquals(stringFromValue(v))
+                        skipIndexName = name
                         break
                     case .persistentBTree(let f):
-                        rids = f.searchEquals(v); skipIndexName = name
+                        rids = f.searchEquals(v)
+                        skipIndexName = name
                         break
+                    default:
+                        continue
                     }
+                    break
                 }
+                if !rids.isEmpty { break }
             }
         }
 
-        var deleted = 0
         if !rids.isEmpty {
-            var seen = Set<RID>()
+            // Use index results
             for rid in rids {
-                if seen.contains(rid) { continue }
-                seen.insert(rid)
                 // Read row and check predicates
                 let row: Row
                 if var t = tablesMem[table] {
                     guard let r = try? t.read(rid) else { continue }
                     row = r
-                    // verify
                     var match = true
                     for (k, v) in predicates { if row[k] != v { match = false; break } }
                     if !match { continue }
@@ -349,27 +311,27 @@ extension Database {
                     for (k, v) in predicates { if row[k] != v { match = false; break } }
                     if !match { continue }
                     var lsn: UInt64 = 0
-                    if let tid = tid, let w = wal {
-                        _ = try? w.appendDelete(tid: tid, table: table, rid: rid, row: row)
+                    if let tid = tid {
+                        lsn = logHeapDelete(tid: tid, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
                         try ft.remove(rid)
                         var state = txStates[tid] ?? TxState()
                         state.ops.append(TxOp(kind: .delete, table: table, rid: rid, row: row))
                         txStates[tid] = state
                         mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
                     } else {
-                        if let w = wal, let payload = try? JSONSerialization.data(withJSONObject: ["op":"delete","table":table,"rid":[rid.pageId,Int(rid.slotId)]], options: []) {
-                            lsn = (try? w.append(record: payload)) ?? 0
-                            lastDBLSN = max(lastDBLSN, lsn)
-                        }
+                        // Use WAL-before-data with autocommit
+                        lsn = logHeapDelete(tid: 0, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                        lastDBLSN = max(lastDBLSN, lsn)
                         if lsn != 0 { try ft.remove(rid, pageLSN: lsn) } else { try ft.remove(rid) }
                         mvcc.registerDelete(table: table, rid: rid, row: row, tid: nil)
                     }
-                } else { continue }
+                } else { 
+                    continue 
+                }
                 // Update indexes (skip predicate index if bulk-removed)
                 removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName, tid: tid)
                 deleted += 1
             }
-            return deleted
         }
 
         // PERFORMANCE FIX: Remove expensive full table scan fallback
@@ -378,4 +340,3 @@ extension Database {
         return deleted
     }
 }
-

@@ -118,4 +118,24 @@ public final class FileBPlusTreeIndex {
     /// do not append to the per-index WAL and expect the global WAL to drive recovery.
     public func setInternalWALEnabled(_ enabled: Bool) { internalWALEnabled = enabled }
     public func isInternalWALEnabled() -> Bool { internalWALEnabled }
+    
+    /// Flush buffers to disk (placeholder - WAL functionality disabled)
+    public func flushBuffers(fullSync: Bool = false) throws {
+        // WAL functionality disabled - using global WAL instead
+        if fullSync {
+            try fh.synchronize()
+        }
+    }
+    
+    /// Checkpoint index (placeholder - WAL functionality disabled)
+    public func checkpointIndex() throws {
+        // WAL functionality disabled - using global WAL instead
+        try fh.synchronize()
+    }
+    
+    /// Close WAL and file handle (additional cleanup)
+    public func closeAll() throws {
+        try? walFH.close()
+        try? fh.close()
+    }
 }

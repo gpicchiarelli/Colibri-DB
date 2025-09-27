@@ -676,6 +676,7 @@ public final class FileWALManager: WALManager {
         operationCounts = WALOperationCounts()
         lastMetricsUpdate = now
     }
+    
 }
 
 // MARK: - Supporting Types
