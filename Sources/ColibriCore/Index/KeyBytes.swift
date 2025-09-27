@@ -54,6 +54,14 @@ public struct KeyBytes: Hashable, Comparable {
             var d = Data([0x04])
             d.append(s.data(using: .utf8) ?? Data())
             return KeyBytes(d)
+        case .decimal(let d):
+            // Convert decimal to double for lexicographic ordering
+            let doubleValue = Double(truncating: d as NSNumber)
+            return fromValue(.double(doubleValue))
+        case .date(let d):
+            // Use timestamp for lexicographic ordering  
+            let timestamp = d.timeIntervalSince1970
+            return fromValue(.double(timestamp))
         }
     }
 
