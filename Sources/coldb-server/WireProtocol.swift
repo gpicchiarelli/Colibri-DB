@@ -250,11 +250,11 @@ public final class WireProtocolHandler: ChannelInboundHandler {
         var buffer = unwrapInboundIn(data)
         let readableBytes = buffer.readableBytes
         
-        guard let data = buffer.getData(at: buffer.readerIndex, length: readableBytes) else {
+        guard let bytes = buffer.readBytes(length: readableBytes) else {
             logError("Failed to read data from buffer")
             return
         }
-        
+        let data = Data(bytes)
         messageBuffer.append(data)
         processMessages(context: context)
     }
