@@ -54,7 +54,10 @@ extension FileBPlusTreeIndex {
 
     func readPage(_ pageId: UInt64) throws -> (type: UInt8, data: Data) {
         let off = UInt64(pageSize) * pageId
-        if let b = buf { return (type: try b.getPage(pageId)[0], data: try b.getPage(pageId)) }
+        if let b = buf { 
+            let data = try b.getPage(pageId)
+            return (type: data[0], data: data)
+        }
         try fh.seek(toOffset: off)
         guard let d = try fh.read(upToCount: pageSize), d.count == pageSize else { throw DBError.io("Short read page \(pageId)") }
         let type = d[0]

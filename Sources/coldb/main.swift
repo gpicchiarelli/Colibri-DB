@@ -20,12 +20,17 @@ struct CLI {
     let db: Database
     let cfgPath: String?
     var currentTID: UInt64? = nil
+    init(db: Database, cfgPath: String?) {
+        self.db = db
+        self.cfgPath = cfgPath
+    }
 
     /// Displays the CLI banner and brief usage hint.
     func printBanner() {
         print("ColibrìDB CLI (coldb) — MVP")
         print("Type \\help for help, \\exit to quit.\n")
     }
+    
 
     /// Lists every CLI command along with a short description.
     func help() {
@@ -90,6 +95,8 @@ struct CLI {
     mutating func parseAndRun(_ line: String) {
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        
+        
         if trimmed == "\\help" { help(); return }
         if trimmed == "\\conf" { showConfig(); return }
         if trimmed == "\\dt" { listTables(); return }
