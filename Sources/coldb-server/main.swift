@@ -14,45 +14,16 @@ import NIOHTTP1
 import NIOSSL
 import ColibriCore
 
-// MARK: - Server Configuration
-
-struct ServerConfig {
-    let host: String
-    let port: Int
-    let dataDirectory: String
-    let maxConnections: Int
-    let sslEnabled: Bool
-    let sslCertificatePath: String?
-    let sslPrivateKeyPath: String?
-    
-    init(
-        host: String = "0.0.0.0",
-        port: Int = 5432,
-        dataDirectory: String = "./data",
-        maxConnections: Int = 1000,
-        sslEnabled: Bool = false,
-        sslCertificatePath: String? = nil,
-        sslPrivateKeyPath: String? = nil
-    ) {
-        self.host = host
-        self.port = port
-        self.dataDirectory = dataDirectory
-        self.maxConnections = maxConnections
-        self.sslEnabled = sslEnabled
-        self.sslCertificatePath = sslCertificatePath
-        self.sslPrivateKeyPath = sslPrivateKeyPath
-    }
-}
-
 // MARK: - Database Server
 
 final class DatabaseServer {
-    private let config: ServerConfig
+    private let config: ServerConfiguration
     private let database: Database
     private let group: EventLoopGroup
+    private let connectionManager: ConnectionManager
     private var serverChannel: Channel?
     
-    init(config: ServerConfig) throws {
+    init(config: ServerConfiguration) throws {
         self.config = config
         
         // Initialize database
@@ -61,6 +32,14 @@ final class DatabaseServer {
         
         // Initialize event loop group
         self.group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+        
+        // Initialize connection manager
+        self.connectionManager = ConnectionManager(
+            maxConnections: config.maxConnections,
+            connectionTimeout: config.connectionTimeout,
+            queryTimeout: config.queryTimeout,
+            database: database
+        )
     }
     
     func start() throws {
