@@ -69,11 +69,9 @@ public final class TransactionManager {
         
         logger.info("Committing transaction \(tid)")
         
-        // TODO: Implement two-phase commit
-        // try twoPhaseCommit.prepare(tid: tid)
-        
-        // Commit MVCC
-        mvcc.commit(tid: tid)
+        // Use database's 2PC implementation
+        try database.prepareTransaction(tid)
+        try database.commitPrepared(tid)
         
         // Update transaction status
         transaction.status = .committed
@@ -103,8 +101,8 @@ public final class TransactionManager {
         
         logger.info("Rolling back transaction \(tid)")
         
-        // Rollback MVCC
-        mvcc.rollback(tid: tid)
+        // Use database's rollback implementation
+        try database.rollback(tid)
         
         // Update transaction status
         transaction.status = .aborted
@@ -370,16 +368,15 @@ public final class TransactionRecoveryManager {
     
     /// Gets all prepared transactions
     private func getPreparedTransactions() -> [UInt64] {
-        // This would read from WAL to find prepared transactions
-        // For now, return empty array
-        return []
+        // Get prepared transactions from database
+        return Array(database.preparedTransactions)
     }
     
     /// Determines if a transaction should be committed
     private func shouldCommit(tid: UInt64) throws -> Bool {
-        // This would check WAL to determine if transaction should be committed
-        // For now, return false (abort)
-        return false
+        // Check if transaction was prepared (default to commit prepared transactions)
+        // In a real distributed system, this would check coordinator decision
+        return database.preparedTransactions.contains(tid)
     }
 }
 
