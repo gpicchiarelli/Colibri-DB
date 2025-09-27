@@ -48,19 +48,27 @@ extension Database {
         if let ft = tablesFile[name] {
             var rid: RID
             if let tid = tid {
-                // WAL-before-data: log the insert before applying it
-                rid = try ft.insert(row) // This generates the RID we need
-                let lsn = logHeapInsert(tid: tid, table: name, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                // WAL-before-data: log the insert BEFORE applying it
+                // We need to predict the RID first
+                let predictedRID = try ft.predictNextRID()
+                let lsn = logHeapInsert(tid: tid, table: name, pageId: predictedRID.pageId, slotId: predictedRID.slotId, row: row)
                 txLastLSN[tid] = lsn
+                
+                // Now apply with pageLSN
+                rid = try ft.insert(row, pageLSN: lsn)
+                assert(rid == predictedRID, "RID prediction failed")
+                
                 // DPT recLSN
                 if dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
                 var state = txStates[tid] ?? TxState()
                 state.ops.append(TxOp(kind: .insert, table: name, rid: rid, row: row))
                 txStates[tid] = state
             } else {
-                // Autocommit: insert and log
-                rid = try ft.insert(row)
-                _ = logHeapInsert(tid: 0, table: name, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                // Autocommit: predict RID, log, then insert
+                let predictedRID = try ft.predictNextRID()
+                let lsn = logHeapInsert(tid: 0, table: name, pageId: predictedRID.pageId, slotId: predictedRID.slotId, row: row)
+                rid = try ft.insert(row, pageLSN: lsn)
+                assert(rid == predictedRID, "RID prediction failed")
             }
             mvcc.registerInsert(table: name, rid: rid, row: row, tid: tid)
             updateIndexes(table: name, row: row, rid: rid, tid: tid)
