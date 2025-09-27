@@ -79,50 +79,164 @@ public struct ConfigurationParser {
             switch arg {
             case "--host":
                 if i + 1 < arguments.count {
-                    config = ServerConfiguration(host: arguments[i + 1])
+                    let host = arguments[i + 1]
+                    config = ServerConfiguration(
+                        host: host,
+                        port: config.port,
+                        dataDirectory: config.dataDirectory,
+                        maxConnections: config.maxConnections,
+                        sslEnabled: config.sslEnabled,
+                        sslCertificatePath: config.sslCertificatePath,
+                        sslPrivateKeyPath: config.sslPrivateKeyPath,
+                        logLevel: config.logLevel,
+                        connectionTimeout: config.connectionTimeout,
+                        queryTimeout: config.queryTimeout
+                    )
                     i += 1
                 }
             case "--port":
                 if i + 1 < arguments.count, let port = Int(arguments[i + 1]) {
-                    config = ServerConfiguration(port: port)
+                    config = ServerConfiguration(
+                        host: config.host,
+                        port: port,
+                        dataDirectory: config.dataDirectory,
+                        maxConnections: config.maxConnections,
+                        sslEnabled: config.sslEnabled,
+                        sslCertificatePath: config.sslCertificatePath,
+                        sslPrivateKeyPath: config.sslPrivateKeyPath,
+                        logLevel: config.logLevel,
+                        connectionTimeout: config.connectionTimeout,
+                        queryTimeout: config.queryTimeout
+                    )
                     i += 1
                 }
             case "--data-dir":
                 if i + 1 < arguments.count {
-                    config = ServerConfiguration(dataDirectory: arguments[i + 1])
+                    let dir = arguments[i + 1]
+                    config = ServerConfiguration(
+                        host: config.host,
+                        port: config.port,
+                        dataDirectory: dir,
+                        maxConnections: config.maxConnections,
+                        sslEnabled: config.sslEnabled,
+                        sslCertificatePath: config.sslCertificatePath,
+                        sslPrivateKeyPath: config.sslPrivateKeyPath,
+                        logLevel: config.logLevel,
+                        connectionTimeout: config.connectionTimeout,
+                        queryTimeout: config.queryTimeout
+                    )
                     i += 1
                 }
             case "--max-connections":
                 if i + 1 < arguments.count, let maxConn = Int(arguments[i + 1]) {
-                    config = ServerConfiguration(maxConnections: maxConn)
+                    config = ServerConfiguration(
+                        host: config.host,
+                        port: config.port,
+                        dataDirectory: config.dataDirectory,
+                        maxConnections: maxConn,
+                        sslEnabled: config.sslEnabled,
+                        sslCertificatePath: config.sslCertificatePath,
+                        sslPrivateKeyPath: config.sslPrivateKeyPath,
+                        logLevel: config.logLevel,
+                        connectionTimeout: config.connectionTimeout,
+                        queryTimeout: config.queryTimeout
+                    )
                     i += 1
                 }
             case "--ssl":
-                config = ServerConfiguration(sslEnabled: true)
+                config = ServerConfiguration(
+                    host: config.host,
+                    port: config.port,
+                    dataDirectory: config.dataDirectory,
+                    maxConnections: config.maxConnections,
+                    sslEnabled: true,
+                    sslCertificatePath: config.sslCertificatePath,
+                    sslPrivateKeyPath: config.sslPrivateKeyPath,
+                    logLevel: config.logLevel,
+                    connectionTimeout: config.connectionTimeout,
+                    queryTimeout: config.queryTimeout
+                )
             case "--ssl-cert":
                 if i + 1 < arguments.count {
-                    config = ServerConfiguration(sslCertificatePath: arguments[i + 1])
+                    let cert = arguments[i + 1]
+                    config = ServerConfiguration(
+                        host: config.host,
+                        port: config.port,
+                        dataDirectory: config.dataDirectory,
+                        maxConnections: config.maxConnections,
+                        sslEnabled: config.sslEnabled,
+                        sslCertificatePath: cert,
+                        sslPrivateKeyPath: config.sslPrivateKeyPath,
+                        logLevel: config.logLevel,
+                        connectionTimeout: config.connectionTimeout,
+                        queryTimeout: config.queryTimeout
+                    )
                     i += 1
                 }
             case "--ssl-key":
                 if i + 1 < arguments.count {
-                    config = ServerConfiguration(sslPrivateKeyPath: arguments[i + 1])
+                    let key = arguments[i + 1]
+                    config = ServerConfiguration(
+                        host: config.host,
+                        port: config.port,
+                        dataDirectory: config.dataDirectory,
+                        maxConnections: config.maxConnections,
+                        sslEnabled: config.sslEnabled,
+                        sslCertificatePath: config.sslCertificatePath,
+                        sslPrivateKeyPath: key,
+                        logLevel: config.logLevel,
+                        connectionTimeout: config.connectionTimeout,
+                        queryTimeout: config.queryTimeout
+                    )
                     i += 1
                 }
             case "--log-level":
                 if i + 1 < arguments.count,
                    let level = LogLevel(rawValue: arguments[i + 1].uppercased()) {
-                    config = ServerConfiguration(logLevel: level)
+                    config = ServerConfiguration(
+                        host: config.host,
+                        port: config.port,
+                        dataDirectory: config.dataDirectory,
+                        maxConnections: config.maxConnections,
+                        sslEnabled: config.sslEnabled,
+                        sslCertificatePath: config.sslCertificatePath,
+                        sslPrivateKeyPath: config.sslPrivateKeyPath,
+                        logLevel: level,
+                        connectionTimeout: config.connectionTimeout,
+                        queryTimeout: config.queryTimeout
+                    )
                     i += 1
                 }
             case "--connection-timeout":
                 if i + 1 < arguments.count, let timeout = TimeInterval(arguments[i + 1]) {
-                    config = ServerConfiguration(connectionTimeout: timeout)
+                    config = ServerConfiguration(
+                        host: config.host,
+                        port: config.port,
+                        dataDirectory: config.dataDirectory,
+                        maxConnections: config.maxConnections,
+                        sslEnabled: config.sslEnabled,
+                        sslCertificatePath: config.sslCertificatePath,
+                        sslPrivateKeyPath: config.sslPrivateKeyPath,
+                        logLevel: config.logLevel,
+                        connectionTimeout: timeout,
+                        queryTimeout: config.queryTimeout
+                    )
                     i += 1
                 }
             case "--query-timeout":
                 if i + 1 < arguments.count, let timeout = TimeInterval(arguments[i + 1]) {
-                    config = ServerConfiguration(queryTimeout: timeout)
+                    config = ServerConfiguration(
+                        host: config.host,
+                        port: config.port,
+                        dataDirectory: config.dataDirectory,
+                        maxConnections: config.maxConnections,
+                        sslEnabled: config.sslEnabled,
+                        sslCertificatePath: config.sslCertificatePath,
+                        sslPrivateKeyPath: config.sslPrivateKeyPath,
+                        logLevel: config.logLevel,
+                        connectionTimeout: config.connectionTimeout,
+                        queryTimeout: timeout
+                    )
                     i += 1
                 }
             case "--config":
