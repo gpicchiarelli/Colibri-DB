@@ -19,7 +19,7 @@ let package = Package(
         .library(name: "ColibriCore", targets: ["ColibriCore"]),
         .executable(name: "coldb", targets: ["coldb"]),
         .executable(name: "coldb-server", targets: ["coldb-server"]),
-        .executable(name: "benchmarks-extra", targets: ["benchmarks-extra"]) 
+        .executable(name: "benchmarks", targets: ["benchmarks"]) 
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-testing", exact: "0.10.0"),
@@ -52,10 +52,7 @@ let package = Package(
             name: "benchmarks",
             dependencies: ["ColibriCore"]
         ),
-        .executableTarget(
-            name: "benchmarks-extra",
-            dependencies: ["ColibriCore"]
-        ),
+        
         .testTarget(
             name: "ColibriCoreTests",
             dependencies: [

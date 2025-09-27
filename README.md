@@ -52,7 +52,8 @@ Il file `colibridb.conf.json` controlla directory dati, dimensioni delle pagine,
 
 Documentazione
 --------------
-La documentazione tecnica è allineata e organizzata in `docs/`:
+La documentazione tecnica è allineata e organizzata in `docs/` e il libro degli internals è in `Libro/`:
+- `Libro/` — libro in markdown sugli internals (architettura, storage, MVCC, WAL, indici, server, CLI)
 - `docs/index.md` — mappa dei documenti e percorsi di lettura
 - `docs/overview.md` — visione generale e stato MVP
 - `docs/architecture.md` — panoramica a livelli e flussi
@@ -66,9 +67,11 @@ Struttura del repository
 ------------------------
 - `Sources/ColibriCore/` — core engine (storage, WAL, MVCC, indici, policy, util)
 - `Sources/coldb/` — CLI amministrativa
+- `Sources/coldb-server/` — server e wire protocol
 - `Sources/benchmarks/` — harness `benchmarks` per test di performance
 - `Tests/` — suite di test SwiftPM
 - `docs/` — documentazione tecnica
+- `Libro/` — libro degli internals in markdown navigabile su GitHub
 - `data/` — dati runtime (ignorati dal VCS)
 - `prompt/` — materiale ausiliario, escluso dal VCS
 
