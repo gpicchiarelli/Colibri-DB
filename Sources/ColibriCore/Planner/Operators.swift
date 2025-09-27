@@ -320,8 +320,7 @@ public final class HashJoinOperator: PlanOperator {
     
     private var context: ExecutionContext?
     private var hashTable: [String: [PlanRow]] = [:]
-    private var leftRows: [PlanRow] = []
-    private var currentLeftIndex: Int = 0
+    private var currentLeftRow: PlanRow?
     private var currentRightRows: [PlanRow] = []
     private var currentRightIndex: Int = 0
     
@@ -347,51 +346,19 @@ public final class HashJoinOperator: PlanOperator {
         try right.close()
         
         try left.open(context: context)
-        self.leftRows = []
-        while let leftRow = try left.next() {
-            leftRows.append(leftRow)
-        }
-        try left.close()
-        
-        self.currentLeftIndex = 0
+        self.currentLeftRow = nil
         self.currentRightRows = []
         self.currentRightIndex = 0
     }
     
     public func next() throws -> PlanRow? {
-        while currentLeftIndex < leftRows.count {
-            let leftRow = leftRows[currentLeftIndex]
-            
-            // If we have remaining right rows for current left row, process them
-            if currentRightIndex < currentRightRows.count {
-                let rightRow = currentRightRows[currentRightIndex]
-                currentRightIndex += 1
-                
-                // Combine left and right rows
-                var combinedValues = leftRow.values
-                for (key, value) in rightRow.values {
-                    combinedValues[key] = value
-                }
-                
-                return PlanRow(values: combinedValues)
-            }
-            
-            // Get matching right rows for current left row
-            let leftKey = buildJoinKey(row: leftRow, keys: leftKeys)
-            currentRightRows = hashTable[leftKey] ?? []
-            currentRightIndex = 0
-            
-            // If no matching right rows, move to next left row
-            if currentRightRows.isEmpty {
-                currentLeftIndex += 1
-                continue
-            }
-            
-            // Process first matching right row
+        // If we have remaining right rows for current left row, process them
+        if currentRightIndex < currentRightRows.count {
             let rightRow = currentRightRows[currentRightIndex]
             currentRightIndex += 1
             
             // Combine left and right rows
+            guard let leftRow = currentLeftRow else { return nil }
             var combinedValues = leftRow.values
             for (key, value) in rightRow.values {
                 combinedValues[key] = value
@@ -400,25 +367,56 @@ public final class HashJoinOperator: PlanOperator {
             return PlanRow(values: combinedValues)
         }
         
-        return nil
+        // Get next left row
+        guard let leftRow = try left.next() else {
+            return nil
+        }
+        
+        currentLeftRow = leftRow
+        
+        // Get matching right rows for current left row
+        let leftKey = buildJoinKey(row: leftRow, keys: leftKeys)
+        currentRightRows = hashTable[leftKey] ?? []
+        currentRightIndex = 0
+        
+        // If no matching right rows, get next left row
+        if currentRightRows.isEmpty {
+            return try next()
+        }
+        
+        // Process first matching right row
+        guard currentRightIndex < currentRightRows.count else {
+            return try next()
+        }
+        let rightRow = currentRightRows[currentRightIndex]
+        currentRightIndex += 1
+        
+        // Combine left and right rows
+        var combinedValues = leftRow.values
+        for (key, value) in rightRow.values {
+            combinedValues[key] = value
+        }
+        
+        return PlanRow(values: combinedValues)
     }
     
     public func close() throws {
         self.context = nil
         self.hashTable = [:]
-        self.leftRows = []
-        self.currentLeftIndex = 0
+        self.currentLeftRow = nil
         self.currentRightRows = []
         self.currentRightIndex = 0
     }
     
     private func buildJoinKey(row: PlanRow, keys: [String]) -> String {
-        return keys.map { key in
+        let keyParts = keys.map { key in
             if let value = row[key] {
                 return "\(key):\(value)"
             }
             return "\(key):null"
-        }.joined(separator: "|")
+        }
+        let result = keyParts.joined(separator: "|")
+        return result
     }
 }
 

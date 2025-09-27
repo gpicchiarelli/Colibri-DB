@@ -122,16 +122,9 @@ public final class QueryPlanner {
             let hashCost = costModel.cost(of: hash)
             let mergeCost = costModel.cost(of: merge)
             if hashCost.cpu + hashCost.io <= mergeCost.cpu + mergeCost.io {
-                rootOperator = HashJoinOperator(joinType: .inner,
-                                                left: rootOperator,
-                                                right: rightOp,
-                                                leftKeys: qualified(joinSpec.leftColumns, alias: request.root.alias ?? request.root.name),
-                                                rightKeys: qualified(joinSpec.rightColumns, alias: joinSpec.table.alias ?? joinSpec.table.name))
+                rootOperator = hash
             } else {
-                rootOperator = MergeJoinOperator(joinType: .inner, left: rootOperator,
-                                                 right: rightOp,
-                                                 leftKeys: qualified(joinSpec.leftColumns, alias: request.root.alias ?? request.root.name),
-                                                 rightKeys: qualified(joinSpec.rightColumns, alias: joinSpec.table.alias ?? joinSpec.table.name))
+                rootOperator = merge
             }
         }
 
