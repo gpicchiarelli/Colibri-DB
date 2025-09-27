@@ -37,7 +37,7 @@ public final class SystemMonitor {
         self.ioMonitor = IOMonitor()
         self.queryMonitor = QueryMonitor()
         // Create a dummy TransactionManager for monitoring
-        let dummyTxManager = TransactionManager(database: database, mvcc: database.mvcc)
+        let dummyTxManager = TransactionManager(database: database)
         self.transactionMonitor = TransactionMonitor(transactionManager: dummyTxManager)
     }
     
@@ -78,7 +78,7 @@ public final class SystemMonitor {
         )
         
         // Log metrics if needed  
-        logger.debug("System metrics: \(metrics)")
+        logger.debug("System metrics collected")
     }
     
     /// Gets current system metrics
@@ -124,7 +124,7 @@ public final class SystemMonitor {
             issues.append(HealthIssue(type: .highTransactionCount, severity: .warning, message: "High transaction count: \(metrics.transactions.activeCount)"))
         }
         
-        let severity = issues.isEmpty ? HealthSeverity.healthy : (issues.contains { $0.severity == .critical } ? HealthSeverity.critical : HealthSeverity.warning)
+        let severity = issues.isEmpty ? HealthStatus.healthy : (issues.contains { $0.severity == .critical } ? HealthStatus.critical : HealthStatus.warning)
         
         return SystemHealthStatus(
             status: severity,

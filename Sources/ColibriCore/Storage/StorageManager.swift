@@ -408,7 +408,7 @@ public enum WriteOptimization {
 /// Storage compression manager
 public final class StorageCompressionManager {
     private let logger = Logger(subsystem: "com.colibridb.storage", category: "compression")
-    private let compressionCodec: CompressionCodec
+    private let compressionCodec: CompressionCodec?
     private var compressionStats: [String: CompressionStatistics] = [:]
     private let statsLock = NSLock()
     
