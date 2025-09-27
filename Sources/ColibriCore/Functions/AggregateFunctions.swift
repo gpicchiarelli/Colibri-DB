@@ -147,7 +147,6 @@ public final class AggregateExecutor {
             case .string(let s): return s
             case .date(let d): return ISO8601DateFormatter().string(from: d)
             case .decimal(let d): return d.description
-            case .enumValue(_, let v): return v
             default: return nil
             }
         }
@@ -189,7 +188,6 @@ public final class AggregateExecutor {
             case .string(let s): return s
             case .date(let d): return ISO8601DateFormatter().string(from: d)
             case .decimal(let d): return d.description
-            case .enumValue(_, let v): return v
             default: return nil
             }
         }
@@ -223,8 +221,6 @@ public struct BuiltinFunctions {
     public static func length(_ value: Value) -> Value {
         switch value {
         case .string(let s): return .int(Int64(s.count))
-        case .blob(let d): return .int(Int64(d.count))
-        case .json(let d): return .int(Int64(d.count))
         default: return .null
         }
     }
@@ -291,25 +287,7 @@ public struct BuiltinFunctions {
     
     /// JSON functions
     public static func jsonExtract(_ value: Value, path: String) -> Value {
-        switch value {
-        case .json(let data):
-            // Simple JSON path extraction (for MVP)
-            if let json = try? JSONSerialization.jsonObject(with: data),
-               let dict = json as? [String: Any] {
-                let keys = path.components(separatedBy: ".")
-                var current: Any = dict
-                for key in keys {
-                    if let dict = current as? [String: Any],
-                       let next = dict[key] {
-                        current = next
-                    } else {
-                        return .null
-                    }
-                }
-                return valueFromAny(current)
-            }
-        default: break
-        }
+        // JSON functionality not implemented for MVP
         return .null
     }
     
