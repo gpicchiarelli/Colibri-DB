@@ -25,6 +25,7 @@ struct SQLCRUDTests {
         // CREATE
         _ = try sql.execute("CREATE TABLE users (id INT PRIMARY KEY, name TEXT, region TEXT)")
         _ = try sql.execute("CREATE TABLE orders (id INT PRIMARY KEY, user_id INT, total DOUBLE)")
+        _ = try sql.execute("CREATE INDEX idx_orders_user ON orders (user_id) USING BTree")
 
         // INSERT
         _ = try sql.execute("INSERT INTO users (id, name, region) VALUES (1, 'Ada', 'EU')")
@@ -46,6 +47,14 @@ struct SQLCRUDTests {
         #expect(d1.affectedRows == 1)
         let r3 = try sql.execute("SELECT * FROM orders")
         #expect(r3.rows.count == 1)
+
+        // Negative: operations on non-registered table should fail
+        do {
+            _ = try sql.execute("INSERT INTO ghost (id) VALUES (1)")
+            Issue.record("Expected failure when inserting into non-registered table")
+        } catch {
+            // ok
+        }
     }
 }
 

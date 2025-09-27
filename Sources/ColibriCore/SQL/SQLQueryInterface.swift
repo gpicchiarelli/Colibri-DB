@@ -52,6 +52,8 @@ public final class SQLQueryInterface {
         switch statement {
         case .createTable(let createTable):
             return try executeCreateTable(createTable)
+        case .createIndex(let createIndex):
+            return try executeCreateIndex(createIndex)
         case .dropTable(let dropTable):
             return try executeDropTable(dropTable)
         case .insert(let insert):
@@ -83,6 +85,21 @@ public final class SQLQueryInterface {
         return SQLQueryResult(
             statementType: .createTable,
             message: "Table '\(statement.tableName)' created successfully"
+        )
+    }
+
+    private func executeCreateIndex(_ statement: CreateIndexStatement) throws -> SQLQueryResult {
+        // Ensure table exists in catalog before physical creation
+        guard database.isTableRegistered(statement.tableName) else {
+            throw SQLQueryError.tableNotFound(statement.tableName)
+        }
+        try database.createIndex(name: statement.name,
+                                 on: statement.tableName,
+                                 columns: statement.columns,
+                                 using: statement.usingKind ?? "BTree")
+        return SQLQueryResult(
+            statementType: .createTable,
+            message: "Index '\(statement.name)' created on \(statement.tableName)"
         )
     }
     

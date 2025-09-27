@@ -56,8 +56,10 @@ public struct SQLParser {
         switch token {
         case .keyword("TABLE"):
             return try parseCreateTableStatement()
+        case .keyword("INDEX"):
+            return try parseCreateIndexStatement()
         default:
-            throw SQLParseError.expectedToken("TABLE", actual: tokenDescription(token))
+            throw SQLParseError.expectedToken("TABLE or INDEX", actual: tokenDescription(token))
         }
     }
     
@@ -88,6 +90,26 @@ public struct SQLParser {
         try consume(.punctuation(")"))
         
         return .createTable(CreateTableStatement(tableName: tableName, columns: columns, constraints: constraints))
+    }
+
+    private mutating func parseCreateIndexStatement() throws -> SQLStatement {
+        try consume(.keyword("INDEX"))
+        let name = try parseIdentifier()
+        try consume(.keyword("ON"))
+        let tableName = try parseIdentifier()
+        try consume(.punctuation("("))
+        var columns: [String] = []
+        while !isCurrentToken(.punctuation(")")) {
+            columns.append(try parseIdentifier())
+            if isCurrentToken(.punctuation(",")) { try consume(.punctuation(",")) }
+        }
+        try consume(.punctuation(")"))
+        var usingKind: String? = nil
+        if isCurrentToken(.keyword("USING")) {
+            try consume(.keyword("USING"))
+            usingKind = try parseIdentifier()
+        }
+        return .createIndex(CreateIndexStatement(name: name, tableName: tableName, columns: columns, usingKind: usingKind))
     }
     
     private mutating func parseColumnDefinition() throws -> SQLColumnDefinition {

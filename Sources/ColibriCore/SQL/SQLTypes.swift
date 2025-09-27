@@ -117,6 +117,7 @@ public enum SQLUnaryOperator: String, CaseIterable {
 // MARK: - SQL Statements
 public indirect enum SQLStatement: Equatable, Hashable {
     case createTable(CreateTableStatement)
+    case createIndex(CreateIndexStatement)
     case dropTable(DropTableStatement)
     case insert(InsertStatement)
     case update(UpdateStatement)
@@ -145,6 +146,20 @@ public struct DropTableStatement: Equatable, Hashable {
     public init(tableName: String, ifExists: Bool = false) {
         self.tableName = tableName
         self.ifExists = ifExists
+    }
+}
+
+public struct CreateIndexStatement: Equatable, Hashable {
+    public let name: String
+    public let tableName: String
+    public let columns: [String]
+    public let usingKind: String?
+
+    public init(name: String, tableName: String, columns: [String], usingKind: String? = nil) {
+        self.name = name
+        self.tableName = tableName
+        self.columns = columns
+        self.usingKind = usingKind
     }
 }
 
