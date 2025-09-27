@@ -351,10 +351,9 @@ public final class FileHeapTable: TableStorageProtocol {
             let p = try readPage(pid)
             if p.header.slotCount == 0 { continue }
             for sid in 1...p.header.slotCount {
-                if let bytes = p.read(slotId: sid) {
-                    if let row = try? JSONDecoder().decode(Row.self, from: bytes) {
-                        items.append((RID(pageId: pid, slotId: sid), row))
-                    }
+                if !p.isSlotLive(sid) { continue }
+                if let bytes = p.read(slotId: sid), let row = try? JSONDecoder().decode(Row.self, from: bytes) {
+                    items.append((RID(pageId: pid, slotId: sid), row))
                 }
             }
         }

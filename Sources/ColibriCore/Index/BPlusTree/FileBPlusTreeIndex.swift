@@ -67,6 +67,8 @@ public final class FileBPlusTreeIndex {
             fm.createFile(atPath: walPath, contents: nil)
         }
         self.walFH = try FileHandle(forUpdating: URL(fileURLWithPath: walPath))
+        // Optional: disable OS cache for WAL to reduce cache pollution
+        IOHints.setNoCache(fd: walFH.fileDescriptor, enabled: walFullSyncEnabled)
         try FileBPlusTreeIndex.ensureWALHeader(handle: walFH)
         if try fh.seekToEnd() == 0 {
             self.hdr = Header(pageSize: pageSize, root: 0, nextPage: 1, checkpointLSN: 0)

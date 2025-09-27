@@ -53,6 +53,8 @@ extension Database {
                                              flushQoS: qos,
                                              ioHintsEnabled: config.ioSequentialReadHint,
                                              walFullSyncEnabled: config.walFullFSyncEnabled)
+            // Apply WAL no-cache hint if requested
+            if config.walNoCache { IOHints.setNoCache(fd: idx.walFH.fileDescriptor, enabled: true) }
             map[name] = (columns: columns, backend: .persistentBTree(idx))
             try indexCatalog?.add(IndexDef(name: name, table: table, column: nil, columns: columns, kind: "BTree"))
             systemCatalog?.registerIndex(name: name,

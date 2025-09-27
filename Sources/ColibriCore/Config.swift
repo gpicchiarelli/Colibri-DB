@@ -48,6 +48,7 @@ public struct DBConfig: Codable {
     public var ioSequentialReadHint: Bool
     public var walCompression: CompressionAlgorithm
     public var pageFlushCompression: CompressionAlgorithm
+    public var walNoCache: Bool
 
     enum CodingKeys: String, CodingKey {
         case dataDir
@@ -81,6 +82,7 @@ public struct DBConfig: Codable {
         case ioSequentialReadHint
         case walCompression
         case pageFlushCompression
+        case walNoCache
     }
 
     /// Initializes a configuration with defaults suited for development.
@@ -115,7 +117,8 @@ public struct DBConfig: Codable {
         bufferFlushQoS: String = "utility",
         ioSequentialReadHint: Bool = false,
         walCompression: CompressionAlgorithm = .none,
-        pageFlushCompression: CompressionAlgorithm = .none
+        pageFlushCompression: CompressionAlgorithm = .none,
+        walNoCache: Bool = false
     ) {
         self.dataDir = dataDir
         self.maxConnectionsLogical = maxConnectionsLogical
@@ -148,6 +151,7 @@ public struct DBConfig: Codable {
         self.ioSequentialReadHint = ioSequentialReadHint
         self.walCompression = walCompression
         self.pageFlushCompression = pageFlushCompression
+        self.walNoCache = walNoCache
     }
 
     // Backward-compatible decoding: missing keys fall back to defaults
@@ -186,6 +190,7 @@ public struct DBConfig: Codable {
         self.ioSequentialReadHint = try c.decodeIfPresent(Bool.self, forKey: .ioSequentialReadHint) ?? d.ioSequentialReadHint
         self.walCompression = try c.decodeIfPresent(CompressionAlgorithm.self, forKey: .walCompression) ?? d.walCompression
         self.pageFlushCompression = try c.decodeIfPresent(CompressionAlgorithm.self, forKey: .pageFlushCompression) ?? d.pageFlushCompression
+        self.walNoCache = try c.decodeIfPresent(Bool.self, forKey: .walNoCache) ?? d.walNoCache
     }
 }
 

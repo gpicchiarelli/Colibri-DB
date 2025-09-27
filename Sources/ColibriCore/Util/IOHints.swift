@@ -94,6 +94,15 @@ enum IOHints {
 #endif
     }
 
+    /// Attempts to disable OS cache for a file descriptor (Darwin: F_NOCACHE).
+    static func setNoCache(fd: Int32, enabled: Bool) {
+#if canImport(Darwin)
+        _ = fcntl(fd, F_NOCACHE, enabled ? 1 : 0)
+#else
+        _ = (fd, enabled)
+#endif
+    }
+
     /// Clamps a 64-bit length to fit into `off_t`.
     private static func clampingLength(_ length: UInt64) -> Int64 {
         if length >= UInt64(Int64.max) { return Int64.max }

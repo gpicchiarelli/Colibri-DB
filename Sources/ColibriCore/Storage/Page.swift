@@ -185,10 +185,21 @@ struct Page {
         let slot: PageSlot = data.withUnsafeBytes { ptr in
             ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
         }
+        if slot.length == 0 { return nil }
         let start = Int(slot.offset)
         let end = start + Int(slot.length)
         guard end <= pageSize else { return nil }
         return data.subdata(in: start..<end)
+    }
+
+    /// Returns true if the slot exists and has a non-zero length (live tuple).
+    func isSlotLive(_ slotId: UInt16) -> Bool {
+        guard slotId > 0 && slotId <= header.slotCount else { return false }
+        let slotPos = pageSize - Int(slotId) * Page.slotSize
+        let slot: PageSlot = data.withUnsafeBytes { ptr in
+            ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
+        }
+        return slot.length != 0
     }
 
     // Compacts live tuples to the front of the page, preserving slot ids.

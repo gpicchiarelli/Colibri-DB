@@ -13,25 +13,30 @@ import Foundation
 extension FileBPlusTreeIndex {
     // MARK: - Comparing helpers
 
-    func upperBound(keys: [Data], key: Data) -> Int {
+    @inline(__always) func upperBound(keys: [Data], key: Data) -> Int {
         var l = 0, r = keys.count
         while l < r {
             let m = (l + r) >> 1
-            if keys[m].lexicographicallyPrecedes(key) || keys[m] == key { l = m + 1 } else { r = m }
+            // Branchless-like: compute cmp as bools and select update
+            let le = keys[m].lexicographicallyPrecedes(key) || keys[m] == key
+            l = le ? (m + 1) : l
+            r = le ? r : m
         }
         return l
     }
 
-    func lowerBound(keys: [Data], key: Data) -> Int {
+    @inline(__always) func lowerBound(keys: [Data], key: Data) -> Int {
         var l = 0, r = keys.count
         while l < r {
             let m = (l + r) >> 1
-            if keys[m].lexicographicallyPrecedes(key) { l = m + 1 } else { r = m }
+            let lt = keys[m].lexicographicallyPrecedes(key)
+            l = lt ? (m + 1) : l
+            r = lt ? r : m
         }
         return l
     }
 
-    func binarySearch(keys: [Data], key: Data) -> Int? {
+    @inline(__always) func binarySearch(keys: [Data], key: Data) -> Int? {
         if keys.isEmpty { return nil }
         var l = 0, r = keys.count - 1
         while l <= r {
