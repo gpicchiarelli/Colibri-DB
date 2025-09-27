@@ -208,16 +208,13 @@ extension Database {
     }
     
     private func redoHeapDelete(record: WALHeapDeleteRecord) throws {
-        guard let ft = tablesFile[record.tableId] else { return }
-        
         let rid = RID(pageId: record.recordPageId, slotId: record.slotId)
-        
-        // Idempotent delete - check if exists
-        if (try? ft.read(rid)) == nil {
-            return  // Already deleted
+        if let ft = tablesFile[record.tableId] {
+            try ft.remove(rid, pageLSN: record.lsn)
         }
-        
-        try ft.remove(rid)
+        if let row = try? JSONDecoder().decode(Row.self, from: record.rowData), tablesMem[record.tableId] != nil || tablesFile[record.tableId] != nil {
+            mvcc.registerDelete(table: record.tableId, rid: rid, row: row, tid: record.txId)
+        }
     }
     
     private func redoIndexInsert(record: WALIndexInsertRecord) throws {
@@ -270,17 +267,17 @@ extension Database {
         // Apply the undo action described in the CLR
         switch record.undoAction {
         case .heapInsert(let pageId, let slotId):
-            // Undo of insert = delete
+            // Undo of insert = mark tombstone
             let rid = RID(pageId: pageId, slotId: slotId)
             for (_, ft) in tablesFile {
-                try? ft.remove(rid)
+                try? ft.remove(rid, pageLSN: record.lsn)
             }
             
         case .heapDelete(_, _, let rowData):
             // Undo of delete = insert
             let row = try JSONDecoder().decode(Row.self, from: rowData)
             for (_, ft) in tablesFile {
-                _ = try? ft.insert(row, pageLSN: record.lsn)
+                _ = try? ft.restore(rid, row: row, pageLSN: record.lsn)
             }
             
         case .heapUpdate(let pageId, let slotId, let originalData):

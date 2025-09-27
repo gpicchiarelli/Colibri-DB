@@ -26,9 +26,39 @@ struct PageHeader {
     var checksum: UInt32 // CRC32 of the whole page with this field zeroed
 }
 
-struct PageSlot { // 4 bytes
+/// Slot metadata stored in the page slot directory (4 bytes).
+struct PageSlot {
+    private enum Flag {
+        static let tombstoneMask: UInt16 = 0x8000
+        static let lengthMask: UInt16 = 0x7FFF
+    }
+
     var offset: UInt16
-    var length: UInt16
+    private var rawLength: UInt16
+
+    init(offset: UInt16, length: UInt16, tombstone: Bool = false) {
+        self.offset = offset
+        self.rawLength = length & Flag.lengthMask
+        if tombstone { self.rawLength |= Flag.tombstoneMask }
+    }
+
+    var length: UInt16 {
+        get { rawLength & Flag.lengthMask }
+        set {
+            rawLength = (rawLength & Flag.tombstoneMask) | (newValue & Flag.lengthMask)
+        }
+    }
+
+    var isTombstone: Bool {
+        get { (rawLength & Flag.tombstoneMask) != 0 }
+        set {
+            if newValue {
+                rawLength |= Flag.tombstoneMask
+            } else {
+                rawLength &= Flag.lengthMask
+            }
+        }
+    }
 }
 
 /// In-memory representation of a database page.
@@ -143,7 +173,7 @@ public struct Page {
                 let slot: PageSlot = data.withUnsafeBytes { ptr in
                     ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
                 }
-                if slot.length == 0 {
+                if slot.length == 0 || slot.isTombstone {
                     deadTuples += 1
                 } else {
                     liveTuples += 1
@@ -174,7 +204,7 @@ public struct Page {
         data.replaceSubrange(Int(offset)..<Int(offset) + need, with: rowBytes)
         // write slot
         let slotOffset = Int(header.freeEnd) - Page.slotSize
-        var slot = PageSlot(offset: offset, length: UInt16(need))
+        var slot = PageSlot(offset: offset, length: UInt16(need), tombstone: false)
         withUnsafeBytes(of: &slot) { src in
             data.replaceSubrange(slotOffset..<slotOffset+Page.slotSize, with: src)
         }
@@ -192,7 +222,7 @@ public struct Page {
         let slot: PageSlot = data.withUnsafeBytes { ptr in
             ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
         }
-        if slot.length == 0 { return nil }
+        if slot.length == 0 || slot.isTombstone { return nil }
         let start = Int(slot.offset)
         let end = start + Int(slot.length)
         guard end <= pageSize else { return nil }
@@ -209,51 +239,69 @@ public struct Page {
         return slot.length != 0
     }
 
+    mutating func markTombstone(slotId: UInt16) {
+        guard slotId > 0 && slotId <= header.slotCount else { return }
+        let slotPos = pageSize - Int(slotId) * Page.slotSize
+        var slot: PageSlot = data.withUnsafeBytes { ptr in
+            ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
+        }
+        slot.isTombstone = true
+        withUnsafeBytes(of: slot) { src in
+            data.replaceSubrange(slotPos..<slotPos+Page.slotSize, with: src)
+        }
+    }
+
+    mutating func clearTombstone(slotId: UInt16) {
+        guard slotId > 0 && slotId <= header.slotCount else { return }
+        let slotPos = pageSize - Int(slotId) * Page.slotSize
+        var slot: PageSlot = data.withUnsafeBytes { ptr in
+            ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
+        }
+        slot.isTombstone = false
+        withUnsafeBytes(of: slot) { src in
+            data.replaceSubrange(slotPos..<slotPos+Page.slotSize, with: src)
+        }
+    }
+
     // Compacts live tuples to the front of the page, preserving slot ids.
     // Returns reclaimed free space delta (after - before).
     /// Compacts the page, preserving slot ids; returns gained free bytes.
     mutating func compact() -> Int {
-        let before = availableSpaceForInsert()
-        var newData = Data(repeating: 0, count: pageSize)
-        // Copy header later via writeHeader()
-        var writeOffset = Page.headerSize
+        var gained = 0
+        var tuples: [(slot: UInt16, data: Data)] = []
         for sid in 1...header.slotCount {
             let slotPos = pageSize - Int(sid) * Page.slotSize
-            let slot: PageSlot = data.withUnsafeBytes { ptr in
+            var slot: PageSlot = data.withUnsafeBytes { ptr in
                 ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
             }
-            if slot.length == 0 { // keep empty slot
-                var ns = PageSlot(offset: 0, length: 0)
-                withUnsafeBytes(of: &ns) { src in
-                    newData.replaceSubrange(slotPos..<(slotPos+Page.slotSize), with: src)
-                }
-                continue
-            }
-            // Read tuple bytes and write sequentially
+            if slot.length == 0 || slot.isTombstone { continue }
             let start = Int(slot.offset)
             let end = start + Int(slot.length)
-            if end <= pageSize {
-                let bytes = data.subdata(in: start..<end)
-                newData.replaceSubrange(writeOffset..<(writeOffset + bytes.count), with: bytes)
-                var ns = PageSlot(offset: UInt16(writeOffset), length: slot.length)
-                withUnsafeBytes(of: &ns) { src in
-                    newData.replaceSubrange(slotPos..<(slotPos+Page.slotSize), with: src)
-                }
-                writeOffset += bytes.count
-            } else {
-                // corrupt slot; zero it
-                var ns = PageSlot(offset: 0, length: 0)
-                withUnsafeBytes(of: &ns) { src in
-                    newData.replaceSubrange(slotPos..<(slotPos+Page.slotSize), with: src)
-                }
-            }
+            guard end <= pageSize else { continue }
+            let payload = data.subdata(in: start..<end)
+            tuples.append((slot: UInt16(sid), data: payload))
         }
-        // Update header on current struct and write header+checksum into newData
-        header.freeStart = UInt16(writeOffset)
-        header.freeEnd = UInt16(pageSize - Int(header.slotCount) * Page.slotSize)
+        var newData = Data(repeating: 0, count: pageSize)
+        let originalFree = availableSpaceForInsert()
+        header.freeStart = UInt16(Page.headerSize)
+        header.freeEnd = UInt16(pageSize)
+        for (slotId, payload) in tuples {
+            let need = payload.count
+            let slotOffset = Int(header.freeEnd) - Page.slotSize
+            let offset = header.freeStart
+            newData.replaceSubrange(Int(offset)..<Int(offset)+need, with: payload)
+            var slot = PageSlot(offset: offset, length: UInt16(need), tombstone: false)
+            withUnsafeBytes(of: slot) { src in
+                newData.replaceSubrange(slotOffset..<slotOffset+Page.slotSize, with: src)
+            }
+            header.freeStart = UInt16(Int(header.freeStart) + need)
+            header.freeEnd = UInt16(slotOffset)
+        }
+        newData.replaceSubrange(0..<Int(header.freeStart), with: data[0..<Int(header.freeStart)])
         data = newData
         writeHeader()
-        let after = availableSpaceForInsert()
-        return after - before
+        let newFree = availableSpaceForInsert()
+        gained = newFree - originalFree
+        return max(0, gained)
     }
 }

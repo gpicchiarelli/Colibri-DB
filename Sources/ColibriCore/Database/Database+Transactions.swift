@@ -146,7 +146,7 @@ extension Database {
             removeFromIndexes(table: op.table, row: op.row, rid: op.rid)
             mvcc.undoInsert(table: op.table, rid: op.rid, tid: tid)
         case .delete:
-            let clr = logCLRUndoDelete(tid: tid, table: op.table, row: op.row, nextUndoLSN: txLastLSN[tid] ?? 0)
+            let clr = logCLRUndoDelete(tid: tid, table: op.table, rid: op.rid, row: op.row, nextUndoLSN: txLastLSN[tid] ?? 0)
             if clr > 0 { txLastLSN[tid] = clr }
             if var t = tablesMem[op.table] {
                 t.restore(op.rid, row: op.row)

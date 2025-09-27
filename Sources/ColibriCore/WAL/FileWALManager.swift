@@ -514,11 +514,7 @@ public final class FileWALManager: WALManager {
         
         // LSN
         recordData.append(record.lsn.bigEndianData)
-        
-        // Database ID
         recordData.append(record.dbId.bigEndianData)
-        
-        // Page ID (optional)
         recordData.append((record.pageId ?? 0).bigEndianData)
         
         // Payload length

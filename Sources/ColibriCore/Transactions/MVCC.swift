@@ -17,6 +17,8 @@ public final class MVCCManager {
     // MARK: - Nested types
 
     public enum Status: String, Codable { case inProgress, committed, aborted }
+    public enum VersionFlag: String, Codable { case normal, tombstone }
+
     public struct Version: Codable {
         var row: Row
         var beginTID: UInt64
@@ -24,6 +26,7 @@ public final class MVCCManager {
         var endTID: UInt64?
         var endStatus: Status?
         var createdAt: Date
+        var flag: VersionFlag
 
         var isDeleted: Bool { endTID != nil && endStatus != .aborted }
     }
@@ -80,7 +83,8 @@ public final class MVCCManager {
                                  beginStatus: beginStatus,
                                  endTID: nil,
                                  endStatus: nil,
-                                 createdAt: Date())
+                                 createdAt: Date(),
+                                 flag: .normal)
         if let last = chain.last,
            last.endTID == nil,
            last.beginTID == beginTid,
@@ -107,7 +111,8 @@ public final class MVCCManager {
                                  beginStatus: .committed,
                                  endTID: nil,
                                  endStatus: nil,
-                                 createdAt: Date()))
+                                 createdAt: Date(),
+                                 flag: .normal))
         }
         guard var last = chain.popLast() else {
             map[rid] = chain
@@ -117,6 +122,7 @@ public final class MVCCManager {
         last.row = row
         last.endTID = tid ?? 0
         last.endStatus = (tid == nil) ? .committed : .inProgress
+        last.flag = .tombstone
         chain.append(last)
         map[rid] = chain
         tableVersions[table] = map
@@ -168,6 +174,7 @@ public final class MVCCManager {
         var result: [RID: Row] = [:]
         for (rid, chain) in map {
             guard let visible = latestVisibleVersion(chain: chain, snapshot: snapshot, readerTID: readerTID) else { continue }
+            if visible.flag == .tombstone { continue }
             result[rid] = visible.row
         }
         return result
@@ -212,6 +219,7 @@ public final class MVCCManager {
     }
 
     private func isVisible(_ version: Version, snapshot: Snapshot, readerTID: UInt64?) -> Bool {
+        if version.flag == .tombstone { return false }
         if version.beginStatus == .aborted { return false }
         if let reader = readerTID, reader == version.beginTID {
             if version.beginStatus == .inProgress {

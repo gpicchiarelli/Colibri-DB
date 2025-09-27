@@ -170,7 +170,7 @@ extension Database {
     }
     
     /// Helper to log CLR for undo delete
-    func logCLRUndoDelete(tid: UInt64, table: String, row: Row, nextUndoLSN: UInt64) -> UInt64 {
+    func logCLRUndoDelete(tid: UInt64, table: String, rid: RID, row: Row, nextUndoLSN: UInt64) -> UInt64 {
         guard let wal = globalWAL else { return 0 }
         
         do {
@@ -180,7 +180,7 @@ extension Database {
                 txId: tid,
                 undoNextLSN: nextUndoLSN,
                 undoneOperationLSN: txLastLSN[tid] ?? 0,
-                undoAction: .heapDelete(pageId: 0, slotId: 0, rowData: rowData)  // Page/slot determined at undo time
+                undoAction: .heapDelete(pageId: rid.pageId, slotId: rid.slotId, rowData: rowData)
             )
             
             return try wal.append(record)

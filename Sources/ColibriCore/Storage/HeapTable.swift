@@ -14,52 +14,69 @@ import Foundation
 /// In-memory heap table for testing and in-memory storage engine.
 
 public struct HeapTable: TableStorageProtocol {
-    private var rows: [RID: Row] = [:]
+    private struct Entry { var row: Row; var isTombstone: Bool }
+    private var rows: [RID: Entry] = [:]
     private var nextPage: UInt64 = 1
-    private var nextSlot: UInt16 = 1
 
     public init() {}
 
-    private mutating func nextRID() -> RID {
-        // Naive RID allocation (no paging). For MVP/testing only.
-        let rid = RID(pageId: nextPage, slotId: nextSlot)
-        if nextSlot == UInt16.max { nextSlot = 1; nextPage += 1 } else { nextSlot &+= 1 }
-        return rid
-    }
-
-    /// Inserts a row and returns its RID.
     @discardableResult
     public mutating func insert(_ row: Row) throws -> RID {
-        let rid = nextRID()
-        rows[rid] = row
+        let rid = RID(pageId: nextPage, slotId: 1)
+        rows[rid] = Entry(row: row, isTombstone: false)
+        nextPage += 1
         return rid
     }
 
-    /// Returns a sequence of all (RID, Row) pairs.
+    public func scan(includeTombstones: Bool = false) throws -> AnySequence<(RID, Row?, Bool)> {
+        let keys = rows.keys.sorted { lhs, rhs in
+            if lhs.pageId == rhs.pageId { return lhs.slotId < rhs.slotId }
+            return lhs.pageId < rhs.pageId
+        }
+        var index = 0
+        let iterator = AnyIterator<(RID, Row?, Bool)> {
+            while index < keys.count {
+                let rid = keys[index]
+                index += 1
+                guard let entry = rows[rid] else { continue }
+                if !includeTombstones && entry.isTombstone { continue }
+                return (rid, entry.isTombstone ? nil : entry.row, entry.isTombstone)
+            }
+            return nil
+        }
+        return AnySequence(iterator)
+    }
+
     public func scan() throws -> AnySequence<(RID, Row)> {
-        AnySequence(rows.map { ($0.key, $0.value) })
+        var iterator = try scan(includeTombstones: false).makeIterator()
+        return AnySequence(AnyIterator {
+            while let next = iterator.next() {
+                let (rid, row, _) = next
+                if let row = row { return (rid, row) }
+            }
+            return nil
+        })
     }
 
-    /// Reads a row by RID.
     public func read(_ rid: RID) throws -> Row {
-        guard let r = rows[rid] else { throw DBError.notFound("RID \(rid)") }
-        return r
+        guard let entry = rows[rid], !entry.isTombstone else { throw DBError.notFound("RID \(rid)") }
+        return entry.row
     }
 
-    /// Updates a row by RID.
     public mutating func update(_ rid: RID, _ newRow: Row) throws {
-        guard rows[rid] != nil else { throw DBError.notFound("RID \(rid)") }
-        rows[rid] = newRow
+        guard var entry = rows[rid], !entry.isTombstone else { throw DBError.notFound("RID \(rid)") }
+        entry.row = newRow
+        rows[rid] = entry
     }
 
-    /// Removes a row by RID.
     public mutating func remove(_ rid: RID) throws {
-        rows.removeValue(forKey: rid)
+        guard var entry = rows[rid] else { throw DBError.notFound("RID \(rid)") }
+        entry.isTombstone = true
+        rows[rid] = entry
     }
 
-    /// Restores a previously removed row into its original RID (used during rollback).
     public mutating func restore(_ rid: RID, row: Row) {
-        rows[rid] = row
+        rows[rid] = Entry(row: row, isTombstone: false)
     }
 }
 

@@ -355,25 +355,60 @@ public final class FileHeapTable: TableStorageProtocol {
         return RID(pageId: newId, slotId: slotId)
     }
 
-    /// Scans the entire table returning (RID, Row) pairs.
-    public func scan() throws -> AnySequence<(RID, Row)> {
+    /// Scans the entire table returning (RID, Row?, isTombstone) tuples.
+    public func scan(includeTombstones: Bool = false) throws -> AnySequence<(RID, Row?, Bool)> {
         let count = lastPageId
         if sequentialReadHint && count > 0 {
-            IOHints.prepareSequentialRead(handle: fh,
-                                          length: UInt64(count) * UInt64(pageSize))
+            IOHints.hintSequential(fd: fh.fileDescriptor, offset: 0, length: Int(count) * pageSize)
         }
-        var items: [(RID, Row)] = []
-        for pid in 1...count {
-            let p = try readPage(pid)
-            if p.header.slotCount == 0 { continue }
-            for sid in 1...p.header.slotCount {
-                if !p.isSlotLive(sid) { continue }
-                if let bytes = p.read(slotId: sid), let row = try? JSONDecoder().decode(Row.self, from: bytes) {
-                    items.append((RID(pageId: pid, slotId: sid), row))
+        let iterator = AnyIterator<(RID, Row?, Bool)> {
+            var currentPage: UInt64 = 1
+            var slot: UInt16 = 1
+            while currentPage <= self.lastPageId {
+                guard let page = try? self.readPage(currentPage) else {
+                    currentPage += 1
+                    slot = 1
+                    continue
+                }
+                while slot <= page.header.slotCount {
+                    let rid = RID(pageId: currentPage, slotId: slot)
+                    let slotPos = self.pageSize - Int(slot) * Page.slotSize
+                    let pageSlot: PageSlot = page.data.withUnsafeBytes { ptr in
+                        ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
+                    }
+                    slot += 1
+                    if pageSlot.length == 0 {
+                        continue
+                    }
+                    let isTombstone = pageSlot.isTombstone
+                    if !includeTombstones && isTombstone {
+                        continue
+                    }
+                    let row: Row? = {
+                        guard let bytes = page.read(slotId: rid.slotId) else { return nil }
+                        return try? JSONDecoder().decode(Row.self, from: bytes)
+                    }()
+                    return (rid, row, isTombstone)
+                }
+                currentPage += 1
+                slot = 1
+            }
+            return nil
+        }
+        return AnySequence(iterator)
+    }
+
+    public func scan() throws -> AnySequence<(RID, Row)> {
+        var iterator = try scan(includeTombstones: false).makeIterator()
+        return AnySequence(AnyIterator {
+            while let next = iterator.next() {
+                let (rid, row, isTombstone) = next
+                if !isTombstone, let row = row {
+                    return (rid, row)
                 }
             }
-        }
-        return AnySequence(items)
+            return nil
+        })
     }
 
     /// Returns buffer pool stats associated with this table.
@@ -406,23 +441,9 @@ public final class FileHeapTable: TableStorageProtocol {
 
     /// Logically deletes a row by zeroing its slot length.
     public func remove(_ rid: RID) throws {
-        // MVP: logical delete by zeroing slot length
         var page = try readPage(rid.pageId)
-        // Read header to compute slot position
-        // slotId is 1-based; slots packed at end: position = pageSize - slotId*slotSize
-        let slotPos = pageSize - Int(rid.slotId) * 4
-        var d = page.data
-        // Zero length (2 bytes) at slot
-        // slot layout: offset u16 | length u16
-        // We keep offset as is, set length to 0
-        let lenPos = slotPos + 2
-        d.replaceSubrange(lenPos..<(lenPos+2), with: [0,0])
-        page.data = d
+        page.markTombstone(slotId: rid.slotId)
         try write(page: &page)
-        let free = page.availableSpaceForInsert()
-        fsm[rid.pageId] = free
-        try? persistFSM()
-        updateCandidates(pageId: rid.pageId, freeBytes: free)
     }
 
     /// Restores a logically deleted row into its original slot (used by rollback/CLR).
@@ -437,29 +458,24 @@ public final class FileHeapTable: TableStorageProtocol {
         let end = start + bytes.count
         guard end <= pageSize else { throw DBError.io("Cannot restore row: slot overflow") }
         slot.length = UInt16(bytes.count)
+        slot.isTombstone = false
         page.data.replaceSubrange(start..<end, with: bytes)
         withUnsafeBytes(of: slot) { src in
             page.data.replaceSubrange(slotPos..<slotPos+Page.slotSize, with: src)
         }
         if let lsn = pageLSN, lsn != 0 { page.setPageLSN(lsn) }
         try write(page: &page)
-        fsm[rid.pageId] = page.availableSpaceForInsert()
-        try? persistFSM()
     }
 
     /// Removes a row and sets the pageLSN (used during WAL redo).
     public func remove(_ rid: RID, pageLSN: UInt64) throws {
         var page = try readPage(rid.pageId)
-        let slotPos = pageSize - Int(rid.slotId) * 4
-        var d = page.data
-        let lenPos = slotPos + 2
-        d.replaceSubrange(lenPos..<(lenPos+2), with: [0,0])
-        page.data = d
+        page.markTombstone(slotId: rid.slotId)
         try write(page: &page, pageLSN: pageLSN)
-        let free = page.availableSpaceForInsert()
-        fsm[rid.pageId] = free
-        try? persistFSM()
-        updateCandidates(pageId: rid.pageId, freeBytes: free)
+    }
+
+    public func restore(_ rid: RID, row: Row) {
+        try? restore(rid, row: row, pageLSN: nil)
     }
 
     // Flush any dirty pages from buffer to disk

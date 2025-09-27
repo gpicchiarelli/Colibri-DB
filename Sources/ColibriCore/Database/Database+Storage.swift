@@ -73,40 +73,13 @@ extension Database {
         defer { if tid == nil { lockManager.unlock(handle) } }
         let cutoff = tid.flatMap { txContexts[$0]?.snapshotCutoff }
         let snapshot = mvcc.snapshot(for: tid, isolationCutoff: cutoff)
-        let raw: [(RID, Row)]
-        if let t = tablesMem[name] {
-            raw = Array(try t.scan())
-        } else if let ft = tablesFile[name] {
-            raw = Array(try ft.scan())
-        } else {
-            throw DBError.notFound("Table \(name)")
-        }
-
-        var visible = mvcc.visibleRows(table: name, snapshot: snapshot, readerTID: tid)
-        var results: [(RID, Row)] = []
-        results.reserveCapacity(max(visible.count, raw.count))
-        var seen = Set<RID>()
-        for (rid, row) in visible {
-            results.append((rid, row))
-            seen.insert(rid)
-        }
-
-        let knownVersions = mvcc.allVersions(for: name)
-        for (rid, row) in raw where !seen.contains(rid) {
-            if knownVersions[rid] != nil {
-                // Already tracked by MVCC but not visible for this snapshot.
-                continue
+        // With MVCC tombstone support, rely solely on MVCC for visibility.
+        let results = mvcc.visibleRows(table: name, snapshot: snapshot, readerTID: tid)
+            .sorted { lhs, rhs in
+                if lhs.key.pageId == rhs.key.pageId { return lhs.key.slotId < rhs.key.slotId }
+                return lhs.key.pageId < rhs.key.pageId
             }
-            mvcc.registerInsert(table: name, rid: rid, row: row, tid: nil)
-            visible[rid] = row
-            results.append((rid, row))
-            seen.insert(rid)
-        }
-
-        results.sort { lhs, rhs in
-            if lhs.0.pageId == rhs.0.pageId { return lhs.0.slotId < rhs.0.slotId }
-            return lhs.0.pageId < rhs.0.pageId
-        }
+            .map { ($0.key, $0.value) }
         return results
     }
 
