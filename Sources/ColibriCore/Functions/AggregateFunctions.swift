@@ -297,11 +297,7 @@ public struct BuiltinFunctions {
         if let int = any as? Int { return .int(Int64(int)) }
         if let double = any as? Double { return .double(double) }
         if let bool = any as? Bool { return .bool(bool) }
-        if let dict = any as? [String: Any] {
-            if let jsonData = try? JSONSerialization.data(withJSONObject: dict) {
-                return .json(jsonData)
-            }
-        }
+        // JSON types not supported in MVP
         return .null
     }
 }
