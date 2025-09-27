@@ -32,7 +32,7 @@ struct PageSlot { // 4 bytes
 }
 
 /// In-memory representation of a database page.
-struct Page {
+public struct Page {
     static let headerSize = 32
     static let slotSize = 4
 

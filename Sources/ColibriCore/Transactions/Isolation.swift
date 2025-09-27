@@ -11,7 +11,7 @@
 import Foundation
 
 /// Supported transaction isolation levels.
-public enum IsolationLevel: String, Codable {
+public enum IsolationLevel: String, Codable, Sendable {
     case readCommitted
     case repeatableRead
     case snapshotIsolation

@@ -1,7 +1,7 @@
 import Foundation
 import Compression
 
-public enum CompressionAlgorithm: String, Codable {
+public enum CompressionAlgorithm: String, Codable, Sendable {
     case none
     case lzfse
     case zlib
@@ -19,7 +19,7 @@ public enum CompressionAlgorithm: String, Codable {
 }
 
 /// Thin wrapper around Apple's Compression framework to support configurable algorithms.
-enum CompressionCodec {
+public enum CompressionCodec {
     /// Attempts to compress `data` using the provided algorithm.
     /// Returns nil when compression is disabled or ineffective.
     static func compress(_ data: Data, algorithm: CompressionAlgorithm) -> Data? {

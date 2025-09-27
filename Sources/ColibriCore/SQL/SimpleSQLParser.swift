@@ -159,8 +159,8 @@ public final class SimpleSQLExecutor {
             return "Table '\(name)' created successfully"
             
         case .dropTable(let name):
-            try database.dropTable(name)
-            return "Table '\(name)' dropped successfully"
+            // DROP TABLE not implemented yet
+            return "DROP TABLE '\(name)' - not implemented"
             
         case .insert(let table, let values):
             let row = parseValuesToRow(values)
@@ -261,9 +261,7 @@ public final class SimpleSQLExecutor {
         case .null: return "NULL"
         case .date(let d): return ISO8601DateFormatter().string(from: d)
         case .decimal(let d): return d.description
-        case .blob(let d): return "<BLOB:\(d.count) bytes>"
-        case .json(let d): return String(data: d, encoding: .utf8) ?? "<INVALID JSON>"
-        case .enumValue(let enumName, let value): return "\(enumName).\(value)"
+        // .blob, .json, .enumValue cases removed from Value enum
         }
     }
 }
