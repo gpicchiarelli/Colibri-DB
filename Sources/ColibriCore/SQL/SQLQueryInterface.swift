@@ -356,7 +356,7 @@ public final class SQLQueryInterface {
     }
 
     private func extractEqualsPredicate(_ expr: SQLExpression?) throws -> (String, Value)? {
-        guard let expr = expr else { return ("", .null) as (String, Value)? }
+        guard let expr = expr else { return nil }
         switch expr {
         case .binary(let l, .equals, let r):
             if case .column(let name) = l {
