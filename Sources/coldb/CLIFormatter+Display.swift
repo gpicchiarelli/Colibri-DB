@@ -42,12 +42,4 @@ extension CLIFormatter {
     }
     
     // TODO: Implement table schema display when ConstraintManager is ready
-    
-    func printError(_ message: String) {
-        print(colors.error("❌ Error: \(message)"))
-    }
-    
-    func printInfo(_ message: String) {
-        print(colors.info("ℹ️  \(message)"))
-    }
 }
