@@ -43,17 +43,10 @@ extension FileBPlusTreeIndex {
         } else {
             var leaf = try parseLeaf(page.data)
             if let i = binarySearch(keys: leaf.keys, key: key) {
-                var set = Set(leaf.ridLists[i])
-                if leaf.tombstones[i].remove(rid) != nil {
-                    // revived tombstone
-                }
-                set.insert(rid)
-                leaf.ridLists[i] = Array(set)
+                leaf.insertRID(at: i, rid: rid)
             } else {
                 let pos = lowerBound(keys: leaf.keys, key: key)
-                leaf.keys.insert(key, at: pos)
-                leaf.ridLists.insert([rid], at: pos)
-                leaf.tombstones.insert([], at: pos)
+                leaf.insertKey(key, rid: rid, at: pos)
             }
             let size = serializedLeafSize(keys: leaf.keys, ridLists: leaf.ridLists)
             if size > pageSize {
