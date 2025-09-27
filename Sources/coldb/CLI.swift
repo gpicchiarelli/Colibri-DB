@@ -102,9 +102,18 @@ public class ProductionCLI {
             formatter.printInfo("INSERT not implemented in basic CLI")
         } else if trimmed.uppercased().hasPrefix("SELECT") {
             formatter.printInfo("SELECT not implemented in basic CLI")
+        } else if trimmed.uppercased() == "\\TEST WAL" {
+            try runWALTests()
         } else {
             throw CLIError.unknownCommand("Unknown SQL command: \(trimmed)")
         }
+    }
+    
+    private func runWALTests() throws {
+        formatter.printInfo("Running WAL Acceptance Tests...")
+        
+        let testRunner = WALTestRunner(verbose: true)
+        testRunner.runTests()
     }
 }
 

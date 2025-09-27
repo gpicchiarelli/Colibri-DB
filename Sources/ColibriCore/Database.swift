@@ -115,8 +115,8 @@ public final class Database {
         if let defs = indexCatalog?.list() {
             for def in defs { try? restoreIndex(from: def) }
         }
-        // Replay DB WAL to recover
-        try? replayDBWAL()
+        // Replay Global WAL to recover
+        try? replayGlobalWAL()
         bootstrapMVCCState()
         if config.autoCompactionEnabled {
             startVacuum(intervalSeconds: config.autoCompactionIntervalSeconds, pagesPerRun: config.autoCompactionPagesPerRun)

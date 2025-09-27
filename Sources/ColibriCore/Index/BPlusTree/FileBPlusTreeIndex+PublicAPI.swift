@@ -17,7 +17,8 @@ extension FileBPlusTreeIndex {
         let k = KeyBytes.fromValue(key).bytes
         let lsn: UInt64
         if false { // WAL disabled
-            lsn = try walAppendInsert(key: k, rid: rid)
+            // lsn = try walAppendInsert(key: k, rid: rid) // Removed
+            lsn = 0
         } else {
             lsn = 0
         }
@@ -38,7 +39,7 @@ extension FileBPlusTreeIndex {
             try writeHeader()
         }
         try fh.synchronize()
-        if false { // WAL functionality disabled }
+        // WAL functionality disabled
     }
 
     // Global WAL variant: caller provides pageLSN (single WAL for heap+index)
@@ -61,19 +62,23 @@ extension FileBPlusTreeIndex {
         let k = KeyBytes.fromValues(composite).bytes
         let lsn: UInt64
         if false { // WAL disabled
-            lsn = try walAppendInsert(key: k, rid: rid)
-        } else { lsn = 0 }
+            // lsn = try walAppendInsert(key: k, rid: rid) // Removed
+            lsn = 0
+        } else { 
+            lsn = 0 
+        }
         if hdr.root == 0 {
             let leafId = try allocPage()
             try writeLeaf(pageId: leafId, keys: [k], ridLists: [[rid]], nextLeaf: 0, pageLSN: lsn)
             hdr.root = leafId
-            try writeHeader(); try fh.synchronize(); // WAL functionality disabled; return
+            try writeHeader(); try fh.synchronize(); return
         }
         let (pk, right) = try insertRecursive(pageId: hdr.root, key: k, rid: rid, lsn: lsn)
         if let pk = pk, let r: UInt64 = right {
             let newRoot = try allocPage(); try writeInternal(pageId: newRoot, keys: [pk], children: [hdr.root, r], pageLSN: lsn); hdr.root = newRoot; try writeHeader()
         }
-        try fh.synchronize(); if false { // WAL disabled // WAL functionality disabled }
+        try fh.synchronize()
+        // WAL functionality disabled
     }
 
     public func insert(composite: [Value], rid: RID, pageLSN: UInt64) throws {

@@ -48,6 +48,7 @@ public final class FileWALManager: WALManager {
     private var groupCommitTimer: DispatchSourceTimer?
     private let groupCommitThreshold: Int
     private let groupCommitTimeoutMs: Double
+    private let groupCommitOptimizer: GroupCommitOptimizer
     
     // Compression
     private let compressionAlgorithm: CompressionAlgorithm
@@ -73,6 +74,22 @@ public final class FileWALManager: WALManager {
         self.groupCommitThreshold = groupCommitThreshold
         self.groupCommitTimeoutMs = groupCommitTimeoutMs
         self.compressionAlgorithm = compressionAlgorithm
+        
+        // Initialize group commit optimizer
+        let optimizerPolicy: GroupCommitPolicy
+        switch durabilityMode {
+        case .always:
+            optimizerPolicy = .fixed(threshold: 1, timeoutMs: 0)
+        case .grouped:
+            optimizerPolicy = .adaptive(minThreshold: max(1, groupCommitThreshold / 2), 
+                                      maxThreshold: groupCommitThreshold * 2, 
+                                      baseTimeoutMs: UInt32(groupCommitTimeoutMs))
+        case .relaxed:
+            optimizerPolicy = .priority(criticalThreshold: 1, 
+                                      normalThreshold: groupCommitThreshold * 3, 
+                                      timeoutMs: UInt32(groupCommitTimeoutMs * 2))
+        }
+        self.groupCommitOptimizer = GroupCommitOptimizer(policy: optimizerPolicy, compressionAlgorithm: compressionAlgorithm)
         
         // Initialize file
         self.fileURL = URL(fileURLWithPath: path)
@@ -141,7 +158,21 @@ public final class FileWALManager: WALManager {
                 // Add to group commit batch
                 groupCommitLock.lock()
                 pendingRecords.append(recordWithLSN)
-                let shouldFlush = pendingRecords.count >= groupCommitThreshold
+                
+                // Check if we should flush using optimizer
+                let oldestAge: TimeInterval
+                if let firstRecord = pendingRecords.first {
+                    // Calculate age based on LSN timing (approximate)
+                    oldestAge = Double(recordWithLSN.lsn - firstRecord.lsn) * 0.001  // Rough estimation
+                } else {
+                    oldestAge = 0
+                }
+                let highestPriority = pendingRecords.map { $0.groupCommitPriority }.max() ?? .normal
+                let shouldFlush = groupCommitOptimizer.shouldFlush(
+                    pendingCount: pendingRecords.count,
+                    oldestRecordAge: oldestAge,
+                    highestPriority: highestPriority
+                )
                 groupCommitLock.unlock()
                 
                 if shouldFlush {
@@ -261,6 +292,11 @@ public final class FileWALManager: WALManager {
         }
     }
     
+    /// Get optimization metrics from the group commit optimizer
+    public var optimizationMetrics: GroupCommitMetrics {
+        return groupCommitOptimizer.currentMetrics
+    }
+    
     // MARK: - Lifecycle
     
     public func close() throws {
@@ -370,28 +406,52 @@ public final class FileWALManager: WALManager {
         
         let startTime = Date()
         
-        // Write all records
-        for record in recordsToFlush {
-            try writeRecordToFile(record)
-        }
+        // Optimize batch using group commit optimizer
+        let optimizedBatch = groupCommitOptimizer.optimizeBatch(recordsToFlush)
+        
+        // Write optimized batch
+        let uncompressedSize = try writeOptimizedBatch(optimizedBatch)
         
         // Sync to disk
         try fileHandle.synchronize()
         
         // Update flushed LSN
-        if let lastRecord = recordsToFlush.last {
+        if let lastRecord = optimizedBatch.records.last {
             lsnLock.lock()
             _flushedLSN = max(_flushedLSN, lastRecord.lsn)
             lsnLock.unlock()
         }
         
-        updateMetrics(operation: .flush, latency: Date().timeIntervalSince(startTime), batchSize: recordsToFlush.count)
+        let latency = Date().timeIntervalSince(startTime)
+        let compressionRatio = uncompressedSize > 0 ? Double(optimizedBatch.estimatedSize) / Double(uncompressedSize) : 1.0
+        
+        // Record performance for optimization
+        groupCommitOptimizer.recordBatchPerformance(
+            batchSize: optimizedBatch.records.count,
+            latency: latency,
+            compressionRatio: compressionRatio
+        )
+        
+        updateMetrics(operation: .flush, latency: latency, batchSize: optimizedBatch.records.count)
     }
     
-    private func writeRecordToFile(_ record: WALRecord) throws {
+    private func writeOptimizedBatch(_ batch: GroupCommitBatch) throws -> Int {
+        var totalUncompressedSize = 0
+        
+        // Write records in optimized order
+        for record in batch.records {
+            totalUncompressedSize += try writeRecordToFile(record)
+        }
+        
+        return totalUncompressedSize
+    }
+    
+    @discardableResult
+    private func writeRecordToFile(_ record: WALRecord) throws -> Int {
         // Serialize record
         let encoder = JSONEncoder()
         var payload = try encoder.encode(record)
+        let originalSize = payload.count
         
         // Compress if beneficial
         var compressionFlag: UInt8 = 0
@@ -437,6 +497,8 @@ public final class FileWALManager: WALManager {
         // Write CRC first, then record
         try fileHandle.write(contentsOf: Data(bytes: &crcBE, count: 4))
         try fileHandle.write(contentsOf: recordData)
+        
+        return originalSize
     }
     
     private func readAllRecords(from startLSN: UInt64) throws -> [WALRecord] {
@@ -549,10 +611,16 @@ public final class FileWALManager: WALManager {
         stopGroupCommitTimer()
         
         let timer = DispatchSource.makeTimerSource(queue: writeQueue)
-        timer.schedule(deadline: .now() + .milliseconds(Int(groupCommitTimeoutMs)), repeating: .milliseconds(Int(groupCommitTimeoutMs)))
+        
+        // Use dynamic timeout from optimizer
+        let currentTimeout = groupCommitOptimizer.currentParameters.timeoutMs
+        timer.schedule(deadline: .now() + .milliseconds(Int(currentTimeout)), repeating: .milliseconds(Int(currentTimeout)))
         
         timer.setEventHandler { [weak self] in
             try? self?.flushPendingRecords()
+            
+            // Restart timer with updated timeout from optimizer
+            self?.startGroupCommitTimer()
         }
         
         timer.resume()
