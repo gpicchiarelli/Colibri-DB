@@ -38,7 +38,7 @@ Il target `benchmarks` dipende da `ColibriCore` e utilizza configurazioni in‑m
 | `btree-insert` | B+Tree | Insert incrementale con indice presente |
 | `btree-range` | B+Tree | Range scan [lo,hi] su indice persistente |
 | `btree-bulk-build` | B+Tree | Rebuild bulk da table scan |
-| `idx-hash/art/skiplist/lsm` | Indici in‑memory | Lookup/range con vari backend |
+| `idx-hash/art/art-range/skiplist/skiplist-range/fractal/fractal-range/btree/btree-range/lsm/lsm-range` | Indici in‑memory | Lookup e range per tutti i backend supportati |
 | `tx-commit/tx-rollback` | Transazioni | Begin/commit/rollback ripetuti |
 | `tx-contention` | Transazioni | Throughput in contesa (`--workers`) |
 | `mvcc-snapshot-read` | MVCC | Scan snapshot mentre un writer modifica |

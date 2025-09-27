@@ -154,8 +154,15 @@ enum Scenario: String, CaseIterable {
     case btreeBulkBuild = "btree-bulk-build"
     case idxHashLookup = "idx-hash-lookup"
     case idxARTLookup = "idx-art-lookup"
+    case idxARTRange = "idx-art-range"
+    case idxSkiplistLookup = "idx-skiplist-lookup"
     case idxSkiplistRange = "idx-skiplist-range"
+    case idxFractalLookup = "idx-fractal-lookup"
+    case idxFractalRange = "idx-fractal-range"
+    case idxBTreeLookup = "idx-btree-lookup"      // in-memory AnyStringIndex BTree
+    case idxBTreeRange = "idx-btree-range"        // in-memory AnyStringIndex BTree
     case idxLSMLookup = "idx-lsm-lookup"
+    case idxLSMRange = "idx-lsm-range"
     case txCommit = "tx-commit"
     case txRollback = "tx-rollback"
     case txContention = "tx-contention"
@@ -231,10 +238,24 @@ struct BenchmarkCLI {
                 result = try runInMemoryIndexLookup(iterations: iterations, kind: "Hash", granular: granular)
             case .idxARTLookup:
                 result = try runInMemoryIndexLookup(iterations: iterations, kind: "ART", granular: granular)
+            case .idxARTRange:
+                result = try runInMemoryIndexRange(iterations: iterations, kind: "ART", granular: granular)
+            case .idxSkiplistLookup:
+                result = try runInMemoryIndexLookup(iterations: iterations, kind: "SkipList", granular: granular)
             case .idxSkiplistRange:
                 result = try runInMemoryIndexRange(iterations: iterations, kind: "SkipList", granular: granular)
+            case .idxFractalLookup:
+                result = try runInMemoryIndexLookup(iterations: iterations, kind: "Fractal", granular: granular)
+            case .idxFractalRange:
+                result = try runInMemoryIndexRange(iterations: iterations, kind: "Fractal", granular: granular)
+            case .idxBTreeLookup:
+                result = try runInMemoryIndexLookup(iterations: iterations, kind: "BTree", granular: granular)
+            case .idxBTreeRange:
+                result = try runInMemoryIndexRange(iterations: iterations, kind: "BTree", granular: granular)
             case .idxLSMLookup:
                 result = try runInMemoryIndexLookup(iterations: iterations, kind: "LSM", granular: granular)
+            case .idxLSMRange:
+                result = try runInMemoryIndexRange(iterations: iterations, kind: "LSM", granular: granular)
             case .txCommit:
                 result = try runTxCommit(iterations: iterations, granular: granular)
             case .txRollback:
