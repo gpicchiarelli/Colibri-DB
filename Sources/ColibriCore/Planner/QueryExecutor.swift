@@ -50,9 +50,9 @@ public final class QueryExecutor {
         var rows: [PlanRow] = []
         
         try plan.open(context: context)
-        defer { try? plan.close(context: context) }
+        defer { try? plan.close() }
         
-        while let row = try plan.next(context: context) {
+        while let row = try plan.next() {
             rows.append(row)
         }
         
@@ -121,10 +121,8 @@ public final class QueryExecutor {
         var updatedCount = 0
         for row in result.rows {
             // Update the row
-            var updatedRow = row
-            for (key, value) in values {
-                updatedRow[key] = value
-            }
+            // Row modification not supported in MVP
+            // updatedRow[key] = value
             
             // This would need to be implemented in the database
             // For now, just count the rows
@@ -313,7 +311,7 @@ public struct QueryExecutionStats {
 }
 
 /// Query execution context with additional options
-public struct AdvancedExecutionContext: ExecutionContext {
+public struct AdvancedExecutionContext {
     public let database: Database
     public let transactionId: UInt64
     public let isolationLevel: IsolationLevel

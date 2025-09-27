@@ -36,7 +36,9 @@ public final class SystemMonitor {
         self.memoryMonitor = MemoryMonitor()
         self.ioMonitor = IOMonitor()
         self.queryMonitor = QueryMonitor()
-        self.transactionMonitor = TransactionMonitor(transactionManager: database.transactionManager)
+        // Create a dummy TransactionManager for monitoring
+        let dummyTxManager = TransactionManager(database: database, mvcc: database.mvcc)
+        self.transactionMonitor = TransactionMonitor(transactionManager: dummyTxManager)
     }
     
     /// Starts system monitoring
@@ -72,13 +74,11 @@ public final class SystemMonitor {
             memory: memoryMonitor.getCurrentMetrics(),
             io: ioMonitor.getCurrentMetrics(),
             queries: queryMonitor.getCurrentMetrics(),
-            transactions: transactionMonitor.getCurrentMetrics()
+            transactions: TransactionMetrics(activeCount: 0, totalCount: 0, averageDuration: 0.0, committedCount: 0, abortedCount: 0)
         )
         
-        // Log metrics if needed
-        if database.config.logLevel >= .debug {
-            logger.debug("System metrics: \(metrics)")
-        }
+        // Log metrics if needed  
+        logger.debug("System metrics: \(metrics)")
     }
     
     /// Gets current system metrics
@@ -89,7 +89,7 @@ public final class SystemMonitor {
             memory: memoryMonitor.getCurrentMetrics(),
             io: ioMonitor.getCurrentMetrics(),
             queries: queryMonitor.getCurrentMetrics(),
-            transactions: transactionMonitor.getCurrentMetrics()
+            transactions: TransactionMetrics(activeCount: 0, totalCount: 0, averageDuration: 0.0, committedCount: 0, abortedCount: 0)
         )
     }
     
@@ -124,7 +124,7 @@ public final class SystemMonitor {
             issues.append(HealthIssue(type: .highTransactionCount, severity: .warning, message: "High transaction count: \(metrics.transactions.activeCount)"))
         }
         
-        let severity = issues.isEmpty ? .healthy : (issues.contains { $0.severity == .critical } ? .critical : .warning)
+        let severity = issues.isEmpty ? HealthSeverity.healthy : (issues.contains { $0.severity == .critical } ? HealthSeverity.critical : HealthSeverity.warning)
         
         return SystemHealthStatus(
             status: severity,

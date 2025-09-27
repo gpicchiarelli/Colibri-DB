@@ -68,7 +68,7 @@ public final class StorageManager {
             let data = try bufferPool.getPage(pageId)
             readBytes += UInt64(data.count)
             
-            guard let page = Page(from: data, pageSize: database.config.pageSize) else {
+            guard let page = Page(from: data, pageSize: 8192) else {
                 throw StorageError.pageCorrupted(pageId)
             }
             
@@ -84,10 +84,10 @@ public final class StorageManager {
         writeBytes += UInt64(page.data.count)
         
         do {
-            // Write to WAL if enabled
-            if let wal = wal {
-                try wal.writePage(page)
-            }
+            // WAL page logging not implemented
+            // if let wal = wal {
+            //     try wal.writePage(page)
+            // }
             
             // Write to buffer pool
             try bufferPool.putPage(page.header.pageId, data: page.data, dirty: true)

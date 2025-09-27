@@ -528,6 +528,8 @@ public final class HashJoinOperator: PlanOperator {
             case .bool(let b): return b ? "b:1" : "b:0"
             case .string(let s): return "s:\(s)"
             case .null: return "n:"
+            case .decimal(let d): return "dec:\(d)"
+            case .date(let d): return "date:\(d.timeIntervalSince1970)"
             }
         }
         var parts: [String] = []

@@ -50,7 +50,7 @@ public final class TransactionManager {
         activeTransactions[tid] = transaction
         mvcc.begin(tid: tid)
         
-        logger.info("Transaction \(tid) started with isolation level: \(isolationLevel)")
+        logger.info("Transaction \(tid) started with isolation level: \(isolationLevel.rawValue)")
         return tid
     }
     
@@ -352,7 +352,7 @@ public final class TransactionMonitor {
         defer { lock.unlock() }
         
         statistics["transactions_started"] = (statistics["transactions_started"] as? Int ?? 0) + 1
-        logger.debug("Transaction \(tid) started with isolation level: \(isolationLevel)")
+        logger.debug("Transaction \(tid) started with isolation level: \(isolationLevel.rawValue)")
     }
     
     /// Records transaction commit
