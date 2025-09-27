@@ -149,9 +149,6 @@ func main() {
         exit(1)
     }
     
-    // Initialize logger
-    logger = Logger(level: config.logLevel)
-    
     do {
         let server = try DatabaseServer(config: config)
         
