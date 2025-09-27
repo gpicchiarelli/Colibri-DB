@@ -23,7 +23,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-testing", exact: "0.10.0"),
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0")
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
+        .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.25.0")
     ],
     targets: [
         .target(
@@ -44,7 +45,7 @@ let package = Package(
                 "ColibriCore",
                 .product(name: "NIO", package: "swift-nio"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
-                .product(name: "NIOSSL", package: "swift-nio")
+                .product(name: "NIOSSL", package: "swift-nio-ssl")
             ]
         ),
         .executableTarget(
