@@ -55,6 +55,7 @@ extension Database {
                                              walFullSyncEnabled: config.walFullFSyncEnabled)
             // Apply WAL no-cache hint if requested
             if config.walNoCache { IOHints.setNoCache(fd: idx.walFH.fileDescriptor, enabled: true) }
+            if config.walUseGlobalIndexLogging { idx.setInternalWALEnabled(false) }
             map[name] = (columns: columns, backend: .persistentBTree(idx))
             try indexCatalog?.add(IndexDef(name: name, table: table, column: nil, columns: columns, kind: "BTree"))
             systemCatalog?.registerIndex(name: name,
