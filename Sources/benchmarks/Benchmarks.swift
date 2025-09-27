@@ -153,10 +153,10 @@ struct BenchmarkCLI {
 
         var iterations = 10_000
         var selected: Scenario? = nil
-        var workers = ProcessInfo.processInfo.activeProcessorCount
-        var userSetWorkers = false
-        var granular = false
-        var formatJSON = false
+        let workers = ProcessInfo.processInfo.activeProcessorCount
+        let userSetWorkers = false
+        let granular = false
+        let formatJSON = false
 
         for a in args {
             if let n = Int(a) { iterations = n; continue }
