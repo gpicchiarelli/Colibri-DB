@@ -275,16 +275,31 @@ public struct SQLParser {
     
     private mutating func parseDropStatement() throws -> SQLStatement {
         try consume(.keyword("DROP"))
-        try consume(.keyword("TABLE"))
-        
-        let ifExists = isCurrentToken(.keyword("IF"))
-        if ifExists {
-            try consume(.keyword("IF"))
-            try consume(.keyword("EXISTS"))
+        let token = try currentToken()
+        switch token {
+        case .keyword("TABLE"):
+            try consume(.keyword("TABLE"))
+            let ifExists = isCurrentToken(.keyword("IF"))
+            if ifExists {
+                try consume(.keyword("IF"))
+                try consume(.keyword("EXISTS"))
+            }
+            let tableName = try parseIdentifier()
+            return .dropTable(DropTableStatement(tableName: tableName, ifExists: ifExists))
+        case .keyword("INDEX"):
+            try consume(.keyword("INDEX"))
+            let ifExists = isCurrentToken(.keyword("IF"))
+            if ifExists {
+                try consume(.keyword("IF"))
+                try consume(.keyword("EXISTS"))
+            }
+            let indexName = try parseIdentifier()
+            try consume(.keyword("ON"))
+            let tableName = try parseIdentifier()
+            return .dropIndex(DropIndexStatement(indexName: indexName, tableName: tableName, ifExists: ifExists))
+        default:
+            throw SQLParseError.expectedToken("TABLE or INDEX", actual: tokenDescription(token))
         }
-        
-        let tableName = try parseIdentifier()
-        return .dropTable(DropTableStatement(tableName: tableName, ifExists: ifExists))
     }
     
     // MARK: - DML Parsing

@@ -26,6 +26,9 @@ struct SQLCRUDTests {
         _ = try sql.execute("CREATE TABLE users (id INT PRIMARY KEY, name TEXT, region TEXT)")
         _ = try sql.execute("CREATE TABLE orders (id INT PRIMARY KEY, user_id INT, total DOUBLE)")
         _ = try sql.execute("CREATE INDEX idx_orders_user ON orders (user_id) USING BTree")
+        // also create in-memory variants to ensure multi-backend mapping works
+        _ = try sql.execute("CREATE INDEX idx_orders_user_hash ON orders (user_id) USING Hash")
+        _ = try sql.execute("CREATE INDEX idx_orders_user_art ON orders (user_id) USING ART")
 
         // INSERT
         _ = try sql.execute("INSERT INTO users (id, name, region) VALUES (1, 'Ada', 'EU')")
@@ -47,6 +50,9 @@ struct SQLCRUDTests {
         #expect(d1.affectedRows == 1)
         let r3 = try sql.execute("SELECT * FROM orders")
         #expect(r3.rows.count == 1)
+        // drop indexes (one existing, one IF EXISTS on non-existing)
+        _ = try sql.execute("DROP INDEX idx_orders_user ON orders")
+        _ = try sql.execute("DROP INDEX IF EXISTS idx_missing ON orders")
 
         // Negative: operations on non-registered table should fail
         do {

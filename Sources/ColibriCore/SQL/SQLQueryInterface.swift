@@ -27,7 +27,9 @@ public struct SQLQueryResult: Codable, Sendable {
 
 public enum SQLStatementType: String, Codable, Sendable {
     case createTable = "CREATE TABLE"
+    case createIndex = "CREATE INDEX"
     case dropTable = "DROP TABLE"
+    case dropIndex = "DROP INDEX"
     case insert = "INSERT"
     case update = "UPDATE"
     case delete = "DELETE"
@@ -56,6 +58,8 @@ public final class SQLQueryInterface {
             return try executeCreateIndex(createIndex)
         case .dropTable(let dropTable):
             return try executeDropTable(dropTable)
+        case .dropIndex(let dropIndex):
+            return try executeDropIndex(dropIndex)
         case .insert(let insert):
             return try executeInsert(insert)
         case .update(let update):
@@ -98,8 +102,25 @@ public final class SQLQueryInterface {
                                  columns: statement.columns,
                                  using: statement.usingKind ?? "BTree")
         return SQLQueryResult(
-            statementType: .createTable,
+            statementType: .createIndex,
             message: "Index '\(statement.name)' created on \(statement.tableName)"
+        )
+    }
+
+    private func executeDropIndex(_ statement: DropIndexStatement) throws -> SQLQueryResult {
+        // Ensure table exists for namespacing
+        guard database.isTableRegistered(statement.tableName) else {
+            if statement.ifExists { return SQLQueryResult(statementType: .dropIndex, message: "Index not found (table missing)") }
+            throw SQLQueryError.tableNotFound(statement.tableName)
+        }
+        do {
+            try database.dropIndex(table: statement.tableName, name: statement.indexName)
+        } catch DBError.notFound {
+            if !statement.ifExists { throw DBError.notFound("Index \(statement.indexName)") }
+        }
+        return SQLQueryResult(
+            statementType: .dropIndex,
+            message: "Index '\(statement.indexName)' dropped on \(statement.tableName)"
         )
     }
     

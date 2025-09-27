@@ -119,6 +119,7 @@ public indirect enum SQLStatement: Equatable, Hashable {
     case createTable(CreateTableStatement)
     case createIndex(CreateIndexStatement)
     case dropTable(DropTableStatement)
+    case dropIndex(DropIndexStatement)
     case insert(InsertStatement)
     case update(UpdateStatement)
     case delete(DeleteStatement)
@@ -160,6 +161,18 @@ public struct CreateIndexStatement: Equatable, Hashable {
         self.tableName = tableName
         self.columns = columns
         self.usingKind = usingKind
+    }
+}
+
+public struct DropIndexStatement: Equatable, Hashable {
+    public let indexName: String
+    public let tableName: String
+    public let ifExists: Bool
+
+    public init(indexName: String, tableName: String, ifExists: Bool = false) {
+        self.indexName = indexName
+        self.tableName = tableName
+        self.ifExists = ifExists
     }
 }
 
