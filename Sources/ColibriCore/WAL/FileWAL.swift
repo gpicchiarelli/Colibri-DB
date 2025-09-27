@@ -34,6 +34,8 @@ public final class FileWAL: WALProtocol {
     private let groupCommitLock = NSLock()
     private let groupCommitThreshold = 8
     private let compressionQueue = DispatchQueue(label: "wal.compression", qos: .utility)
+    private var groupCommitTimer: DispatchSourceTimer?
+    private var groupCommitIntervalMs: Double = 2.0
 
     private enum CompressionFlag {
         static let compressed: UInt8 = 0x80
@@ -69,9 +71,28 @@ public final class FileWAL: WALProtocol {
         let records = try readAll()
         self.nextLSN = (records.last?.lsn ?? 0) &+ 1
         try fh.seekToEnd()
+        startGroupCommitTimer(intervalMs: groupCommitIntervalMs)
     }
 
     deinit { try? fh.close() }
+
+    public func setGroupCommit(intervalMs: Double) {
+        groupCommitIntervalMs = max(0.0, intervalMs)
+        startGroupCommitTimer(intervalMs: groupCommitIntervalMs)
+    }
+
+    private func startGroupCommitTimer(intervalMs: Double) {
+        groupCommitTimer?.cancel(); groupCommitTimer = nil
+        guard intervalMs > 0 else { return }
+        let t = DispatchSource.makeTimerSource(queue: DispatchQueue(label: "wal.groupcommit", qos: .userInitiated))
+        t.schedule(deadline: .now() + intervalMs/1000.0, repeating: intervalMs/1000.0)
+        t.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            try? self.flushPending()
+        }
+        t.resume()
+        groupCommitTimer = t
+    }
 
     public func setFullFSync(enabled: Bool) {
 #if os(macOS)

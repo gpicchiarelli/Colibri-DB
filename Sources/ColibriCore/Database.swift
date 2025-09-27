@@ -98,6 +98,7 @@ public final class Database {
             self.wal?.setFullFSync(enabled: config.walFullFSyncEnabled)
             self.wal?.setIOHints(enabled: config.ioSequentialReadHint)
             self.wal?.setCompression(config.walCompression)
+            self.wal?.setGroupCommit(intervalMs: config.walGroupCommitMs)
         }
         // Load index catalog
         let idxDir = URL(fileURLWithPath: config.dataDir).appendingPathComponent("indexes").path
