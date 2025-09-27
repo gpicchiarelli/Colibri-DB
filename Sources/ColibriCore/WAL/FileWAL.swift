@@ -161,9 +161,10 @@ public final class FileWAL: WALProtocol {
             
             // Async compression for large payloads
             if record.payload.count > 1024 && compressionAlgorithm != .none {
-                compressionQueue.async { [weak self] in
-                    guard let self = self else { return }
-                    if let _ = CompressionCodec.compress(record.payload, algorithm: self.compressionAlgorithm) {
+                let payloadCopy = record.payload
+                let algo = compressionAlgorithm
+                compressionQueue.async {
+                    if let _ = CompressionCodec.compress(payloadCopy, algorithm: algo) {
                         // background
                     }
                 }

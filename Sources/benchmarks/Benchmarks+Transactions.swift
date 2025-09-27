@@ -1,4 +1,6 @@
 import Foundation
+import Atomics
+import ColibriCore
 import ColibriCore
 
 extension BenchmarkCLI {
