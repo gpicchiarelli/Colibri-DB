@@ -33,6 +33,8 @@ public enum Value: Codable, Hashable, CustomStringConvertible, Sendable {
     case bool(Bool)
     case string(String)
     case null
+    case decimal(Decimal)
+    case date(Date)
 
     public var description: String {
         switch self {
@@ -41,6 +43,8 @@ public enum Value: Codable, Hashable, CustomStringConvertible, Sendable {
         case .bool(let v): return String(v)
         case .string(let v): return v
         case .null: return "NULL"
+        case .decimal(let v): return String(describing: v)
+        case .date(let v): return ISO8601DateFormatter().string(from: v)
         }
     }
 }

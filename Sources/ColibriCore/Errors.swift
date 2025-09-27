@@ -23,6 +23,7 @@ public enum DBError: Error, CustomStringConvertible {
     case conflict(String)
     case deadlock(String)
     case lockTimeout(String)
+    case constraintViolation(String)
 
     /// Human‑readable error description.
     public var description: String {
@@ -35,7 +36,21 @@ public enum DBError: Error, CustomStringConvertible {
         case .conflict(let m): return "Conflict: \(m)"
         case .deadlock(let m): return "Deadlock: \(m)"
         case .lockTimeout(let m): return "LockTimeout: \(m)"
+        case .constraintViolation(let m): return "ConstraintViolation: \(m)"
         }
     }
 }
 
+/// Database-specific error types
+public enum DatabaseError: Error {
+    case connectionFailed
+    case queryTimeout
+    case invalidSchema
+}
+
+/// Index-specific error types  
+public enum IndexError: Error {
+    case corruptedIndex
+    case duplicateKey
+    case missingIndex
+}
