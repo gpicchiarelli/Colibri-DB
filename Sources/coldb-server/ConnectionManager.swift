@@ -100,7 +100,7 @@ public final class ConnectionManager {
 
 // MARK: - Connection ID
 
-public struct ConnectionID: Hashable, CustomStringConvertible {
+public struct ConnectionID: Hashable, CustomStringConvertible, Sendable {
     private let id: UUID
     
     public init() {
@@ -120,13 +120,14 @@ public final class DatabaseConnection {
     private let database: Database
     private let queryTimeout: TimeInterval
     private var currentTransaction: UInt64?
-    private let connectionQueue = DispatchQueue(label: "com.colibridb.connection.\(id)", qos: .userInitiated)
+    private let connectionQueue: DispatchQueue
     
     public init(id: ConnectionID, channel: Channel, database: Database, timeout: TimeInterval) {
         self.id = id
         self.channel = channel
         self.database = database
         self.queryTimeout = timeout
+        self.connectionQueue = DispatchQueue(label: "com.colibridb.connection.\(id)", qos: .userInitiated)
     }
     
     public func executeQuery(_ sql: String) -> EventLoopFuture<SQLQueryResult> {

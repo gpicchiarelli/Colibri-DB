@@ -21,7 +21,7 @@ public enum WireProtocol {
 
 // MARK: - Message Types
 
-public enum MessageType: UInt8 {
+public enum MessageType: UInt8, Sendable {
     case query = 0x51        // 'Q'
     case queryResult = 0x52  // 'R'
     case error = 0x45        // 'E'
@@ -29,7 +29,7 @@ public enum MessageType: UInt8 {
     case terminate = 0x58    // 'X'
     case begin = 0x42        // 'B'
     case commit = 0x43       // 'C'
-    case rollback = 0x52     // 'R'
+    case rollback = 0x54     // 'T'
 }
 
 // MARK: - Wire Message
@@ -250,7 +250,7 @@ public final class WireProtocolHandler: ChannelInboundHandler {
         var buffer = unwrapInboundIn(data)
         let readableBytes = buffer.readableBytes
         
-        guard let data = buffer.readData(length: readableBytes) else {
+        guard let data = buffer.getData(at: buffer.readerIndex, length: readableBytes) else {
             logError("Failed to read data from buffer")
             return
         }

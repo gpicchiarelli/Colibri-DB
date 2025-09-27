@@ -147,7 +147,7 @@ public struct ConsoleLogOutput: LogOutput {
     }
 }
 
-public struct FileLogOutput: LogOutput {
+public final class FileLogOutput: LogOutput {
     private let fileHandle: FileHandle
     private let queue: DispatchQueue
     
@@ -183,7 +183,7 @@ public struct FileLogOutput: LogOutput {
 
 // MARK: - Global Logger Instance
 
-public var logger = Logger()
+public let logger = Logger()
 
 // MARK: - Convenience Functions
 

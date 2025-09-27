@@ -9,7 +9,7 @@
 import Foundation
 
 // MARK: - SQL Query Result
-public struct SQLQueryResult {
+public struct SQLQueryResult: Codable {
     public let statementType: SQLStatementType
     public let affectedRows: Int
     public let message: String
@@ -25,7 +25,7 @@ public struct SQLQueryResult {
     }
 }
 
-public enum SQLStatementType: String {
+public enum SQLStatementType: String, Codable {
     case createTable = "CREATE TABLE"
     case dropTable = "DROP TABLE"
     case insert = "INSERT"
