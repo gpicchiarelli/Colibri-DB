@@ -113,12 +113,10 @@ extension BenchmarkCLI {
         try db.createTable("t")
         for i in 0..<iterations { _ = try db.insert(into: "t", row: ["id": .int(Int64(i))]) }
         let writerQ = DispatchQueue.global(qos: .utility)
-        let keepWriting = UnsafeMutablePointer<Bool>.allocate(capacity: 1)
-        keepWriting.initialize(to: true)
-        defer { keepWriting.deinitialize(count: 1); keepWriting.deallocate() }
+        let keepWriting = ManagedAtomic<Bool>(true)
         writerQ.async {
             var toggler = false
-            while keepWriting.pointee {
+            while keepWriting.load(ordering: .relaxed) {
                 do {
                     if toggler {
                         _ = try db.deleteEquals(table: "t", column: "id", value: .int(Int64(Int.random(in: 0..<max(1, iterations)))))
@@ -134,7 +132,7 @@ extension BenchmarkCLI {
         let rows = try db.scan("t", tid: tid)
         let elapsed = clock.now - start
         try db.commit(tid)
-        keepWriting.pointee = false
+        keepWriting.store(false, ordering: .relaxed)
         precondition(!rows.isEmpty)
         return BenchmarkResult(name: Scenario.mvccSnapshotRead.rawValue, iterations: rows.count, elapsed: elapsed)
     }

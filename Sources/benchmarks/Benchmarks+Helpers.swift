@@ -1,4 +1,5 @@
 import Foundation
+import ColibriCore
 
 extension BenchmarkCLI {
     // Misura differenza in millisecondi tra due istanti

@@ -38,7 +38,6 @@ extension BenchmarkCLI {
 
     // MARK: - Planner estesi
     static func runPlannerIndexScan(iterations: Int, granular: Bool) throws -> BenchmarkResult {
-        let fm = FileManager.default
         let tmp = try makeTempDir()
         var cfg = DBConfig(dataDir: tmp.path)
         cfg.storageEngine = "FileHeap"

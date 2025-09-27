@@ -13,8 +13,8 @@ extension BenchmarkCLI {
         cfg.autoCompactionEnabled = false
         let db = Database(config: cfg)
         try db.createTable("t")
-        _ = warmupInserts(db: db, table: "t", count: min(2_000, n0))
         let n0 = cappedDiskIterations(iterations)
+        _ = warmupInserts(db: db, table: "t", count: min(2_000, n0))
         let n = granular ? n0 : min(n0, 200)
         let clock = ContinuousClock(); let start = clock.now
         if granular {

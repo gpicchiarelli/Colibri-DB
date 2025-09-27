@@ -33,11 +33,13 @@ let package = Package(
         ),
         .target(
             name: "ColibriCore",
-            dependencies: ["CRC32Accelerator"]
+            dependencies: ["CRC32Accelerator"],
+            exclude: ["README.md"]
         ),
         .executableTarget(
             name: "coldb",
-            dependencies: ["ColibriCore"]
+            dependencies: ["ColibriCore"],
+            exclude: ["README.md"]
         ),
         .executableTarget(
             name: "coldb-server",
@@ -46,7 +48,8 @@ let package = Package(
                 .product(name: "NIO", package: "swift-nio"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOSSL", package: "swift-nio-ssl")
-            ]
+            ],
+            exclude: ["README.md"]
         ),
         .executableTarget(
             name: "benchmarks",

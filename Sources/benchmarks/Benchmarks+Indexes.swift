@@ -55,8 +55,6 @@ extension BenchmarkCLI {
         let lo = Value.string(String(format: "k%08d", 0))
         let hi = Value.string(String(format: "k%08d", iterations - 1))
         _ = try db.indexRangeTyped(table: "t", index: idxName, lo: lo, hi: hi)
-        let lo = Value.string(String(format: "k%08d", 0))
-        let hi = Value.string(String(format: "k%08d", iterations - 1))
         let clock = ContinuousClock(); let start = clock.now
         if granular {
             let q = min(iterations, 500)
