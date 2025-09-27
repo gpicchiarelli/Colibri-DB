@@ -96,6 +96,40 @@ public final class IndexScanOperator: PlanOperator {
         self.context = context
         self.currentRows = []
         self.currentIndex = 0
+        
+        // PERFORMANCE FIX: Actually implement index scan
+        let database = context.database
+        
+        // Use equality bounds for simple index lookup
+        if bounds.lower == bounds.upper, let firstValue = bounds.lower.first {
+            // Point lookup using index
+            if let tableMap = database.indexes[table], let indexDef = tableMap[index] {
+                var rids: [RID] = []
+                switch indexDef.backend {
+                case .anyString(let idx):
+                    if let value = firstValue {
+                        rids = idx.searchEquals(database.stringFromValue(value))
+                    }
+                case .persistentBTree(let f):
+                    if let value = firstValue {
+                        rids = f.searchEquals(value)
+                    }
+                }
+                
+                // Convert RIDs to rows
+                for rid in rids {
+                    if let row = try? database.readRow(table: table, rid: rid) {
+                        var qualifiedRow: [String: Value] = [:]
+                        let prefix = alias ?? table
+                        
+                        for (key, value) in row {
+                            qualifiedRow["\(prefix).\(key)"] = value
+                        }
+                        currentRows.append(PlanRow(values: qualifiedRow))
+                    }
+                }
+            }
+        }
     }
     
     public func next() throws -> PlanRow? {

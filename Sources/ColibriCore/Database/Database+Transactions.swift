@@ -22,9 +22,9 @@ extension Database {
         let tid = nextTID; nextTID &+= 1
         activeTIDs.insert(tid)
         mvcc.begin(tid: tid)
-        let lsn = (try? wal?.appendBegin(tid: tid, prevLSN: txLastLSN[tid] ?? 0)) ?? 0
-        txLastLSN[tid] = lsn
         let level = isolation ?? config.defaultIsolationLevel
+        let lsn = logTransactionBegin(tid: tid, isolationLevel: level)
+        txLastLSN[tid] = lsn
         let cutoff = level.usesStableSnapshot ? tid : UInt64.max
         let clockTS = serialClock.next()
         txContexts[tid] = TransactionContext(isolation: level, snapshotCutoff: cutoff, clockTimestamp: clockTS)
@@ -39,7 +39,7 @@ extension Database {
     /// - Throws: Never in the current MVP; reserved for future errors.
     public func commit(_ tid: UInt64) throws {
         guard activeTIDs.contains(tid) else { return }
-        let lsn = (try? wal?.appendCommit(tid: tid, prevLSN: txLastLSN[tid] ?? 0)) ?? 0
+        let lsn = logTransactionCommit(tid: tid)
         txLastLSN[tid] = lsn
         activeTIDs.remove(tid)
         txStates.removeValue(forKey: tid)
@@ -58,7 +58,7 @@ extension Database {
         // Undo in reverse order
         let ops = (txStates[tid]?.ops ?? []).reversed()
         for op in ops { undo(op: op, tid: tid) }
-        let lsn: UInt64 = (try? wal?.appendAbort(tid: tid, prevLSN: txLastLSN[tid] ?? 0)) ?? 0
+        let lsn = logTransactionAbort(tid: tid)
         txLastLSN[tid] = lsn
         activeTIDs.remove(tid)
         txStates.removeValue(forKey: tid)
@@ -93,9 +93,9 @@ extension Database {
     /// Prepares a transaction for two-phase commit by forcing WAL and data buffers to disk.
     public func prepareTransaction(_ tid: UInt64) throws {
         guard activeTIDs.contains(tid) else { throw DBError.notFound("Transaction \(tid) not active") }
-        if let w = wal {
+        if globalWAL != nil {
             let targetLSN = txLastLSN[tid] ?? lastDBLSN
-            try w.flush(upTo: targetLSN)
+            try flushWAL(upTo: targetLSN)
         }
         flushAll()
         preparedTransactions.insert(tid)
@@ -136,8 +136,8 @@ extension Database {
     func undo(op: TxOp, tid: UInt64) {
         switch op.kind {
         case .insert:
-            let clr = try? wal?.appendCLRUndoInsert(tid: tid, table: op.table, rid: op.rid, nextUndoLSN: txLastLSN[tid] ?? 0, prevLSN: txLastLSN[tid] ?? 0)
-            if let clr = clr { txLastLSN[tid] = clr }
+            let clr = logCLRUndoInsert(tid: tid, table: op.table, rid: op.rid, nextUndoLSN: txLastLSN[tid] ?? 0)
+            if clr > 0 { txLastLSN[tid] = clr }
             if var t = tablesMem[op.table] {
                 try? t.remove(op.rid); tablesMem[op.table] = t
             } else if let ft = tablesFile[op.table] {
@@ -146,8 +146,8 @@ extension Database {
             removeFromIndexes(table: op.table, row: op.row, rid: op.rid)
             mvcc.undoInsert(table: op.table, rid: op.rid, tid: tid)
         case .delete:
-            let clr = try? wal?.appendCLRUndoDelete(tid: tid, table: op.table, row: op.row, nextUndoLSN: txLastLSN[tid] ?? 0, prevLSN: txLastLSN[tid] ?? 0)
-            if let clr = clr { txLastLSN[tid] = clr }
+            let clr = logCLRUndoDelete(tid: tid, table: op.table, row: op.row, nextUndoLSN: txLastLSN[tid] ?? 0)
+            if clr > 0 { txLastLSN[tid] = clr }
             if var t = tablesMem[op.table] {
                 t.restore(op.rid, row: op.row)
                 tablesMem[op.table] = t

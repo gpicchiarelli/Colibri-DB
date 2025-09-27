@@ -127,19 +127,19 @@ extension Database {
                 guard let c = cols.first, let v = row[c] else { continue }
                 let s = stringFromValue(v)
                 idx.insert(key: s, ref: rid)
-                if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                if config.walEnabled && config.walUseGlobalIndexLogging {
                     let kb = Data(s.utf8)
                     let txId = tid ?? 0
-                    _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: kb, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
+                    _ = logIndexInsert(tid: txId, indexId: name, table: table, keyBytes: kb, rid: rid)
                 }
                 map[name] = (columns: cols, backend: .anyString(idx))
             case .persistentBTree(let f):
                 if cols.count == 1 {
                     if let v = row[cols[0]] {
                         try? f.insert(key: v, rid: rid)
-                        if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                        if config.walEnabled && config.walUseGlobalIndexLogging {
                             let txId = tid ?? 0
-                            _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
+                            _ = logIndexInsert(tid: txId, indexId: name, table: table, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid)
                         }
                     }
                 } else {
@@ -148,9 +148,9 @@ extension Database {
                     for c in cols { guard let v = row[c] else { ok = false; break }; values.append(v) }
                     if ok {
                         try? f.insert(composite: values, rid: rid)
-                        if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                        if config.walEnabled && config.walUseGlobalIndexLogging {
                             let txId = tid ?? 0
-                            _ = try? w.appendIndexInsert(table: table, index: name, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
+                            _ = logIndexInsert(tid: txId, indexId: name, table: table, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid)
                         }
                     }
                 }
@@ -177,19 +177,19 @@ extension Database {
                 guard let c = cols.first, let v = row[c] else { continue }
                 let s = stringFromValue(v)
                 idx.remove(key: s, ref: rid)
-                if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                if config.walEnabled && config.walUseGlobalIndexLogging {
                     let kb = Data(s.utf8)
                     let txId = tid ?? 0
-                    _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: kb, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
+                    _ = logIndexDelete(tid: txId, indexId: name, table: table, keyBytes: kb, rid: rid)
                 }
                 map[name] = (columns: cols, backend: .anyString(idx))
             case .persistentBTree(let f):
                 if cols.count == 1 {
                     if let v = row[cols[0]] {
                         try? f.remove(key: v, rid: rid)
-                        if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                        if config.walEnabled && config.walUseGlobalIndexLogging {
                             let txId = tid ?? 0
-                            _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
+                            _ = logIndexDelete(tid: txId, indexId: name, table: table, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid)
                         }
                     }
                 } else {
@@ -198,9 +198,9 @@ extension Database {
                     for c in cols { guard let v = row[c] else { ok = false; break }; values.append(v) }
                     if ok {
                         try? f.remove(composite: values, rid: rid)
-                        if config.walEnabled && config.walUseGlobalIndexLogging, let w = wal {
+                        if config.walEnabled && config.walUseGlobalIndexLogging {
                             let txId = tid ?? 0
-                            _ = try? w.appendIndexDelete(table: table, index: name, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid, prevLSN: txLastLSN[txId] ?? 0)
+                            _ = logIndexDelete(tid: txId, indexId: name, table: table, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid)
                         }
                     }
                 }

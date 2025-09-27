@@ -23,7 +23,7 @@ public final class Database {
     // MARK: - Storage state
     var tablesMem: [String: HeapTable] = [:]
     var tablesFile: [String: FileHeapTable] = [:]
-    var wal: FileWAL?
+    var globalWAL: FileWALManager?
     var lastDBLSN: UInt64 = 0
 
     /// Backend disponibili per ogni indice registrato.
@@ -93,12 +93,16 @@ public final class Database {
         BufferNamespaceManager.shared.setQuota(group: "table", pages: config.dataBufferPoolPages)
         BufferNamespaceManager.shared.setQuota(group: "index", pages: config.indexBufferPoolPages)
         if config.walEnabled {
-            let walPath = URL(fileURLWithPath: config.dataDir).appendingPathComponent("wal.log").path
-            self.wal = try? FileWAL(path: walPath)
-            self.wal?.setFullFSync(enabled: config.walFullFSyncEnabled)
-            self.wal?.setIOHints(enabled: config.ioSequentialReadHint)
-            self.wal?.setCompression(config.walCompression)
-            self.wal?.setGroupCommit(intervalMs: config.walGroupCommitMs)
+            let walPath = URL(fileURLWithPath: config.dataDir).appendingPathComponent("global.wal").path
+            let durabilityMode: DurabilityMode = config.walFullFSyncEnabled ? .always : .grouped
+            self.globalWAL = try? FileWALManager(
+                dbId: 1,  // Default database ID - could be configurable
+                path: walPath,
+                durabilityMode: durabilityMode,
+                groupCommitThreshold: 8,
+                groupCommitTimeoutMs: config.walGroupCommitMs,
+                compressionAlgorithm: config.walCompression
+            )
         }
         // Load index catalog
         let idxDir = URL(fileURLWithPath: config.dataDir).appendingPathComponent("indexes").path
@@ -159,7 +163,8 @@ public final class Database {
 
 extension Database {
     public func walRecentFlushMetrics() -> (lastBatch: Int, lastSyncNs: UInt64, flushes: Int, totalBatch: Int, totalSyncNs: UInt64)? {
-        return wal?.recentFlushMetrics()
+        // TODO: Adapt to FileWALManager metrics
+        return nil
     }
 }
 

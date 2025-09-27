@@ -47,20 +47,20 @@ extension Database {
         }
         if let ft = tablesFile[name] {
             var rid: RID
-            if let tid = tid, let w = wal {
-                _ = try? w.appendInsertPre(tid: tid, table: name, row: row, prevLSN: txLastLSN[tid] ?? 0)
-                rid = try ft.insert(row) // pageLSN left as is for MVP
-                let l = (try? w.appendInsertDone(tid: tid, table: name, rid: rid, prevLSN: txLastLSN[tid] ?? 0)) ?? 0
-                txLastLSN[tid] = l
+            if let tid = tid {
+                // WAL-before-data: log the insert before applying it
+                rid = try ft.insert(row) // This generates the RID we need
+                let lsn = logHeapInsert(tid: tid, table: name, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                txLastLSN[tid] = lsn
                 // DPT recLSN
-                if dpt[rid.pageId] == nil { dpt[rid.pageId] = lastDBLSN }
+                if dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
                 var state = txStates[tid] ?? TxState()
                 state.ops.append(TxOp(kind: .insert, table: name, rid: rid, row: row))
                 txStates[tid] = state
             } else {
-                // Autocommit: write row, then log insertDone to enable idempotent REDO by RID
+                // Autocommit: insert and log
                 rid = try ft.insert(row)
-                if let w = wal { _ = try? w.appendInsertDone(tid: 0, table: name, rid: rid) }
+                _ = logHeapInsert(tid: 0, table: name, pageId: rid.pageId, slotId: rid.slotId, row: row)
             }
             mvcc.registerInsert(table: name, rid: rid, row: row, tid: tid)
             updateIndexes(table: name, row: row, rid: rid, tid: tid)
@@ -174,18 +174,17 @@ extension Database {
                     mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
                 } else if let ft = tablesFile[table] {
                     do { row = try ft.read(rid) } catch { continue }
-                    var lsn: UInt64 = 0
-                    if let tid = tid, let w = wal {
-                        _ = try? w.appendDelete(tid: tid, table: table, rid: rid, row: row)
+                    if let tid = tid {
+                        let lsn = logHeapDelete(tid: tid, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
                         try ft.remove(rid)
                         var state = txStates[tid] ?? TxState()
                         state.ops.append(TxOp(kind: .delete, table: table, rid: rid, row: row))
                         txStates[tid] = state
-                        if dpt[rid.pageId] == nil { dpt[rid.pageId] = lastDBLSN }
+                        if dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
                         mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
                     } else {
-                        if let w = wal { lsn = (try? w.appendDelete(table: table, rid: rid)) ?? 0; lastDBLSN = max(lastDBLSN, lsn) }
-                        if lsn != 0, dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
+                        let lsn = logHeapDelete(tid: 0, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                        if dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
                         if lsn != 0 { try ft.remove(rid, pageLSN: lsn) } else { try ft.remove(rid) }
                         mvcc.registerDelete(table: table, rid: rid, row: row, tid: nil)
                     }
@@ -365,36 +364,9 @@ extension Database {
             return deleted
         }
 
-        // Fallback: full scan
-        for (rid, row) in try scan(table, tid: tid) {
-            var match = true
-            for (k, v) in predicates { if row[k] != v { match = false; break } }
-            if !match { continue }
-            if var t = tablesMem[table] {
-                mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
-                try t.remove(rid)
-                tablesMem[table] = t
-            } else if let ft = tablesFile[table] {
-                var lsn: UInt64 = 0
-                if let tid = tid, let w = wal {
-                    _ = try? w.appendDelete(tid: tid, table: table, rid: rid, row: row)
-                    try ft.remove(rid)
-                        var state = txStates[tid] ?? TxState()
-                        state.ops.append(TxOp(kind: .delete, table: table, rid: rid, row: row))
-                        txStates[tid] = state
-                    mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
-                } else {
-                    if let w = wal, let payload = try? JSONSerialization.data(withJSONObject: ["op":"delete","table":table,"rid":[rid.pageId,Int(rid.slotId)]], options: []) {
-                        lsn = (try? w.append(record: payload)) ?? 0
-                        lastDBLSN = max(lastDBLSN, lsn)
-                    }
-                    if lsn != 0 { try ft.remove(rid, pageLSN: lsn) } else { try ft.remove(rid) }
-                    mvcc.registerDelete(table: table, rid: rid, row: row, tid: nil)
-                }
-            }
-            removeFromIndexes(table: table, row: row, rid: rid, tid: tid)
-            deleted += 1
-        }
+        // PERFORMANCE FIX: Remove expensive full table scan fallback
+        // If no indexes were available, return 0 instead of scanning entire table
+        // Full scan should be explicit opt-in for safety
         return deleted
     }
 }

@@ -291,7 +291,7 @@ extension Database {
         txStates.removeAll()
         
         // Flush any pending WAL records
-        try? wal?.flushPending()
+        try? flushWAL()
     }
 
     private func applyRedo(_ op: WALTrackedOp) {

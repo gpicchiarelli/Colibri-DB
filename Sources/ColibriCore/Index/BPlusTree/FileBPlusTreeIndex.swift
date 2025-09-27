@@ -28,7 +28,7 @@ public final class FileBPlusTreeIndex {
     let checkpointEvery: Int = 256
     var ioHintsEnabled: Bool
     var walFullSyncEnabled: Bool = false
-    private var internalWALEnabled: Bool = true
+    private var internalWALEnabled: Bool = false  // PERFORMANCE: Disable internal WAL for speed
 
     struct Header {
         var pageSize: Int
