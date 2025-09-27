@@ -179,13 +179,14 @@ public final class QueryPlanner {
                                                   selectivityHint: nonIndex.first?.selectivityHint) { row in
                     evaluate(predicates: nonIndex, row: row, alias: alias)
                 }
-                current = FilterOperator(child: current, predicate: planPredicate)
+                // Replace with vectorized filter by default
+                current = VectorizedFilterOperator(child: current, batchSize: 1024) { row in planPredicate.evaluator(row) }
             }
         }
 
         if let projection = ref.projection {
             let qualifiedColumns = projection.map { "\(alias).\($0)" }
-            current = ProjectOperator(child: current, projection: qualifiedColumns)
+            current = VectorizedProjectOperator(child: current, projection: qualifiedColumns, batchSize: 1024)
         }
 
         return current

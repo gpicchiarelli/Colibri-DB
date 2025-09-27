@@ -73,8 +73,15 @@ public final class CostModel {
             return costTableScan(scan)
         case let filter as FilterOperator:
             return costFilter(filter)
+        case let vfilter as VectorizedFilterOperator:
+            let base = cost(of: vfilter.child)
+            // Assume better CPU efficiency per batch
+            return PlanCost(rows: base.rows, cpu: base.cpu * 0.8, io: base.io, memory: base.memory)
         case let project as ProjectOperator:
             return costProject(project)
+        case let vproj as VectorizedProjectOperator:
+            let base = cost(of: vproj.child)
+            return PlanCost(rows: base.rows, cpu: base.cpu * 0.9, io: base.io, memory: base.memory)
         case let sort as SortOperator:
             return costSort(sort)
         case let hashJoin as HashJoinOperator:
