@@ -72,6 +72,7 @@ public final class FileWALManager: WALManager {
     private var fileHandle: FileHandle
     private let writeQueue: DispatchQueue
     private let metricsQueue: DispatchQueue
+    private static let writeQueueSpecificKey = DispatchSpecificKey<Void>()
     
     // LSN management
     private var _nextLSN: UInt64 = 1
@@ -137,6 +138,7 @@ public final class FileWALManager: WALManager {
         
         // Initialize queues
         self.writeQueue = DispatchQueue(label: "wal.write.\(dbId)", qos: .userInitiated)
+        self.writeQueue.setSpecific(key: Self.writeQueueSpecificKey, value: ())
         self.metricsQueue = DispatchQueue(label: "wal.metrics.\(dbId)", qos: .utility)
         
         // Initialize metrics
@@ -338,12 +340,15 @@ public final class FileWALManager: WALManager {
     public func close() throws {
         stopGroupCommitTimer()
         
-        try writeQueue.sync {
-            // Flush any pending records
-            try flushPendingRecords()
-            
-            // Close file handle
-            try fileHandle.close()
+        let flushAndClose = {
+            try self.flushPendingRecords()
+            try self.fileHandle.close()
+        }
+        
+        if DispatchQueue.getSpecific(key: Self.writeQueueSpecificKey) != nil {
+            try flushAndClose()
+        } else {
+            try writeQueue.sync(execute: flushAndClose)
         }
     }
     
