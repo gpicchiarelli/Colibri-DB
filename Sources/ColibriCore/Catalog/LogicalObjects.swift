@@ -12,6 +12,16 @@
 
 import Foundation
 
+// MARK: - Index Types
+
+/// Index type enumeration
+public enum IndexType: String, Codable, CaseIterable {
+    case btree = "BTREE"
+    case hash = "HASH"
+    case bitmap = "BITMAP"
+    case fulltext = "FULLTEXT"
+}
+
 // MARK: - Database Entry
 
 /// Represents a database in the catalog
