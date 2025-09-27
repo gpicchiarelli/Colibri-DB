@@ -56,11 +56,11 @@ public class ProductionCLI {
         
         // Meta commands
         if trimmed.hasPrefix("\\") {
-            try handleMetaCommand(trimmed)
+            try handleMetaCommand(String(trimmed))
             return
         }
         
         // SQL queries
-        try handleSQLQuery(trimmed)
+        try handleSQLQuery(String(trimmed))
     }
 }
