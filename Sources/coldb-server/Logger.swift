@@ -183,22 +183,27 @@ public final class FileLogOutput: LogOutput {
 
 // MARK: - Global Logger Instance
 
+@MainActor
 public let logger = Logger()
 
 // MARK: - Convenience Functions
 
+@MainActor
 public func logDebug(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
     logger.debug(message, file: file, function: function, line: line)
 }
 
+@MainActor
 public func logInfo(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
     logger.info(message, file: file, function: function, line: line)
 }
 
+@MainActor
 public func logWarning(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
     logger.warning(message, file: file, function: function, line: line)
 }
 
+@MainActor
 public func logError(_ message: String, file: String = #file, function: String = #function, line: Int = #line) {
     logger.error(message, file: file, function: function, line: line)
 }
