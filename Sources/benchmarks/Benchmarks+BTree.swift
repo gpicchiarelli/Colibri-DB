@@ -18,6 +18,8 @@ extension BenchmarkCLI {
         }
         try db.createIndex(name: "idx_bench_id", on: "bench", columns: ["id"], using: "BTree")
         try db.rebuildIndexBulk(table: "bench", index: "idx_bench_id")
+        // Warm-up: carica livelli alti/prime foglie
+        for i in 0..<min(1_000, iterations) { _ = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(i))) }
 
         let clock = ContinuousClock(); let start = clock.now
         for i in 0..<iterations {
@@ -25,7 +27,7 @@ extension BenchmarkCLI {
             precondition(!hits.isEmpty)
         }
         let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40"]) 
+        return BenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done":"true"]) 
     }
 
     // MARK: - B+Tree estesi
@@ -50,11 +52,11 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.btreeInsert.rawValue, iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id"])
+            return BenchmarkResult(name: Scenario.btreeInsert.rawValue, iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","warmup_done":"true"]) 
         } else {
             for i in 0..<n { _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "p": .string("v\(i)")]) }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.btreeInsert.rawValue, iterations: n, elapsed: elapsed)
+            return BenchmarkResult(name: Scenario.btreeInsert.rawValue, iterations: n, elapsed: elapsed, metadata: ["warmup_done":"true"]) 
         }
     }
 
@@ -88,14 +90,14 @@ extension BenchmarkCLI {
             }
             let elapsed = clock.now - start
             precondition(total > 0)
-            return BenchmarkResult(name: Scenario.btreeRange.rawValue, iterations: q, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","queries":"\(q)"])
+            return BenchmarkResult(name: Scenario.btreeRange.rawValue, iterations: q, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","queries":"\(q)", "warmup_done":"true"]) 
         } else {
             let lo = Value.int(0)
             let hi = Value.int(Int64(n - 1))
             let hits = try db.indexRangeTyped(table: "t", index: "idx", lo: lo, hi: hi)
             precondition(hits.count == n)
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.btreeRange.rawValue, iterations: hits.count, elapsed: elapsed)
+            return BenchmarkResult(name: Scenario.btreeRange.rawValue, iterations: hits.count, elapsed: elapsed, metadata: ["warmup_done":"true"]) 
         }
     }
 

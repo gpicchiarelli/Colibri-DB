@@ -13,6 +13,9 @@ extension BenchmarkCLI {
         for i in 0..<iterations {
             _ = try db.insert(into: "t", row: ["k": .string("k\(i)"), "v": .int(Int64(i))])
         }
+        // Warm-up: 1k lookups
+        let warm = min(iterations, 1_000)
+        for i in 0..<warm { _ = try db.indexSearchEqualsTyped(table: "t", index: idxName, value: .string("k\(i)")) }
         let clock = ContinuousClock(); let start = clock.now
         var found = 0
         if granular {
@@ -26,7 +29,7 @@ extension BenchmarkCLI {
             }
             let elapsed = clock.now - start
             precondition(found == iterations)
-            return BenchmarkResult(name: "idx-\(kind.lowercased())-lookup", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["kind":kind, "storage":"InMemory"]) 
+            return BenchmarkResult(name: "idx-\(kind.lowercased())-lookup", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"]) 
         } else {
             for i in 0..<iterations {
                 let hits = try db.indexSearchEqualsTyped(table: "t", index: idxName, value: .string("k\(i)"))
@@ -34,7 +37,7 @@ extension BenchmarkCLI {
             }
             let elapsed = clock.now - start
             precondition(found == iterations)
-            return BenchmarkResult(name: "idx-\(kind.lowercased())-lookup", iterations: iterations, elapsed: elapsed, metadata: ["kind":kind, "storage":"InMemory"]) 
+            return BenchmarkResult(name: "idx-\(kind.lowercased())-lookup", iterations: iterations, elapsed: elapsed, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"]) 
         }
     }
 
@@ -48,6 +51,10 @@ extension BenchmarkCLI {
         for i in 0..<iterations {
             _ = try db.insert(into: "t", row: ["k": .string(String(format: "k%08d", i)), "v": .int(Int64(i))])
         }
+        // Warm-up range full
+        let lo = Value.string(String(format: "k%08d", 0))
+        let hi = Value.string(String(format: "k%08d", iterations - 1))
+        _ = try db.indexRangeTyped(table: "t", index: idxName, lo: lo, hi: hi)
         let lo = Value.string(String(format: "k%08d", 0))
         let hi = Value.string(String(format: "k%08d", iterations - 1))
         let clock = ContinuousClock(); let start = clock.now
@@ -64,12 +71,12 @@ extension BenchmarkCLI {
             }
             let elapsed = clock.now - start
             precondition(total > 0)
-            return BenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: q, elapsed: elapsed, latenciesMs: lat, metadata: ["kind":kind,"storage":"InMemory","queries":"\(q)"]) 
+            return BenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: q, elapsed: elapsed, latenciesMs: lat, metadata: ["kind":kind,"storage":"InMemory","queries":"\(q)", "warmup_done":"true"]) 
         } else {
             let hits = try db.indexRangeTyped(table: "t", index: idxName, lo: lo, hi: hi)
             let elapsed = clock.now - start
             precondition(!hits.isEmpty)
-            return BenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: hits.count, elapsed: elapsed, metadata: ["kind":kind, "storage":"InMemory"]) 
+            return BenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: hits.count, elapsed: elapsed, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"]) 
         }
     }
 }
