@@ -1,0 +1,38 @@
+# ColibrìDB Documentation EditorConfig
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.md]
+indent_style = space
+indent_size = 2
+max_line_length = 100
+
+[*.yml]
+indent_style = space
+indent_size = 2
+
+[*.rb]
+indent_style = space
+indent_size = 2
+
+[*.sh]
+indent_style = space
+indent_size = 2
+
+[*.{js,ts}]
+indent_style = space
+indent_size = 2
+
+[*.{css,scss,sass}]
+indent_style = space
+indent_size = 2
+
+[*.{html,xml}]
+indent_style = space
+indent_size = 2

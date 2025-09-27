@@ -1,0 +1,29 @@
+# ColibrìDB Documentation CI/CD
+
+language: ruby
+rvm:
+  - 2.7
+  - 3.0
+  - 3.1
+
+before_install:
+  - gem install bundler
+
+install:
+  - bundle install
+
+script:
+  - bundle exec jekyll build
+  - bundle exec htmlproofer _site --only-4xx --check-html
+
+branches:
+  only:
+    - main
+    - develop
+
+cache:
+  bundler: true
+  directories:
+    - _site
+    - .sass-cache
+    - .jekyll-cache

@@ -1,0 +1,18 @@
+{
+  "dataDir": "./dev-environment/data/test",
+  "maxConnectionsLogical": 100,
+  "maxConnectionsPhysical": 4,
+  "bufferPoolSizeBytes": 67108864,
+  "pageSizeBytes": 8192,
+  "walEnabled": true,
+  "checksumEnabled": true,
+  "cliEnabled": true,
+  "metricsEnabled": true,
+  "serverEnabled": false,
+  "indexImplementation": "Hash",
+  "storageEngine": "FileHeap",
+  "logLevel": "info",
+  "telemetryEnabled": true,
+  "profilingEnabled": false,
+  "debugMode": false
+}
