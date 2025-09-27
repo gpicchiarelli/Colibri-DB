@@ -30,11 +30,12 @@ extension Database {
         let pageId: UInt64?
     }
 
-    // MARK: - ARIES-style replay
+    // MARK: - ARIES-style replay (Global WAL)
     func replayDBWAL() throws {
-        guard let w = wal else { return }
-        let records = try w.readAll()
-        guard !records.isEmpty else { return }
+        guard let globalWAL = globalWAL else { return }
+        let records = try globalWAL.iterate(from: 1)
+        let recordArray = Array(records)
+        guard !recordArray.isEmpty else { return }
 
         var txStatus: [UInt64: WALTxStatus] = [:]
         var txOps: [UInt64: [WALTrackedOp]] = [:]
