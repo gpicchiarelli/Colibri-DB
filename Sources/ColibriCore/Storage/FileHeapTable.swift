@@ -284,6 +284,22 @@ public final class FileHeapTable: TableStorageProtocol {
         // Durability is guaranteed by WAL+explicit flush. Avoid per-page fsync which severely hurts throughput.
     }
 
+    /// Predicts the next RID that would be assigned (for WAL-before-data).
+    public func predictNextRID(for row: Row) throws -> RID {
+        let json = try JSONEncoder().encode(row)
+        // Try existing pages using FSM
+        if let pid = selectPage(forNeed: json.count) {
+            let p = try readPage(pid)
+            // Find next available slot (simulate insertion without modifying)
+            if let simulatedSlot = p.simulateInsert(rowBytes: json) {
+                return RID(pageId: pid, slotId: simulatedSlot)
+            }
+        }
+        // Would create new page
+        let newId = lastPageId + 1
+        return RID(pageId: newId, slotId: 1)
+    }
+    
     /// Inserts a row using FSM first-fit and returns its RID.
     @discardableResult
     public func insert(_ row: Row) throws -> RID {

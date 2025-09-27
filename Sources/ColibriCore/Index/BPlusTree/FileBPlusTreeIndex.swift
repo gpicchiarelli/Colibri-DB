@@ -68,9 +68,7 @@ public final class FileBPlusTreeIndex {
             fm.createFile(atPath: walPath, contents: nil)
         }
         self.walFH = try FileHandle(forUpdating: URL(fileURLWithPath: walPath))
-        // Optional: disable OS cache for WAL to reduce cache pollution
-        IOHints.setNoCache(fd: walFH.fileDescriptor, enabled: walFullSyncEnabled)
-        try FileBPlusTreeIndex.ensureWALHeader(handle: walFH)
+        // Note: WAL functionality disabled - using global WAL instead
         if try fh.seekToEnd() == 0 {
             self.hdr = Header(pageSize: pageSize, root: 0, nextPage: 1, checkpointLSN: 0)
             try writeHeader()
@@ -79,7 +77,6 @@ public final class FileBPlusTreeIndex {
             self.hdr = try FileBPlusTreeIndex.readHeader(handle: fh, pageSize: pageSize)
         }
         setFullFSync(enabled: walFullSyncEnabled)
-        try replayWAL()
         self.buf = LRUBufferPool(pageSize: pageSize, capacityPages: capacityPages, fetch: { [weak self] pid in
             guard let self = self else { return Data() }
             let off = UInt64(self.pageSize) * pid

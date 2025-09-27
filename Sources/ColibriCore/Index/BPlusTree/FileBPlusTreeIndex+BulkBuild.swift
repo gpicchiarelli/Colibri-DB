@@ -77,7 +77,7 @@ extension FileBPlusTreeIndex {
 
         hdr.root = childIds.first ?? 0
         try writeHeader()
-        try clearWAL()
+        // WAL cleared - using global WAL now
     }
 }
 

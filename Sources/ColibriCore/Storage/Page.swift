@@ -157,6 +157,13 @@ public struct Page {
         return (liveTuples, deadTuples, liveBytes, deadBytes, freeBytes)
     }
 
+    /// Simulates an insert without modifying the page (for RID prediction).
+    func simulateInsert(rowBytes: Data) -> UInt16? {
+        let need = rowBytes.count
+        guard need <= availableSpaceForInsert() else { return nil }
+        return header.slotCount &+ 1
+    }
+    
     /// Inserts tuple bytes and returns allocated slot id, or nil if insufficient space.
     mutating func insert(rowBytes: Data) -> UInt16? {
         let need = rowBytes.count
