@@ -31,55 +31,6 @@ struct CLI {
         print("Type \\help for help, \\exit to quit.\n")
     }
 
-    /// Parses a raw input line and dispatches the associated command handler.
-    mutating func parseAndRun(_ line: String) {
-        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        
-        if trimmed == "\\help" { help(); return }
-        if trimmed == "\\conf" { showConfig(); return }
-        if trimmed == "\\dt" { listTables(); return }
-        if trimmed == "\\exit" { exit(0) }
-
-        if trimmed.hasPrefix("\\create table ") {
-            let parts = trimmed.split(separator: " ")
-            if parts.count >= 3 {
-                let n = String(trimmed.dropFirst("\\create table ".count))
-                do { try db.createTable(n) ; print("created \(n)") } catch { print("error: \(error)") }
-            }
-            return
-        }
-
-        if trimmed.hasPrefix("\\begin") {
-            handleBegin()
-            return
-        }
-        if trimmed.hasPrefix("\\commit") {
-            let parts = trimmed.split(separator: " ")
-            handleCommit(parts)
-            return
-        }
-        if trimmed.hasPrefix("\\rollback") {
-            let parts = trimmed.split(separator: " ")
-            handleRollback(parts)
-            return
-        }
-
-        if trimmed.hasPrefix("\\insert ") {
-            handleInsert(String(trimmed.dropFirst("\\insert ".count)))
-            return
-        }
-        if trimmed.hasPrefix("\\scan ") {
-            handleScan(String(trimmed.dropFirst("\\scan ".count)))
-            return
-        }
-        if trimmed.hasPrefix("\\delete ") {
-            handleDelete(String(trimmed.dropFirst("\\delete ".count)))
-            return
-        }
-
-        print("Unrecognized command. Type \\help.")
-    }
 
 }
 

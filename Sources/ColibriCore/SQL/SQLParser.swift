@@ -427,13 +427,13 @@ public struct SQLParser {
         var limit: Int?
         if isCurrentToken(.keyword("LIMIT")) {
             try consume(.keyword("LIMIT"))
-            limit = try parseIntegerLiteral()
+            limit = Int(try parseIntegerLiteral())
         }
         
         var offset: Int?
         if isCurrentToken(.keyword("OFFSET")) {
             try consume(.keyword("OFFSET"))
-            offset = try parseIntegerLiteral()
+            offset = Int(try parseIntegerLiteral())
         }
         
         return .select(SelectStatement(columns: columns, from: from, whereClause: whereClause, 
@@ -723,7 +723,7 @@ public struct SQLParser {
         position += 1
     }
     
-    private func parseIdentifier() throws -> String {
+    private mutating func parseIdentifier() throws -> String {
         let token = try currentToken()
         guard case .identifier(let name) = token else {
             throw SQLParseError.expectedToken("identifier", actual: tokenDescription(token))
@@ -732,7 +732,7 @@ public struct SQLParser {
         return name
     }
     
-    private func parseIntegerLiteral() throws -> Int64 {
+    private mutating func parseIntegerLiteral() throws -> Int64 {
         let token = try currentToken()
         guard case .literal(.integer(let value)) = token else {
             throw SQLParseError.expectedToken("integer", actual: tokenDescription(token))

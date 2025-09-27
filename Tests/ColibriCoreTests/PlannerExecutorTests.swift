@@ -18,7 +18,6 @@ struct PlannerExecutorTests {
 
         var config = DBConfig(dataDir: tempDir.path)
         config.autoCompactionEnabled = false
-        config.storageEngine = "InMemory"
 
         let db = Database(config: config)
         try db.createTable("users")
@@ -29,7 +28,7 @@ struct PlannerExecutorTests {
 
         let predicate = QueryPredicate(column: "region", op: .equals, value: .string("EU"), selectivityHint: 0.2)
         let table = QueryTableRef(name: "users", predicates: [predicate], projection: ["id", "name", "region"])
-        let order = SortOperator.SortKey(column: "users.id", ascending: true)
+        let order = SortKey(column: "users.id", ascending: true)
         let request = QueryRequest(root: table, orderBy: [order])
 
         let rows = try db.executeQuery(request)
@@ -48,7 +47,6 @@ struct PlannerExecutorTests {
 
         var config = DBConfig(dataDir: tempDir.path)
         config.autoCompactionEnabled = false
-        config.storageEngine = "InMemory"
 
         let db = Database(config: config)
         try db.createTable("users")
@@ -66,7 +64,7 @@ struct PlannerExecutorTests {
         let userTable = QueryTableRef(name: "users", predicates: [QueryPredicate(column: "region", op: .equals, value: .string("EU"))])
         let ordersTable = QueryTableRef(name: "orders", alias: "o", projection: ["id", "user_id", "total"])
         let join = QueryJoinSpec(table: ordersTable, leftColumns: ["users.id"], rightColumns: ["o.user_id"])
-        let order = SortOperator.SortKey(column: "o.total", ascending: false)
+        let order = SortKey(column: "o.total", ascending: false)
         var request = QueryRequest(root: userTable,
                                    joins: [join],
                                    orderBy: [order],

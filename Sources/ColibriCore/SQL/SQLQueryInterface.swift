@@ -7,7 +7,6 @@
 // Theme: Complete SQL query interface connecting parser to database engine.
 
 import Foundation
-import ColibriCore
 
 // MARK: - SQL Query Result
 public struct SQLQueryResult {
@@ -150,9 +149,9 @@ public final class SQLQueryInterface {
         
         return SQLQueryResult(
             statementType: .select,
+            message: "Query executed successfully",
             columns: columns,
-            rows: resultRows,
-            message: "Query executed successfully"
+            rows: resultRows
         )
     }
     
@@ -325,3 +324,4 @@ public enum SQLQueryError: Error, Equatable {
     case columnNotFound(String)
     case typeMismatch(String)
 }
+

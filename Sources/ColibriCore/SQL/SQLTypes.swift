@@ -115,7 +115,7 @@ public enum SQLUnaryOperator: String, CaseIterable {
 }
 
 // MARK: - SQL Statements
-public enum SQLStatement: Equatable, Hashable {
+public indirect enum SQLStatement: Equatable, Hashable {
     case createTable(CreateTableStatement)
     case dropTable(DropTableStatement)
     case insert(InsertStatement)

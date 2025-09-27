@@ -4,51 +4,42 @@
 //
 //  Created by Giacomo Picchiarelli on 2025-09-27.
 //
-// Theme: SQL command integration for the CLI.
+// Theme: SQL query execution commands.
 
 import Foundation
 import ColibriCore
 
 // MARK: - SQL Commands
 extension CLI {
-    /// Execute SQL query
+    /// Executes a SQL query and displays the results.
     func executeSQL(_ query: String) {
         do {
-            let sqlInterface = SQLQueryInterface(database: db)
-            let result = try sqlInterface.execute(query)
+            let interface = SQLQueryInterface(database: db)
+            let result = try interface.execute(query)
             printSQLResult(result)
         } catch {
-            print("SQL Error: \(error.localizedDescription)")
+            print("SQL Error: \(error)")
         }
     }
     
-    /// Print SQL query result
-    func printSQLResult(_ result: SQLQueryResult) {
-        print("Query executed successfully")
-        print("Statement: \(result.statementType.rawValue)")
-        print("Affected rows: \(result.affectedRows)")
-        print("Message: \(result.message)")
+    /// Prints SQL query results in a formatted way.
+    private func printSQLResult(_ result: SQLQueryResult) {
+        if !result.message.isEmpty {
+            print(result.message)
+        }
         
         if !result.columns.isEmpty {
-            print("\nResult:")
-            print("Columns: \(result.columns.joined(separator: " | "))")
-            print(String(repeating: "-", count: result.columns.joined(separator: " | ").count))
-            
-            for row in result.rows {
-                let values = row.map { value in
-                    switch value {
-                    case .null: return "NULL"
-                    case .int(let v): return String(v)
-                    case .double(let v): return String(v)
-                    case .string(let v): return "'\(v)'"
-                    case .bool(let v): return v ? "TRUE" : "FALSE"
-                    case .data(let v): return "<\(v.count) bytes>"
-                    case .array(let v): return "[\(v.count) items]"
-                    }
-                }
-                print(values.joined(separator: " | "))
-            }
+            print("Columns: \(result.columns.joined(separator: ", "))")
         }
-        print()
+        
+        if !result.rows.isEmpty {
+            print("Rows (\(result.rows.count)):")
+            for (index, row) in result.rows.enumerated() {
+                let values = row.map { "\($0)" }.joined(separator: ", ")
+                print("  \(index + 1): \(values)")
+            }
+        } else if result.affectedRows > 0 {
+            print("Affected rows: \(result.affectedRows)")
+        }
     }
 }

@@ -69,7 +69,7 @@ public struct QueryJoinSpec {
 public struct QueryRequest {
     public var root: QueryTableRef
     public var joins: [QueryJoinSpec]
-    public var orderBy: [SortOperator.SortKey]
+    public var orderBy: [SortKey]
     public var limit: Int?
     public var parallelism: Int?
     public var cacheKey: String?
@@ -77,7 +77,7 @@ public struct QueryRequest {
 
     public init(root: QueryTableRef,
                 joins: [QueryJoinSpec] = [],
-                orderBy: [SortOperator.SortKey] = [],
+                orderBy: [SortKey] = [],
                 limit: Int? = nil,
                 parallelism: Int? = nil,
                 cacheKey: String? = nil,
@@ -115,7 +115,7 @@ public final class QueryPlanner {
                                         right: rightOp,
                                         leftKeys: qualified(joinSpec.leftColumns, alias: request.root.alias ?? request.root.name),
                                         rightKeys: qualified(joinSpec.rightColumns, alias: joinSpec.table.alias ?? joinSpec.table.name))
-            let merge = MergeJoinOperator(left: rootOperator,
+            let merge = MergeJoinOperator(joinType: .inner, left: rootOperator,
                                           right: rightOp,
                                           leftKeys: qualified(joinSpec.leftColumns, alias: request.root.alias ?? request.root.name),
                                           rightKeys: qualified(joinSpec.rightColumns, alias: joinSpec.table.alias ?? joinSpec.table.name))
@@ -128,7 +128,7 @@ public final class QueryPlanner {
                                                 leftKeys: qualified(joinSpec.leftColumns, alias: request.root.alias ?? request.root.name),
                                                 rightKeys: qualified(joinSpec.rightColumns, alias: joinSpec.table.alias ?? joinSpec.table.name))
             } else {
-                rootOperator = MergeJoinOperator(left: rootOperator,
+                rootOperator = MergeJoinOperator(joinType: .inner, left: rootOperator,
                                                  right: rightOp,
                                                  leftKeys: qualified(joinSpec.leftColumns, alias: request.root.alias ?? request.root.name),
                                                  rightKeys: qualified(joinSpec.rightColumns, alias: joinSpec.table.alias ?? joinSpec.table.name))
@@ -168,10 +168,8 @@ public final class QueryPlanner {
             let indexOp = IndexScanOperator(table: ref.name,
                                             index: indexInfo.name,
                                             indexColumns: indexInfo.columns,
-                                            alias: alias,
-                                            equality: equalityMap,
-                                            lowerBound: bounds.lower,
-                                            upperBound: bounds.upper)
+                                            bounds: bounds,
+                                            alias: alias)
             let indexCost = costModel.cost(of: indexOp)
             candidates.append((indexOp, indexCost.cpu + indexCost.io))
         }
@@ -227,8 +225,8 @@ public final class QueryPlanner {
         }
     }
 
-    private func rangeBounds(for columns: [String], predicates: [QueryPredicate]) -> (lower: [Value]?, upper: [Value]?) {
-        guard let first = columns.first else { return (nil, nil) }
+    private func rangeBounds(for columns: [String], predicates: [QueryPredicate]) -> IndexBounds {
+        guard let first = columns.first else { return IndexBounds(lower: [], upper: []) }
         var lower: Value?
         var upper: Value?
         for predicate in predicates where predicate.column == first {
@@ -254,9 +252,9 @@ public final class QueryPlanner {
                 upper = predicate.value
             }
         }
-        let lowerArr = lower.map { [ $0 ] }
-        let upperArr = upper.map { [ $0 ] }
-        return (lowerArr, upperArr)
+        let lowerArr = lower.map { [ $0 ] } ?? []
+        let upperArr = upper.map { [ $0 ] } ?? []
+        return IndexBounds(lower: lowerArr, upper: upperArr)
     }
 }
 

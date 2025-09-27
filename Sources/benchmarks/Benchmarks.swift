@@ -149,7 +149,7 @@ struct BenchmarkCLI {
         let users = QueryTableRef(name: "users", predicates: [predicate], projection: ["id", "region"])
         let orders = QueryTableRef(name: "orders", alias: "o", projection: ["id", "user_id", "total"], indexHint: "idx_orders_user")
         let join = QueryJoinSpec(table: orders, leftColumns: ["users.id"], rightColumns: ["o.user_id"])
-        let request = QueryRequest(root: users, joins: [join], orderBy: [SortOperator.SortKey(column: "o.total", ascending: false)], parallelism: 2)
+        let request = QueryRequest(root: users, joins: [join], orderBy: [SortKey(column: "o.total", ascending: false)], parallelism: 2)
 
         let clock = ContinuousClock()
         let start = clock.now

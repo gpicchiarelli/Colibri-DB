@@ -11,44 +11,46 @@ import ColibriCore
 
 // MARK: - Transaction Commands
 extension CLI {
-    /// Handles transaction begin command
+    /// Starts a new transaction.
     mutating func handleBegin() {
-        do { 
+        do {
             let tid = try db.begin()
             currentTID = tid
-            print("TID=\(tid)")
-        } catch { 
-            print("error: \(error)") 
+            print("Transaction started: \(tid)")
+        } catch {
+            print("Error starting transaction: \(error)")
         }
     }
     
-    /// Handles transaction commit command
+    /// Commits the current transaction.
     mutating func handleCommit(_ parts: [Substring]) {
-        var tid: UInt64? = nil
-        if parts.count >= 2 { tid = UInt64(parts[1]) }
-        if tid == nil { tid = currentTID }
-        guard let t = tid else { print("no active TID"); return }
-        do { 
-            try db.commit(t)
-            print("committed \(t)") 
-        } catch { 
-            print("error: \(error)") 
+        guard let tid = currentTID else {
+            print("No active transaction")
+            return
         }
-        if currentTID == t { currentTID = nil }
+        
+        do {
+            try db.commit(tid)
+            currentTID = nil
+            print("Transaction committed: \(tid)")
+        } catch {
+            print("Error committing transaction: \(error)")
+        }
     }
     
-    /// Handles transaction rollback command
+    /// Rolls back the current transaction.
     mutating func handleRollback(_ parts: [Substring]) {
-        var tid: UInt64? = nil
-        if parts.count >= 2 { tid = UInt64(parts[1]) }
-        if tid == nil { tid = currentTID }
-        guard let t = tid else { print("no active TID"); return }
-        do { 
-            try db.rollback(t)
-            print("aborted \(t)") 
-        } catch { 
-            print("error: \(error)") 
+        guard let tid = currentTID else {
+            print("No active transaction")
+            return
         }
-        if currentTID == t { currentTID = nil }
+        
+        do {
+            try db.rollback(toSavepoint: "", tid: tid)
+            currentTID = nil
+            print("Transaction rolled back: \(tid)")
+        } catch {
+            print("Error rolling back transaction: \(error)")
+        }
     }
 }

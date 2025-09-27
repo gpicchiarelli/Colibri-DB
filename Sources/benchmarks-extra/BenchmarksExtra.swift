@@ -729,7 +729,7 @@ struct BenchmarksExtraCLI {
         let orders = QueryTableRef(name: "orders", projection: ["id", "total"])
         let req = QueryRequest(root: orders,
                                joins: [],
-                               orderBy: [SortOperator.SortKey(column: "orders.total", ascending: false)],
+                                orderBy: [SortKey(column: "orders.total", ascending: false)],
                                limit: max(1, iterations / 10),
                                parallelism: 2)
         let clock = ContinuousClock(); let start = clock.now

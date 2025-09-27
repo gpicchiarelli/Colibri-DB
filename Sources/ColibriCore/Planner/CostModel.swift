@@ -70,25 +70,25 @@ public final class CostModel {
     public func cost(of op: PlanOperator) -> PlanCost {
         switch op {
         case let scan as TableScanOperator:
-            return cost(tableScan: scan)
+            return costTableScan(scan)
         case let filter as FilterOperator:
-            return cost(filter: filter)
+            return costFilter(filter)
         case let project as ProjectOperator:
-            return cost(project: project)
+            return costProject(project)
         case let sort as SortOperator:
-            return cost(sort: sort)
+            return costSort(sort)
         case let hashJoin as HashJoinOperator:
-            return cost(hashJoin: hashJoin)
+            return costHashJoin(hashJoin)
         case let mergeJoin as MergeJoinOperator:
-            return cost(mergeJoin: mergeJoin)
+            return costMergeJoin(mergeJoin)
         case let parallel as ParallelMapOperator:
-            return cost(parallel: parallel)
+            return costParallel(parallel)
         default:
             return PlanCost(rows: 1_000, cpu: 1_000, io: 100, memory: 1)
         }
     }
 
-    private func cost(tableScan op: TableScanOperator) -> PlanCost {
+    private func costTableScan(_ op: TableScanOperator) -> PlanCost {
         let card = estimator.estimateScan(table: op.table)
         let rowSize = averageRowSize(for: op.table)
         let pages = (card.rows * rowSize) / pageSize
@@ -98,7 +98,7 @@ public final class CostModel {
                         memory: 0)
     }
 
-    private func cost(filter op: FilterOperator) -> PlanCost {
+    private func costFilter(_ op: FilterOperator) -> PlanCost {
         let childCost = cost(of: op.child)
         let childCard = CardinalityEstimate(rows: childCost.rows, confidence: 0.7)
         let filtered = estimator.estimateFilter(base: childCard, predicate: op.predicate)
@@ -108,12 +108,12 @@ public final class CostModel {
                         memory: childCost.memory)
     }
 
-    private func cost(project op: ProjectOperator) -> PlanCost {
+    private func costProject(_ op: ProjectOperator) -> PlanCost {
         let child = cost(of: op.child)
         return PlanCost(rows: child.rows, cpu: child.cpu, io: child.io, memory: child.memory)
     }
 
-    private func cost(sort op: SortOperator) -> PlanCost {
+    private func costSort(_ op: SortOperator) -> PlanCost {
         let childCost = cost(of: op.child)
         let n = childCost.rows
         // TimSort/merge sort n log n cost by default.
@@ -122,7 +122,7 @@ public final class CostModel {
         return PlanCost(rows: childCost.rows, cpu: cpu, io: childCost.io + n, memory: memory)
     }
 
-    private func cost(hashJoin op: HashJoinOperator) -> PlanCost {
+    private func costHashJoin(_ op: HashJoinOperator) -> PlanCost {
         let leftCost = cost(of: op.left)
         let rightCost = cost(of: op.right)
         let card = estimator.estimateJoin(left: CardinalityEstimate(rows: leftCost.rows, confidence: 0.8),
@@ -137,7 +137,7 @@ public final class CostModel {
                         memory: memory)
     }
 
-    private func cost(mergeJoin op: MergeJoinOperator) -> PlanCost {
+    private func costMergeJoin(_ op: MergeJoinOperator) -> PlanCost {
         let leftCost = cost(of: op.left)
         let rightCost = cost(of: op.right)
         let card = estimator.estimateJoin(left: CardinalityEstimate(rows: leftCost.rows, confidence: 0.8),
@@ -150,7 +150,7 @@ public final class CostModel {
                         memory: max(leftCost.memory, rightCost.memory))
     }
 
-    private func cost(parallel op: ParallelMapOperator) -> PlanCost {
+    private func costParallel(_ op: ParallelMapOperator) -> PlanCost {
         let child = cost(of: op.child)
         let cpu = child.cpu / Double(op.concurrency)
         return PlanCost(rows: child.rows, cpu: cpu, io: child.io, memory: child.memory)
