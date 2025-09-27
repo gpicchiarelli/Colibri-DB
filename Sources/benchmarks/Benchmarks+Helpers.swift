@@ -20,6 +20,20 @@ extension BenchmarkCLI {
         return min(n, 5_000)
     }
 
+    // Esegue un warm-up di N operazioni prima della misura principale.
+    @discardableResult
+    static func warmupInserts(db: Database, table: String, count: Int) -> Int {
+        guard count > 0 else { return 0 }
+        var done = 0
+        for i in 0..<count {
+            do {
+                _ = try db.insert(into: table, row: ["id": .int(Int64(-1 - i)), "p": .string("warmup")])
+                done &+= 1
+            } catch { break }
+        }
+        return done
+    }
+
     // Utility per contenere tipi non sendable usati nei benchmark concorrenti
     final class NonSendableBox<T>: @unchecked Sendable { var value: T; init(_ v: T) { self.value = v } }
 
