@@ -170,6 +170,118 @@ public final class FilterOperator: PlanOperator {
     }
 }
 
+// MARK: - Vectorized Filter Operator (SIMD-friendly)
+
+/// Processes rows in batches to leverage CPU caches and enable SIMD-friendly evaluation.
+public final class VectorizedFilterOperator: PlanOperator {
+    public let child: PlanOperator
+    public let schema: PlanSchema
+    public let batchSize: Int
+    private let predicate: (PlanRow) -> Bool
+    private var context: ExecutionContext?
+    private var buffer: [PlanRow] = []
+    private var index: Int = 0
+
+    public init(child: PlanOperator, batchSize: Int = 1024, predicate: @escaping (PlanRow) -> Bool) {
+        self.child = child
+        self.schema = child.schema
+        self.batchSize = max(1, batchSize)
+        self.predicate = predicate
+    }
+
+    public func open(context: ExecutionContext) throws {
+        self.context = context
+        buffer.removeAll(keepingCapacity: true)
+        index = 0
+        try child.open(context: context)
+    }
+
+    public func next() throws -> PlanRow? {
+        while true {
+            if index < buffer.count {
+                let row = buffer[index]
+                index += 1
+                return row
+            }
+            buffer.removeAll(keepingCapacity: true)
+            index = 0
+            var fetched = 0
+            while fetched < batchSize, let row = try child.next() {
+                if predicate(row) { buffer.append(row) }
+                fetched += 1
+            }
+            if buffer.isEmpty {
+                if fetched == 0 { return nil }
+                continue
+            }
+        }
+    }
+
+    public func close() throws {
+        try child.close()
+        buffer.removeAll(keepingCapacity: true)
+        index = 0
+        context = nil
+    }
+}
+
+// MARK: - Vectorized Project Operator
+
+public final class VectorizedProjectOperator: PlanOperator {
+    public let child: PlanOperator
+    public let schema: PlanSchema
+    private let projection: [String]
+    private let batchSize: Int
+    private var context: ExecutionContext?
+    private var buffer: [PlanRow] = []
+    private var index: Int = 0
+
+    public init(child: PlanOperator, projection: [String], batchSize: Int = 1024) {
+        self.child = child
+        self.schema = PlanSchema(columns: projection)
+        self.projection = projection
+        self.batchSize = max(1, batchSize)
+    }
+
+    public func open(context: ExecutionContext) throws {
+        self.context = context
+        buffer.removeAll(keepingCapacity: true)
+        index = 0
+        try child.open(context: context)
+    }
+
+    public func next() throws -> PlanRow? {
+        while true {
+            if index < buffer.count {
+                let row = buffer[index]
+                index += 1
+                return row
+            }
+            buffer.removeAll(keepingCapacity: true)
+            index = 0
+            var fetched = 0
+            while fetched < batchSize, let row = try child.next() {
+                var out: [String: Value] = [:]
+                out.reserveCapacity(projection.count)
+                for col in projection { if let v = row.values[col] { out[col] = v } }
+                buffer.append(PlanRow(values: out))
+                fetched += 1
+            }
+            if buffer.isEmpty {
+                if fetched == 0 { return nil }
+                continue
+            }
+        }
+    }
+
+    public func close() throws {
+        try child.close()
+        buffer.removeAll(keepingCapacity: true)
+        index = 0
+        context = nil
+    }
+}
+
 // MARK: - Project Operator
 
 /// Projects specific columns from child rows

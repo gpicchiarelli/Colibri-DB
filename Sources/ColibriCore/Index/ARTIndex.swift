@@ -29,6 +29,9 @@ public final class ARTIndex<Ref: Hashable>: IndexProtocol {
     }
 
     private let root = Node()
+    private var arena: [Node] = []
+    private let arenaChunk: Int = 1024
+    private var arenaIndex: Int = 0
 
     public init() {}
 
@@ -102,7 +105,7 @@ public final class ARTIndex<Ref: Hashable>: IndexProtocol {
             // split node
             let suffix = Array(node.prefix[common...])
             let edge = suffix.first!
-            let newChild = Node(prefix: Array(suffix.dropFirst()))
+            let newChild = allocateNode(prefix: Array(suffix.dropFirst()))
             newChild.children = node.children
             newChild.refs = node.refs
             node.children.removeAll()
@@ -122,10 +125,25 @@ public final class ARTIndex<Ref: Hashable>: IndexProtocol {
         } else {
             // create leaf with remaining bytes as prefix
             let rem = (i + 1) < bytes.count ? Array(bytes[(i+1)..<bytes.count]) : []
-            let leaf = Node(prefix: rem)
+            let leaf = allocateNode(prefix: rem)
             leaf.refs.insert(ref)
             node.children[b] = leaf
         }
+    }
+
+    // MARK: - Arena allocator (simple bump-pointer style)
+    private func allocateNode(prefix: [UInt8]) -> Node {
+        if arenaIndex >= arena.count {
+            // bulk allocate
+            arena.reserveCapacity(arena.count + arenaChunk)
+            for _ in 0..<arenaChunk { arena.append(Node()) }
+        }
+        let n = arena[arenaIndex]
+        arenaIndex += 1
+        n.prefix = prefix
+        n.children.removeAll(keepingCapacity: true)
+        n.refs.removeAll(keepingCapacity: true)
+        return n
     }
 
     private func prune(_ path: inout [(Node, UInt8?)], last: Node) {
