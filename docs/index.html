@@ -1,21 +1,245 @@
 ---
 layout: default
-title: ColibrDB
-description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
+title: Colibrì DB
+description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon
 ---
 
-<!-- Overview Section -->
-<section id="overview" class="section">
-    <h2>🎯 Panoramica</h2>
-    <p><strong>ColibrDB</strong> è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa <code>coldb</code>.</p>
+<style>
+/* Hero Section Styles */
+.hero-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 4rem 0;
+    text-align: center;
+    border-radius: 12px;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(9,105,218,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)"/></svg>');
+    opacity: 0.5;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.hero-content h1 {
+    font-size: 3.5rem;
+    color: #0969da;
+    margin-bottom: 1rem;
+    font-weight: 700;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.hero-subtitle {
+    font-size: 1.5rem;
+    color: #656d76;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+}
+
+.hero-description {
+    font-size: 1.1rem;
+    color: #24292f;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.hero-badges {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+}
+
+.hero-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.hero-badge.swift {
+    background: linear-gradient(135deg, #FA7343, #FF8A65);
+    color: white;
+    box-shadow: 0 4px 12px rgba(250, 115, 67, 0.3);
+}
+
+.hero-badge.macos {
+    background: linear-gradient(135deg, #007AFF, #4FC3F7);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+}
+
+.hero-badge.silicon {
+    background: linear-gradient(135deg, #34C759, #66BB6A);
+    color: white;
+    box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3);
+}
+
+.hero-badge.features {
+    background: linear-gradient(135deg, #6C757D, #90A4AE);
+    color: white;
+    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+}
+
+.hero-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.875rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transition: left 0.5s;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: #0969da;
+    color: white;
+    box-shadow: 0 4px 12px rgba(9, 105, 218, 0.3);
+}
+
+.btn-primary:hover {
+    background: #0550ae;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(9, 105, 218, 0.4);
+}
+
+.btn-secondary {
+    background: white;
+    color: #0969da;
+    border-color: #0969da;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary:hover {
+    background: #0969da;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(9, 105, 218, 0.3);
+}
+
+.btn-outline {
+    background: transparent;
+    color: #656d76;
+    border-color: #d1d9e0;
+}
+
+.btn-outline:hover {
+    background: #f6f8fa;
+    color: #0969da;
+    border-color: #0969da;
+    transform: translateY(-2px);
+}
+
+/* Responsive Hero */
+@media (max-width: 768px) {
+    .hero-content h1 {
+        font-size: 2.5rem;
+    }
     
-    <div class="badges" style="margin: 2rem 0; text-align: center;">
-        <a href="https://swift.org" class="badge" target="_blank" style="background: #FA7343; color: white;">Swift 6.2</a>
-        <a href="https://developer.apple.com/macos/" class="badge" target="_blank" style="background: #007AFF; color: white;">macOS 13+</a>
-        <a href="https://developer.apple.com/silicon/" class="badge" target="_blank" style="background: #34C759; color: white;">Apple Silicon</a>
-        <a href="https://github.com/gpicchiarelli/Colibri-DB/stargazers" class="badge" target="_blank" style="background: #FFD700; color: #333;">⭐ GitHub Stars</a>
-        <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE" class="badge" target="_blank" style="background: #6C757D; color: white;">📄 BSD-3 License</a>
-        <a href="https://github.com/gpicchiarelli/Colibri-DB/issues" class="badge" target="_blank" style="background: #FF6B6B; color: white;">🐛 Report Issues</a>
+    .hero-subtitle {
+        font-size: 1.25rem;
+    }
+    
+    .hero-description {
+        font-size: 1rem;
+    }
+    
+    .hero-badges {
+        gap: 0.5rem;
+    }
+    
+    .hero-badge {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+    
+    .hero-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn {
+        width: 100%;
+        max-width: 250px;
+        justify-content: center;
+    }
+}
+</style>
+
+<!-- Hero Section -->
+<section id="hero" class="section hero-section">
+    <div class="hero-content">
+        <h1>🐦 Colibrì DB</h1>
+        <p class="hero-subtitle">RDBMS sperimentale ad alte prestazioni per l'ecosistema Apple</p>
+        <p class="hero-description">
+            Un database relazionale moderno scritto in Swift 6.2, progettato per gestire milioni di connessioni 
+            logiche con un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa.
+        </p>
+        
+        <div class="hero-badges">
+            <span class="hero-badge swift">Swift 6.2</span>
+            <span class="hero-badge macos">macOS 13+</span>
+            <span class="hero-badge silicon">Apple Silicon</span>
+            <span class="hero-badge features">WAL • MVCC • B+Tree</span>
+        </div>
+        
+        <div class="hero-actions">
+            <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-primary" target="_blank">
+                <span>⭐ Star su GitHub</span>
+            </a>
+            <a href="{{ site.baseurl }}/wiki/Quick-Start" class="btn btn-secondary">
+                <span>🚀 Quick Start</span>
+            </a>
+            <a href="{{ site.baseurl }}/wiki/Architecture" class="btn btn-outline">
+                <span>🏗️ Architettura</span>
+            </a>
+        </div>
     </div>
 </section>
 

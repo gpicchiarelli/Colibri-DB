@@ -1,7 +1,7 @@
-# GitHub Pages Configuration for ColibrDB
-title: ColibrDB
-description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
-author: ColibrDB Team
+# GitHub Pages Configuration for Colibrì DB
+title: Colibrì DB
+description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon
+author: Colibrì DB Team
 url: https://gpicchiarelli.github.io
 baseurl: /Colibri-DB
 
@@ -9,18 +9,24 @@ baseurl: /Colibri-DB
 markdown: kramdown
 highlighter: rouge
 theme: minima
+timezone: Europe/Rome
+encoding: utf-8
 
 # Plugins
 plugins:
   - jekyll-feed
   - jekyll-sitemap
   - jekyll-seo-tag
+  - jekyll-redirect-from
 
 # Collections
 collections:
   docs:
     output: true
     permalink: /:collection/:name/
+  wiki:
+    output: true
+    permalink: /wiki/:name/
 
 # Defaults
 defaults:
@@ -29,11 +35,19 @@ defaults:
       type: "pages"
     values:
       layout: "default"
+      author: "Colibrì DB Team"
   - scope:
       path: ""
       type: "docs"
     values:
       layout: "doc"
+      author: "Colibrì DB Team"
+  - scope:
+      path: ""
+      type: "wiki"
+    values:
+      layout: "page"
+      author: "Colibrì DB Team"
 
 # Exclude from processing
 exclude:
@@ -44,6 +58,11 @@ exclude:
   - vendor/cache/
   - vendor/gems/
   - vendor/ruby/
+  - README.md
+  - LICENSE
+  - SECURITY.md
+  - CODE_OF_CONDUCT.md
+  - CONTRIBUTING.md
 
 # Include
 include:
@@ -51,20 +70,43 @@ include:
 
 # Social links
 social:
-  name: ColibrDB
+  name: Colibrì DB
   links:
     - https://github.com/gpicchiarelli/Colibri-DB
     - https://github.com/gpicchiarelli/Colibri-DB/issues
     - https://github.com/gpicchiarelli/Colibri-DB/discussions
 
-# SEO
+# SEO and Meta
 seo:
   type: Organization
-  name: ColibrDB
-  description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
+  name: Colibrì DB
+  description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon
   url: https://gpicchiarelli.github.io/Colibri-DB
   image: /assets/og-image.png
   twitter:
     username: colibridb
+    card: summary_large_image
   facebook:
     app_id: 123456789
+
+# Additional meta tags
+meta:
+  keywords: "RDBMS, Swift, Database, macOS, Apple Silicon, WAL, MVCC, B+Tree, Database Engine, SQL, Transaction, Concurrency"
+  robots: "index, follow"
+  googlebot: "index, follow"
+  language: "it"
+  geo:
+    region: "IT"
+    placename: "Italy"
+
+# Site structure
+permalink: /:title/
+paginate: 10
+paginate_path: "/page:num/"
+
+# Custom variables
+version: "0.1.0-alpha"
+swift_version: "6.2"
+min_macos: "13.0"
+apple_silicon: true
+license: "BSD-3-Clause"

@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if page.title %}{{ page.title }} - {% endif %}ColibrDB</title>
-    <meta name="description" content="{% if page.description %}{{ page.description }}{% else %}ColibrDB è un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon.{% endif %}">
+    <title>{% if page.title %}{{ page.title }} - {% endif %}Colibrì DB</title>
+    <meta name="description" content="{% if page.description %}{{ page.description }}{% else %}Colibrì DB è un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon.{% endif %}">
     <meta name="keywords" content="RDBMS, Swift, Database, macOS, Apple Silicon, WAL, MVCC, B+Tree">
     <meta name="author" content="ColibrDB Team">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ site.url }}{{ site.baseurl }}{{ page.url }}">
-    <meta property="og:title" content="{% if page.title %}{{ page.title }} - {% endif %}ColibrDB">
+    <meta property="og:title" content="{% if page.title %}{{ page.title }} - {% endif %}Colibrì DB">
     <meta property="og:description" content="{% if page.description %}{{ page.description }}{% else %}Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon.{% endif %}">
     <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/og-image.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="{{ site.url }}{{ site.baseurl }}{{ page.url }}">
-    <meta property="twitter:title" content="{% if page.title %}{{ page.title }} - {% endif %}ColibrDB">
+    <meta property="twitter:title" content="{% if page.title %}{{ page.title }} - {% endif %}Colibrì DB">
     <meta property="twitter:description" content="{% if page.description %}{{ page.description }}{% else %}Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon.{% endif %}">
     <meta property="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/og-image.png">
 
@@ -59,21 +59,43 @@
         .header {
             background: linear-gradient(135deg, var(--primary-color) 0%, #0550ae 100%);
             color: white;
-            padding: 2rem 0;
+            padding: 3rem 0;
             text-align: center;
             box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="50" cy="10" r="0.5" fill="rgba(255,255,255,0.05)"/><circle cx="10" cy="60" r="0.5" fill="rgba(255,255,255,0.05)"/><circle cx="90" cy="40" r="0.5" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header .container {
+            position: relative;
+            z-index: 1;
         }
 
         .header h1 {
-            font-size: 3rem;
+            font-size: 3.5rem;
             margin-bottom: 0.5rem;
             font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            letter-spacing: -0.02em;
         }
 
         .header .subtitle {
-            font-size: 1.25rem;
-            opacity: 0.9;
-            margin-bottom: 1.5rem;
+            font-size: 1.4rem;
+            opacity: 0.95;
+            margin-bottom: 2rem;
+            font-weight: 400;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
 
         .badges {
@@ -86,18 +108,24 @@
 
         .badge {
             display: inline-block;
-            padding: 0.25rem 0.75rem;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
+            padding: 0.4rem 1rem;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
             font-size: 0.875rem;
             font-weight: 500;
             text-decoration: none;
             color: white;
-            transition: background-color 0.2s;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .badge:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
 
         .cta-buttons {
@@ -109,42 +137,65 @@
 
         .btn {
             display: inline-block;
-            padding: 0.75rem 1.5rem;
+            padding: 0.875rem 2rem;
             background: white;
             color: var(--primary-color);
             text-decoration: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-weight: 600;
-            transition: all 0.2s;
+            font-size: 1rem;
+            transition: all 0.3s ease;
             border: 2px solid transparent;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn:hover {
             background: var(--primary-color);
             color: white;
-            transform: translateY(-2px);
-            box-shadow: var(--shadow);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
         }
 
         .btn-secondary {
             background: transparent;
             color: white;
-            border-color: white;
+            border-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
         }
 
         .btn-secondary:hover {
             background: white;
             color: var(--primary-color);
+            border-color: white;
         }
 
         /* Navigation */
         .nav {
             background: white;
             border-bottom: 1px solid var(--border-color);
-            padding: 1rem 0;
+            padding: 1.5rem 0;
             position: sticky;
             top: 0;
             z-index: 100;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
         .nav ul {
@@ -152,20 +203,41 @@
             display: flex;
             justify-content: center;
             flex-wrap: wrap;
-            gap: 2rem;
+            gap: 1rem;
+            margin: 0;
+            padding: 0;
         }
 
         .nav a {
             color: var(--text-color);
             text-decoration: none;
             font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            transition: background-color 0.2s;
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            position: relative;
+            font-size: 0.95rem;
+        }
+
+        .nav a::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: var(--primary-color);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
         }
 
         .nav a:hover, .nav a.active {
             background: var(--code-background);
+            color: var(--primary-color);
+        }
+
+        .nav a:hover::before, .nav a.active::before {
+            width: 80%;
         }
 
         /* Main Content */
@@ -201,15 +273,34 @@
         .feature-card {
             background: white;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: var(--shadow);
-            transition: transform 0.2s, box-shadow 0.2s;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), #4fc3f7);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
         }
 
         .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-6px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+            border-color: var(--primary-color);
         }
 
         .feature-card h4 {
@@ -377,39 +468,184 @@
         .footer {
             background: var(--text-color);
             color: white;
-            padding: 3rem 0;
-            text-align: center;
+            padding: 4rem 0 2rem 0;
         }
 
-        .footer h3 {
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .footer-section h3 {
+            color: white;
             margin-bottom: 1rem;
+            font-size: 1.5rem;
         }
 
-        .footer p {
+        .footer-section h4 {
+            color: white;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .footer-section p {
             opacity: 0.8;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .footer-description {
+            font-size: 0.9rem;
+            opacity: 0.7;
         }
 
         .footer-links {
             display: flex;
-            justify-content: center;
-            gap: 2rem;
-            flex-wrap: wrap;
-            margin-bottom: 2rem;
+            flex-direction: column;
+            gap: 0.5rem;
         }
 
         .footer-links a {
             color: white;
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 400;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+            padding: 0.25rem 0;
         }
 
         .footer-links a:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 2rem;
+        }
+
+        .trademark-disclaimer {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .trademark-disclaimer p {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .trademark-disclaimer strong {
+            color: #ffd700;
+            font-weight: 600;
+        }
+
+        .copyright {
+            text-align: center;
+            opacity: 0.7;
+        }
+
+        .copyright p {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .copyright a {
+            color: #4fc3f7;
+            text-decoration: none;
+        }
+
+        .copyright a:hover {
             text-decoration: underline;
         }
 
         /* Responsive */
         @media (max-width: 768px) {
+            .container {
+                padding: 0 15px;
+            }
+            
+            .header {
+                padding: 2rem 0;
+            }
+            
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .header .subtitle {
+                font-size: 1.1rem;
+            }
+            
+            .badges {
+                gap: 0.25rem;
+            }
+            
+            .badge {
+                padding: 0.3rem 0.8rem;
+                font-size: 0.8rem;
+            }
+            
+            .nav {
+                padding: 1rem 0;
+            }
+            
+            .nav ul {
+                flex-direction: column;
+                gap: 0.5rem;
+                align-items: center;
+            }
+            
+            .nav a {
+                padding: 0.5rem 1rem;
+                width: 100%;
+                text-align: center;
+                max-width: 200px;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+                gap: 0.75rem;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 250px;
+                text-align: center;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .feature-card {
+                padding: 1.5rem;
+            }
+            
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                text-align: center;
+            }
+            
+            .footer-links {
+                align-items: center;
+            }
+            
+            .trademark-disclaimer {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
             .header h1 {
                 font-size: 2rem;
             }
@@ -418,18 +654,13 @@
                 font-size: 1rem;
             }
             
-            .nav ul {
-                flex-direction: column;
-                gap: 0.5rem;
+            .badges {
+                justify-content: center;
             }
             
-            .cta-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .features-grid {
-                grid-template-columns: 1fr;
+            .badge {
+                padding: 0.25rem 0.6rem;
+                font-size: 0.75rem;
             }
         }
 
@@ -453,7 +684,7 @@
     <!-- Header -->
     <header class="header">
         <div class="container">
-            <h1>🐦 ColibrDB</h1>
+            <h1>🐦 Colibrì DB</h1>
             <p class="subtitle">Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2</p>
             
             <div class="badges">
@@ -509,17 +740,66 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <h3>🐦 ColibrDB</h3>
-            <p>RDBMS sperimentale in Swift 6</p>
-            
-            <div class="footer-links">
-                <a href="https://github.com/gpicchiarelli/Colibri-DB">GitHub</a>
-                <a href="https://github.com/gpicchiarelli/Colibri-DB/issues">Issues</a>
-                <a href="https://github.com/gpicchiarelli/Colibri-DB/discussions">Discussions</a>
-                <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE">License</a>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>🐦 Colibrì DB</h3>
+                    <p>RDBMS sperimentale in Swift 6.2</p>
+                    <p class="footer-description">
+                        Un database relazionale moderno progettato per l'ecosistema Apple, 
+                        ottimizzato per macOS e Apple Silicon.
+                    </p>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Risorse</h4>
+                    <div class="footer-links">
+                        <a href="https://github.com/gpicchiarelli/Colibri-DB">GitHub</a>
+                        <a href="https://github.com/gpicchiarelli/Colibri-DB/issues">Issues</a>
+                        <a href="https://github.com/gpicchiarelli/Colibri-DB/discussions">Discussions</a>
+                        <a href="{{ site.baseurl }}/wiki/Quick-Start">Quick Start</a>
+                        <a href="{{ site.baseurl }}/wiki/Architecture">Architecture</a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Documentazione</h4>
+                    <div class="footer-links">
+                        <a href="{{ site.baseurl }}/wiki/CLI-Reference">CLI Reference</a>
+                        <a href="{{ site.baseurl }}/wiki/API-Reference">API Reference</a>
+                        <a href="{{ site.baseurl }}/wiki/Performance">Performance</a>
+                        <a href="{{ site.baseurl }}/wiki/Examples">Examples</a>
+                        <a href="{{ site.baseurl }}/wiki/Troubleshooting">Troubleshooting</a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h4>Legale</h4>
+                    <div class="footer-links">
+                        <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE">BSD-3 License</a>
+                        <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CODE_OF_CONDUCT.md">Code of Conduct</a>
+                        <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md">Contributing</a>
+                        <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/SECURITY.md">Security</a>
+                    </div>
+                </div>
             </div>
             
-            <p>&copy; 2024 ColibrDB Team. Licenza BSD 3-Clause License.</p>
+            <div class="footer-bottom">
+                <div class="trademark-disclaimer">
+                    <p><strong>Disclaimer sui Marchi:</strong></p>
+                    <p>
+                        Apple, il logo Apple, macOS, Apple Silicon, Swift e altri marchi Apple sono 
+                        marchi registrati di Apple Inc. negli Stati Uniti e in altri paesi. 
+                        Colibrì DB è un progetto indipendente e non è affiliato, sponsorizzato o 
+                        approvato da Apple Inc. L'uso di questi marchi è solo a scopo descrittivo 
+                        per indicare la compatibilità con i prodotti Apple.
+                    </p>
+                </div>
+                
+                <div class="copyright">
+                    <p>&copy; 2024 Colibrì DB Team. Tutti i diritti riservati.</p>
+                    <p>Distribuito sotto licenza <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE">BSD 3-Clause License</a>.</p>
+                </div>
+            </div>
         </div>
     </footer>
 
