@@ -1,17 +1,15 @@
 # Capitolo 26 — Benchmarking e Performance Engineering
 
-## 26.1 Suite di benchmark
-- `Sources/benchmarks` e scenari (`Benchmarks+Heap`, `Benchmarks+WAL`).
-- Parametrizzazione, durata, output.
+## 26.1 Suite
+`swift run benchmarks` esegue scenari: WAL throughput, heap operations, planner performance.
 
-## 26.2 Metriche chiave
-- Throughput, latenza, IOPS, Page Flush rate.
-- Metriche riportate in `WALMetrics`, `BufferPoolStats`.
+## 26.2 Metriche
+Elenco metriche chiave: `appendsPerSecond`, `bytesPerSecond`, `fsyncsPerSecond`, `p95CommitLatencyMs`, `queueDepth`, `compressionRatio`.
 
-## 26.3 Esecuzione benchmark
-- Comando `swift run benchmarks --scenario`.
-- Raccolta dati, esportazione grafici.
+## 26.3 Metodologia
+- Definizione di baseline.
+- Ripetibilità (seme random, configurazione hardware).
+- Analisi regressioni.
 
-## 26.4 Tuning e interpretazione
-- Configurazioni `DBConfig`, `ServerConfig`.
-- Analisi dei risultati, regressioni, profiling.
+## 26.4 Ottimizzazione
+Strategie per migliorare performance: tuning `DBConfig`, parallelismo, caching, compressione.

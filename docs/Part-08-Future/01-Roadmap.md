@@ -1,19 +1,16 @@
 # Capitolo 27 — Roadmap Tecnica
 
-## 27.1 Replicazione e HA
-- Implementare replication log-based.
-- Failover automatico, consensus.
+## 27.1 Replicazione
+Pianificare un log shipping basato su WAL, implementare follower read-only, failover automatico.
 
 ## 27.2 Query distribuite
-- Sharding, federated queries.
-- Coordinatori, data placement.
+Supporto a sharding, federation, coordinatori. Discussione su partizionamento, consistent hashing.
 
 ## 27.3 Ottimizzazione avanzata
-- Cost-based planner completo, statistica multi-dimensionale.
-- Adaptive query processing.
+Planner cost-based completo, statistiche multi-dimensionali, adaptive query processing.
 
 ## 27.4 Sicurezza
-- TLS, auditing, row-level security.
+TLS, auditing, row-level security.
 
-## 27.5 Specializzazioni hardware
-- SIMD, GPU, accelerator (Apple Silicon).
+## 27.5 Hardware specializzato
+Utilizzo di SIMD, GPU, e ottimizzazioni Apple Silicon.

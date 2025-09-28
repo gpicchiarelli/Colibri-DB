@@ -1,17 +1,17 @@
 # Appendice B — Guida alla Configurazione
 
-## B.1 File di configurazione principale
-- `colibridb.conf.json`: parametri `storage`, `wal`, `server`.
-- Formato JSON, esempi commentati.
+## B.1 File di configurazione
+- `colibridb.conf.json`: parametri di database, WAL, server.
+- Esempio con commenti e spiegazione di ciascun campo.
 
 ## B.2 Parametri runtime
-- `DBConfig`, `ServerConfig`, `CheckpointConfig`.
-- Come modificarli via CLI e API.
+- `DBConfig`: opzioni per storage, WAL, checkpoint.
+- `ServerConfig`: porta, pool thread, sicurezza.
+- `CheckpointConfig`: intervalli e durata.
 
-## B.3 Directory e permessi
-- `data/` (WAL, catalogo, checkpoint).
-- Permessi consigliati, backup.
+## B.3 Directory
+- `data/`: file WAL, catalogo, checkpoint.
+- Best practice per permessi e backup.
 
-## B.4 Ambienti di deploy
-- macOS, Linux.
-- Script di installazione, dipendenze.
+## B.4 Ambienti
+- Setup su macOS (launchctl) e Linux (systemd).

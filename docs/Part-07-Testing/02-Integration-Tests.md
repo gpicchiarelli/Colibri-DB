@@ -1,16 +1,13 @@
 # Capitolo 25 — Test di Integrazione e End-to-End
 
-## 25.1 Scenario completo
-- Setup database, server, client CLI.
-- Workflow transazionale completo.
+## 25.1 Pipeline end-to-end
+Descriviamo come configurare un test completo: avvio server, esecuzione script SQL, verifica risultati, teardown.
 
-## 25.2 Failover e recovery
-- Script per simulare crash, WAL replay.
-- Validazione consistenza post-recovery.
+## 25.2 Recovery tests
+Scenario: transazioni in corso, crash del server, riavvio, verifica integrità. Si utilizza `DevCLI+Testing` e script shell.
 
 ## 25.3 Concorrenza
-- Test di transazioni concorrenti, phantom, deadlock.
-- Strumenti `DevCLI+Testing`.
+Test di transazioni parallele con carichi generati, verifica invarianti (serializability, read phenomena).
 
-## 25.4 Strumenti automatizzati
-- Integrazione in CI, orchestrazione.
+## 25.4 Automazione
+Integrazione con pipeline CI/CD, scheduling regolare, reporting.
