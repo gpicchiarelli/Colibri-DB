@@ -28,7 +28,7 @@ struct LockManagerTests {
         var t1Error: Error?
 
         // Start T1 trying to acquire resourceB in background
-        DispatchQueue.global().async { [manager, resourceB] in
+        DispatchQueue.global().async {
             do {
                 let h = try manager.lock(resourceB, mode: .exclusive, tid: 1, timeout: nil)
                 t1Result.sync { t1SecondHandle = h }
@@ -56,11 +56,13 @@ struct LockManagerTests {
         // Clean up
         manager.unlock(handleT2)
         _ = waiterFinished.wait(timeout: .now() + 1)
-        if let err = t1Error {
-            Issue.record("Unexpected error for T1: \(err)")
-        }
-        if let h = t1SecondHandle {
-            manager.unlock(h)
+        t1Result.sync {
+            if let err = t1Error {
+                Issue.record("Unexpected error for T1: \(err)")
+            }
+            if let h = t1SecondHandle {
+                manager.unlock(h)
+            }
         }
         manager.unlock(handleT1)
     }
@@ -95,7 +97,7 @@ struct LockManagerTests {
         var exclusiveHandle: LockHandle?
         var upgradeError: Error?
 
-        DispatchQueue.global().async { [manager, resource] in
+        DispatchQueue.global().async {
             do {
                 let h = try manager.lock(resource, mode: .exclusive, tid: 1, timeout: nil)
                 upgradeResult.sync { exclusiveHandle = h }
@@ -110,13 +112,15 @@ struct LockManagerTests {
 
         let waitResult = upgradeFinished.wait(timeout: .now() + 1)
         #expect(waitResult == .success, "Upgrade to exclusive lock timed out")
-        if let error = upgradeError {
-            Issue.record("Unexpected error during upgrade: \(error)")
-        }
-        #expect(exclusiveHandle?.mode == .exclusive)
+        upgradeResult.sync {
+            if let error = upgradeError {
+                Issue.record("Unexpected error during upgrade: \(error)")
+            }
+            #expect(exclusiveHandle?.mode == .exclusive)
 
-        if let exclusive = exclusiveHandle {
-            manager.unlock(exclusive)
+            if let exclusive = exclusiveHandle {
+                manager.unlock(exclusive)
+            }
         }
         manager.unlock(sharedT1)
     }

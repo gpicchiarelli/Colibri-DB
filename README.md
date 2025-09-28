@@ -55,73 +55,233 @@
 - **Prometheus Metrics**: Production-ready monitoring and observability
 - **Policy Engine**: Automated maintenance and optimization scheduling
 
-Caratteristiche principali
--------------------------
-- **Storage & Buffering**: heap file paginati con slot directory, Free Space Map persistente, compattazione online e buffer pool LRU/Clock con flusher in background e quote per namespace.
-- **Durabilità**: WAL v2 con record tipizzati, CRC32, checkpoint, ARIES-like CLR per UNDO e gestione Dirty Page Table. Supporto a replay DB + WAL degli indici B+Tree.
-- **Indici**: persistente B+Tree con checkpoint, validazioni profonde, bulk-build e compattazione; indice `AnyStringIndex` con Hash, ART, SkipList, Fractal tree e LSM in-memory.
-- **Transazioni & MVCC**: livelli di isolamento configurabili, lock manager con deadlock detection/timeout, snapshot MVCC, vacuum e supporto 2PC (prepare/commit/abort).
-- **Planner/Executor**: iteratore Volcano con planner cost-based, operatori scan/filter/project/sort/join, predicate pushdown e caching di viste materializzate.
-- **CLI operativa**: gestione tabelle, indici, import/export CSV, buffer pool, politiche di manutenzione, simulatore di ottimizzazione e metriche formato Prometheus.
-- **Catalogo & Policy**: cataloghi sistema/indici, statistiche di frammentazione, policy di compattazione programmata e simulatori di clustering.
+## 🚀 Quick Start
 
-Requisiti
----------
-- macOS 13+ (Apple Silicon consigliato)
-- Swift 6.2 (o toolchain compatibile via SwiftPM)
-- Spazio su disco per dati (`data/`), WAL e indici
+### Prerequisites
 
-Avvio rapido
-------------
-```
+- **macOS 13+** (Apple Silicon recommended for optimal performance)
+- **Swift 6.2** (or compatible toolchain via SwiftPM)
+- **Disk Space**: Sufficient space for data (`data/`), WAL, and indexes
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/gpicchiarelli/Colibrì-DB.git
+cd Colibrì-DB
+
+# Build the project
 swift build
+
+# Run the CLI
 .build/debug/coldb --config colibridb.conf.json
 ```
-Per provare una sessione interattiva:
+
+### Interactive Session
+
+```bash
+# Start an interactive session
+.build/debug/coldb
+
+# Create a table
+\create table demo
+
+# Insert data
+\insert demo id=1,name=Alice,age=25
+
+# Create an index
+\create index idx_demo_name ON demo(name) USING BTree
+
+# Search using the index
+\index search demo idx_demo_name Alice
+
+# Query data
+\select * FROM demo WHERE name = 'Alice'
 ```
-\\create table demo
-\\insert demo id=1,name=Alice
-\\create index idx_demo_name ON demo(name) USING BTree
-\\index search demo idx_demo_name Alice
+
+## ⚙️ Configuration
+
+The `colibridb.conf.json` file controls all database settings:
+
+```json
+{
+  "dataDir": "./data",
+  "maxConnectionsLogical": 1000000,
+  "maxConnectionsPhysical": 16,
+  "bufferPoolSizeBytes": 1073741824,
+  "pageSizeBytes": 8192,
+  "walEnabled": true,
+  "checksumEnabled": true,
+  "cliEnabled": true,
+  "metricsEnabled": true,
+  "serverEnabled": false,
+  "indexImplementation": "Hash",
+  "storageEngine": "FileHeap"
+}
 ```
 
-Configurazione
---------------
-Il file `colibridb.conf.json` controlla directory dati, dimensioni delle pagine, buffer pool, politiche di compattazione, livelli di isolamento e backend di indicizzazione. La struttura completa è descritta in `docs/configuration.md`.
+## 📚 Documentation
 
-Documentazione
---------------
-La documentazione tecnica è allineata e organizzata in `docs/` e il libro degli internals è in `Libro/`:
-- `Libro/` — libro in markdown sugli internals (architettura, storage, MVCC, WAL, indici, server, CLI)
-- `docs/index.md` — mappa dei documenti e percorsi di lettura
-- `docs/overview.md` — visione generale e stato MVP
-- `docs/architecture.md` — panoramica a livelli e flussi
-- `docs/modules-*.md` — approfondimenti su storage, buffer, indici, WAL, concorrenza
-- `docs/cli.md` e `docs/policies.md` — comandi operativi e automazioni
-- `docs/security.md`, `docs/apple-silicon.md`, `docs/appendices.md` — aspetti trasversali, ottimizzazioni e materiali di supporto
-- `docs/dimensional-limits.md` — vincoli dimensionali (pagine, slot, WAL, buffer) e valori di default
-- `docs/benchmarking.md` — guida ai benchmark micro/macro e al target unificato `benchmarks`
+### 📖 Comprehensive Technical Documentation
 
-Struttura del repository
-------------------------
-- `Sources/ColibriCore/` — core engine (storage, WAL, MVCC, indici, policy, util)
-- `Sources/coldb/` — CLI amministrativa
-- `Sources/coldb-server/` — server e wire protocol
-- `Sources/benchmarks/` — harness `benchmarks` unificato (scenari tematici e output leggibile)
-- `Tests/` — suite di test SwiftPM
-- `docs/` — documentazione tecnica
-- `Libro/` — libro degli internals in markdown navigabile su GitHub
-- `data/` — dati runtime (ignorati dal VCS)
+Our documentation is organized into multiple sections for different audiences:
 
-CI e qualità
-------------
-- GitHub Actions esegue build e test (`.github/workflows/ci.yml`).
-- Analisi statica con CodeQL (`.github/workflows/codeql.yml`).
+#### 🎓 **University Manual** (`docs/`)
+- **Part I: Foundations** - Relational principles, SQL algebra, transaction theory
+- **Part II: Core Engine** - WAL, Buffer Pool, Heap Storage, B+Tree Indexes, MVCC
+- **Part III: Query Processing** - SQL Parser, Logical/Physical Planning, Execution Engine
+- **Part IV: Metadata** - Catalog Core, Statistics, Schema Management
+- **Part V: Server** - Architecture, Wire Protocol, Operations
+- **Part VI: Tooling** - User CLI, Dev CLI, Monitoring & DevOps
+- **Part VII: Testing** - Unit Tests, Integration Tests, Benchmarks
+- **Part VIII: Future** - Roadmap and Extensions
 
-Contribuire
------------
-Consulta `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` e la roadmap (`docs/roadmap.md`) prima di aprire PR. Strutture dati e protocolli sono progettati per essere estesi: vedere `docs/api-extendibility.md`.
+#### 🔧 **Operational Guides**
+- **Configuration Guide** (`docs/Appendices/02-Configurazione.md`)
+- **CLI Reference** (`docs/Part-06-Tooling/01-User-CLI.md`)
+- **Benchmarking** (`docs/Part-07-Testing/03-Benchmarks.md`)
+- **Security** (`SECURITY.md`)
 
-Licenza
--------
-BSD 3-Clause. Tutti i contributi ricadono sotto la licenza in `LICENSE`.
+## 🏗️ Architecture
+
+### Repository Structure
+
+```
+Colibrì-DB/
+├── Sources/
+│   ├── ColibriCore/          # Core database engine
+│   │   ├── Buffer/           # Buffer pool management
+│   │   ├── Catalog/          # System catalog
+│   │   ├── Database/         # Database operations
+│   │   ├── Index/            # Index implementations
+│   │   ├── Storage/          # Storage engine
+│   │   ├── Transactions/     # MVCC and locking
+│   │   ├── WAL/              # Write-Ahead Logging
+│   │   └── ...
+│   ├── coldb/                # Administrative CLI
+│   ├── coldb-server/         # Network server
+│   └── benchmarks/           # Performance testing
+├── Tests/                    # Test suite
+├── docs/                     # Technical documentation
+├── Examples/                 # Usage examples
+└── Resources/                # Configuration files
+```
+
+### Core Components
+
+- **Storage Engine**: Heap file-based storage with slot directory
+- **Buffer Pool**: LRU/Clock eviction with background flushing
+- **WAL System**: ARIES-compliant recovery with CRC32 checksums
+- **Index Engine**: Pluggable B+Tree, Hash, ART, and LSM implementations
+- **Transaction Manager**: MVCC with configurable isolation levels
+- **Query Processor**: Volcano iterator with cost-based optimization
+
+## 🧪 Testing & Quality
+
+### Continuous Integration
+- **GitHub Actions**: Automated build and test execution
+- **CodeQL**: Static analysis and security scanning
+- **Swift Testing**: Modern testing framework integration
+
+### Test Coverage
+- **Unit Tests**: Core functionality validation
+- **Integration Tests**: End-to-end workflow testing
+- **Benchmarks**: Performance regression detection
+- **Stress Tests**: High-load scenario validation
+
+### Running Tests
+
+```bash
+# Run all tests
+swift test
+
+# Run specific test categories
+swift test --filter WAL
+swift test --filter Buffer
+swift test --filter BTree
+
+# Run benchmarks
+swift run benchmarks --help
+```
+
+## 📊 Performance
+
+### Target Performance Metrics
+- **WAL Throughput**: 10,000+ operations/second
+- **B+Tree Lookups**: 1M+ lookups/second
+- **Transaction Throughput**: 1,000+ transactions/second
+- **Buffer Pool Hit Rate**: >95%
+
+### Benchmarking
+
+```bash
+# WAL performance
+swift run benchmarks --wal-throughput --duration 30s
+
+# B+Tree operations
+swift run benchmarks --btree-lookups --keys 1000000
+
+# Transaction throughput
+swift run benchmarks --transaction-throughput --duration 30s
+
+# Buffer pool efficiency
+swift run benchmarks --buffer-hit-rate --workload mixed
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) for details.
+
+### Development Setup
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Ensure all tests pass
+6. Submit a pull request
+
+### Areas for Contribution
+
+- **Core Engine**: Storage, WAL, indexing improvements
+- **Query Processing**: Parser enhancements, optimization
+- **Testing**: Additional test coverage, benchmarks
+- **Documentation**: Technical writing, examples
+- **Tooling**: CLI improvements, monitoring tools
+
+## 📈 Roadmap
+
+### Current Status: MVP (Alpha)
+- ✅ Core storage engine with WAL
+- ✅ B+Tree indexes with recovery
+- ✅ Basic MVCC and transaction support
+- ✅ Administrative CLI
+- ✅ Comprehensive documentation
+
+### Upcoming Features
+- **Beta Release**: Multi-user server mode, concurrent transactions
+- **Production Release**: Full SQL compliance, advanced monitoring
+- **Future**: Distributed architecture, cloud-native deployment
+
+See [ROADMAP.md](ROADMAP.md) for detailed development plans.
+
+## 📄 License
+
+This project is licensed under the **BSD 3-Clause License** - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- **Apple**: For Swift language and development tools
+- **Community**: Contributors and early adopters
+- **Academic**: Database systems research and literature
+- **Open Source**: Inspiration from existing database projects
+
+---
+
+<div align="center">
+
+**Built with ❤️ in Swift for the Apple Ecosystem**
+
+[⭐ Star us on GitHub](https://github.com/gpicchiarelli/Colibrì-DB) • [📖 Read the docs](docs/) • [🐛 Report issues](https://github.com/gpicchiarelli/Colibrì-DB/issues) • [💬 Join discussions](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
+
+</div>
