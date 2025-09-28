@@ -112,7 +112,7 @@ public final class IndexScanOperator: PlanOperator {
                     }
                 case .persistentBTree(let f):
                     if let value = firstValue {
-                        rids = f.searchEquals(value)
+                        rids = try f.searchEquals(value)
                     }
                 }
                 

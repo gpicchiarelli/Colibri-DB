@@ -103,7 +103,8 @@ struct BenchmarkResult {
             let sys = systemMetrics.map { Payload.Sys(cpu_percent: $0.cpu.usage, memory_percent: $0.memory.usage, io_read_bytes: $0.io.readCount, io_write_bytes: $0.io.writeCount) }
             let p = Payload(scenario: name, iterations: iterations, throughput_ops_s: opsPerSecond, when: ts, latency_ms: lat, system_metrics: sys, metadata: metadata)
             let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-            if let data = try enc.encode(p), let s = String(data: data, encoding: .utf8) { print(s) }
+            let data = try? enc.encode(p)
+            if let data = data, let s = String(data: data, encoding: .utf8) { print(s) }
         }
     }
 

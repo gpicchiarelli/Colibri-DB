@@ -101,7 +101,7 @@ swift build
 
 ## 📚 Manuale Tecnico
 
-### 🎓 **Manuale Universitario** - Struttura Completa
+### 🎓 **Manuale** - Struttura Completa
 
 La documentazione è organizzata in sezioni progressive per diversi livelli di competenza:
 
