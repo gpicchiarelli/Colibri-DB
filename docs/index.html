@@ -5,65 +5,69 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ott
 ---
 
 <style>
-/* Modern Typography and Design System */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
+/* Apple Minimalist Design System */
 :root {
-    /* Modern Color Palette */
+    /* Apple Color Palette */
     --primary-blue: #007AFF;
-    --primary-blue-dark: #0051D5;
-    --success-green: #34C759;
-    --warning-orange: #FF9500;
-    --danger-red: #FF3B30;
-    --accent-purple: #AF52DE;
-    --accent-pink: #FF2D92;
-    --accent-teal: #5AC8FA;
-    --accent-indigo: #5856D6;
-    --neutral-gray: #8E8E93;
-    --neutral-gray-2: #AEAEB2;
-    --neutral-gray-3: #C7C7CC;
-    --neutral-gray-4: #D1D1D6;
-    --neutral-gray-5: #E5E5EA;
-    --neutral-gray-6: #F2F2F7;
+    --primary-blue-hover: #0056CC;
+    --success-green: #30D158;
+    --warning-orange: #FF9F0A;
+    --danger-red: #FF453A;
     
-    /* Typography Scale */
-    --font-size-display: clamp(3.5rem, 8vw, 6rem);
-    --font-size-large-title: clamp(2.5rem, 6vw, 4rem);
-    --font-size-title-1: clamp(2rem, 5vw, 3rem);
-    --font-size-title-2: clamp(1.5rem, 4vw, 2.25rem);
-    --font-size-title-3: clamp(1.25rem, 3vw, 1.75rem);
-    --font-size-headline: clamp(1.125rem, 2.5vw, 1.5rem);
+    /* Apple Gray Scale */
+    --gray-1: #1D1D1F;
+    --gray-2: #3A3A3C;
+    --gray-3: #48484A;
+    --gray-4: #636366;
+    --gray-5: #8E8E93;
+    --gray-6: #AEAEB2;
+    --gray-7: #C7C7CC;
+    --gray-8: #D1D1D6;
+    --gray-9: #E5E5EA;
+    --gray-10: #F2F2F7;
+    --white: #FFFFFF;
+    
+    /* Typography Scale - Apple Style */
+    --font-size-large-title: clamp(2.5rem, 6vw, 3.5rem);
+    --font-size-title-1: clamp(1.75rem, 4vw, 2.5rem);
+    --font-size-title-2: clamp(1.5rem, 3.5vw, 2rem);
+    --font-size-title-3: clamp(1.25rem, 3vw, 1.5rem);
+    --font-size-headline: clamp(1.125rem, 2.5vw, 1.25rem);
     --font-size-body: clamp(1rem, 2vw, 1.125rem);
     --font-size-callout: clamp(0.875rem, 1.5vw, 1rem);
     --font-size-subhead: clamp(0.8125rem, 1.25vw, 0.9375rem);
     --font-size-footnote: clamp(0.75rem, 1vw, 0.8125rem);
     --font-size-caption: clamp(0.6875rem, 0.875vw, 0.75rem);
     
-    /* Spacing Scale */
-    --space-xs: 0.25rem;
-    --space-sm: 0.5rem;
-    --space-md: 1rem;
-    --space-lg: 1.5rem;
-    --space-xl: 2rem;
-    --space-2xl: 3rem;
-    --space-3xl: 4rem;
-    --space-4xl: 6rem;
-    --space-5xl: 8rem;
+    /* Apple Spacing Scale */
+    --space-1: 0.25rem;   /* 4px */
+    --space-2: 0.5rem;    /* 8px */
+    --space-3: 0.75rem;   /* 12px */
+    --space-4: 1rem;      /* 16px */
+    --space-5: 1.25rem;   /* 20px */
+    --space-6: 1.5rem;    /* 24px */
+    --space-8: 2rem;      /* 32px */
+    --space-10: 2.5rem;   /* 40px */
+    --space-12: 3rem;     /* 48px */
+    --space-16: 4rem;     /* 64px */
+    --space-20: 5rem;     /* 80px */
+    --space-24: 6rem;     /* 96px */
+    --space-32: 8rem;     /* 128px */
+    --space-40: 10rem;    /* 160px */
     
-    /* Border Radius */
-    --radius-sm: 0.375rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.75rem;
-    --radius-xl: 1rem;
-    --radius-2xl: 1.5rem;
+    /* Apple Border Radius */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 20px;
     --radius-full: 9999px;
     
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    /* Apple Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.1);
 }
 
 /* Reset and Base Styles */
@@ -74,14 +78,15 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ott
 }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    line-height: 1.6;
-    color: #1d1d1f;
-    background: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    line-height: 1.47;
+    color: var(--gray-1);
+    background: var(--white);
     font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    font-weight: 400;
 }
 
 /* Hero Section - Modern Style */
