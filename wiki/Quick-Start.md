@@ -300,11 +300,11 @@ chmod 755 data/
 
 Ora che hai completato il Quick Start, esplora:
 
-1. **[Architettura del Sistema](Architecture)** - Comprendi i componenti interni
-2. **[CLI Reference](CLI-Reference)** - Impara tutti i comandi disponibili
-3. **[Configurazione](Configuration)** - Personalizza il database per le tue esigenze
-4. **[Esempi Pratici](Examples)** - Casi d'uso avanzati e pattern comuni
-5. **[Performance Guide](Performance)** - Ottimizza le performance del database
+1. **[Architettura del Sistema]({{ site.baseurl }}/wiki/Architecture)** - Comprendi i componenti interni
+2. **[CLI Reference]({{ site.baseurl }}/wiki/CLI-Reference)** - Impara tutti i comandi disponibili
+3. **[Configurazione]({{ site.baseurl }}/wiki/Configuration)** - Personalizza il database per le tue esigenze
+4. **[Esempi Pratici]({{ site.baseurl }}/wiki/Examples)** - Casi d'uso avanzati e pattern comuni
+5. **[Performance Guide]({{ site.baseurl }}/wiki/Performance)** - Ottimizza le performance del database
 
 ## 🆘 Supporto
 
@@ -321,6 +321,6 @@ Se incontri problemi:
 
 **🎉 Congratulazioni!** Hai completato il Quick Start di ColibrìDB.
 
-[← Torna alla Home](Home) • [Architettura del Sistema →](Architecture)
+[← Torna alla Home]({{ site.baseurl }}/wiki/Home) • [Architettura del Sistema →]({{ site.baseurl }}/wiki/Architecture)
 
 </div>

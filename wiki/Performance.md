@@ -561,6 +561,6 @@ crontab -e
 
 **⚡ Performance Guide ColibrìDB** - *Ottimizza le performance per il massimo throughput*
 
-[← Troubleshooting](Troubleshooting) • [Examples →](Examples)
+[← Troubleshooting]({{ site.baseurl }}/wiki/Troubleshooting) • [Examples →]({{ site.baseurl }}/wiki/Examples)
 
 </div>

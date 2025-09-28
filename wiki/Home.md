@@ -37,19 +37,19 @@ description: Pagina principale della wiki di ColibrìDB
 ## 📚 Navigazione Wiki
 
 ### 🚀 **Per Iniziare**
-- [**Quick Start**](Quick-Start) - Installazione e prima sessione
-- [**Configurazione**](Configuration) - Guida completa alle impostazioni
-- [**Esempi Pratici**](Examples) - Casi d'uso e tutorial
+- [**Quick Start**]({{ site.baseurl }}/wiki/Quick-Start) - Installazione e prima sessione
+- [**Configurazione**]({{ site.baseurl }}/wiki/Configuration) - Guida completa alle impostazioni
+- [**Esempi Pratici**]({{ site.baseurl }}/wiki/Examples) - Casi d'uso e tutorial
 
 ### 🏗️ **Architettura e Sviluppo**
-- [**Architettura del Sistema**](Architecture) - Componenti core e design
-- [**API Reference**](API-Reference) - Documentazione completa delle API
-- [**Guida per Sviluppatori**](Development) - Contribuire al progetto
+- [**Architettura del Sistema**]({{ site.baseurl }}/wiki/Architecture) - Componenti core e design
+- [**API Reference**]({{ site.baseurl }}/wiki/API-Reference) - Documentazione completa delle API
+- [**Guida per Sviluppatori**]({{ site.baseurl }}/wiki/Development) - Contribuire al progetto
 
 ### 🔧 **Operazioni e Troubleshooting**
-- [**CLI Reference**](CLI-Reference) - Comandi e opzioni della CLI
-- [**Performance Guide**](Performance) - Benchmark e ottimizzazioni
-- [**Troubleshooting**](Troubleshooting) - Risoluzione problemi comuni
+- [**CLI Reference**]({{ site.baseurl }}/wiki/CLI-Reference) - Comandi e opzioni della CLI
+- [**Performance Guide**]({{ site.baseurl }}/wiki/Performance) - Benchmark e ottimizzazioni
+- [**Troubleshooting**]({{ site.baseurl }}/wiki/Troubleshooting) - Risoluzione problemi comuni
 
 ### 📖 **Documentazione Tecnica**
 - [**Manuale Completo**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/README.md) - Documentazione tecnica dettagliata
@@ -92,7 +92,7 @@ swift build
 
 ## 🤝 Contribuire
 
-ColibrìDB accoglie i contributi! Consulta la nostra [Guida per Sviluppatori](Development) per iniziare.
+ColibrìDB accoglie i contributi! Consulta la nostra [Guida per Sviluppatori]({{ site.baseurl }}/wiki/Development) per iniziare.
 
 ### Aree di Contributo
 - **Motore Core**: Storage, WAL, indicizzazione

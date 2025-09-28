@@ -1,3 +1,9 @@
+---
+layout: page
+title: Introduzione alla Parte II — Motore Core
+description: Introduzione al motore core di ColibrìDB
+---
+
 # Introduzione alla Parte II — Motore Core
 
 La Parte II costituisce il nucleo tecnico del manuale: qui dimostriamo come ColibrìDB implementa i meccanismi di persistenza, recovery, gestione della memoria e concorrenza. Ogni capitolo segue un'impostazione scientifica:

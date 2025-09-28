@@ -1,3 +1,9 @@
+---
+layout: page
+title: Parte IV — Catalogo, Statistiche e Metadati
+description: Catalogo, statistiche e metadati in ColibrìDB
+---
+
 # Parte IV — Catalogo, Statistiche e Metadati
 
 In questa parte descriviamo la struttura dati che memorizza la conoscenza del database su se stesso. L'obiettivo è comprendere come ColibrìDB mantiene la consistenza dei metadati, fornisce statistiche per l'ottimizzatore e gestisce permessi/configurazioni.

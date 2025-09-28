@@ -684,6 +684,6 @@ Quando crei un'issue su GitHub, includi:
 
 **🚨 Troubleshooting ColibrìDB** - *Risolvi problemi e ottimizza le performance*
 
-[← Development Guide](Development) • [Performance Guide →](Performance)
+[← Development Guide]({{ site.baseurl }}/wiki/Development) • [Performance Guide →]({{ site.baseurl }}/wiki/Performance)
 
 </div>

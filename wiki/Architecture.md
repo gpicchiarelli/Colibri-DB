@@ -294,6 +294,6 @@ graph TD
 
 **🏗️ Architettura ColibrìDB** - *Design modulare per performance e scalabilità*
 
-[← Quick Start](Quick-Start) • [Configurazione →](Configuration)
+[← Quick Start]({{ site.baseurl }}/wiki/Quick-Start) • [Configurazione →]({{ site.baseurl }}/wiki/Configuration)
 
 </div>

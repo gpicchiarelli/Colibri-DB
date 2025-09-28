@@ -751,6 +751,6 @@ spec:
 
 **📚 Examples ColibrìDB** - *Esempi pratici per ogni scenario d'uso*
 
-[← Performance Guide](Performance) • [Home →](Home)
+[← Performance Guide]({{ site.baseurl }}/wiki/Performance) • [Home →]({{ site.baseurl }}/wiki/Home)
 
 </div>

@@ -1,3 +1,9 @@
+---
+layout: page
+title: Parte III — Pipeline di Query e Ottimizzazione
+description: Pipeline di query e ottimizzazione in ColibrìDB
+---
+
 # Parte III — Pipeline di Query e Ottimizzazione
 
 Questa parte del manuale approfondisce l'intero ciclo di vita di una query SQL in ColibrìDB. Analizzeremo:

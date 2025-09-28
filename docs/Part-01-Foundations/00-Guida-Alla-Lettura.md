@@ -1,3 +1,9 @@
+---
+layout: page
+title: Guida alla Lettura della Parte I — Fondamenti
+description: Guida alla lettura della documentazione tecnica di ColibrìDB
+---
+
 # Guida alla Lettura della Parte I — Fondamenti
 
 La Parte I stabilisce il lessico e il sistema assiomatico su cui poggia ColibrìDB. Ogni capitolo è strutturato per guidare il lettore dalla teoria formale alla realizzazione pratica. Per trarre il massimo beneficio si suggerisce di adottare il seguente processo:
