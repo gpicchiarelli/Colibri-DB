@@ -49,7 +49,7 @@
 - **Viste Materializzate**: Risultati query cached per performance migliorate
 - **SQL Parser**: Compatibilità SQL completa con sintassi moderna
 
-### 🛠️ **Eccellenza Operativa**
+### 🛠️ **Operazioni**
 - **CLI Amministrativa**: Gestione completa database con tool `coldb`
 - **Import/Export CSV**: Operazioni bulk con validazione formato
 - **Metriche Prometheus**: Monitoring e osservabilità pronti per produzione
