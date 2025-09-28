@@ -1,12 +1,12 @@
 ---
 layout: page
 title: Heap Storage Engine
-description: Capitolo 7 - Motore di storage heap in ColibrDB
+description: Capitolo 7 - Motore di storage heap in Colibrì DB
 ---
 
 # Capitolo 7 — Storage Heap e Gestione delle Tuple
 
-> **Obiettivo**: descrivere in termini accademici la struttura heap-table di ColibrDB, mappando teoria e codice, con diagrammi e laboratori.
+> **Obiettivo**: descrivere in termini accademici la struttura heap-table di Colibrì DB, mappando teoria e codice, con diagrammi e laboratori.
 
 ---
 

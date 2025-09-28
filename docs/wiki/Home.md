@@ -1,10 +1,10 @@
 ---
 layout: doc
-title: ColibrDB Wiki
-description: Pagina principale della wiki di ColibrDB
+title: Colibrì DB Wiki
+description: Pagina principale della wiki di Colibrì DB
 ---
 
-# 🐦 ColibrDB Wiki
+# 🐦 Colibrì DB Wiki
 
 <div align="center">
 
@@ -21,9 +21,9 @@ description: Pagina principale della wiki di ColibrDB
 
 ---
 
-## 🎯 Benvenuto in ColibrDB
+## 🎯 Benvenuto in Colibrì DB
 
-**ColibrDB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
+**Colibrì DB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
 
 ### ✨ Caratteristiche Principali
 
@@ -92,7 +92,7 @@ swift build
 
 ## 🤝 Contribuire
 
-ColibrDB accoglie i contributi! Consulta la nostra [Guida per Sviluppatori]({{ site.baseurl }}/wiki/Development) per iniziare.
+Colibrì DB accoglie i contributi! Consulta la nostra [Guida per Sviluppatori]({{ site.baseurl }}/wiki/Development) per iniziare.
 
 ### Aree di Contributo
 - **Motore Core**: Storage, WAL, indicizzazione
@@ -126,7 +126,7 @@ Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [
 
 <div align="center">
 
-**ColibrDB** - *Un RDBMS moderno per l'ecosistema Swift*
+**Colibrì DB** - *Un RDBMS moderno per l'ecosistema Swift*
 
 [⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibri-DB) • [📖 Documentazione]({{ site.baseurl }}/docs/README) • [🐛 Segnala Bug](https://github.com/gpicchiarelli/Colibri-DB/issues)
 

@@ -1,10 +1,10 @@
 ---
 layout: page
-title: Documentazione ColibrDB
-description: Documentazione tecnica completa di ColibrDB
+title: Documentazione Colibrì DB
+description: Documentazione tecnica completa di Colibrì DB
 ---
 
-# 🐦 ColibrDB Documentation
+# 🐦 Colibrì DB Documentation
 
 <div align="center">
 
@@ -25,7 +25,7 @@ description: Documentazione tecnica completa di ColibrDB
 
 ## 🎯 Panoramica
 
-**ColibrDB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
+**Colibrì DB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
 
 ### ✨ Caratteristiche Principali
 
@@ -290,6 +290,6 @@ Licenza BSD 3-Clause License
 
 [⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibri-DB) • [📖 Leggi la documentazione]({{ site.baseurl }}/docs/README) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibri-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibri-DB/discussions)
 
-**ColibrDB**
+**Colibrì DB**
 
 </div>

@@ -1,16 +1,16 @@
 ---
 layout: doc
 title: Guida per Sviluppatori
-description: Guida completa per contribuire allo sviluppo di ColibrDB
+description: Guida completa per contribuire allo sviluppo di Colibrì DB
 ---
 
 # 🛠️ Guida per Sviluppatori
 
-Guida completa per contribuire allo sviluppo di ColibrDB.
+Guida completa per contribuire allo sviluppo di Colibrì DB.
 
 ## 🎯 Panoramica
 
-ColibrDB è un progetto open source che accoglie contributi da sviluppatori di tutti i livelli. Questa guida ti aiuterà a:
+Colibrì DB è un progetto open source che accoglie contributi da sviluppatori di tutti i livelli. Questa guida ti aiuterà a:
 
 - Configurare l'ambiente di sviluppo
 - Comprendere l'architettura del codice
@@ -99,7 +99,7 @@ Colibri-DB/
 
 ### Swift Testing
 
-ColibrDB utilizza il framework Swift Testing moderno:
+Colibrì DB utilizza il framework Swift Testing moderno:
 
 ```swift
 import Testing
@@ -547,7 +547,7 @@ This approach might cause a memory leak. Consider using `weak` references or ens
 
 <div align="center">
 
-**🛠️ Development Guide ColibrDB** - *Contribuisci al futuro dei database Swift*
+**🛠️ Development Guide Colibrì DB** - *Contribuisci al futuro dei database Swift*
 
 [← API Reference]({{ site.baseurl }}/wiki/API-Reference) • [Troubleshooting →]({{ site.baseurl }}/wiki/Troubleshooting)
 

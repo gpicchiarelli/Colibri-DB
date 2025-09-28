@@ -7,7 +7,7 @@ description: Capitolo 4 - Principi di storage e persistenza
 # Capitolo 4 — Fondamenti di Storage e Pagine
 
 ## 4.1 Modello di memoria secondaria
-Il motore storage di ColibrDB utilizza file organizzati in pagine di dimensione fissa (8KB). Ogni pagina è suddivisa in:
+Il motore storage di Colibrì DB utilizza file organizzati in pagine di dimensione fissa (8KB). Ogni pagina è suddivisa in:
 - Header: include `pageLSN`, identificatore, numero slot liberi.
 - Slot directory: array di offset che puntano alle tuple.
 - Area dati: spazio contiguo in cui le tuple sono memorizzate in formato compatto.

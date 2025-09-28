@@ -1,7 +1,7 @@
 ---
 layout: page
 title: SQL Parser
-description: Capitolo 13 - Parser SQL in ColibrDB
+description: Capitolo 13 - Parser SQL in Colibrì DB
 ---
 
 # Capitolo 10 — Parsing SQL e Costruzione AST

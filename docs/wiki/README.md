@@ -1,12 +1,12 @@
 ---
 layout: doc
-title: ColibrDB Wiki
-description: Guida operativa e riferimenti per ColibrDB
+title: Colibrì DB Wiki
+description: Guida operativa e riferimenti per Colibrì DB
 ---
 
-# 📚 ColibrDB Wiki
+# 📚 Colibrì DB Wiki
 
-Benvenuto nella wiki di ColibrDB! Qui trovi guide pratiche, riferimenti e esempi per utilizzare al meglio il database.
+Benvenuto nella wiki di Colibrì DB! Qui trovi guide pratiche, riferimenti e esempi per utilizzare al meglio il database.
 
 ## 🚀 Guide Rapide
 
@@ -35,4 +35,4 @@ Per la documentazione tecnica dettagliata, consulta:
 
 ---
 
-**ColibrDB** - *Un RDBMS moderno per l'ecosistema Swift*
+**Colibrì DB** - *Un RDBMS moderno per l'ecosistema Swift*

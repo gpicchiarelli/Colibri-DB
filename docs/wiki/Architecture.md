@@ -1,20 +1,20 @@
 ---
 layout: doc
 title: Architettura del Sistema
-description: Architettura interna di ColibrDB, componenti core e interazioni
+description: Architettura interna di Colibrì DB, componenti core e interazioni
 ---
 
 # 🏗️ Architettura del Sistema
 
-Questa pagina descrive l'architettura interna di ColibrDB, i componenti core e come interagiscono tra loro.
+Questa pagina descrive l'architettura interna di Colibrì DB, i componenti core e come interagiscono tra loro.
 
 ## 🎯 Panoramica Architetturale
 
-ColibrDB è progettato con un'architettura modulare che separa chiaramente le responsabilità dei vari componenti:
+Colibrì DB è progettato con un'architettura modulare che separa chiaramente le responsabilità dei vari componenti:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    ColibrDB Architecture                   │
+│                    Colibrì DB Architecture                   │
 ├─────────────────────────────────────────────────────────────┤
 │  CLI Layer          │  Server Layer     │  API Layer        │
 │  ┌─────────────┐    │  ┌─────────────┐  │  ┌─────────────┐  │
@@ -292,7 +292,7 @@ graph TD
 
 <div align="center">
 
-**🏗️ Architettura ColibrDB** - *Design modulare per performance e scalabilità*
+**🏗️ Architettura Colibrì DB** - *Design modulare per performance e scalabilità*
 
 [← Quick Start]({{ site.baseurl }}/wiki/Quick-Start) • [Configurazione →]({{ site.baseurl }}/wiki/Configuration)
 

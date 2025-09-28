@@ -1,12 +1,12 @@
 ---
 layout: page
 title: Roadmap del Progetto
-description: Roadmap e piani futuri per ColibrDB
+description: Roadmap e piani futuri per Colibrì DB
 ---
 
 # Capitolo 27 — Roadmap Tecnica
 
-> **Obiettivo**: delineare le evoluzioni pianificate per ColibrDB, collocandole in una visione strategica di ricerca e sviluppo.
+> **Obiettivo**: delineare le evoluzioni pianificate per Colibrì DB, collocandole in una visione strategica di ricerca e sviluppo.
 
 ---
 

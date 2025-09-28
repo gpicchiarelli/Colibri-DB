@@ -1,12 +1,12 @@
 ---
 layout: page
 title: Operazioni Server
-description: Capitolo 12 - Operazioni del server ColibrDB
+description: Capitolo 12 - Operazioni del server Colibrì DB
 ---
 
 # Capitolo 20 — Operazioni Server, Fault Tolerance e Manutenzione
 
-> **Obiettivo**: fornire una guida sistematica alle operazioni quotidiane sul server, spiegando come ColibrDB assicura fault tolerance, manutenzione e monitoraggio.
+> **Obiettivo**: fornire una guida sistematica alle operazioni quotidiane sul server, spiegando come Colibrì DB assicura fault tolerance, manutenzione e monitoraggio.
 
 ---
 

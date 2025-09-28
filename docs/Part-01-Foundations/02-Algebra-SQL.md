@@ -4,7 +4,7 @@ title: Algebra SQL
 description: Capitolo 2 - Algebra relazionale e SQL
 ---
 
-# Capitolo 2 — Algebra Relazionale e SQL in ColibrDB
+# Capitolo 2 — Algebra Relazionale e SQL in Colibrì DB
 
 > **Obiettivo**: derivare la pipeline di trasformazione SQL → AST → Piano Logico, integrando concetti di algebra relazionale, schemi grafici e riferimenti al codice.
 

@@ -1,12 +1,12 @@
 ---
 layout: doc
 title: Esempi Pratici
-description: Esempi pratici e casi d'uso per ColibrDB
+description: Esempi pratici e casi d'uso per Colibrì DB
 ---
 
 # 📚 Esempi Pratici
 
-Collezione di esempi pratici per utilizzare ColibrDB in scenari reali.
+Collezione di esempi pratici per utilizzare Colibrì DB in scenari reali.
 
 ## 🎯 Panoramica
 
@@ -644,7 +644,7 @@ Test di performance per identificare regressioni.
 ### 1. Docker Deployment
 
 ```dockerfile
-# Dockerfile per ColibrDB
+# Dockerfile per Colibrì DB
 FROM swift:6.2-focal
 
 WORKDIR /app
@@ -749,7 +749,7 @@ spec:
 
 <div align="center">
 
-**📚 Examples ColibrDB** - *Esempi pratici per ogni scenario d'uso*
+**📚 Examples Colibrì DB** - *Esempi pratici per ogni scenario d'uso*
 
 [← Performance Guide]({{ site.baseurl }}/wiki/Performance) • [Home →]({{ site.baseurl }}/wiki/Home)
 

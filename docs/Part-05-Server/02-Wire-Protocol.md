@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Wire Protocol
-description: Capitolo 11 - Protocollo di comunicazione ColibrDB
+description: Capitolo 11 - Protocollo di comunicazione Colibrì DB
 ---
 
 # Capitolo 19 — Wire Protocol e Gestione Sessioni
@@ -12,7 +12,7 @@ description: Capitolo 11 - Protocollo di comunicazione ColibrDB
 
 ## 19.1 Modello comunicativo
 
-ColibrDB utilizza un protocollo binario personalizzato (estendibile) definito in `WireProtocol.swift`. Ogni messaggio contiene:
+Colibrì DB utilizza un protocollo binario personalizzato (estendibile) definito in `WireProtocol.swift`. Ogni messaggio contiene:
 - `type`: identifica il comando (es. `ExecuteSQL`, `Prepare`, `Describe`).
 - `payload`: dati (JSON/Binary) serializzati.
 - `length` e, in roadmap, `checksum`.

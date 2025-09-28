@@ -6,7 +6,7 @@ description: Riferimento completo per i comandi della CLI coldb
 
 # 🔧 CLI Reference
 
-Guida completa ai comandi della CLI `coldb` di ColibrDB.
+Guida completa ai comandi della CLI `coldb` di Colibrì DB.
 
 ## 🚀 Avvio della CLI
 
@@ -42,11 +42,11 @@ colibridb> \help
 
 **Output**:
 ```
-📚 ColibrDB Commands:
+📚 Colibrì DB Commands:
 
 Meta Commands:
   \help, \h, \?         Show this help
-  \quit, \q, \exit      Exit ColibrDB
+  \quit, \q, \exit      Exit Colibrì DB
   \version, \v          Show version information
   \status, \s           Show database status
   \timing               Toggle timing display
@@ -86,7 +86,7 @@ colibridb> \version
 
 **Output**:
 ```
-ColibrDB Version Information:
+Colibrì DB Version Information:
   Version: 1.0.0
   Platform: macOS 13.0
   Swift: 6.2.0
@@ -800,7 +800,7 @@ colibridb> \commit
 
 <div align="center">
 
-**🔧 CLI Reference ColibrDB** - *Comandi completi per gestire il database*
+**🔧 CLI Reference Colibrì DB** - *Comandi completi per gestire il database*
 
 [← Configurazione]({{ site.baseurl }}/wiki/Configuration) • [API Reference →]({{ site.baseurl }}/wiki/API-Reference)
 
