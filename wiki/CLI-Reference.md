@@ -1,3 +1,9 @@
+---
+layout: page
+title: CLI Reference
+description: Riferimento completo per i comandi della CLI coldb
+---
+
 # 🔧 CLI Reference
 
 Guida completa ai comandi della CLI `coldb` di ColibrìDB.

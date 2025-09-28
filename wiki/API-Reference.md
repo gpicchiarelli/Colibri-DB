@@ -1,3 +1,9 @@
+---
+layout: page
+title: API Reference
+description: Documentazione completa delle API di ColibrìDB
+---
+
 # 📚 API Reference
 
 Documentazione completa delle API pubbliche di ColibrìDB.

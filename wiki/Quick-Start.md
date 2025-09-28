@@ -1,3 +1,9 @@
+---
+layout: page
+title: Quick Start Guide
+description: Guida rapida per installare e utilizzare ColibrìDB
+---
+
 # 🚀 Quick Start Guide
 
 Questa guida ti aiuterà a installare e utilizzare ColibrìDB in pochi minuti.

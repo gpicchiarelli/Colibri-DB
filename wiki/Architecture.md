@@ -1,3 +1,9 @@
+---
+layout: page
+title: Architettura del Sistema
+description: Architettura interna di ColibrìDB, componenti core e interazioni
+---
+
 # 🏗️ Architettura del Sistema
 
 Questa pagina descrive l'architettura interna di ColibrìDB, i componenti core e come interagiscono tra loro.

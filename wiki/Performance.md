@@ -1,3 +1,9 @@
+---
+layout: page
+title: Performance Guide
+description: Guida completa alle performance e ottimizzazioni di ColibrìDB
+---
+
 # ⚡ Performance Guide
 
 Guida completa per ottimizzare le performance di ColibrìDB.

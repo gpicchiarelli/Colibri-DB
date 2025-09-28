@@ -11,34 +11,14 @@ markdown: kramdown
 highlighter: rouge
 theme: minima
 
-# Navigation
-navigation:
-  - title: Home
-    url: /
-  - title: Quick Start
-    url: /wiki/Quick-Start
-  - title: Architecture
-    url: /wiki/Architecture
-  - title: Configuration
-    url: /wiki/Configuration
-  - title: CLI Reference
-    url: /wiki/CLI-Reference
-  - title: API Reference
-    url: /wiki/API-Reference
-  - title: Development
-    url: /wiki/Development
-  - title: Troubleshooting
-    url: /wiki/Troubleshooting
-  - title: Performance
-    url: /wiki/Performance
-  - title: Examples
-    url: /wiki/Examples
-
 # Collections
 collections:
   wiki:
     output: true
     permalink: /wiki/:name/
+  docs:
+    output: true
+    permalink: /docs/:name/
 
 # Defaults
 defaults:
@@ -50,6 +30,11 @@ defaults:
   - scope:
       path: ""
       type: "wiki"
+    values:
+      layout: "page"
+  - scope:
+      path: ""
+      type: "docs"
     values:
       layout: "page"
 

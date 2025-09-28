@@ -1,3 +1,9 @@
+---
+layout: page
+title: Troubleshooting Guide
+description: Guida alla risoluzione dei problemi comuni con ColibrìDB
+---
+
 # 🚨 Troubleshooting Guide
 
 Guida completa per risolvere i problemi più comuni con ColibrìDB.

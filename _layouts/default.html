@@ -1,248 +1,561 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page.title | default: 'ColibrìDB' }}</title>
-    <meta name="description" content="{{ page.description | default: 'ColibrìDB - Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2' }}">
+    <title>{% if page.title %}{{ page.title }} - {% endif %}ColibrìDB</title>
+    <meta name="description" content="{% if page.description %}{{ page.description }}{% else %}ColibrìDB è un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon.{% endif %}">
+    <meta name="keywords" content="RDBMS, Swift, Database, macOS, Apple Silicon, WAL, MVCC, B+Tree">
+    <meta name="author" content="ColibrìDB Team">
     
-    <!-- CSS -->
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ site.url }}{{ site.baseurl }}{{ page.url }}">
+    <meta property="og:title" content="{% if page.title %}{{ page.title }} - {% endif %}ColibrìDB">
+    <meta property="og:description" content="{% if page.description %}{{ page.description }}{% else %}Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon.{% endif %}">
+    <meta property="og:image" content="{{ site.url }}{{ site.baseurl }}/assets/og-image.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{ site.url }}{{ site.baseurl }}{{ page.url }}">
+    <meta property="twitter:title" content="{% if page.title %}{{ page.title }} - {% endif %}ColibrìDB">
+    <meta property="twitter:description" content="{% if page.description %}{{ page.description }}{% else %}Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon.{% endif %}">
+    <meta property="twitter:image" content="{{ site.url }}{{ site.baseurl }}/assets/og-image.png">
+
     <style>
+        :root {
+            --primary-color: #0969da;
+            --secondary-color: #656d76;
+            --success-color: #1a7f37;
+            --warning-color: #9a6700;
+            --danger-color: #cf222e;
+            --background-color: #ffffff;
+            --text-color: #24292f;
+            --border-color: #d1d9e0;
+            --code-background: #f6f8fa;
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: var(--text-color);
+            background-color: var(--background-color);
+        }
+
+        .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f8f9fa;
+            padding: 0 20px;
         }
-        
-        .container {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 40px;
-            margin: 20px 0;
-        }
-        
+
+        /* Header */
         .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #0550ae 100%);
+            color: white;
+            padding: 2rem 0;
             text-align: center;
-            border-bottom: 2px solid #e9ecef;
-            padding-bottom: 30px;
-            margin-bottom: 40px;
+            box-shadow: var(--shadow);
         }
-        
+
         .header h1 {
-            color: #2c3e50;
-            margin: 0;
-            font-size: 3em;
-            margin-bottom: 10px;
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
         }
-        
+
         .header .subtitle {
-            color: #6c757d;
-            font-size: 1.2em;
-            margin-bottom: 20px;
+            font-size: 1.25rem;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
         }
-        
+
         .badges {
-            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
         }
-        
+
         .badge {
             display: inline-block;
-            padding: 6px 12px;
-            background-color: #007bff;
-            color: white;
-            border-radius: 4px;
-            font-size: 0.9em;
-            margin: 3px;
+            padding: 0.25rem 0.75rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 500;
             text-decoration: none;
+            color: white;
+            transition: background-color 0.2s;
         }
-        
+
         .badge:hover {
-            background-color: #0056b3;
-            color: white;
+            background: rgba(255, 255, 255, 0.3);
         }
-        
-        .nav {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 30px 0;
-            text-align: center;
+
+        .cta-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
         }
-        
-        .nav h3 {
-            margin-top: 0;
-            color: #2c3e50;
-        }
-        
-        .nav-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-        
-        .nav-item {
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
             background: white;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #e9ecef;
+            color: var(--primary-color);
             text-decoration: none;
-            color: #333;
+            border-radius: 6px;
+            font-weight: 600;
             transition: all 0.2s;
+            border: 2px solid transparent;
         }
-        
-        .nav-item:hover {
-            border-color: #007bff;
-            box-shadow: 0 2px 5px rgba(0,123,255,0.1);
+
+        .btn:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
         }
-        
-        .nav-item h4 {
-            margin: 0 0 5px 0;
-            color: #007bff;
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border-color: white;
         }
-        
-        .nav-item p {
-            margin: 0;
-            font-size: 0.9em;
-            color: #6c757d;
+
+        .btn-secondary:hover {
+            background: white;
+            color: var(--primary-color);
         }
-        
-        .content {
-            line-height: 1.8;
+
+        /* Navigation */
+        .nav {
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        
-        .content h1, .content h2, .content h3, .content h4, .content h5, .content h6 {
-            color: #2c3e50;
-            margin-top: 30px;
-            margin-bottom: 15px;
+
+        .nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 2rem;
         }
-        
-        .content h1 {
-            border-bottom: 2px solid #e9ecef;
-            padding-bottom: 10px;
+
+        .nav a {
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: background-color 0.2s;
         }
-        
-        .content h2 {
-            border-bottom: 1px solid #e9ecef;
-            padding-bottom: 5px;
+
+        .nav a:hover, .nav a.active {
+            background: var(--code-background);
         }
-        
-        .content code {
-            background-color: #f8f9fa;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 0.9em;
+
+        /* Main Content */
+        .main {
+            padding: 3rem 0;
         }
-        
-        .content pre {
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 5px;
-            padding: 15px;
+
+        .section {
+            margin-bottom: 4rem;
+        }
+
+        .section h2 {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .section h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-color);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .feature-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-card h4 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+
+        .feature-card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .feature-card li {
+            padding: 0.25rem 0;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .feature-card li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        /* Code blocks */
+        .code-block {
+            background: var(--code-background);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
             overflow-x: auto;
-            margin: 20px 0;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
         }
-        
-        .content pre code {
+
+        .code-block pre {
+            margin: 0;
+            white-space: pre;
+        }
+
+        /* Quick start section */
+        .quick-start {
+            background: var(--code-background);
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .quick-start h3 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .step {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .step h4 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Wiki Content */
+        .wiki-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .wiki-content h1 {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .wiki-content h2 {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin: 2rem 0 1rem 0;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .wiki-content h3 {
+            font-size: 1.5rem;
+            color: var(--text-color);
+            margin: 1.5rem 0 0.5rem 0;
+        }
+
+        .wiki-content h4 {
+            font-size: 1.25rem;
+            color: var(--text-color);
+            margin: 1rem 0 0.5rem 0;
+        }
+
+        .wiki-content p {
+            margin-bottom: 1rem;
+        }
+
+        .wiki-content ul, .wiki-content ol {
+            margin-bottom: 1rem;
+            padding-left: 2rem;
+        }
+
+        .wiki-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .wiki-content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            font-style: italic;
+            color: var(--secondary-color);
+        }
+
+        .wiki-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        .wiki-content th, .wiki-content td {
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        .wiki-content th {
+            background: var(--code-background);
+            font-weight: 600;
+        }
+
+        .wiki-content code {
+            background: var(--code-background);
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .wiki-content pre {
+            background: var(--code-background);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+
+        .wiki-content pre code {
             background: none;
             padding: 0;
         }
-        
-        .content blockquote {
-            border-left: 4px solid #007bff;
-            margin: 20px 0;
-            padding: 10px 20px;
-            background-color: #f8f9fa;
-        }
-        
-        .content table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        
-        .content th, .content td {
-            border: 1px solid #e9ecef;
-            padding: 12px;
-            text-align: left;
-        }
-        
-        .content th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-        }
-        
+
+        /* Footer */
         .footer {
-            border-top: 1px solid #e9ecef;
-            padding-top: 20px;
-            margin-top: 40px;
+            background: var(--text-color);
+            color: white;
+            padding: 3rem 0;
             text-align: center;
-            color: #6c757d;
         }
-        
-        .footer a {
-            color: #007bff;
+
+        .footer h3 {
+            margin-bottom: 1rem;
+        }
+
+        .footer p {
+            opacity: 0.8;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links a {
+            color: white;
             text-decoration: none;
+            font-weight: 500;
         }
-        
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
+
+        .footer-links a:hover {
+            text-decoration: underline;
         }
-        
-        .feature {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #007bff;
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .header .subtitle {
+                font-size: 1rem;
+            }
+            
+            .nav ul {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
         }
-        
-        .feature h3 {
-            margin-top: 0;
-            color: #2c3e50;
+
+        /* GitHub-style syntax highlighting */
+        .highlight {
+            background: #f6f8fa;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
         }
-        
-        .feature ul {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-        
-        .feature li {
-            margin: 5px 0;
-        }
+
+        .highlight .c { color: #6a737d; font-style: italic; } /* Comment */
+        .highlight .k { color: #d73a49; font-weight: bold; } /* Keyword */
+        .highlight .s { color: #032f62; } /* String */
+        .highlight .n { color: #6f42c1; } /* Name */
+        .highlight .o { color: #d73a49; } /* Operator */
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
             <h1>🐦 ColibrìDB</h1>
-            <div class="subtitle">Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2</div>
+            <p class="subtitle">Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2</p>
+            
             <div class="badges">
-                <a href="https://github.com/gpicchiarelli/Colibrì-DB" class="badge">⭐ Stella su GitHub</a>
-                <a href="https://github.com/gpicchiarelli/Colibrì-DB/issues" class="badge">🐛 Segnala Bug</a>
-                <a href="https://github.com/gpicchiarelli/Colibrì-DB/discussions" class="badge">💬 Discussioni</a>
+                <span class="badge">Swift 6.2</span>
+                <span class="badge">macOS 13+</span>
+                <span class="badge">Apple Silicon</span>
+                <span class="badge">WAL</span>
+                <span class="badge">MVCC</span>
+                <span class="badge">B+Tree</span>
+            </div>
+            
+            <div class="cta-buttons">
+                <a href="https://github.com/gpicchiarelli/Colibrì-DB" class="btn">⭐ Star on GitHub</a>
+                <a href="{{ site.baseurl }}/wiki/Quick-Start" class="btn btn-secondary">🚀 Quick Start</a>
+                <a href="{{ site.baseurl }}/docs" class="btn btn-secondary">📖 Documentation</a>
             </div>
         </div>
-        
-        <div class="content">
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="container">
+            <ul>
+                <li><a href="{{ site.baseurl }}/" {% if page.url == '/' %}class="active"{% endif %}>Home</a></li>
+                <li><a href="{{ site.baseurl }}/wiki/Quick-Start" {% if page.url contains 'Quick-Start' %}class="active"{% endif %}>Quick Start</a></li>
+                <li><a href="{{ site.baseurl }}/wiki/Architecture" {% if page.url contains 'Architecture' %}class="active"{% endif %}>Architecture</a></li>
+                <li><a href="{{ site.baseurl }}/wiki/Configuration" {% if page.url contains 'Configuration' %}class="active"{% endif %}>Configuration</a></li>
+                <li><a href="{{ site.baseurl }}/wiki/CLI-Reference" {% if page.url contains 'CLI-Reference' %}class="active"{% endif %}>CLI Reference</a></li>
+                <li><a href="{{ site.baseurl }}/wiki/API-Reference" {% if page.url contains 'API-Reference' %}class="active"{% endif %}>API Reference</a></li>
+                <li><a href="{{ site.baseurl }}/wiki/Performance" {% if page.url contains 'Performance' %}class="active"{% endif %}>Performance</a></li>
+                <li><a href="{{ site.baseurl }}/wiki/Examples" {% if page.url contains 'Examples' %}class="active"{% endif %}>Examples</a></li>
+                <li><a href="{{ site.baseurl }}/wiki/Troubleshooting" {% if page.url contains 'Troubleshooting' %}class="active"{% endif %}>Troubleshooting</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            {% if page.layout == 'page' %}
+            <div class="wiki-content">
+                {{ content }}
+            </div>
+            {% else %}
             {{ content }}
+            {% endif %}
         </div>
-        
-        <div class="footer">
-            <p>
-                <strong>ColibrìDB</strong> - Un RDBMS moderno per l'ecosistema Swift<br>
-                <a href="https://github.com/gpicchiarelli/Colibrì-DB">GitHub Repository</a> • 
-                <a href="https://github.com/gpicchiarelli/Colibrì-DB/blob/main/LICENSE">Licenza BSD 3-Clause</a>
-            </p>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <h3>🐦 ColibrìDB</h3>
+            <p>RDBMS sperimentale in Swift 6</p>
+            
+            <div class="footer-links">
+                <a href="https://github.com/gpicchiarelli/Colibrì-DB">GitHub</a>
+                <a href="https://github.com/gpicchiarelli/Colibrì-DB/issues">Issues</a>
+                <a href="https://github.com/gpicchiarelli/Colibrì-DB/discussions">Discussions</a>
+                <a href="https://github.com/gpicchiarelli/Colibrì-DB/blob/main/LICENSE">License</a>
+            </div>
+            
+            <p>&copy; 2024 ColibrìDB Team. Licenza BSD 3-Clause License.</p>
         </div>
-    </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add active class to navigation items
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('.nav a[href^="#"]');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
 </body>
 </html>

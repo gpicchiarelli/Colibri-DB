@@ -1,71 +1,91 @@
 ---
 layout: default
 title: ColibrìDB
+description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
 ---
 
-# 🐦 ColibrìDB
+<!-- Overview Section -->
+<section id="overview" class="section">
+    <h2>🎯 Panoramica</h2>
+    <p><strong>ColibrìDB</strong> è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa <code>coldb</code>.</p>
+</section>
 
-> **Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2**
+<!-- Features Section -->
+<section id="features" class="section">
+    <h2>✨ Caratteristiche Principali</h2>
+    <div class="features-grid">
+        <div class="feature-card">
+            <h4>🗄️ Storage & Buffering</h4>
+            <ul>
+                <li>Heap File Storage con slot directory</li>
+                <li>Compattazione Online in tempo reale</li>
+                <li>Buffer Pool LRU/Clock intelligente</li>
+                <li>Ottimizzato Apple Silicon ARM64</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>🔒 Durabilità Enterprise</h4>
+            <ul>
+                <li>WAL v2 con checksum CRC32</li>
+                <li>Recovery ARIES-compliant</li>
+                <li>Transaction Logging UNDO/REDO</li>
+                <li>Index Recovery da WAL</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>🚀 Indicizzazione Avanzata</h4>
+            <ul>
+                <li>B+Tree Persistente su disco</li>
+                <li>Tipi pluggabili: Hash, ART, LSM</li>
+                <li>Validazione profonda integrità</li>
+                <li>Memory-Efficient per dataset grandi</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>⚡ Controllo Concorrenza</h4>
+            <ul>
+                <li>MVCC Multi-Version Control</li>
+                <li>Lock Manager con deadlock detection</li>
+                <li>Supporto Two-Phase Commit</li>
+                <li>Snapshot Isolation per query complesse</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>🧠 Elaborazione Query</h4>
+            <ul>
+                <li>Volcano Iterator cost-based</li>
+                <li>Operatori avanzati: Scan, Filter, Join</li>
+                <li>Viste Materializzate cached</li>
+                <li>SQL Parser compatibilità completa</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>🛠️ Operazioni</h4>
+            <ul>
+                <li>CLI Amministrativa completa</li>
+                <li>Import/Export CSV bulk</li>
+                <li>Metriche Prometheus integrate</li>
+                <li>Policy Engine automatizzato</li>
+            </ul>
+        </div>
+    </div>
+</section>
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/ci.yml?branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibrì-DB/actions/workflows/ci.yml)
-[![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/codeql.yml?label=CodeQL&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibrì-DB/actions/workflows/codeql.yml)
-![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg?style=flat-square)
-![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg?style=flat-square)
-![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey.svg?style=flat-square)
-![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg?style=flat-square)
+<!-- Quick Start Section -->
+<section id="quick-start" class="section">
+    <h2>🚀 Quick Start</h2>
+    <div class="quick-start">
+        <h3>Prerequisiti</h3>
+        <ul>
+            <li><strong>macOS 13+</strong> (Apple Silicon consigliato per performance ottimali)</li>
+            <li><strong>Swift 6.2</strong> (o toolchain compatibile via SwiftPM)</li>
+            <li><strong>Spazio su disco</strong>: Sufficiente per dati (<code>data/</code>), WAL e indici</li>
+        </ul>
 
-**ColibrìDB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
-
-## ✨ Caratteristiche Principali
-
-### 🗄️ **Storage & Buffering**
-- **Heap File Storage**: File heap paginati con slot directory e Free Space Map persistente
-- **Compattazione Online**: Riorganizzazione dati in tempo reale senza downtime
-- **Buffer Pool LRU/Clock**: Flusher in background con quote per namespace ed eviction intelligente
-- **Ottimizzato Apple Silicon**: Performance ARM64 native con accelerazione CRC32
-
-### 🔒 **Durabilità Enterprise**
-- **WAL v2**: Record tipizzati con checksum CRC32 e recovery ARIES-like
-- **Sistema Checkpoint**: Recovery efficiente con gestione Dirty Page Table
-- **Transaction Logging**: Supporto completo UNDO/REDO per consistenza dati
-- **Index Recovery**: Replay indici B+Tree da WAL durante il recovery
-
-### 🚀 **Indicizzazione ad Alte Prestazioni**
-- **B+Tree Persistente**: Su disco con supporto checkpoint e operazioni bulk
-- **Tipi di Indici Pluggabili**: Hash, ART (Adaptive Radix Tree), SkipList, Fractal Tree, LSM
-- **Validazione Profonda**: Controlli di integrità completi e manutenzione online
-- **Memory-Efficient**: Ottimizzato per dataset grandi con caching intelligente
-
-### ⚡ **Controllo Concorrenza Moderno**
-- **MVCC**: Multi-Version Concurrency Control con livelli di isolamento configurabili
-- **Lock Manager**: Rilevamento deadlock, gestione timeout e locking granulare
-- **Supporto 2PC**: Two-Phase Commit per consistenza transazioni distribuite
-- **Snapshot Isolation**: Viste di lettura consistenti per query complesse
-
-### 🧠 **Elaborazione Query Intelligente**
-- **Volcano Iterator**: Planner cost-based con predicate pushdown
-- **Operatori Avanzati**: Scan, filter, project, sort e operazioni join
-- **Viste Materializzate**: Risultati query cached per performance migliorate
-- **SQL Parser**: Compatibilità SQL completa con sintassi moderna
-
-### 🛠️ **Operazioni**
-- **CLI Amministrativa**: Gestione completa database con tool `coldb`
-- **Import/Export CSV**: Operazioni bulk con validazione formato
-- **Metriche Prometheus**: Monitoring e osservabilità pronti per produzione
-- **Policy Engine**: Manutenzione e ottimizzazione automatizzate
-
-## 🚀 Avvio Rapido
-
-### Prerequisiti
-
-- **macOS 13+** (Apple Silicon consigliato per performance ottimali)
-- **Swift 6.2** (o toolchain compatibile via SwiftPM)
-- **Spazio su disco**: Sufficiente per dati (`data/`), WAL e indici
-
-### Installazione
-
-```bash
-# Clona il repository
+        <div class="step">
+            <h4>1. Installazione</h4>
+            <div class="code-block">
+                <pre># Clona il repository
 git clone https://github.com/gpicchiarelli/Colibrì-DB.git
 cd Colibrì-DB
 
@@ -73,13 +93,14 @@ cd Colibrì-DB
 swift build
 
 # Esegui la CLI
-.build/debug/coldb --config colibridb.conf.json
-```
+.build/debug/coldb --config colibridb.conf.json</pre>
+            </div>
+        </div>
 
-### Sessione Interattiva
-
-```bash
-# Avvia una sessione interattiva
+        <div class="step">
+            <h4>2. Prima Sessione</h4>
+            <div class="code-block">
+                <pre># Avvia una sessione interattiva
 .build/debug/coldb
 
 # Crea una tabella
@@ -91,169 +112,93 @@ swift build
 # Crea un indice
 \create index idx_demo_name ON demo(name) USING BTree
 
-# Cerca usando l'indice
-\index search demo idx_demo_name Alice
-
 # Interroga i dati
-\select * FROM demo WHERE name = 'Alice'
-```
+\select * FROM demo WHERE name = 'Alice'</pre>
+            </div>
+        </div>
+    </div>
+</section>
 
-## 📚 Documentazione
+<!-- Documentation Section -->
+<section id="documentation" class="section">
+    <h2>📚 Documentazione Completa</h2>
+    <p>La documentazione è organizzata in sezioni progressive per diversi livelli di competenza:</p>
+    
+    <div class="features-grid">
+        <div class="feature-card">
+            <h4>🚀 Wiki Operativa</h4>
+            <ul>
+                <li><a href="{{ site.baseurl }}/wiki/Quick-Start">Quick Start</a> - Installazione e prima sessione</li>
+                <li><a href="{{ site.baseurl }}/wiki/Architecture">Architecture</a> - Architettura del sistema</li>
+                <li><a href="{{ site.baseurl }}/wiki/CLI-Reference">CLI Reference</a> - Comandi completi</li>
+                <li><a href="{{ site.baseurl }}/wiki/API-Reference">API Reference</a> - Documentazione API</li>
+                <li><a href="{{ site.baseurl }}/wiki/Performance">Performance</a> - Ottimizzazioni e benchmark</li>
+                <li><a href="{{ site.baseurl }}/wiki/Troubleshooting">Troubleshooting</a> - Risoluzione problemi</li>
+                <li><a href="{{ site.baseurl }}/wiki/Examples">Examples</a> - Esempi pratici</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>🎓 Manuale Tecnico</h4>
+            <ul>
+                <li><a href="{{ site.baseurl }}/docs/Part-01-Foundations/00-Guida-Alla-Lettura">Parte I: Fondamenti</a> - Principi relazionali, algebra SQL</li>
+                <li><a href="{{ site.baseurl }}/docs/Part-02-Core-Engine/00-Introduzione">Parte II: Motore Core</a> - WAL, Buffer Pool, Indici</li>
+                <li><a href="{{ site.baseurl }}/docs/Part-03-Query/00-Introduzione">Parte III: Elaborazione Query</a> - Parser, Planning, Execution</li>
+                <li><a href="{{ site.baseurl }}/docs/Part-04-Metadata/00-Introduzione">Parte IV: Metadati</a> - Catalog, Statistiche</li>
+                <li><a href="{{ site.baseurl }}/docs/Part-05-Server/00-Introduzione">Parte V: Server</a> - Architettura, Wire Protocol</li>
+                <li><a href="{{ site.baseurl }}/docs/Part-06-Tooling/00-Introduzione">Parte VI: Strumenti</a> - CLI, Monitoring</li>
+            </ul>
+        </div>
+    </div>
+</section>
 
-### 🚀 **Wiki Completa**
-- **[Quick Start](wiki/Quick-Start)** - Installazione e prima sessione
-- **[Architecture](wiki/Architecture)** - Architettura del sistema
-- **[CLI Reference](wiki/CLI-Reference)** - Comandi completi
-- **[API Reference](wiki/API-Reference)** - Documentazione API
-- **[Performance](wiki/Performance)** - Ottimizzazioni e benchmark
-- **[Troubleshooting](wiki/Troubleshooting)** - Risoluzione problemi
-- **[Examples](wiki/Examples)** - Esempi pratici
+<!-- Architecture Section -->
+<section id="architecture" class="section">
+    <h2>🏗️ Architettura del Sistema</h2>
+    <p>ColibrìDB è progettato con un'architettura modulare che separa chiaramente le responsabilità:</p>
+    
+    <div class="features-grid">
+        <div class="feature-card">
+            <h4>Storage Engine</h4>
+            <p>Storage basato su file heap con slot directory e Free Space Map persistente per gestione efficiente dello spazio.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Buffer Pool</h4>
+            <p>Eviction LRU/Clock con flush in background e quote per namespace per ottimizzazione memoria.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Sistema WAL</h4>
+            <p>Recovery ARIES-compliant con checksum CRC32 per garantire durabilità e consistenza dei dati.</p>
+        </div>
+        <div class="feature-card">
+            <h4>Motore Indici</h4>
+            <p>Implementazioni pluggabili B+Tree, Hash, ART e LSM per diverse esigenze di accesso ai dati.</p>
+        </div>
+    </div>
+</section>
 
-### 📖 **Manuale Tecnico Completo**
-
-La documentazione è organizzata in più sezioni per diversi tipi di utenti:
-
-#### 🎓 **Manuale Universitario** (`docs/`)
-- **Parte I: Fondamenti** - Principi relazionali, algebra SQL, teoria delle transazioni
-- **Parte II: Motore Core** - WAL, Buffer Pool, Heap Storage, Indici B+Tree, MVCC
-- **Parte III: Elaborazione Query** - SQL Parser, Planning Logico/Fisico, Execution Engine
-- **Parte IV: Metadati** - Catalog Core, Statistiche, Gestione Schema
-- **Parte V: Server** - Architettura, Wire Protocol, Operazioni
-- **Parte VI: Strumenti** - User CLI, Dev CLI, Monitoring & DevOps
-- **Parte VII: Testing** - Unit Tests, Integration Tests, Benchmarks
-- **Parte VIII: Futuro** - Roadmap ed Estensioni
-
-## 🏗️ Architettura
-
-### Struttura del Repository
-
-```
-Colibrì-DB/
-├── Sources/
-│   ├── ColibriCore/          # Motore database core
-│   │   ├── Buffer/           # Gestione buffer pool
-│   │   ├── Catalog/          # Catalogo di sistema
-│   │   ├── Database/         # Operazioni database
-│   │   ├── Index/            # Implementazioni indici
-│   │   ├── Storage/          # Motore storage
-│   │   ├── Transactions/     # MVCC e locking
-│   │   ├── WAL/              # Write-Ahead Logging
-│   │   └── ...
-│   ├── coldb/                # CLI amministrativa
-│   ├── coldb-server/         # Server di rete
-│   └── benchmarks/           # Test di performance
-├── Tests/                    # Suite di test
-├── docs/                     # Documentazione tecnica
-├── Examples/                 # Esempi di utilizzo
-└── Resources/                # File di configurazione
-```
-
-### Componenti Core
-
-- **Storage Engine**: Storage basato su file heap con slot directory
-- **Buffer Pool**: Eviction LRU/Clock con flush in background
-- **Sistema WAL**: Recovery ARIES-compliant con checksum CRC32
-- **Motore Indici**: Implementazioni pluggabili B+Tree, Hash, ART e LSM
-- **Transaction Manager**: MVCC con livelli di isolamento configurabili
-- **Query Processor**: Iterator Volcano con ottimizzazione cost-based
-
-## 🧪 Testing e Qualità
-
-### Continuous Integration
-- **GitHub Actions**: Esecuzione automatica build e test
-- **CodeQL**: Analisi statica e security scanning
-- **Swift Testing**: Integrazione framework di test moderno
-
-### Copertura Test
-- **Unit Tests**: Validazione funzionalità core
-- **Integration Tests**: Test workflow end-to-end
-- **Benchmarks**: Rilevamento regressioni performance
-- **Stress Tests**: Validazione scenari ad alto carico
-
-### Esecuzione Test
-
-```bash
-# Esegui tutti i test
-swift test
-
-# Esegui categorie specifiche di test
-swift test --filter WAL
-swift test --filter Buffer
-swift test --filter BTree
-
-# Esegui benchmark
-swift run benchmarks --help
-```
-
-## 📊 Performance
-
-### Metriche Performance Target
-- **WAL Throughput**: 10,000+ operazioni/secondo
-- **B+Tree Lookups**: 1M+ lookups/secondo
-- **Transaction Throughput**: 1,000+ transazioni/secondo
-- **Buffer Pool Hit Rate**: >95%
-
-### Benchmarking
-
-```bash
-# Performance WAL
-swift run benchmarks --wal-throughput --duration 30s
-
-# Operazioni B+Tree
-swift run benchmarks --btree-lookups --keys 1000000
-
-# Throughput transazioni
-swift run benchmarks --transaction-throughput --duration 30s
-
-# Efficienza buffer pool
-swift run benchmarks --buffer-hit-rate --workload mixed
-```
-
-## 🤝 Contribuire
-
-Accogliamo i contributi! Consulta la nostra [Guida per Sviluppatori](wiki/Development) per i dettagli.
-
-### Setup di Sviluppo
-
-1. Fork del repository
-2. Crea un branch per la feature
-3. Apporta le modifiche
-4. Aggiungi test per le nuove funzionalità
-5. Assicurati che tutti i test passino
-6. Invia una pull request
-
-### Aree per i Contributi
-
-- **Motore Core**: Miglioramenti storage, WAL, indicizzazione
-- **Elaborazione Query**: Miglioramenti parser, ottimizzazione
-- **Testing**: Copertura test aggiuntiva, benchmark
-- **Documentazione**: Scrittura tecnica, esempi
-- **Strumenti**: Miglioramenti CLI, strumenti di monitoring
-
-## 📈 Roadmap
-
-### Stato Attuale: MVP (Alpha)
-- ✅ Motore storage core con WAL
-- ✅ Indici B+Tree con recovery
-- ✅ Supporto MVCC e transazioni base
-- ✅ CLI amministrativa
-- ✅ Documentazione completa
-
-### Funzionalità in Arrivo
-- **Release Beta**: Modalità server multi-utente, transazioni concorrenti
-- **Release Produzione**: Conformità SQL completa, monitoring avanzato
-- **Futuro**: Architettura distribuita, deployment cloud-native
-
-Vedi [PROJECT_ROADMAP.md](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/PROJECT_ROADMAP.md) per i piani di sviluppo dettagliati.
-
-## 📄 Licenza
-
-Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [LICENSE](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/LICENSE) per i dettagli.
-
----
-
-<div align="center">
-
-[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibrì-DB) • [📖 Leggi la documentazione](wiki/Quick-Start) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibrì-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
-
-</div>
+<!-- Contributing Section -->
+<section id="contributing" class="section">
+    <h2>🤝 Contribuire</h2>
+    <p>Accogliamo i contributi! Consulta le nostre <a href="https://github.com/gpicchiarelli/Colibrì-DB/blob/main/CONTRIBUTING.md">Linee Guida per i Contributi</a> e il <a href="https://github.com/gpicchiarelli/Colibrì-DB/blob/main/CODE_OF_CONDUCT.md">Codice di Condotta</a> per i dettagli.</p>
+    
+    <div class="features-grid">
+        <div class="feature-card">
+            <h4>🔧 Aree per i Contributi</h4>
+            <ul>
+                <li>Motore Core: Storage, WAL, indicizzazione</li>
+                <li>Elaborazione Query: Parser, ottimizzazione</li>
+                <li>Testing: Copertura test, benchmark</li>
+                <li>Documentazione: Scrittura tecnica, esempi</li>
+            </ul>
+        </div>
+        <div class="feature-card">
+            <h4>📈 Roadmap</h4>
+            <ul>
+                <li>✅ MVP (Alpha): Motore core, WAL, indici</li>
+                <li>🔄 Release Beta: Server multi-utente</li>
+                <li>🚀 Release Produzione: SQL completo</li>
+                <li>🌐 Futuro: Architettura distribuita</li>
+            </ul>
+        </div>
+    </div>
+</section>

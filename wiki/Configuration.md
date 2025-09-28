@@ -1,3 +1,9 @@
+---
+layout: page
+title: Guida alla Configurazione
+description: Guida completa alla configurazione di ColibrìDB
+---
+
 # ⚙️ Guida alla Configurazione
 
 Questa guida completa ti aiuterà a configurare ColibrìDB per le tue esigenze specifiche.

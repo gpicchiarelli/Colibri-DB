@@ -1,3 +1,9 @@
+---
+layout: page
+title: Guida per Sviluppatori
+description: Guida completa per contribuire allo sviluppo di ColibrìDB
+---
+
 # 🛠️ Guida per Sviluppatori
 
 Guida completa per contribuire allo sviluppo di ColibrìDB.

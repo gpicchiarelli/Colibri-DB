@@ -1,3 +1,9 @@
+---
+layout: page
+title: ColibrìDB Wiki
+description: Pagina principale della wiki di ColibrìDB
+---
+
 # 🐦 ColibrìDB Wiki
 
 <div align="center">

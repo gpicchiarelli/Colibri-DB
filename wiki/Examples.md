@@ -1,3 +1,9 @@
+---
+layout: page
+title: Esempi Pratici
+description: Esempi pratici e casi d'uso per ColibrìDB
+---
+
 # 📚 Esempi Pratici
 
 Collezione di esempi pratici per utilizzare ColibrìDB in scenari reali.
