@@ -127,9 +127,7 @@ swift run benchmarks
 ## 🔒 Sicurezza
 
 ### Segnalazione Vulnerabilità
-- **Email**: security@colibridb.dev
 - **GitHub**: Security Advisory
-- **Processo**: Coordinated disclosure
 
 ### Best Practices
 - Input validation
