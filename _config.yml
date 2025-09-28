@@ -30,9 +30,6 @@ plugins:
 
 # Collections
 collections:
-  wiki:
-    output: true
-    permalink: /:collection/:name/
 
 # Exclude files
 exclude:
