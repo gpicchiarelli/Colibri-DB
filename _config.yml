@@ -10,7 +10,7 @@ baseurl: /Colibri-DB
 # Jekyll configuration
 markdown: kramdown
 highlighter: rouge
-theme: minima
+# theme: minima  # Using custom layouts instead
 
 # GitHub Pages specific settings
 github: [metadata]
