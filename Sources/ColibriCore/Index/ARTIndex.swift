@@ -23,9 +23,11 @@ public final class ARTIndex<Ref: Hashable>: IndexProtocol {
     final class Node {
         var prefix: [UInt8]
         var children: [UInt8: Node] = [:]
-        var refs: Set<Ref> = [] // valori per chiave esatta
+        var refs: TombstoneSet<Ref> = TombstoneSet()
         init(prefix: [UInt8] = []) { self.prefix = prefix }
         var isLeaf: Bool { children.isEmpty }
+        var hasLiveRefs: Bool { refs.hasLive }
+        var isEmpty: Bool { !refs.hasLive && !refs.hasTombstones && children.isEmpty }
     }
 
     private let root = Node()
@@ -38,7 +40,7 @@ public final class ARTIndex<Ref: Hashable>: IndexProtocol {
     /// Returns all references for an exact key.
     public func searchEquals(_ key: String) throws -> [Ref] {
         let bytes = Array(key.utf8)
-        if let node = findNode(bytes) { return Array(node.refs) }
+        if let node = findNode(bytes) { return node.refs.visible() }
         return []
     }
 
@@ -46,7 +48,9 @@ public final class ARTIndex<Ref: Hashable>: IndexProtocol {
     public func range(_ lo: String?, _ hi: String?) throws -> [Ref] {
         var acc: [Ref] = []
         var path: [UInt8] = []
-        dfs(node: root, path: &path, lo: lo, hi: hi) { acc.append($0) }
+        dfs(node: root, path: &path, lo: lo, hi: hi) { ref in
+            acc.append(ref)
+        }
         // Deduplicate to align with BTree behavior
         return Array(Set(acc))
     }
@@ -109,7 +113,7 @@ public final class ARTIndex<Ref: Hashable>: IndexProtocol {
             newChild.children = node.children
             newChild.refs = node.refs
             node.children.removeAll()
-            node.refs.removeAll()
+            node.refs.clearAll()
             node.prefix = Array(node.prefix[..<common])
             node.children[edge] = newChild
         }
@@ -142,7 +146,7 @@ public final class ARTIndex<Ref: Hashable>: IndexProtocol {
         arenaIndex += 1
         n.prefix = prefix
         n.children.removeAll(keepingCapacity: true)
-        n.refs.removeAll(keepingCapacity: true)
+        n.refs = TombstoneSet()
         return n
     }
 
@@ -150,10 +154,10 @@ public final class ARTIndex<Ref: Hashable>: IndexProtocol {
         // Se il nodo è vuoto e ha un solo figlio, comprime; se nessuno, rimuove.
         var current = last
         while let (parent, edge) = path.popLast() {
-            if current.refs.isEmpty && current.children.isEmpty {
+            if current.isEmpty {
                 if let e = edge { parent.children.removeValue(forKey: e) }
                 current = parent
-            } else if current.refs.isEmpty && current.children.count == 1, let (k, only) = current.children.first {
+            } else if !current.hasLiveRefs && current.children.count == 1, let (k, only) = current.children.first {
                 // merge
                 current.prefix.append(k)
                 current.prefix.append(contentsOf: only.prefix)
@@ -172,7 +176,7 @@ public final class ARTIndex<Ref: Hashable>: IndexProtocol {
         // Emit refs for exact key at this node if within range
         let keyStr = String(bytes: path, encoding: .utf8) ?? ""
         if inRange(keyStr, lo: lo, hi: hi) {
-            node.refs.forEach(yield)
+            node.refs.visible().forEach(yield)
         }
         // Explore children in byte-sorted order for lexicographic traversal
         if !node.children.isEmpty {

@@ -16,8 +16,21 @@ public final class FractalTreeIndex<Element: Hashable & Comparable, Reference: H
     public typealias Key = Element
     public typealias Ref = Reference
 
-    private var buffer: [Key: Set<Ref>] = [:]
-    private var baseTree: [Key: Set<Ref>] = [:]
+    private struct Entry {
+        var live: Set<Ref> = []
+        var tombstones: Set<Ref> = []
+        mutating func insert(_ ref: Ref) { tombstones.remove(ref); live.insert(ref) }
+        mutating func delete(_ ref: Ref) { if live.remove(ref) != nil { tombstones.insert(ref) } }
+        func visible() -> [Ref] { Array(live) }
+        var isDead: Bool { live.isEmpty && tombstones.isEmpty }
+        mutating func merge(with other: Entry) {
+            live.formUnion(other.live)
+            tombstones.formUnion(other.tombstones)
+        }
+    }
+
+    private var buffer: [Key: Entry] = [:]
+    private var baseTree: [Key: Entry] = [:]
     private let bufferCapacity: Int
 
     public init(bufferCapacity: Int = 256) {
@@ -31,34 +44,36 @@ public final class FractalTreeIndex<Element: Hashable & Comparable, Reference: H
 
     private func flushBuffer() {
         guard !buffer.isEmpty else { return }
-        for (key, refs) in buffer {
-            var set = baseTree[key] ?? Set<Ref>()
-            set.formUnion(refs)
-            baseTree[key] = set
+        for (key, entry) in buffer {
+            var stored = baseTree[key] ?? Entry()
+            stored.merge(with: entry)
+            baseTree[key] = stored
         }
         buffer.removeAll(keepingCapacity: true)
     }
 
-    private func materialized() -> [Key: Set<Ref>] {
+    private func materialized() -> [Key: Entry] {
         if buffer.isEmpty { return baseTree }
         var combined = baseTree
-        for (key, refs) in buffer {
-            combined[key, default: Set<Ref>()].formUnion(refs)
+        for (key, entry) in buffer {
+            var stored = combined[key] ?? Entry()
+            stored.merge(with: entry)
+            combined[key] = stored
         }
         return combined
     }
 
     public func insert(_ key: Key, _ ref: Ref) throws {
-        var set = buffer[key] ?? Set<Ref>()
-        set.insert(ref)
-        buffer[key] = set
+        var entry = buffer[key] ?? Entry()
+        entry.insert(ref)
+        buffer[key] = entry
         flushBufferIfNeeded()
     }
 
     public func searchEquals(_ key: Key) throws -> [Ref] {
-        var result = baseTree[key] ?? Set<Ref>()
-        if let buf = buffer[key] { result.formUnion(buf) }
-        return Array(result)
+        var entry = baseTree[key] ?? Entry()
+        if let buf = buffer[key] { entry.merge(with: buf) }
+        return entry.visible()
     }
 
     public func range(_ lo: Key?, _ hi: Key?) throws -> [Ref] {
@@ -70,19 +85,19 @@ public final class FractalTreeIndex<Element: Hashable & Comparable, Reference: H
         }.sorted()
         var result: [Ref] = []
         for key in keys {
-            if let refs = combined[key] { result.append(contentsOf: refs) }
+            if let entry = combined[key] { result.append(contentsOf: entry.visible()) }
         }
         return result
     }
 
     public func remove(_ key: Key, _ ref: Ref) throws {
-        if var set = buffer[key] {
-            set.remove(ref)
-            if set.isEmpty { buffer.removeValue(forKey: key) } else { buffer[key] = set }
+        if var entry = buffer[key] {
+            entry.delete(ref)
+            if entry.isDead { buffer.removeValue(forKey: key) } else { buffer[key] = entry }
         }
-        if var set = baseTree[key] {
-            set.remove(ref)
-            if set.isEmpty { baseTree.removeValue(forKey: key) } else { baseTree[key] = set }
+        if var entry = baseTree[key] {
+            entry.delete(ref)
+            if entry.isDead { baseTree.removeValue(forKey: key) } else { baseTree[key] = entry }
         }
     }
 }

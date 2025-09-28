@@ -21,9 +21,9 @@ public final class BTreeIndex<Ref: Hashable>: IndexProtocol {
     final class Node {
         var isLeaf: Bool
         var keys: [String] = []
-        var children: [Node] = [] // for internal nodes
-        var values: [[Ref]] = []   // for leaves: parallel to keys
-        weak var nextLeaf: Node?   // for range scans
+        var children: [Node] = []
+        var values: [TombstoneSet<Ref>] = []
+        weak var nextLeaf: Node?
         init(isLeaf: Bool) { self.isLeaf = isLeaf }
     }
 
@@ -39,7 +39,7 @@ public final class BTreeIndex<Ref: Hashable>: IndexProtocol {
     /// Returns all references equal to `key`.
     public func searchEquals(_ key: String) throws -> [Ref] {
         let leaf = findLeaf(for: key)
-        if let idx = leaf.keys.binarySearch(key) { return Array(Set(leaf.values[idx])) }
+        if let idx = leaf.keys.binarySearch(key) { return leaf.values[idx].visible() }
         return []
     }
 
@@ -52,7 +52,7 @@ public final class BTreeIndex<Ref: Hashable>: IndexProtocol {
             for (i, k) in node.keys.enumerated() {
                 if let lo = lo, k < lo { continue }
                 if let hi = hi, k > hi { return Array(Set(result)) }
-                result.append(contentsOf: node.values[i])
+                result.append(contentsOf: node.values[i].visible())
             }
             guard let next = node.nextLeaf else { break }
             node = next
@@ -99,11 +99,13 @@ public final class BTreeIndex<Ref: Hashable>: IndexProtocol {
         if node.isLeaf {
             if let idx = node.keys.binarySearch(key) {
                 // append unique ref
-                if !node.values[idx].contains(ref) { node.values[idx].append(ref) }
+                node.values[idx].insert(ref)
             } else {
                 let pos = node.keys.lowerBound(for: key)
                 node.keys.insert(key, at: pos)
-                node.values.insert([ref], at: pos)
+                var ts = TombstoneSet<Ref>()
+                ts.insert(ref)
+                node.values.insert(ts, at: pos)
             }
             if node.keys.count > maxKeys { return splitLeaf(node) }
             return (nil, nil)
@@ -153,7 +155,7 @@ public final class BTreeIndex<Ref: Hashable>: IndexProtocol {
         var leaf = leftmostLeaf()
         while true {
             for (i, k) in leaf.keys.enumerated() {
-                res.append((k, Array(Set(leaf.values[i]))))
+                res.append((k, leaf.values[i].visible()))
             }
             if let n = leaf.nextLeaf { leaf = n } else { break }
         }

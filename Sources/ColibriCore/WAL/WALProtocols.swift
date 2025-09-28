@@ -160,11 +160,12 @@ public struct WALHeapDeleteRecord: WALRecord {
     public let recordPageId: UInt64
     public let slotId: UInt16
     public let rowData: Data  // For UNDO
+    public let isTombstone: Bool
     
     public var kind: WALKind { .heapDelete }
     public var pageId: UInt64? { recordPageId }
     
-    public init(lsn: UInt64 = 0, dbId: UInt32, txId: UInt64, tableId: String, pageId: UInt64, slotId: UInt16, rowData: Data) {
+    public init(lsn: UInt64 = 0, dbId: UInt32, txId: UInt64, tableId: String, pageId: UInt64, slotId: UInt16, rowData: Data, isTombstone: Bool = true) {
         self.lsn = lsn
         self.dbId = dbId
         self.txId = txId
@@ -172,6 +173,7 @@ public struct WALHeapDeleteRecord: WALRecord {
         self.recordPageId = pageId
         self.slotId = slotId
         self.rowData = rowData
+        self.isTombstone = isTombstone
     }
 }
 
@@ -213,11 +215,12 @@ public struct WALIndexDeleteRecord: WALRecord {
     public let keyBytes: Data
     public let ridPageId: UInt64
     public let ridSlotId: UInt16
+    public let isTombstone: Bool
     
     public var kind: WALKind { .indexDelete }
     public var pageId: UInt64? { ridPageId }
     
-    public init(lsn: UInt64 = 0, dbId: UInt32, txId: UInt64, indexId: String, tableId: String, keyBytes: Data, ridPageId: UInt64, ridSlotId: UInt16) {
+    public init(lsn: UInt64 = 0, dbId: UInt32, txId: UInt64, indexId: String, tableId: String, keyBytes: Data, ridPageId: UInt64, ridSlotId: UInt16, isTombstone: Bool = true) {
         self.lsn = lsn
         self.dbId = dbId
         self.txId = txId
@@ -226,6 +229,7 @@ public struct WALIndexDeleteRecord: WALRecord {
         self.keyBytes = keyBytes
         self.ridPageId = ridPageId
         self.ridSlotId = ridSlotId
+        self.isTombstone = isTombstone
     }
 }
 
