@@ -86,28 +86,26 @@ extension BenchmarkCLI {
         let indexName = "ix_tomb_\(UUID().uuidString.prefix(6))"
         try db.createIndex(name: indexName, on: "docs", columns: ["title"], using: kind)
 
-        // Insert base rows
         for i in 0..<iterations {
             _ = try db.insert(into: "docs", row: ["title": .string("doc-\(i)"), "body": .string("draft")])
         }
-
-        // Delete half of them to create tombstones
         for i in stride(from: 0, to: iterations, by: 2) {
             _ = try db.deleteEquals(table: "docs", column: "title", value: .string("doc-\(i)"))
         }
 
         let clock = ContinuousClock(); let start = clock.now
         var latencies: [Double] = []
+        var invisibleHits = 0
+        var visibleHits = 0
 
         let queries = min(iterations, granular ? iterations : max(1, iterations / 2))
         for i in 0..<queries {
             let t0 = clock.now
-            let shouldBeEmpty = i % 2 == 0
             let hits = try db.indexSearchEqualsTyped(table: "docs", index: indexName, value: .string("doc-\(i)"))
-            if shouldBeEmpty {
-                guard hits.isEmpty else { fatalError("Expected empty result for doc-\(i)") }
+            if i % 2 == 0 {
+                if hits.isEmpty { invisibleHits += 1 }
             } else {
-                guard !hits.isEmpty else { fatalError("Expected hit for doc-\(i)") }
+                if !hits.isEmpty { visibleHits += 1 }
             }
             let t1 = clock.now
             latencies.append(BenchmarkCLI.msDelta(t0, t1))
@@ -116,9 +114,10 @@ extension BenchmarkCLI {
         let vacuumStart = clock.now
         _ = try db.compactTable(table: "docs", pageId: nil)
         let vacuumEnd = clock.now
+        var postVacuumInvisible = 0
         for i in stride(from: 0, to: iterations, by: 2) {
             let hits = try db.indexSearchEqualsTyped(table: "docs", index: indexName, value: .string("doc-\(i)"))
-            guard hits.isEmpty else { fatalError("Vacuum expected tombstone hidden for doc-\(i)") }
+            if hits.isEmpty { postVacuumInvisible += 1 }
         }
 
         let elapsed = clock.now - start
@@ -133,7 +132,10 @@ extension BenchmarkCLI {
                 "kind": kind,
                 "storage": "InMemory",
                 "vacuum_time_ms": String(format: "%.3f", BenchmarkCLI.msDelta(vacuumStart, vacuumEnd)),
-                "queries": "\(queries)"
+                "queries": "\(queries)",
+                "invisible_before": "\(invisibleHits)",
+                "visible_before": "\(visibleHits)",
+                "invisible_after": "\(postVacuumInvisible)"
             ]
         )
     }

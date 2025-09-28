@@ -180,6 +180,7 @@ enum Scenario: String, CaseIterable {
     case idxBTreeRange = "idx-btree-range"        // in-memory AnyStringIndex BTree
     case idxLSMLookup = "idx-lsm-lookup"
     case idxLSMRange = "idx-lsm-range"
+    case idxTombstone = "idx-tombstone"
     case txCommit = "tx-commit"
     case txRollback = "tx-rollback"
     case txContention = "tx-contention"
@@ -282,6 +283,8 @@ struct BenchmarkCLI {
                 result = try runInMemoryIndexLookup(iterations: iterations, kind: "LSM", granular: granular)
             case .idxLSMRange:
                 result = try runInMemoryIndexRange(iterations: iterations, kind: "LSM", granular: granular)
+            case .idxTombstone:
+                result = try runIndexTombstone(iterations: iterations, kind: "Hash", granular: granular)
             case .txCommit:
                 result = try runTxCommit(iterations: iterations, granular: granular)
             case .txRollback:
