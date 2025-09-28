@@ -48,6 +48,13 @@ struct IndexSQLTests {
 
         let rngEq = try db.indexRangeTyped(table: "t", index: "idx_t_k_hash", lo: .string("b"), hi: .string("b"))
         #expect(rngEq.count == 2)
+        // Delete and ensure equality returns zero until vacuum
+        _ = try db.deleteEquals(table: "t", column: "k", value: .string("b"))
+        let postDelete = try db.indexSearchEqualsTyped(table: "t", index: "idx_t_k_hash", value: .string("b"))
+        #expect(postDelete.isEmpty)
+        _ = try db.compactTable(table: "t", pageId: nil)
+        let postVacuum = try db.indexSearchEqualsTyped(table: "t", index: "idx_t_k_hash", value: .string("b"))
+        #expect(postVacuum.isEmpty)
     }
 
     @Test func artIndexEqualityAndRange() throws {

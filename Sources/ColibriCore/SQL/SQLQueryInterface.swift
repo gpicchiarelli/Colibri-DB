@@ -154,7 +154,9 @@ public final class SQLQueryInterface {
         return SQLQueryResult(
             statementType: .insert,
             affectedRows: 1,
-            message: "Row inserted with RID: \(rid)"
+            message: "Row inserted with RID: \(rid)",
+            columns: ["rid_page", "rid_slot"],
+            rows: [[.int(Int64(rid.pageId)), .int(Int64(rid.slotId))]]
         )
     }
     
@@ -188,7 +190,9 @@ public final class SQLQueryInterface {
         return SQLQueryResult(
             statementType: .delete,
             affectedRows: affected,
-            message: "Deleted rows: \(affected)"
+            message: "Deleted rows: \(affected)",
+            columns: ["rid_page", "rid_slot"],
+            rows: []
         )
     }
     
