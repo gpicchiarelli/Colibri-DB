@@ -67,25 +67,25 @@ Questo file documenta tutti i link del sito per verificare che funzionino corret
 ## 🌐 Link Esterni
 
 ### GitHub
-- **Repository**: `https://github.com/gpicchiarelli/Colibrì-DB` ✅
-- **Issues**: `https://github.com/gpicchiarelli/Colibrì-DB/issues` ✅
-- **Discussions**: `https://github.com/gpicchiarelli/Colibrì-DB/discussions` ✅
-- **Pull Requests**: `https://github.com/gpicchiarelli/Colibrì-DB/pulls` ✅
-- **Releases**: `https://github.com/gpicchiarelli/Colibrì-DB/releases` ✅
-- **License**: `https://github.com/gpicchiarelli/Colibrì-DB/blob/main/LICENSE` ✅
+- **Repository**: `https://github.com/gpicchiarelli/Colibr-DB` ✅
+- **Issues**: `https://github.com/gpicchiarelli/Colibr-DB/issues` ✅
+- **Discussions**: `https://github.com/gpicchiarelli/Colibr-DB/discussions` ✅
+- **Pull Requests**: `https://github.com/gpicchiarelli/Colibr-DB/pulls` ✅
+- **Releases**: `https://github.com/gpicchiarelli/Colibr-DB/releases` ✅
+- **License**: `https://github.com/gpicchiarelli/Colibr-DB/blob/main/LICENSE` ✅
 
 ### Documentazione Esterna
-- **Manuale Completo**: `https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/README.md` ✅
-- **Roadmap**: `https://github.com/gpicchiarelli/Colibrì-DB/blob/main/PROJECT_ROADMAP.md` ✅
+- **Manuale Completo**: `https://github.com/gpicchiarelli/Colibr-DB/blob/main/docs/README.md` ✅
+- **Roadmap**: `https://github.com/gpicchiarelli/Colibr-DB/blob/main/PROJECT_ROADMAP.md` ✅
 
 ## ✅ Risultato
 
 Tutti i link sono stati corretti e utilizzano la sintassi Jekyll corretta con `{{ site.baseurl }}` per i link interni.
 
 ### Configurazione Base
-- **Base URL**: `/Colibrì-DB`
+- **Base URL**: `/Colibr-DB`
 - **URL**: `https://gpicchiarelli.github.io`
-- **URL Completo**: `https://gpicchiarelli.github.io/Colibrì-DB`
+- **URL Completo**: `https://gpicchiarelli.github.io/Colibr-DB`
 
 ### Note
 - I link interni utilizzano `{{ site.baseurl }}` per essere compatibili con GitHub Pages

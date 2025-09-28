@@ -2,17 +2,17 @@
 
 > **Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2**
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/ci.yml?branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/ci.yml)
-[![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/codeql.yml?label=CodeQL&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/codeql.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibr-DB/ci.yml?branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibr-DB/codeql.yml?label=CodeQL&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/codeql.yml)
 ![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg?style=flat-square)
 ![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey.svg?style=flat-square)
 ![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg?style=flat-square)
-![Stars](https://img.shields.io/github/stars/gpicchiarelli/Colibrì-DB?style=social)
-![Issues](https://img.shields.io/github/issues/gpicchiarelli/Colibrì-DB?style=flat-square)
-![PRs](https://img.shields.io/github/issues-pr/gpicchiarelli/Colibrì-DB?style=flat-square)
-![Last commit](https://img.shields.io/github/last-commit/gpicchiarelli/Colibrì-DB?style=flat-square)
-![Contributors](https://img.shields.io/github/contributors/gpicchiarelli/Colibrì-DB?style=flat-square)
+![Stars](https://img.shields.io/github/stars/gpicchiarelli/Colibr-DB?style=social)
+![Issues](https://img.shields.io/github/issues/gpicchiarelli/Colibr-DB?style=flat-square)
+![PRs](https://img.shields.io/github/issues-pr/gpicchiarelli/Colibr-DB?style=flat-square)
+![Last commit](https://img.shields.io/github/last-commit/gpicchiarelli/Colibr-DB?style=flat-square)
+![Contributors](https://img.shields.io/github/contributors/gpicchiarelli/Colibr-DB?style=flat-square)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
 
 **ColibrìDB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
@@ -68,7 +68,7 @@
 ```bash
 # Clona il repository
 git clone https://github.com/gpicchiarelli/Colibr-DB.git
-cd Colibrì-DB
+cd Colibr-DB
 
 # Compila il progetto
 swift build
@@ -147,7 +147,7 @@ La documentazione è organizzata in più sezioni per diversi tipi di utenti:
 ### Struttura del Repository
 
 ```
-Colibrì-DB/
+Colibr-DB/
 ├── Sources/
 │   ├── ColibriCore/          # Motore database core
 │   │   ├── Buffer/           # Gestione buffer pool

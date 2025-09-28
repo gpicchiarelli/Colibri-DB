@@ -117,6 +117,6 @@ Il file `.github/workflows/pages.yml` contiene la configurazione per:
 ## 📞 Supporto
 
 Per problemi con il sito web:
-- Apri una [issue su GitHub](https://github.com/gpicchiarelli/Colibrì-DB/issues)
+- Apri una [issue su GitHub](https://github.com/gpicchiarelli/Colibr-DB/issues)
 - Consulta la [documentazione Jekyll](https://jekyllrb.com/docs/)
 - Verifica la [documentazione GitHub Pages](https://docs.github.com/en/pages)

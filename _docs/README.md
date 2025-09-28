@@ -77,7 +77,7 @@ description: Documentazione tecnica completa di ColibrìDB
 ```bash
 # Clona il repository
 git clone https://github.com/gpicchiarelli/Colibr-DB.git
-cd Colibrì-DB
+cd Colibr-DB
 
 # Compila il progetto
 swift build
@@ -193,7 +193,7 @@ La documentazione è organizzata in sezioni progressive per diversi livelli di c
 ### Struttura del Repository
 
 ```
-Colibrì-DB/
+Colibr-DB/
 ├── Sources/
 │   ├── ColibriCore/          # Motore database core
 │   │   ├── Buffer/           # Gestione buffer pool

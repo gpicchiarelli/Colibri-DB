@@ -41,8 +41,8 @@ uname -m
 ### 1. Clona il Repository
 
 ```bash
-git clone https://github.com/gpicchiarelli/Colibrì-DB.git
-cd Colibrì-DB
+git clone https://github.com/gpicchiarelli/Colibr-DB.git
+cd Colibr-DB
 ```
 
 ### 2. Compila il Progetto
@@ -310,10 +310,10 @@ Ora che hai completato il Quick Start, esplora:
 
 Se incontri problemi:
 
-1. **Consulta la [documentazione completa](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/README.md)**
-2. **Cerca nelle [issue esistenti](https://github.com/gpicchiarelli/Colibrì-DB/issues)**
-3. **Apri una [nuova issue](https://github.com/gpicchiarelli/Colibrì-DB/issues/new)**
-4. **Partecipa alle [discussioni](https://github.com/gpicchiarelli/Colibrì-DB/discussions)**
+1. **Consulta la [documentazione completa](https://github.com/gpicchiarelli/Colibr-DB/blob/main/docs/README.md)**
+2. **Cerca nelle [issue esistenti](https://github.com/gpicchiarelli/Colibr-DB/issues)**
+3. **Apri una [nuova issue](https://github.com/gpicchiarelli/Colibr-DB/issues/new)**
+4. **Partecipa alle [discussioni](https://github.com/gpicchiarelli/Colibr-DB/discussions)**
 
 ---
 
