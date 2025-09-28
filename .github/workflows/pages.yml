@@ -30,9 +30,13 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
         
+      - name: Get Pages base path
+        id: vars
+        run: echo "base_path=Colibri-DB" >> $GITHUB_OUTPUT
+        
       - name: Build with Jekyll
         run: |
-          bundle exec jekyll build --baseurl "${{ steps.vars.outputs.base_path }}"
+          bundle exec jekyll build --baseurl "/${{ steps.vars.outputs.base_path }}"
         env:
           JEKYLL_ENV: production
           

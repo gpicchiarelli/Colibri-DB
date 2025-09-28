@@ -83,9 +83,9 @@ Questo file documenta tutti i link del sito per verificare che funzionino corret
 Tutti i link sono stati corretti e utilizzano la sintassi Jekyll corretta con `{{ site.baseurl }}` per i link interni.
 
 ### Configurazione Base
-- **Base URL**: `/Colibrì-DB`
+- **Base URL**: `/Colibri-DB`
 - **URL**: `https://gpicchiarelli.github.io`
-- **URL Completo**: `https://gpicchiarelli.github.io/Colibrì-DB`
+- **URL Completo**: `https://gpicchiarelli.github.io/Colibri-DB`
 
 ### Note
 - I link interni utilizzano `{{ site.baseurl }}` per essere compatibili con GitHub Pages
