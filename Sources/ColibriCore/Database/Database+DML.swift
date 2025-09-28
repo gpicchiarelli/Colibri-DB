@@ -413,7 +413,7 @@ extension Database {
         guard !rids.isEmpty else { return 0 }
         
         var deleted = 0
-        let actualTid = tid ?? begin()
+        let actualTid = tid ?? try begin()
         
         // Process all deletes in a single transaction using tombstone approach
         for rid in rids {
@@ -428,7 +428,7 @@ extension Database {
             } else if let ft = tablesFile[table] {
                 guard let r = try? ft.read(rid) else { continue }
                 row = r
-                let lsn = logHeapDelete(tid: actualTid, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                _ = logHeapDelete(tid: actualTid, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
                 // Use tombstone instead of physical removal
                 try ft.remove(rid) // This marks as tombstone in FileHeapTable
                 var state = txStates[actualTid] ?? TxState()

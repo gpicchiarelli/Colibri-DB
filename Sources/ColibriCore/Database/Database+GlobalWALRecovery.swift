@@ -342,9 +342,19 @@ extension Database {
     // MARK: - UNDO Phase
     
     private func undoPhase(globalWAL: FileWALManager, att: [UInt64: UInt64]) throws {
+        // Only print summary for large numbers of transactions
+        if att.count > 10 {
+            print("Rolling back \(att.count) transactions...")
+        }
         for (txId, lastLSN) in att {
-            print("Rolling back transaction \(txId) from LSN \(lastLSN)")
+            // Only print individual rollbacks for small numbers
+            if att.count <= 10 {
+                print("Rolling back transaction \(txId) from LSN \(lastLSN)")
+            }
             try undoTransaction(globalWAL: globalWAL, txId: txId, fromLSN: lastLSN)
+        }
+        if att.count > 10 {
+            print("Completed rolling back \(att.count) transactions")
         }
     }
     

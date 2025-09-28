@@ -59,6 +59,56 @@ extension BenchmarkCLI {
             return BenchmarkResult(name: Scenario.btreeInsert.rawValue, iterations: n, elapsed: elapsed, metadata: ["warmup_done":"true"]) 
         }
     }
+    
+    static func runBTreeInsertOptimized(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+        let fm = FileManager.default
+        let tmp = try makeTempDir(); defer { try? fm.removeItem(at: tmp) }
+        var cfg = DBConfig(dataDir: tmp.path)
+        cfg.storageEngine = "FileHeap"
+        cfg.autoCompactionEnabled = false
+        let db = Database(config: cfg)
+        try db.createTable("t")
+        try db.createIndex(name: "idx", on: "t", columns: ["id"], using: "BTree")
+        
+        let n0 = cappedDiskIterations(iterations)
+        let n = granular ? n0 : min(n0, 200)
+        let clock = ContinuousClock(); let start = clock.now
+        
+        if granular {
+            var lat: [Double] = []; lat.reserveCapacity(n / 50) // Batch every 50 inserts
+            for batchStart in stride(from: 0, to: n, by: 50) {
+                let t0 = clock.now
+                let batchEnd = min(batchStart + 50, n)
+                
+                // Insert batch with reduced sync
+                for i in batchStart..<batchEnd {
+                    _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "p": .string("v\(i)")])
+                }
+                
+                // Force sync only at batch boundaries
+                if let index = db.indexes["t"]?["idx"] {
+                    switch index.backend {
+                    case .persistentBTree(let fbt):
+                        try fbt.fh.synchronize()
+                    default:
+                        break
+                    }
+                }
+                
+                let t1 = clock.now
+                lat.append(msDelta(t0, t1))
+            }
+            let elapsed = clock.now - start
+            return BenchmarkResult(name: "btree-insert-optimized", iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","batch_size":"50","optimized":"true"]) 
+        } else {
+            // Single batch with minimal sync
+            for i in 0..<n { 
+                _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "p": .string("v\(i)")]) 
+            }
+            let elapsed = clock.now - start
+            return BenchmarkResult(name: "btree-insert-optimized", iterations: n, elapsed: elapsed, metadata: ["index":"BTree","columns":"id","optimized":"true"]) 
+        }
+    }
 
     static func runBTreeRange(iterations: Int, granular: Bool) throws -> BenchmarkResult {
         let fm = FileManager.default

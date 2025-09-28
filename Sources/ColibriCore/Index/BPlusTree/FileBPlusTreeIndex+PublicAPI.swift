@@ -43,19 +43,24 @@ extension FileBPlusTreeIndex {
     }
 
     // Global WAL variant: caller provides pageLSN (single WAL for heap+index)
-    public func insert(key: Value, rid: RID, pageLSN: UInt64) throws {
+    public func insert(key: Value, rid: RID, pageLSN: UInt64, sync: Bool = true) throws {
         let k = KeyBytes.fromValue(key).bytes
         if hdr.root == 0 {
             let leafId = try allocPage()
             try writeLeaf(pageId: leafId, keys: [k], ridLists: [[rid]], nextLeaf: 0, pageLSN: pageLSN)
             hdr.root = leafId
-            try writeHeader(); try fh.synchronize(); return
+            try writeHeader()
+            if sync { try fh.synchronize() }
+            return
         }
         let (promoKey, promoRight) = try insertRecursive(pageId: hdr.root, key: k, rid: rid, lsn: pageLSN)
         if let pk = promoKey, let right = promoRight {
-            let newRoot = try allocPage(); try writeInternal(pageId: newRoot, keys: [pk], children: [hdr.root, right], pageLSN: pageLSN); hdr.root = newRoot; try writeHeader()
+            let newRoot = try allocPage()
+            try writeInternal(pageId: newRoot, keys: [pk], children: [hdr.root, right], pageLSN: pageLSN)
+            hdr.root = newRoot
+            try writeHeader()
         }
-        try fh.synchronize()
+        if sync { try fh.synchronize() }
     }
 
     public func insert(composite: [Value], rid: RID) throws {
@@ -90,7 +95,11 @@ extension FileBPlusTreeIndex {
         guard !entries.isEmpty else { return }
         
         // Sort entries by key for better cache locality and reduced splits
-        let sortedEntries = entries.sorted { KeyBytes.fromValue($0.0).bytes < KeyBytes.fromValue($1.0).bytes }
+        let sortedEntries = entries.sorted { 
+            let key1 = KeyBytes.fromValue($0.0).bytes
+            let key2 = KeyBytes.fromValue($1.0).bytes
+            return key1.lexicographicallyPrecedes(key2)
+        }
         
         for (key, rid) in sortedEntries {
             let k = KeyBytes.fromValue(key).bytes
