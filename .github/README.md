@@ -127,9 +127,7 @@ swift run benchmarks
 ## 🔒 Sicurezza
 
 ### Segnalazione Vulnerabilità
-- **Email**: security@colibridb.dev
 - **GitHub**: Security Advisory
-- **Processo**: Coordinated disclosure
 
 ### Best Practices
 - Input validation
@@ -199,8 +197,6 @@ swift run benchmarks --transaction-throughput
 
 ### Per Domande
 - **GitHub Discussions**: Per domande generali
-- **Issues**: Per bug e problemi
-- **Email**: info@colibridb.dev
 
 ### Per Contributi
 - **Pull Requests**: Per modifiche al codice
