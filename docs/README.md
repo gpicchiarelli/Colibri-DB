@@ -282,7 +282,7 @@ Licenza BSD 3-Clause License
 
 <div align="center">
 
-[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibr-DB) • [📖 Leggi la documentazione](https://github.com/gpicchiarelli/Colibr-DB/tree/main/docs) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibr-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibr-DB/discussions)
+[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibr-DB) • [📖 Leggi la documentazione](https://github.com/gpicchiarelli/Colibr-DB/blob/main/docs/README.md) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibr-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibr-DB/discussions)
 
 **ColibrìDB**
 
