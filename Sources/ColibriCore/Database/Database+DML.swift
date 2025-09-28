@@ -222,14 +222,14 @@ extension Database {
                 for rid in rids {
                     let row: Row
                     if var t = tablesMem[table] {
-                        guard let r = try? t.read(rid) else { continue }
+                        guard let r = try t.read(rid) else { continue }
                         row = r
                         // Use tombstone instead of physical removal
                         t.remove(rid) // This marks as tombstone in HeapTable
                         tablesMem[table] = t
                         mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
                     } else if let ft = tablesFile[table] {
-                        guard let r = try? ft.read(rid) else { continue }
+                        guard let r = try ft.read(rid) else { continue }
                         row = r
                         var lsn: UInt64 = 0
                         if let tid = tid {
@@ -368,7 +368,7 @@ extension Database {
                     t.remove(rid)
                     tablesMem[table] = t
                 } else if let ft = tablesFile[table] {
-                    guard let r = try? ft.read(rid) else { continue }
+                    guard let r = try ft.read(rid) else { continue }
                     row = r
                     var match = true
                     for (k, v) in predicates { if row[k] != v { match = false; break } }

@@ -143,13 +143,13 @@ extension FileBPlusTreeIndex {
         guard hdr.root != 0 else { return [] }
         var pid = hdr.root
         while true {
-            guard let page = try? readPage(pid) else { return [] }
+            guard let page = try readPage(pid) else { return [] }
             if page.type == 1 {
-                let inpg = try! parseInternal(page.data)
+                let inpg = try parseInternal(page.data)
                 let idx = upperBound(keys: inpg.keys, key: k)
                 pid = inpg.children[idx]
             } else {
-                let leaf = try! parseLeaf(page.data)
+                let leaf = try parseLeaf(page.data)
                 if let i = binarySearch(keys: leaf.keys, key: k) {
                     return leaf.ridLists[i]
                 }
@@ -163,13 +163,13 @@ extension FileBPlusTreeIndex {
         guard hdr.root != 0 else { return [] }
         var pid = hdr.root
         while true {
-            guard let page = try? readPage(pid) else { return [] }
+            guard let page = try readPage(pid) else { return [] }
             if page.type == 1 {
-                let inpg = try! parseInternal(page.data)
+                let inpg = try parseInternal(page.data)
                 let idx = upperBoundOptimized(keys: inpg.keys, key: key)
                 pid = inpg.children[idx]
             } else {
-                let leaf = try! parseLeaf(page.data)
+                let leaf = try parseLeaf(page.data)
                 if let i = binarySearchOptimized(keys: leaf.keys, key: key) {
                     return leaf.ridLists[i]
                 }
@@ -183,13 +183,13 @@ extension FileBPlusTreeIndex {
         guard hdr.root != 0 else { return [] }
         var pid = hdr.root
         while true {
-            guard let page = try? readPage(pid) else { return [] }
+            guard let page = try readPage(pid) else { return [] }
             if page.type == 1 {
-                let inpg = try! parseInternal(page.data)
+                let inpg = try parseInternal(page.data)
                 let idx = upperBound(keys: inpg.keys, key: k)
                 pid = inpg.children[idx]
             } else {
-                let leaf = try! parseLeaf(page.data)
+                let leaf = try parseLeaf(page.data)
                 if let i = binarySearch(keys: leaf.keys, key: k) { return leaf.ridLists[i] }
                 return []
             }
@@ -205,7 +205,7 @@ extension FileBPlusTreeIndex {
         while true {
             guard let page = try? readPage(pid) else { return res }
             if page.type == 1 {
-                let inpg = try! parseInternal(page.data)
+                let inpg = try parseInternal(page.data)
                 let idx = loK.map { upperBound(keys: inpg.keys, key: $0) } ?? 0
                 pid = inpg.children[idx]
             } else {
@@ -236,7 +236,7 @@ extension FileBPlusTreeIndex {
         while true {
             guard let page = try? readPage(pid) else { return res }
             if page.type == 1 {
-                let inpg = try! parseInternal(page.data)
+                let inpg = try parseInternal(page.data)
                 let idx = loK.map { upperBound(keys: inpg.keys, key: $0) } ?? 0
                 pid = inpg.children[idx]
             } else {
@@ -271,7 +271,7 @@ extension FileBPlusTreeIndex {
         while true {
             guard let page = try? readPage(pid) else { return res }
             if page.type == 1 {
-                let inpg = try! parseInternal(page.data)
+                let inpg = try parseInternal(page.data)
                 let idx = upperBound(keys: inpg.keys, key: loKey)
                 pid = inpg.children[idx]
             } else {

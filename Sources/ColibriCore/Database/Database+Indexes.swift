@@ -98,10 +98,10 @@ extension Database {
         case .anyString:
             break
         case .persistentBTree(let index):
-            try? index.closeAll()
+            try index.closeAll()
             let fm = FileManager.default
-            try? fm.removeItem(atPath: index.path)
-            try? fm.removeItem(atPath: index.path + ".wal")
+            try fm.removeItem(atPath: index.path)
+            try fm.removeItem(atPath: index.path + ".wal")
         }
         map.removeValue(forKey: name)
         if map.isEmpty {
@@ -140,7 +140,7 @@ extension Database {
             case .persistentBTree(let f):
                 if cols.count == 1 {
                     if let v = row[cols[0]] {
-                        try? f.insert(key: v, rid: rid)
+                        try f.insert(key: v, rid: rid)
                         if config.walEnabled && config.walUseGlobalIndexLogging {
                             let txId = tid ?? 0
                             _ = logIndexInsert(tid: txId, indexId: name, table: table, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid)
@@ -151,7 +151,7 @@ extension Database {
                     var ok = true
                     for c in cols { guard let v = row[c] else { ok = false; break }; values.append(v) }
                     if ok {
-                        try? f.insert(composite: values, rid: rid)
+                        try f.insert(composite: values, rid: rid)
                         if config.walEnabled && config.walUseGlobalIndexLogging {
                             let txId = tid ?? 0
                             _ = logIndexInsert(tid: txId, indexId: name, table: table, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid)
@@ -190,7 +190,7 @@ extension Database {
             case .persistentBTree(let f):
                 if cols.count == 1 {
                     if let v = row[cols[0]] {
-                        try? f.remove(key: v, rid: rid)
+                        try f.remove(key: v, rid: rid)
                         if config.walEnabled && config.walUseGlobalIndexLogging {
                             let txId = tid ?? 0
                             _ = logIndexDelete(tid: txId, indexId: name, table: table, keyBytes: KeyBytes.fromValue(v).bytes, rid: rid)
@@ -201,7 +201,7 @@ extension Database {
                     var ok = true
                     for c in cols { guard let v = row[c] else { ok = false; break }; values.append(v) }
                     if ok {
-                        try? f.remove(composite: values, rid: rid)
+                        try f.remove(composite: values, rid: rid)
                         if config.walEnabled && config.walUseGlobalIndexLogging {
                             let txId = tid ?? 0
                             _ = logIndexDelete(tid: txId, indexId: name, table: table, keyBytes: KeyBytes.fromValues(values).bytes, rid: rid)
@@ -358,7 +358,7 @@ extension Database {
         case .persistentBTree(_):
             let dir = URL(fileURLWithPath: config.dataDir).appendingPathComponent("indexes")
             let path = dir.appendingPathComponent("\(table)__\(index).bt").path
-            try? FileManager.default.removeItem(atPath: path)
+            try FileManager.default.removeItem(atPath: path)
             let qos = DispatchQoS.fromConfig(config.bufferFlushQoS)
             let idx = try FileBPlusTreeIndex(path: path,
                                              pageSize: config.pageSizeBytes,
