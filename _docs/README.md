@@ -17,7 +17,7 @@ description: Documentazione tecnica completa di ColibrDB
 
 **Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2**
 
-[🏠 Home](/) • [📖 Docs](docs/) • [🚀 Quick Start](#-quick-start) • [📚 Manuale Tecnico](#-manuale-tecnico) • [🔧 API Reference](#-api-reference)
+[🏠 Home](https://gpicchiarelli.github.io/Colibr-DB/) • [📖 Docs](https://gpicchiarelli.github.io/Colibr-DB/docs/) • [🚀 Quick Start](#-quick-start) • [📚 Manuale Tecnico](#-manuale-tecnico) • [🔧 API Reference](#-api-reference)
 
 </div>
 

@@ -273,6 +273,6 @@ Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [
 
 <div align="center">
 
-[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibr-DB) • [📖 Leggi la documentazione](docs/) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibr-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibr-DB/discussions)
+[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibr-DB) • [📖 Leggi la documentazione](https://gpicchiarelli.github.io/Colibr-DB/) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibr-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibr-DB/discussions)
 
 </div>

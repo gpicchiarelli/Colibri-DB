@@ -52,7 +52,7 @@ description: Pagina principale della wiki di ColibrDB
 - [**Troubleshooting**]({{ site.baseurl }}/wiki/Troubleshooting) - Risoluzione problemi comuni
 
 ### 📖 **Documentazione Tecnica**
-- [**Manuale Completo**](https://github.com/gpicchiarelli/Colibr-DB/blob/main/docs/README.md) - Documentazione tecnica dettagliata
+- [**Manuale Completo**]({{ site.baseurl }}/docs/README) - Documentazione tecnica dettagliata
 - [**Roadmap del Progetto**](https://github.com/gpicchiarelli/Colibr-DB/blob/main/PROJECT_ROADMAP.md) - Piano di sviluppo e milestone
 
 ## 🎯 Stato del Progetto
@@ -128,6 +128,6 @@ Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [
 
 **ColibrDB** - *Un RDBMS moderno per l'ecosistema Swift*
 
-[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibr-DB) • [📖 Documentazione](https://github.com/gpicchiarelli/Colibr-DB/blob/main/docs/README.md) • [🐛 Segnala Bug](https://github.com/gpicchiarelli/Colibr-DB/issues)
+[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibr-DB) • [📖 Documentazione]({{ site.baseurl }}/docs/README) • [🐛 Segnala Bug](https://github.com/gpicchiarelli/Colibr-DB/issues)
 
 </div>
