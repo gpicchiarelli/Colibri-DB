@@ -2,7 +2,6 @@
 title: ColibrìDB
 description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
 author: ColibrìDB Team
-email: contact@colibridb.dev
 url: https://gpicchiarelli.github.io
 baseurl: /Colibr-DB
 
