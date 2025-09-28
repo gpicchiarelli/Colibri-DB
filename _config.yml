@@ -1,0 +1,80 @@
+# ColibrìDB Documentation Site
+# GitHub Pages configuration
+
+title: ColibrìDB
+description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
+baseurl: "/Colibrì-DB"
+url: "https://gpicchiarelli.github.io"
+
+# Jekyll configuration
+markdown: kramdown
+highlighter: rouge
+theme: minima
+
+# Navigation
+navigation:
+  - title: Home
+    url: /
+  - title: Quick Start
+    url: /wiki/Quick-Start
+  - title: Architecture
+    url: /wiki/Architecture
+  - title: Configuration
+    url: /wiki/Configuration
+  - title: CLI Reference
+    url: /wiki/CLI-Reference
+  - title: API Reference
+    url: /wiki/API-Reference
+  - title: Development
+    url: /wiki/Development
+  - title: Troubleshooting
+    url: /wiki/Troubleshooting
+  - title: Performance
+    url: /wiki/Performance
+  - title: Examples
+    url: /wiki/Examples
+
+# Collections
+collections:
+  wiki:
+    output: true
+    permalink: /wiki/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+  - scope:
+      path: ""
+      type: "wiki"
+    values:
+      layout: "page"
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Exclude files
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - .git
+  - .gitignore
+  - Sources/
+  - Tests/
+  - Examples/
+  - .github/
+  - Package.swift
+  - Package.resolved
+  - colibridb.conf.json
+  - update_wiki.sh
+  - create_wiki.py
+  - create_wiki_curl.sh
