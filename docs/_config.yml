@@ -4,7 +4,7 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
 author: ColibrìDB Team
 email: contact@colibridb.dev
 url: https://gpicchiarelli.github.io
-baseurl: /Colibrì-DB
+baseurl: /Colibr-DB
 
 # Build settings
 markdown: kramdown
@@ -54,16 +54,16 @@ include:
 social:
   name: ColibrìDB
   links:
-    - https://github.com/gpicchiarelli/Colibrì-DB
-    - https://github.com/gpicchiarelli/Colibrì-DB/issues
-    - https://github.com/gpicchiarelli/Colibrì-DB/discussions
+    - https://github.com/gpicchiarelli/Colibr-DB
+    - https://github.com/gpicchiarelli/Colibr-DB/issues
+    - https://github.com/gpicchiarelli/Colibr-DB/discussions
 
 # SEO
 seo:
   type: Organization
   name: ColibrìDB
   description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
-  url: https://gpicchiarelli.github.io/Colibrì-DB
+  url: https://gpicchiarelli.github.io/Colibr-DB
   image: /assets/og-image.png
   twitter:
     username: colibridb

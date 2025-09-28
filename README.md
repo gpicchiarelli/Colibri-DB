@@ -2,8 +2,8 @@
 
 > **Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2**
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/ci.yml?branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibrì-DB/actions/workflows/ci.yml)
-[![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/codeql.yml?label=CodeQL&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibrì-DB/actions/workflows/codeql.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/ci.yml?branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/codeql.yml?label=CodeQL&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/codeql.yml)
 ![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg?style=flat-square)
 ![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey.svg?style=flat-square)
@@ -67,7 +67,7 @@
 
 ```bash
 # Clona il repository
-git clone https://github.com/gpicchiarelli/Colibrì-DB.git
+git clone https://github.com/gpicchiarelli/Colibr-DB.git
 cd Colibrì-DB
 
 # Compila il progetto
@@ -273,6 +273,6 @@ Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [
 
 <div align="center">
 
-[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibrì-DB) • [📖 Leggi la documentazione](docs/) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibrì-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
+[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibr-DB) • [📖 Leggi la documentazione](docs/) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibr-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibr-DB/discussions)
 
 </div>
