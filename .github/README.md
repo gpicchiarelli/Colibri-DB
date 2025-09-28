@@ -26,8 +26,8 @@ Benvenuto nella documentazione GitHub per ColibrDB! Questa wiki fornisce una gui
 ### 1. Setup Iniziale
 ```bash
 # Clona il repository
-git clone https://github.com/gpicchiarelli/Colibr-DB.git
-cd Colibr-DB
+git clone https://github.com/gpicchiarelli/Colibri-DB.git
+cd Colibri-DB
 
 # Installa dipendenze
 swift package resolve
@@ -41,7 +41,7 @@ swift test
 
 ### 2. Prima Contribuzione
 1. Leggi il [Contributing Guide](CONTRIBUTING.md)
-2. Controlla le [issue esistenti](https://github.com/gpicchiarelli/Colibr-DB/issues)
+2. Controlla le [issue esistenti](https://github.com/gpicchiarelli/Colibri-DB/issues)
 3. Crea un branch per la tua feature
 4. Implementa le modifiche seguendo le convenzioni
 5. Aggiungi test per le nuove funzionalità
@@ -189,11 +189,11 @@ swift run benchmarks --transaction-throughput
 
 ## 🔗 Link Utili
 
-- **Repository**: [github.com/gpicchiarelli/Colibr-DB](https://github.com/gpicchiarelli/Colibr-DB)
+- **Repository**: [github.com/gpicchiarelli/Colibri-DB](https://github.com/gpicchiarelli/Colibri-DB)
 - **Documentazione**: [docs/](../docs/)
-- **Issues**: [github.com/gpicchiarelli/Colibr-DB/issues](https://github.com/gpicchiarelli/Colibr-DB/issues)
-- **Discussions**: [github.com/gpicchiarelli/Colibr-DB/discussions](https://github.com/gpicchiarelli/Colibr-DB/discussions)
-- **Releases**: [github.com/gpicchiarelli/Colibr-DB/releases](https://github.com/gpicchiarelli/Colibr-DB/releases)
+- **Issues**: [github.com/gpicchiarelli/Colibri-DB/issues](https://github.com/gpicchiarelli/Colibri-DB/issues)
+- **Discussions**: [github.com/gpicchiarelli/Colibri-DB/discussions](https://github.com/gpicchiarelli/Colibri-DB/discussions)
+- **Releases**: [github.com/gpicchiarelli/Colibri-DB/releases](https://github.com/gpicchiarelli/Colibri-DB/releases)
 
 ## 📞 Supporto
 

@@ -203,8 +203,8 @@ pkgbuild --root .build/release --identifier com.colibridb.server --version 0.2.0
 ```ruby
 class Colibridb < Formula
   desc "High-performance RDBMS written in Swift"
-  homepage "https://github.com/gpicchiarelli/Colibr-DB"
-  url "https://github.com/gpicchiarelli/Colibr-DB/releases/download/v0.2.0/colibridb-v0.2.0-macos.tar.gz"
+  homepage "https://github.com/gpicchiarelli/Colibri-DB"
+  url "https://github.com/gpicchiarelli/Colibri-DB/releases/download/v0.2.0/colibridb-v0.2.0-macos.tar.gz"
   sha256 "sha256-hash"
   license "BSD-3-Clause"
 

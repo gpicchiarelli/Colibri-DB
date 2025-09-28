@@ -22,7 +22,7 @@ Grazie per il tuo interesse a contribuire a ColibrDB! Questo documento fornisce 
 - 🔧 **Refactoring**: Miglioramento del codice esistente
 
 ### Prima di Iniziare
-1. Controlla le [issue esistenti](https://github.com/gpicchiarelli/Colibr-DB/issues)
+1. Controlla le [issue esistenti](https://github.com/gpicchiarelli/Colibri-DB/issues)
 2. Assicurati che la tua idea non sia già in discussione
 3. Per feature importanti, apri prima una issue per discussione
 
@@ -38,11 +38,11 @@ Grazie per il tuo interesse a contribuire a ColibrDB! Questo documento fornisce 
 ```bash
 # 1. Fork del repository su GitHub
 # 2. Clona il tuo fork
-git clone https://github.com/[TUO-USERNAME]/Colibr-DB.git
-cd Colibr-DB
+git clone https://github.com/[TUO-USERNAME]/Colibri-DB.git
+cd Colibri-DB
 
 # 3. Aggiungi il repository originale come upstream
-git remote add upstream https://github.com/gpicchiarelli/Colibr-DB.git
+git remote add upstream https://github.com/gpicchiarelli/Colibri-DB.git
 
 # 4. Installa le dipendenze
 swift package resolve
@@ -56,7 +56,7 @@ swift test
 
 ### Struttura del Progetto
 ```
-Colibr-DB/
+Colibri-DB/
 ├── Sources/
 │   ├── ColibriCore/          # Motore database core
 │   │   ├── Buffer/           # Gestione buffer pool
@@ -315,4 +315,4 @@ Grazie a tutti i contributori che rendono ColibrDB possibile! I tuoi contributi 
 
 ---
 
-**Hai domande?** Apri una [discussione](https://github.com/gpicchiarelli/Colibr-DB/discussions) o contatta il team di sviluppo!
+**Hai domande?** Apri una [discussione](https://github.com/gpicchiarelli/Colibri-DB/discussions) o contatta il team di sviluppo!

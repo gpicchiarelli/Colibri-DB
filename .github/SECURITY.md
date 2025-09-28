@@ -16,7 +16,7 @@ Usa questa sezione per dire alle persone quali versioni del tuo progetto sono at
 
 Se hai trovato una vulnerabilità di sicurezza in ColibrDB, ti preghiamo di segnalarla in modo responsabile:
 
-1. **GitHub Security Advisory**: Usa il [form di segnalazione](https://github.com/gpicchiarelli/Colibr-DB/security/advisories/new)
+1. **GitHub Security Advisory**: Usa il [form di segnalazione](https://github.com/gpicchiarelli/Colibri-DB/security/advisories/new)
 2. **Non aprire issue pubbliche** per vulnerabilità di sicurezza
 
 ### Informazioni da Includere
@@ -168,7 +168,7 @@ swift run coldb --vulnerability-scan
 
 Ringraziamo tutti i ricercatori di sicurezza che hanno contribuito a rendere ColibrDB più sicuro:
 
-- [Security Hall of Fame](https://github.com/gpicchiarelli/Colibr-DB/security/advisories)
+- [Security Hall of Fame](https://github.com/gpicchiarelli/Colibri-DB/security/advisories)
 
 ## Changelog
 
