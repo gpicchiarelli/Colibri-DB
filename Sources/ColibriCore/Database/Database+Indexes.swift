@@ -230,8 +230,8 @@ extension Database {
         case .anyString(let idx):
             return idx.searchEquals(stringFromValue(value))
         case .persistentBTree(let f):
-            if pair.columns.count == 1 { return f.searchEquals(value) }
-            else { return f.searchEquals(composite: [value]) }
+            if pair.columns.count == 1 { return try f.searchEquals(value) }
+            else { return try f.searchEquals(composite: [value]) }
         }
     }
 

@@ -118,7 +118,7 @@ extension FileBPlusTreeIndex {
         return DeepReport(ok: ok, leaves: leafCount, internalNodes: internalCount, keys: totalKeys, zeroLSNPages: zeroLSN, badLeafLinks: badLeafLinks, olderThanCheckpointPages: olderLSN, messages: messages)
     }
 
-    public func dumpHeader(pageId: UInt64?) -> String {
+    public func dumpHeader(pageId: UInt64?) throws -> String {
         if let pid = pageId, pid > 0 {
             let page = try readPage(pid)
             if page.type == 1 {
@@ -142,7 +142,7 @@ extension FileBPlusTreeIndex {
 
     public func poolMetrics() -> LRUBufferPool.Metrics? { buf?.metrics() }
 
-    public func dumpFirstLeaves(count: Int) -> [String] {
+    public func dumpFirstLeaves(count: Int) throws -> [String] {
         var results: [String] = []
         guard hdr.root != 0, count > 0 else { return results }
         var pid = hdr.root
