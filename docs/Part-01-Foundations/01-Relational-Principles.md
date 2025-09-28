@@ -1,3 +1,9 @@
+---
+layout: page
+title: Principi Relazionali
+description: Capitolo 1 - Principi del modello relazionale
+---
+
 # Capitolo 1 — Principi Relazionali e Modello Dati
 
 > **Obiettivo del capitolo**: collegare le definizioni formali del modello relazionale con l'implementazione concreta in ColibrìDB, utilizzando schemi, tabelle riassuntive, pseudocodice e riferimenti puntuali al codice sorgente.

@@ -1,3 +1,9 @@
+---
+layout: page
+title: Catalog Core
+description: Capitolo 18 - Core del catalogo di sistema
+---
+
 # Capitolo 15 — SystemCatalog e Persistenza dei Metadati
 
 > **Obiettivo**: analizzare il catalogo di sistema come base di conoscenza del database, utilizzando tabelle esplicative, diagrammi e procedure di laboratorio.

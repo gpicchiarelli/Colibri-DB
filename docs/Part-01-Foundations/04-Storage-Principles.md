@@ -1,3 +1,9 @@
+---
+layout: page
+title: Principi di Storage
+description: Capitolo 4 - Principi di storage e persistenza
+---
+
 # Capitolo 4 — Fondamenti di Storage e Pagine
 
 ## 4.1 Modello di memoria secondaria

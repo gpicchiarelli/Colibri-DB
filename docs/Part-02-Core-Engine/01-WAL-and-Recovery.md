@@ -1,3 +1,9 @@
+---
+layout: page
+title: Write-Ahead Logging e Recupero ARIES
+description: Capitolo 5 - Sistema WAL di ColibrìDB con recupero ARIES
+---
+
 # Capitolo 5 — Write-Ahead Logging e Recupero ARIES
 
 > **Obiettivo**: fornire una trattazione accademica del sistema WAL di ColibrìDB, includendo schemi, pseudocodice, dimostrazioni informali degli invarianti e laboratori riproducibili.

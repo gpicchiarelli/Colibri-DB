@@ -1,3 +1,9 @@
+---
+layout: page
+title: Architettura Server
+description: Capitolo 10 - Architettura del server ColibrìDB
+---
+
 # Capitolo 18 — Architettura del Server ColibrìDB
 
 > **Obiettivo**: descrivere la struttura del server SQL, includendo diagrammi dei componenti, flussi di controllo e strumenti di osservazione.

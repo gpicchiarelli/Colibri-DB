@@ -18,7 +18,7 @@ collections:
     permalink: /wiki/:name/
   docs:
     output: true
-    permalink: /docs/:name/
+    permalink: /docs/:path/
 
 # Defaults
 defaults:

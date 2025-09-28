@@ -1,3 +1,9 @@
+---
+layout: page
+title: Teoria delle Transazioni
+description: Capitolo 3 - Teoria delle transazioni e ACID
+---
+
 # Capitolo 3 — Transazioni, ACID e Concorrenza
 
 ## 3.1 Proprietà ACID

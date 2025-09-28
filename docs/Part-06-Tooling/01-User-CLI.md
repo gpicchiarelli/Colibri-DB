@@ -1,3 +1,9 @@
+---
+layout: page
+title: User CLI
+description: Capitolo 21 - CLI per utenti
+---
+
 # Capitolo 21 — CLI Utente `coldb`
 
 > **Obiettivo**: documentare la CLI ufficiale per gli utenti finali, descrivendone architettura, comandi, formattazione e casi d'uso accademici.

@@ -1,3 +1,9 @@
+---
+layout: page
+title: Logical Planning
+description: Capitolo 14 - Pianificazione logica delle query
+---
+
 # Capitolo 11 — Piano Logico e Analisi Semantica
 
 > **Obiettivo**: formalizzare il passaggio da AST a piano logico, evidenziando regole algebriche, processi di binding e controllo dei tipi.

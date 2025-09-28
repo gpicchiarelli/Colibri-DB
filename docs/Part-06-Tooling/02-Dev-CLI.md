@@ -1,3 +1,9 @@
+---
+layout: page
+title: Dev CLI
+description: Capitolo 22 - CLI per sviluppatori
+---
+
 # Capitolo 22 — `coldb-dev`: Strumenti per Sviluppatori
 
 > **Obiettivo**: documentare la CLI avanzata per debugging e manutenzione, trattando comandi, architettura interna e scenari pratici.

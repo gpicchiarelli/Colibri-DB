@@ -1,3 +1,9 @@
+---
+layout: page
+title: Physical Planning
+description: Capitolo 15 - Pianificazione fisica delle query
+---
+
 # Capitolo 12 — Piano Fisico e Ottimizzazione Basata sui Costi
 
 > **Obiettivo**: tradurre il piano logico in un piano fisico con scelte algoritmiche giustificate da stime di costo, in linea con i modelli del paper Selinger et al. (1979).

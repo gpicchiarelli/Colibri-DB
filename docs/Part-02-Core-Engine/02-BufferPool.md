@@ -1,3 +1,9 @@
+---
+layout: page
+title: Buffer Pool Management
+description: Capitolo 6 - Gestione del buffer pool in ColibrìDB
+---
+
 # Capitolo 6 — Buffer Pool e Gestione Pagine
 
 > **Obiettivo**: analizzare il sottosistema buffer pool con schemi, tabelle riassuntive e laboratori. Dimostrare come ColibrìDB realizzi la coerenza tra memoria e disco.

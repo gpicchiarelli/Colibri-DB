@@ -1,3 +1,9 @@
+---
+layout: page
+title: Wire Protocol
+description: Capitolo 11 - Protocollo di comunicazione ColibrìDB
+---
+
 # Capitolo 19 — Wire Protocol e Gestione Sessioni
 
 > **Obiettivo**: documentare il protocollo di comunicazione tra client e server, mostrando il formato dei messaggi, la sequenza di handshake e la gestione dello stato di sessione.

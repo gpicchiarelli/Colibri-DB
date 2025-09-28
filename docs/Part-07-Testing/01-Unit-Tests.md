@@ -1,3 +1,9 @@
+---
+layout: page
+title: Unit Tests
+description: Capitolo 24 - Test unitari
+---
+
 # Capitolo 24 — Testing Unitario e di Modulo
 
 > **Obiettivo**: documentare la strategia di testing unitario per ColibrìDB, evidenziando copertura, framework e casi principali.

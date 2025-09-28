@@ -1,3 +1,9 @@
+---
+layout: page
+title: Execution Engine
+description: Capitolo 16 - Motore di esecuzione query
+---
+
 # Capitolo 13 — Motore di Esecuzione e Iteratori
 
 > **Obiettivo**: descrivere il runtime delle query in ColibrìDB basato su operatori iteratore, evidenziando il flusso dati e i meccanismi di valutazione delle espressioni.

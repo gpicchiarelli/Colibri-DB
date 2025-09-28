@@ -1,3 +1,9 @@
+---
+layout: page
+title: SQL Parser
+description: Capitolo 13 - Parser SQL in ColibrìDB
+---
+
 # Capitolo 10 — Parsing SQL e Costruzione AST
 
 > **Obiettivo**: trasformare una stringa SQL in una rappresentazione strutturata (AST) con un approccio formale. Useremo notazione BNF, diagrammi, tabelle ed esempi pratici.

@@ -1,3 +1,9 @@
+---
+layout: page
+title: Integration Tests
+description: Capitolo 25 - Test di integrazione
+---
+
 # Capitolo 25 — Test di Integrazione e End-to-End
 
 > **Obiettivo**: descrivere i test che coprono l'intera pipeline (parser → planner → executor → server), includendo scenari di crash e concorrenza.

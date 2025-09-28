@@ -1,3 +1,9 @@
+---
+layout: page
+title: Glossario
+description: Appendice A - Glossario dei termini
+---
+
 # Appendice A — Glossario Tecnico
 
 | Termine | Definizione | Riferimento | Stato |

@@ -1,3 +1,9 @@
+---
+layout: page
+title: Catalog Manager
+description: Capitolo 19 - Gestore del catalogo
+---
+
 # Capitolo 16 — CatalogManager e API DDL
 
 > **Obiettivo**: analizzare l'interfaccia ad alto livello che gestisce le operazioni di Data Definition Language (DDL), illustrando il flusso completo di creazione, modifica e cancellazione degli oggetti.

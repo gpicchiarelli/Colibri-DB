@@ -1,3 +1,9 @@
+---
+layout: page
+title: B+Tree Indexes
+description: Capitolo 8 - Indici B+Tree in ColibrìDB
+---
+
 # Capitolo 8 — Indici B+Tree e Strutture Secondarie
 
 > **Obiettivo**: illustrare il funzionamento degli indici B+Tree in ColibrìDB con una trattazione simile a quella dei testi classici (es. Comer, 1979), integrando diagrammi, pseudocodice e riferimenti al codice Swift.

@@ -1,3 +1,9 @@
+---
+layout: page
+title: Documentazione ColibrìDB
+description: Documentazione tecnica completa di ColibrìDB
+---
+
 # 🐦 ColibrìDB Documentation
 
 <div align="center">

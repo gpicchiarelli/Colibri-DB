@@ -1,3 +1,9 @@
+---
+layout: page
+title: Funzionalità Avanzate
+description: Capitolo 17 - Funzionalità avanzate delle query
+---
+
 # Capitolo 14 — Funzionalità Avanzate di Query
 
 > **Obiettivo**: esplorare le capacità avanzate del motore SQL (aggregazioni, funzioni, ordinamenti) e delineare le estensioni pianificate.

@@ -1,3 +1,9 @@
+---
+layout: page
+title: Statistiche
+description: Capitolo 20 - Statistiche e ottimizzazione
+---
+
 # Capitolo 17 — Statistiche e Ottimizzazione Cost-Based
 
 > **Obiettivo**: spiegare come ColibrìDB raccoglie e utilizza statistiche su tabelle e colonne per alimentare l'ottimizzatore cost-based, con metodi di analisi e laboratori.

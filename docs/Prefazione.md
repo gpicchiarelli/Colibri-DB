@@ -1,3 +1,9 @@
+---
+layout: page
+title: Prefazione
+description: Prefazione alla documentazione ColibrìDB
+---
+
 # Prefazione
 
 ColibrìDB nasce come esperimento ingegneristico volto a dimostrare che un motore relazionale moderno può essere costruito con rigore formale mantenendo un codice sorgente leggibile. Questo manuale costituisce il ponte fra teoria e implementazione: ogni sezione illustra i concetti classici dei sistemi di gestione di basi di dati e li mette in relazione diretta con le funzioni reali presenti nella codebase Swift.

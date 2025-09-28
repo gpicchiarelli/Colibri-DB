@@ -1,3 +1,9 @@
+---
+layout: page
+title: Configurazione
+description: Appendice B - Guida alla configurazione
+---
+
 # Appendice B — Guida alla Configurazione
 
 ## B.1 File di configurazione
