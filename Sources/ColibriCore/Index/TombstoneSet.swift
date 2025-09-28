@@ -10,7 +10,7 @@ import Foundation
 
 /// Utility container that tracks live references together with tombstones so
 /// that deletes remain logical until compaction/vacuum clears them.
-struct TombstoneSet<Ref: Hashable>: Sendable {
+struct TombstoneSet<Ref: Hashable> {
     private(set) var live: Set<Ref> = []
     private(set) var tombstones: Set<Ref> = []
 
@@ -32,6 +32,10 @@ struct TombstoneSet<Ref: Hashable>: Sendable {
         if live.remove(ref) != nil {
             tombstones.insert(ref)
         }
+    }
+
+    mutating func delete(_ ref: Ref) {
+        remove(ref)
     }
 
     mutating func remove<S: Sequence>(_ refs: S) where S.Element == Ref {
@@ -62,6 +66,7 @@ struct TombstoneSet<Ref: Hashable>: Sendable {
     var hasLive: Bool { !live.isEmpty }
     var hasTombstones: Bool { !tombstones.isEmpty }
     var isEmpty: Bool { live.isEmpty && tombstones.isEmpty }
+    var isDead: Bool { isEmpty }
 }
 
 

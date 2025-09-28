@@ -69,14 +69,22 @@ public struct HeapTable: TableStorageProtocol {
         rows[rid] = entry
     }
 
-    public mutating func remove(_ rid: RID) throws {
-        guard var entry = rows[rid] else { throw DBError.notFound("RID \(rid)") }
-        entry.isTombstone = true
-        rows[rid] = entry
+    public mutating func remove(_ rid: RID) {
+        if var row = rows[rid] {
+            row["__is_tombstone"] = .bool(true)
+            rows[rid] = row
+        }
+    }
+    
+    public mutating func restore(_ rid: RID, row: Row) {
+        rows[rid] = row
     }
 
-    public mutating func restore(_ rid: RID, row: Row) {
-        rows[rid] = Entry(row: row, isTombstone: false)
+    public mutating func clearTombstone(_ rid: RID) {
+        if var row = rows[rid] {
+            row["__is_tombstone"] = .bool(false)
+            rows[rid] = row
+        }
     }
 }
 
