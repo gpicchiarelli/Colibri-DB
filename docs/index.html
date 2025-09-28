@@ -856,56 +856,11 @@ swift build
     </div>
 </section>
 
-<!-- Architecture Section -->
-<section id="architecture" class="section">
-    <h2>🏗️ Architettura del Sistema</h2>
-    <p>Colibrì DB è progettato con un'architettura modulare che separa chiaramente le responsabilità:</p>
-    
-    <div class="features-grid">
-        <div class="feature-card">
-            <h4>Storage Engine</h4>
-            <p>Storage basato su file heap con slot directory e Free Space Map persistente per gestione efficiente dello spazio.</p>
-        </div>
-        <div class="feature-card">
-            <h4>Buffer Pool</h4>
-            <p>Eviction LRU/Clock con flush in background e quote per namespace per ottimizzazione memoria.</p>
-        </div>
-        <div class="feature-card">
-            <h4>Sistema WAL</h4>
-            <p>Recovery ARIES-compliant con checksum CRC32 per garantire durabilità e consistenza dei dati.</p>
-        </div>
-        <div class="feature-card">
-            <h4>Motore Indici</h4>
-            <p>Implementazioni pluggabili B+Tree, Hash, ART e LSM per diverse esigenze di accesso ai dati.</p>
-        </div>
-    </div>
-</section>
 
 <!-- Contributing Section -->
 <section id="contributing" class="section">
     <h2>🤝 Contribuire</h2>
     <p>Accogliamo i contributi! Consulta le nostre <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md">Linee Guida per i Contributi</a> e il <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CODE_OF_CONDUCT.md">Codice di Condotta</a> per i dettagli.</p>
-    
-    <div class="features-grid">
-        <div class="feature-card">
-            <h4>🔧 Aree per i Contributi</h4>
-            <ul>
-                <li>Motore Core: Storage, WAL, indicizzazione</li>
-                <li>Elaborazione Query: Parser, ottimizzazione</li>
-                <li>Testing: Copertura test, benchmark</li>
-                <li>Documentazione: Scrittura tecnica, esempi</li>
-            </ul>
-        </div>
-        <div class="feature-card">
-            <h4>📈 Roadmap</h4>
-            <ul>
-                <li>✅ MVP (Alpha): Motore core, WAL, indici</li>
-                <li>🔄 Release Beta: Server multi-utente</li>
-                <li>🚀 Release Produzione: SQL completo</li>
-                <li>🌐 Futuro: Architettura distribuita</li>
-            </ul>
-        </div>
-    </div>
 </section>
 
 <!-- Trademark Disclaimer Section -->
