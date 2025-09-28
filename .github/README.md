@@ -205,6 +205,6 @@ swift run benchmarks --transaction-throughput
 
 ---
 
-**Grazie per il tuo interesse in ColibrDB!** 🐦
+**Grazie per il tuo interesse in Colibrì DB!** 🐦
 
 La tua partecipazione alla comunità è preziosa e aiuta a costruire un database migliore per tutti. Non esitare a contribuire, fare domande o condividere le tue idee!
