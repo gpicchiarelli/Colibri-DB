@@ -41,7 +41,7 @@ extension FileBPlusTreeIndex {
         var firstLeafDepth: Int? = nil
         var depthMismatch = 0
 
-        func dfsBounds(_ pid: UInt64, _ lower: Data?, _ upper: Data?, _ depth: Int) -> Bool {
+        func dfsBounds(_ pid: UInt64, _ lower: Data?, _ upper: Data?, _ depth: Int) throws -> Bool {
             let page = try readPage(pid)
             if page.type == 1 {
                 internalCount += 1
@@ -49,14 +49,14 @@ extension FileBPlusTreeIndex {
                 let lsn = page.data.subdata(in: 8..<(8+8)).withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian
                 if lsn == 0 && !intr.keys.isEmpty { zeroLSN += 1 }
                 if lsn != 0 && lsn < hdr.checkpointLSN { olderLSN += 1 }
-                if !dfsBounds(intr.children.first ?? 0, lower, intr.keys.first, depth + 1) { return false }
+                if !(try dfsBounds(intr.children.first ?? 0, lower, intr.keys.first, depth + 1)) { return false }
                 for i in 1..<intr.children.count - 1 {
                     let low = intr.keys[i - 1]
                     let up = intr.keys[i]
-                    if !dfsBounds(intr.children[i], low, up, depth + 1) { return false }
+                    if !(try dfsBounds(intr.children[i], low, up, depth + 1)) { return false }
                 }
                 if let lastChild = intr.children.last {
-                    if !dfsBounds(lastChild, intr.keys.last, upper, depth + 1) { return false }
+                    if !(try dfsBounds(lastChild, intr.keys.last, upper, depth + 1)) { return false }
                 }
                 return true
             } else if page.type == 2 {
@@ -76,7 +76,7 @@ extension FileBPlusTreeIndex {
                 return false
             }
         }
-        let okBounds = dfsBounds(hdr.root, nil, nil, 0)
+        let okBounds = try dfsBounds(hdr.root, nil, nil, 0)
 
         var leafCount = 0
         var prevKey: Data? = nil

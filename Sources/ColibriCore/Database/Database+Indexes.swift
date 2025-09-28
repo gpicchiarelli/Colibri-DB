@@ -115,7 +115,7 @@ extension Database {
         lastIndexCompaction.removeValue(forKey: "\(table).\(name)")
     }
 
-    func updateIndexes(table: String, row: Row, rid: RID, tid: UInt64? = nil) {
+    func updateIndexes(table: String, row: Row, rid: RID, tid: UInt64? = nil) throws {
         guard var map = indexes[table] else { return }
         let allowed: Set<String>
         if let sc = systemCatalog {
@@ -250,8 +250,8 @@ extension Database {
         case .anyString:
             throw DBError.invalidArgument("Composite equality not supported for in-memory indexes")
         case .persistentBTree(let f):
-            if values.count == 1 { return f.searchEqualsOptimized(values[0]) }
-            return f.searchEquals(composite: values)
+            if values.count == 1 { return try f.searchEqualsOptimized(values[0]) }
+            return try f.searchEquals(composite: values)
         }
     }
 
@@ -320,12 +320,12 @@ extension Database {
                 guard let c = cols.first, let v = row[c] else { continue }
                 hits = idx.searchEquals(stringFromValue(v))
             case .persistentBTree(let f):
-                if cols.count == 1 { if let v = row[cols[0]] { hits = f.searchEqualsOptimized(v) } else { hits = [] } }
+                if cols.count == 1 { if let v = row[cols[0]] { hits = try f.searchEqualsOptimized(v) } else { hits = [] } }
                 else {
                     var vs: [Value] = []
                     var ok = true
                     for c in cols { guard let v = row[c] else { ok = false; break }; vs.append(v) }
-                    hits = ok ? f.searchEquals(composite: vs) : []
+                    hits = ok ? try f.searchEquals(composite: vs) : []
                 }
             }
             if !hits.isEmpty { indexed += 1 }
@@ -454,7 +454,7 @@ extension Database {
         case .anyString:
             return "(not supported for in-memory indexes)"
         case .persistentBTree(let f):
-            return f.validateDeep().description
+            return try f.validateDeep().description
         }
     }
 
@@ -473,7 +473,7 @@ extension Database {
         case .anyString:
             return "(not supported for in-memory indexes)"
         case .persistentBTree(let f):
-            return f.dumpHeader(pageId: pageId)
+            return try f.dumpHeader(pageId: pageId)
         }
     }
 
@@ -492,7 +492,7 @@ extension Database {
         case .anyString:
             return "(not supported for in-memory indexes)"
         case .persistentBTree(let f):
-            return f.dumpFirstLeaves(count: max(1, count)).joined(separator: "\n")
+            return try f.dumpFirstLeaves(count: max(1, count)).joined(separator: "\n")
         }
     }
 
