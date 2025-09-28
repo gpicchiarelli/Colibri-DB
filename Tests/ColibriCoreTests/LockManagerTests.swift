@@ -28,7 +28,7 @@ struct LockManagerTests {
         var t1Error: Error?
 
         // Start T1 trying to acquire resourceB in background
-        DispatchQueue.global().async {
+        DispatchQueue.global().async { @Sendable in
             do {
                 let h = try manager.lock(resourceB, mode: .exclusive, tid: 1, timeout: nil)
                 t1Result.sync { t1SecondHandle = h }
