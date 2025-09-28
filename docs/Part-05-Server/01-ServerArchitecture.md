@@ -1,22 +1,25 @@
 # Capitolo 18 — Architettura del Server ColibrìDB
 
-## 18.1 Panoramica
-- Componenti principali: `coldb-server` (binario), `ColibriServer` (libreria), `ConnectionManager`.
-- Diagramma dei thread: listener, worker pool, task asincroni.
+## 18.1 Componenti principali
+- Binario `coldb-server`: entry point per lanciare il server.
+- Libreria `ColibriServer`: contiene la logica di business per gestire sessioni e routing.
+- `ConnectionManager`: gestisce socket, thread e backpressure.
 
-## 18.2 Entry point
-- `Sources/coldb-server/main.swift`: configurazione iniziale, parsing argomenti.
-- Caricamento `ServerConfig` e bootstrap `ColibriServer`.
+## 18.2 Bootstrap
+`main.swift` legge la configurazione (`ServerConfig`), inizializza `ColibriServer`, avvia `ConnectionManager`. Analizziamo il flusso di inizializzazione, compresi i controlli su file di configurazione e directory data.
 
 ## 18.3 ConnectionManager
-- File `Sources/coldb-server/ConnectionManager.swift`.
-- Funzioni chiave: `start()`, `acceptLoop()`, `handle(client:)`.
-- Gestione backpressure e limiti di connessione.
+`ConnectionManager.start()` esegue:
+1. Apertura del socket listener.
+2. Loop `acceptLoop()` che accetta connessioni.
+3. Per ogni client, delega a `handle(client:)` su thread/queue dedicata.
 
-## 18.4 Logging e monitoring
-- `Logger.swift`, `Logging.swift`.
-- Integrazione con `Metrics` e `Telemetry`.
+ColibrìDB utilizza GCD (DispatchQueue) per gestire la concorrenza. Discutiamo strategie di limitazione (`maxConnections`).
 
-## 18.5 Scalabilità
-- Strategia multi-core, dispatch queue, QoS.
-- TODO: connessioni multiplexed, async/await.
+## 18.4 Logging e monitoraggio
+Il server emette log strutturati mediante `Logger`. Le metriche sono raccolte in `Telemetry`. Spieghiamo come attivare livelli di log e streaming.
+
+## 18.5 Roadmap
+- Supporto async/await.
+- Load balancing multi-node.
+- Warm restart.

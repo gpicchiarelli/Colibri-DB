@@ -1,8 +1,8 @@
 # Parte IV — Catalogo, Statistiche e Metadati
 
-Qui si documenta il sottosistema catalogo: come ColibrìDB tiene traccia di schemi, permessi, statistiche e configurazioni. Ogni capitolo include:
+In questa parte descriviamo la struttura dati che memorizza la conoscenza del database su se stesso. L'obiettivo è comprendere come ColibrìDB mantiene la consistenza dei metadati, fornisce statistiche per l'ottimizzatore e gestisce permessi/configurazioni.
 
-- Definizione delle strutture dati (`SystemCatalog`, `CatalogManager`).
-- Flussi di aggiornamento (DDL, DCL, manutenzione).
-- Persistenza on-disk (`system_catalog.json`, checkpoints).
-- API pubbliche per interrogare e modificare i metadati.
+Argomenti trattati:
+- `SystemCatalog`: persistenza logica/fisica di tabelle, indici, ruoli.
+- `CatalogManager`: API DDL ad alto livello.
+- `StatisticsManager`: raccolta e utilizzo di statistiche per il planner.

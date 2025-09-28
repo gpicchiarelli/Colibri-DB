@@ -1,8 +1,10 @@
-# Parte III — Pipelines di Query e Ottimizzazione
+# Parte III — Pipeline di Query e Ottimizzazione
 
-Questa parte illustra come ColibrìDB elabora le query SQL dal parsing all’esecuzione, con attenzione a pianificazione, ottimizzazione e runtime iterator-based. Ogni capitolo approfondirà:
+Questa parte del manuale approfondisce l'intero ciclo di vita di una query SQL in ColibrìDB. Analizzeremo:
+1. **Parsing** — dalla stringa SQL all'albero sintattico astratto (AST).
+2. **Pianificazione logica** — trasformazione dell'AST in un piano basato su operatori relazionali.
+3. **Ottimizzazione** — applicazione di regole logiche e stime di costo.
+4. **Pianificazione fisica** — scelta degli algoritmi concreti.
+5. **Esecuzione** — pipeline iterator-based che materializza i risultati.
 
-- Strutture dati dell’AST e del piano logico.
-- Conversione in piano fisico e operatori.
-- Meccanismi di valutazione espressioni, aggregazioni e join.
-- Collegamenti con statistiche catalogo e cost-based optimization.
+Ogni capitolo segue il tema: spiegazione teorica, analisi del codice (`SQLParser`, `LogicalPlanner`, `PhysicalPlanner`, `Executor`) ed esperimenti empirici.

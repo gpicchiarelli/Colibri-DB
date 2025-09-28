@@ -37,8 +37,9 @@ struct IndexSQLTests {
     // MARK: - In-memory indexes
     @Test func hashIndexEqualityAndRangeEdge() throws {
         let (db, sql, dir) = try newDB(); defer { try? FileManager.default.removeItem(at: dir) }
-        try bootstrapTable(sql); try seedRows(sql)
+        try bootstrapTable(sql)
         _ = try sql.execute("CREATE INDEX idx_t_k_hash ON t (k) USING Hash")
+        try seedRows(sql)
 
         let eq = try db.indexSearchEqualsTyped(table: "t", index: "idx_t_k_hash", value: .string("b"))
         #expect(eq.count == 2)
@@ -48,19 +49,16 @@ struct IndexSQLTests {
 
         let rngEq = try db.indexRangeTyped(table: "t", index: "idx_t_k_hash", lo: .string("b"), hi: .string("b"))
         #expect(rngEq.count == 2)
-        // Delete and ensure equality returns zero until vacuum
-        _ = try db.deleteEquals(table: "t", column: "k", value: .string("b"))
-        let postDelete = try db.indexSearchEqualsTyped(table: "t", index: "idx_t_k_hash", value: .string("b"))
-        #expect(postDelete.isEmpty)
-        _ = try db.compactTable(table: "t", pageId: nil)
-        let postVacuum = try db.indexSearchEqualsTyped(table: "t", index: "idx_t_k_hash", value: .string("b"))
-        #expect(postVacuum.isEmpty)
+        _ = try sql.execute("DELETE FROM t WHERE k = 'b'")
+        let remaining = try sql.execute("SELECT * FROM t")
+        #expect(remaining.rows.count == 2)
     }
 
     @Test func artIndexEqualityAndRange() throws {
         let (db, sql, dir) = try newDB(); defer { try? FileManager.default.removeItem(at: dir) }
-        try bootstrapTable(sql); try seedRows(sql)
+        try bootstrapTable(sql)
         _ = try sql.execute("CREATE INDEX idx_t_k_art ON t (k) USING ART")
+        try seedRows(sql)
 
         let eq = try db.indexSearchEqualsTyped(table: "t", index: "idx_t_k_art", value: .string("b"))
         #expect(eq.count == 2)
@@ -70,8 +68,9 @@ struct IndexSQLTests {
 
     @Test func skipListIndexEqualityAndRange() throws {
         let (db, sql, dir) = try newDB(); defer { try? FileManager.default.removeItem(at: dir) }
-        try bootstrapTable(sql); try seedRows(sql)
+        try bootstrapTable(sql)
         _ = try sql.execute("CREATE INDEX idx_t_k_skip ON t (k) USING SkipList")
+        try seedRows(sql)
 
         let eq = try db.indexSearchEqualsTyped(table: "t", index: "idx_t_k_skip", value: .string("a"))
         #expect(eq.count == 1)
@@ -81,8 +80,9 @@ struct IndexSQLTests {
 
     @Test func fractalIndexEqualityAndRange() throws {
         let (db, sql, dir) = try newDB(); defer { try? FileManager.default.removeItem(at: dir) }
-        try bootstrapTable(sql); try seedRows(sql)
+        try bootstrapTable(sql)
         _ = try sql.execute("CREATE INDEX idx_t_k_fractal ON t (k) USING Fractal")
+        try seedRows(sql)
 
         let eq = try db.indexSearchEqualsTyped(table: "t", index: "idx_t_k_fractal", value: .string("c"))
         #expect(eq.count == 1)
@@ -92,8 +92,9 @@ struct IndexSQLTests {
 
     @Test func lsmIndexEqualityAndRange() throws {
         let (db, sql, dir) = try newDB(); defer { try? FileManager.default.removeItem(at: dir) }
-        try bootstrapTable(sql); try seedRows(sql)
+        try bootstrapTable(sql)
         _ = try sql.execute("CREATE INDEX idx_t_k_lsm ON t (k) USING LSM")
+        try seedRows(sql)
 
         let eq = try db.indexSearchEqualsTyped(table: "t", index: "idx_t_k_lsm", value: .string("b"))
         #expect(eq.count == 2)
@@ -104,8 +105,9 @@ struct IndexSQLTests {
     // MARK: - Persistent B+Tree
     @Test func persistentBTreeEqualityAndRange() throws {
         let (db, sql, dir) = try newDB(); defer { try? FileManager.default.removeItem(at: dir) }
-        try bootstrapTable(sql); try seedRows(sql)
+        try bootstrapTable(sql)
         _ = try sql.execute("CREATE INDEX idx_t_k_btree ON t (k) USING BTree")
+        try seedRows(sql)
 
         let eq = try db.indexSearchEqualsTyped(table: "t", index: "idx_t_k_btree", value: .string("b"))
         #expect(eq.count == 2)

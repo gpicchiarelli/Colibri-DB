@@ -1,17 +1,19 @@
-# Capitolo 12 — Piano Fisico e Cost-Based Optimization
+# Capitolo 12 — Piano Fisico e Ottimizzazione Basata sui Costi
 
-## 12.1 Dal piano logico al fisico
-- `PhysicalPlanner` (`Sources/ColibriCore/Planner/PhysicalPlanner.swift`).
-- `PhysicalPlan` e operatori concreti.
+## 12.1 Scopo del piano fisico
+Il piano fisico decide gli algoritmi concreti per implementare ogni operatore logico. Introduciamo le metriche di costo (tempo, I/O, memoria) e la funzione obiettivo: minimizzare il costo atteso.
 
-## 12.2 Stime dei costi
-- `CostEstimator`, uso di statistiche (`StatisticsManager`).
-- Metriche: cardinalità, selettività, I/O.
+## 12.2 `PhysicalPlanner`
+- `buildPhysicalPlan(logical:)`: visita il piano logico e crea operatori fisici.
+- `chooseJoinAlgorithm`: decide tra nested loop, hash join, merge join (in roadmap).
+- `chooseScan`: selezione tra full scan e index scan.
 
-## 12.3 Scelta dei join
-- Nested Loop, Hash Join, Merge Join (stato implementazione/roadmap).
-- Heuristics vs cost-based.
+## 12.3 Stima dei costi
+`CostEstimator` utilizza statistiche dal catalogo. Spieghiamo le formule di stima di cardinalità (`cardinality * selectivity`), costo I/O per pagina (`pages * pageCost`), costo CPU.
 
-## 12.4 Esempi
-- Piano per query con join e filtraggio.
-- Output con `EXPLAIN` (funzione da implementare).
+## 12.4 Pianificazione dinamica
+Discussione su possibili ottimizzazioni future: dynamic programming (Selinger), memoization, branch-and-bound.
+
+## 12.5 Laboratorio
+- Eseguire query `EXPLAIN` (feature da implementare) per osservare piani fisici.
+- Cambiare statistiche nel catalogo e verificare l'impatto sul piano scelto.
