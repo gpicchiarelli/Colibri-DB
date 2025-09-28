@@ -153,8 +153,8 @@ extension FileBPlusTreeIndex {
         guard hdr.root != 0, count > 0 else { return results }
         var pid = hdr.root
         while true {
-            guard let page = try? readPage(pid) else { return results }
-            if page.type == 1, let intr = try? parseInternal(page.data), let c0 = intr.children.first {
+            guard let page = try readPage(pid) else { return results }
+            if page.type == 1, let intr = try parseInternal(page.data), let c0 = intr.children.first {
                 pid = c0
             } else {
                 break
@@ -163,7 +163,7 @@ extension FileBPlusTreeIndex {
         var current = pid
         var left = count
         while current != 0 && left > 0 {
-            guard let page = try? readPage(current) else { break }
+            guard let page = try readPage(current) else { break }
             if page.type != 2 { results.append("page=\(current) type=\(page.type) unexpected"); break }
             let keyCount = Int(page.data.subdata(in: 1..<3).withUnsafeBytes { $0.load(as: UInt16.self) }.bigEndian)
             let lsn = page.data.subdata(in: 8..<(8+8)).withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian
