@@ -13,7 +13,7 @@ Il problema era causato da **caratteri speciali nel baseurl** che GitHub Pages n
 ### Configurazione Problematica
 ```yaml
 # _config.yml (PRIMA)
-baseurl: "/Colibrì-DB"  # ❌ Carattere speciale 'ì'
+baseurl: "/Colibri-DB"  # ❌ Carattere speciale 'ì'
 url: "https://gpicchiarelli.github.io"
 ```
 

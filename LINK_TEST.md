@@ -67,16 +67,16 @@ Questo file documenta tutti i link del sito per verificare che funzionino corret
 ## 🌐 Link Esterni
 
 ### GitHub
-- **Repository**: `https://github.com/gpicchiarelli/Colibrì-DB` ✅
-- **Issues**: `https://github.com/gpicchiarelli/Colibrì-DB/issues` ✅
-- **Discussions**: `https://github.com/gpicchiarelli/Colibrì-DB/discussions` ✅
-- **Pull Requests**: `https://github.com/gpicchiarelli/Colibrì-DB/pulls` ✅
-- **Releases**: `https://github.com/gpicchiarelli/Colibrì-DB/releases` ✅
-- **License**: `https://github.com/gpicchiarelli/Colibrì-DB/blob/main/LICENSE` ✅
+- **Repository**: `https://github.com/gpicchiarelli/Colibri-DB` ✅
+- **Issues**: `https://github.com/gpicchiarelli/Colibri-DB/issues` ✅
+- **Discussions**: `https://github.com/gpicchiarelli/Colibri-DB/discussions` ✅
+- **Pull Requests**: `https://github.com/gpicchiarelli/Colibri-DB/pulls` ✅
+- **Releases**: `https://github.com/gpicchiarelli/Colibri-DB/releases` ✅
+- **License**: `https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE` ✅
 
 ### Documentazione Esterna
-- **Manuale Completo**: `https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/README.md` ✅
-- **Roadmap**: `https://github.com/gpicchiarelli/Colibrì-DB/blob/main/PROJECT_ROADMAP.md` ✅
+- **Manuale Completo**: `https://github.com/gpicchiarelli/Colibri-DB/blob/main/docs/README.md` ✅
+- **Roadmap**: `https://github.com/gpicchiarelli/Colibri-DB/blob/main/PROJECT_ROADMAP.md` ✅
 
 ## ✅ Risultato
 
