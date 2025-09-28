@@ -8,6 +8,15 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
 <section id="overview" class="section">
     <h2>🎯 Panoramica</h2>
     <p><strong>ColibrDB</strong> è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa <code>coldb</code>.</p>
+    
+    <div class="badges" style="margin: 2rem 0; text-align: center;">
+        <a href="https://swift.org" class="badge" target="_blank" style="background: #FA7343; color: white;">Swift 6.2</a>
+        <a href="https://developer.apple.com/macos/" class="badge" target="_blank" style="background: #007AFF; color: white;">macOS 13+</a>
+        <a href="https://developer.apple.com/silicon/" class="badge" target="_blank" style="background: #34C759; color: white;">Apple Silicon</a>
+        <a href="https://github.com/gpicchiarelli/Colibri-DB/stargazers" class="badge" target="_blank" style="background: #FFD700; color: #333;">⭐ GitHub Stars</a>
+        <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE" class="badge" target="_blank" style="background: #6C757D; color: white;">📄 BSD-3 License</a>
+        <a href="https://github.com/gpicchiarelli/Colibri-DB/issues" class="badge" target="_blank" style="background: #FF6B6B; color: white;">🐛 Report Issues</a>
+    </div>
 </section>
 
 <!-- Features Section -->
@@ -76,6 +85,11 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
     <h2>🚀 Quick Start</h2>
     <div class="quick-start">
         <h3>Prerequisiti</h3>
+        <div style="margin-bottom: 1rem;">
+            <a href="https://developer.apple.com/macos/" class="badge" target="_blank" style="background: #007AFF; color: white; margin-right: 0.5rem;">macOS 13+</a>
+            <a href="https://swift.org" class="badge" target="_blank" style="background: #FA7343; color: white; margin-right: 0.5rem;">Swift 6.2</a>
+            <span class="badge" style="background: #34C759; color: white;">Apple Silicon</span>
+        </div>
         <ul>
             <li><strong>macOS 13+</strong> (Apple Silicon consigliato per performance ottimali)</li>
             <li><strong>Swift 6.2</strong> (o toolchain compatibile via SwiftPM)</li>
@@ -128,13 +142,13 @@ swift build
         <div class="feature-card">
             <h4>🚀 Wiki Operativa</h4>
             <ul>
-                <li><a href="{{ site.baseurl }}/docs/wiki/Quick-Start">Quick Start</a> - Installazione e prima sessione</li>
-                <li><a href="{{ site.baseurl }}/docs/wiki/Architecture">Architecture</a> - Architettura del sistema</li>
-                <li><a href="{{ site.baseurl }}/docs/wiki/CLI-Reference">CLI Reference</a> - Comandi completi</li>
-                <li><a href="{{ site.baseurl }}/docs/wiki/API-Reference">API Reference</a> - Documentazione API</li>
-                <li><a href="{{ site.baseurl }}/docs/wiki/Performance">Performance</a> - Ottimizzazioni e benchmark</li>
-                <li><a href="{{ site.baseurl }}/docs/wiki/Troubleshooting">Troubleshooting</a> - Risoluzione problemi</li>
-                <li><a href="{{ site.baseurl }}/docs/wiki/Examples">Examples</a> - Esempi pratici</li>
+                <li><a href="{{ site.baseurl }}/docs/Quick-Start">Quick Start</a> - Installazione e prima sessione</li>
+                <li><a href="{{ site.baseurl }}/docs/Architecture">Architecture</a> - Architettura del sistema</li>
+                <li><a href="{{ site.baseurl }}/docs/CLI-Reference">CLI Reference</a> - Comandi completi</li>
+                <li><a href="{{ site.baseurl }}/docs/API-Reference">API Reference</a> - Documentazione API</li>
+                <li><a href="{{ site.baseurl }}/docs/Performance">Performance</a> - Ottimizzazioni e benchmark</li>
+                <li><a href="{{ site.baseurl }}/docs/Troubleshooting">Troubleshooting</a> - Risoluzione problemi</li>
+                <li><a href="{{ site.baseurl }}/docs/Examples">Examples</a> - Esempi pratici</li>
             </ul>
         </div>
         <div class="feature-card">
