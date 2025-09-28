@@ -269,19 +269,10 @@ Vedi [ROADMAP.md](ROADMAP.md) per i piani di sviluppo dettagliati.
 
 Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [LICENSE](LICENSE) per i dettagli.
 
-## 🙏 Ringraziamenti
-
-- **Apple**: Per il linguaggio Swift e gli strumenti di sviluppo
-- **Comunità**: Contributori e early adopter
-- **Accademia**: Ricerca e letteratura sui sistemi database
-- **Open Source**: Ispirazione da progetti database esistenti
-
 ---
 
 <div align="center">
 
-**Costruito con ❤️ in Swift per l'Ecosistema Apple**
-
-[⭐ Dacci una stella su GitHub](https://github.com/gpicchiarelli/Colibrì-DB) • [📖 Leggi la documentazione](docs/) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibrì-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
+[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibrì-DB) • [📖 Leggi la documentazione](docs/) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibrì-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
 
 </div>
