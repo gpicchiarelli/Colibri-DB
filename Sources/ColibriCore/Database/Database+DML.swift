@@ -413,7 +413,12 @@ extension Database {
         guard !rids.isEmpty else { return 0 }
         
         var deleted = 0
-        let actualTid = tid ?? try begin()
+        let actualTid: UInt64
+        if let existingTid = tid {
+            actualTid = existingTid
+        } else {
+            actualTid = try begin()
+        }
         
         // Process all deletes in a single transaction using tombstone approach
         for rid in rids {

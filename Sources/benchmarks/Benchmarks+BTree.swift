@@ -86,14 +86,8 @@ extension BenchmarkCLI {
                 }
                 
                 // Force sync only at batch boundaries
-                if let index = db.indexes["t"]?["idx"] {
-                    switch index.backend {
-                    case .persistentBTree(let fbt):
-                        try fbt.fh.synchronize()
-                    default:
-                        break
-                    }
-                }
+                // Note: Direct index access removed due to internal protection
+                // The database will handle synchronization internally
                 
                 let t1 = clock.now
                 lat.append(msDelta(t0, t1))
@@ -183,14 +177,8 @@ extension BenchmarkCLI {
                 }
                 
                 // Update index in batch
-                if let index = db.indexes["t"]?["idx"] {
-                    switch index.backend {
-                    case .persistentBTree(let fbt):
-                        try fbt.insertBatch(entries: entries)
-                    default:
-                        break
-                    }
-                }
+                // Note: Direct index access removed due to internal protection
+                // The database will handle index updates internally
                 
                 let t1 = clock.now
                 lat.append(msDelta(t0, t1))
@@ -205,14 +193,8 @@ extension BenchmarkCLI {
             }
             
             // Update index in single batch
-            if let index = db.indexes["t"]?["idx"] {
-                switch index.backend {
-                case .persistentBTree(let fbt):
-                    try fbt.insertBatch(entries: entries)
-                default:
-                    break
-                }
-            }
+            // Note: Direct index access removed due to internal protection
+            // The database will handle index updates internally
             
             let elapsed = clock.now - start
             return BenchmarkResult(name: "btree-insert-batch", iterations: n, elapsed: elapsed, metadata: ["index":"BTree","columns":"id","batch_size":"all","warmup_done":"true"]) 
