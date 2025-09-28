@@ -78,5 +78,37 @@ struct DatabaseMVCCIntegrationTests {
             #expect(!chain.isEmpty)
         }
     }
+
+    @Test func deletesRemainInvisibleUntilVacuumRuns() throws {
+        var config = DBConfig(storageEngine: "InMemory")
+        config.autoCompactionEnabled = false
+        let db = Database(config: config)
+        try db.createTable("docs")
+        try db.createIndex(name: "idx_docs_title", on: "docs", columns: ["title"], using: "hash")
+
+        let rid = try db.insert(into: "docs", row: ["title": .string("Design"), "body": .string("Draft")])
+        let scanBefore = try db.scan("docs").map { $0.1 }
+        #expect(scanBefore.count == 1)
+
+        _ = try db.deleteEquals(table: "docs", column: "title", value: .string("Design"))
+        let scanAfter = try db.scan("docs").map { $0.1 }
+        #expect(scanAfter.isEmpty)
+
+        let indexHits = try db.indexSearchEqualsTyped(table: "docs", index: "idx_docs_title", value: .string("Design"))
+        #expect(indexHits.isEmpty)
+
+        // Vacuum should be able to reclaim tombstone and keep table empty
+        _ = try db.compactTable(table: "docs", pageId: nil)
+        let scanVacuumed = try db.scan("docs").map { $0.1 }
+        #expect(scanVacuumed.isEmpty)
+        let indexHitsVacuumed = try db.indexSearchEqualsTyped(table: "docs", index: "idx_docs_title", value: .string("Design"))
+        #expect(indexHitsVacuumed.isEmpty)
+
+        // Reinserting should work and be visible again
+        let rid2 = try db.insert(into: "docs", row: ["title": .string("Design"), "body": .string("Final")])
+        #expect(rid2 != rid)
+        let hitsReinsert = try db.indexSearchEqualsTyped(table: "docs", index: "idx_docs_title", value: .string("Design"))
+        #expect(hitsReinsert == [rid2])
+    }
 }
 

@@ -50,5 +50,21 @@ struct ARTIndexTests {
         let remaining = try index.range("ap", "apz")
         #expect(Set(remaining) == [12])
     }
+
+    @Test func tombstoneFlowSkipsDeletesUntilCompaction() throws {
+        let index = ARTIndex<RID>()
+        let rid = RID(pageId: 1, slotId: 1)
+
+        try index.insert("ghost", rid)
+        try index.remove("ghost", rid)
+
+        // Tombstone keeps entry invisible
+        #expect(try index.searchEquals("ghost").isEmpty)
+
+        // Reinserting same RID resurrects visibility
+        try index.insert("ghost", rid)
+        let hits = try index.searchEquals("ghost")
+        #expect(hits == [rid])
+    }
 }
 

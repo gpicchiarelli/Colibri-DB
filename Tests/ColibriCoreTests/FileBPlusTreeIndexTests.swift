@@ -155,6 +155,22 @@ struct FileBPlusTreeIndexTests {
         let remainingKeys = remaining.compactMap { keyByRid[$0] }
         #expect(Set(remainingKeys) == Set([0, 1]))
     }
+
+    @Test func tombstoneDeletesRemainInvisible() throws {
+        let (index, tempDir) = try makeIndexFixture(pageSize: 256)
+        defer { index.close(); try? FileManager.default.removeItem(at: tempDir) }
+
+        let rid = RID(pageId: 1, slotId: 1)
+        try index.insert(key: .string("ghost"), rid: rid)
+        #expect(index.searchEquals(.string("ghost")) == [rid])
+
+        try index.remove(key: .string("ghost"), rid: rid)
+        #expect(index.searchEquals(.string("ghost")).isEmpty)
+
+        // Reinsert same RID should resurrect visibility
+        try index.insert(key: .string("ghost"), rid: rid)
+        #expect(index.searchEquals(.string("ghost")) == [rid])
+    }
 }
 
 private func makeIndexFixture(pageSize: Int) throws -> (FileBPlusTreeIndex, URL) {
