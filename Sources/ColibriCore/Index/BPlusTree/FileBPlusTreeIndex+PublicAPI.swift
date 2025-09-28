@@ -138,12 +138,12 @@ extension FileBPlusTreeIndex {
         try fh.synchronize()
     }
 
-    public func searchEquals(_ key: Value) -> [RID] {
+    public func searchEquals(_ key: Value) throws -> [RID] {
         let k = KeyBytes.fromValue(key).bytes
         guard hdr.root != 0 else { return [] }
         var pid = hdr.root
         while true {
-            guard let page = try readPage(pid) else { return [] }
+            let page = try readPage(pid)
             if page.type == 1 {
                 let inpg = try parseInternal(page.data)
                 let idx = upperBound(keys: inpg.keys, key: k)
@@ -159,11 +159,11 @@ extension FileBPlusTreeIndex {
     }
     
     /// Optimized search that avoids KeyBytes allocation in hot path
-    public func searchEqualsOptimized(_ key: Value) -> [RID] {
+    public func searchEqualsOptimized(_ key: Value) throws -> [RID] {
         guard hdr.root != 0 else { return [] }
         var pid = hdr.root
         while true {
-            guard let page = try readPage(pid) else { return [] }
+            let page = try readPage(pid)
             if page.type == 1 {
                 let inpg = try parseInternal(page.data)
                 let idx = upperBoundOptimized(keys: inpg.keys, key: key)
@@ -178,12 +178,12 @@ extension FileBPlusTreeIndex {
         }
     }
 
-    public func searchEquals(composite: [Value]) -> [RID] {
+    public func searchEquals(composite: [Value]) throws -> [RID] {
         let k = KeyBytes.fromValues(composite).bytes
         guard hdr.root != 0 else { return [] }
         var pid = hdr.root
         while true {
-            guard let page = try readPage(pid) else { return [] }
+            let page = try readPage(pid)
             if page.type == 1 {
                 let inpg = try parseInternal(page.data)
                 let idx = upperBound(keys: inpg.keys, key: k)

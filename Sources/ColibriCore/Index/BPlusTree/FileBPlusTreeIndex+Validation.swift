@@ -27,7 +27,7 @@ extension FileBPlusTreeIndex {
         }
     }
 
-    public func validateDeep() -> DeepReport {
+    public func validateDeep() throws -> DeepReport {
         guard hdr.root != 0 else {
             return DeepReport(ok: true, leaves: 0, internalNodes: 0, keys: 0, zeroLSNPages: 0, badLeafLinks: 0, olderThanCheckpointPages: 0, messages: ["empty-root"])
         }
@@ -42,10 +42,10 @@ extension FileBPlusTreeIndex {
         var depthMismatch = 0
 
         func dfsBounds(_ pid: UInt64, _ lower: Data?, _ upper: Data?, _ depth: Int) -> Bool {
-            guard let page = try readPage(pid) else { messages.append("read-fail@\(pid)"); return false }
+            let page = try readPage(pid)
             if page.type == 1 {
                 internalCount += 1
-                guard let intr = try parseInternal(page.data) else { messages.append("parse-internal-fail@\(pid)"); return false }
+                let intr = try parseInternal(page.data)
                 let lsn = page.data.subdata(in: 8..<(8+8)).withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian
                 if lsn == 0 && !intr.keys.isEmpty { zeroLSN += 1 }
                 if lsn != 0 && lsn < hdr.checkpointLSN { olderLSN += 1 }
@@ -60,7 +60,7 @@ extension FileBPlusTreeIndex {
                 }
                 return true
             } else if page.type == 2 {
-                guard let leaf = try parseLeaf(page.data) else { messages.append("leaf-parse-fail@\(pid)"); return false }
+                let leaf = try parseLeaf(page.data)
                 let lsn = page.data.subdata(in: 8..<(8+8)).withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian
                 if lsn == 0 && !leaf.keys.isEmpty { zeroLSN += 1 }
                 if lsn != 0 && lsn < hdr.checkpointLSN { olderLSN += 1 }
@@ -82,18 +82,17 @@ extension FileBPlusTreeIndex {
         var prevKey: Data? = nil
         var pid = hdr.root
         while true {
-            guard let page = try readPage(pid) else { messages.append("read-fail@\(pid)"); break }
+            let page = try readPage(pid)
             if page.type == 1 {
-                if let intr = try parseInternal(page.data) {
-                    pid = intr.children.first ?? pid
-                } else { break }
+                let intr = try parseInternal(page.data)
+                pid = intr.children.first ?? pid
             } else { break }
         }
         var curPid = pid
         while curPid != 0 {
-            guard let page = try readPage(curPid) else { messages.append("leaf-read-fail@\(curPid)"); break }
+            let page = try readPage(curPid)
             if page.type != 2 { messages.append("leaf-type-mismatch@\(curPid)"); badLeafLinks += 1; break }
-            guard let leaf = try parseLeaf(page.data) else { messages.append("leaf-parse-fail@\(curPid)"); break }
+            let leaf = try parseLeaf(page.data)
             let lsn = page.data.subdata(in: 8..<(8+8)).withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian
             if lsn == 0 && !leaf.keys.isEmpty { zeroLSN += 1 }
             if lsn != 0 && lsn < hdr.checkpointLSN { olderLSN += 1 }
@@ -109,13 +108,8 @@ extension FileBPlusTreeIndex {
                 totalKeys += 1
             }
             if leaf.nextLeaf == 0 { break }
-            if let np = try readPage(leaf.nextLeaf) {
-                if np.type != 2 { badLeafLinks += 1; messages.append("leaf-next-not-leaf@\(curPid)->\(leaf.nextLeaf)"); break }
-            } else {
-                badLeafLinks += 1
-                messages.append("leaf-next-missing@\(curPid)")
-                break
-            }
+            let np = try readPage(leaf.nextLeaf)
+            if np.type != 2 { badLeafLinks += 1; messages.append("leaf-next-not-leaf@\(curPid)->\(leaf.nextLeaf)"); break }
             curPid = leaf.nextLeaf
         }
         let ok = okBounds && messages.isEmpty && badLeafLinks == 0 && boundaryViolations == 0 && depthMismatch == 0
@@ -126,7 +120,7 @@ extension FileBPlusTreeIndex {
 
     public func dumpHeader(pageId: UInt64?) -> String {
         if let pid = pageId, pid > 0 {
-            guard let page = try readPage(pid) else { return "error: cannot read page \(pid)" }
+            let page = try readPage(pid)
             if page.type == 1 {
                 let keyCount = Int(page.data.subdata(in: 1..<3).withUnsafeBytes { $0.load(as: UInt16.self) }.bigEndian)
                 let childCount = Int(page.data.subdata(in: 3..<5).withUnsafeBytes { $0.load(as: UInt16.self) }.bigEndian)
@@ -153,9 +147,14 @@ extension FileBPlusTreeIndex {
         guard hdr.root != 0, count > 0 else { return results }
         var pid = hdr.root
         while true {
-            guard let page = try readPage(pid) else { return results }
-            if page.type == 1, let intr = try parseInternal(page.data), let c0 = intr.children.first {
-                pid = c0
+            let page = try readPage(pid)
+            if page.type == 1 {
+                let intr = try parseInternal(page.data)
+                if let c0 = intr.children.first {
+                    pid = c0
+                } else {
+                    break
+                }
             } else {
                 break
             }
@@ -163,7 +162,7 @@ extension FileBPlusTreeIndex {
         var current = pid
         var left = count
         while current != 0 && left > 0 {
-            guard let page = try readPage(current) else { break }
+            let page = try readPage(current)
             if page.type != 2 { results.append("page=\(current) type=\(page.type) unexpected"); break }
             let keyCount = Int(page.data.subdata(in: 1..<3).withUnsafeBytes { $0.load(as: UInt16.self) }.bigEndian)
             let lsn = page.data.subdata(in: 8..<(8+8)).withUnsafeBytes { $0.load(as: UInt64.self) }.bigEndian

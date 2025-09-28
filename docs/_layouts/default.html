@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}</title>
+    <meta name="description" content="{% if page.description %}{{ page.description }}{% else %}{{ site.description }}{% endif %}">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+    <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ '/favicon.ico' | relative_url }}">
+    
+    <!-- SEO -->
+    {% seo %}
+</head>
+<body>
+    <!-- Header -->
+    <header class="page-header">
+        <div class="wrapper">
+            <h1 class="project-name">
+                <a href="{{ '/' | relative_url }}">🐦 {{ site.title }}</a>
+            </h1>
+            <h2 class="project-tagline">{{ site.description }}</h2>
+            
+            <div class="badges">
+                <span class="badge">Swift 6.2</span>
+                <span class="badge">macOS 13+</span>
+                <span class="badge">Apple Silicon</span>
+                <span class="badge">WAL</span>
+                <span class="badge">MVCC</span>
+                <span class="badge">B+Tree</span>
+            </div>
+            
+            <div class="cta-buttons">
+                <a href="https://github.com/gpicchiarelli/Colibrì-DB" class="btn">⭐ Star on GitHub</a>
+                <a href="{{ '/README.md' | relative_url }}" class="btn btn-secondary">📖 Documentation</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="site-nav">
+        <div class="wrapper">
+            <ul>
+                <li><a href="{{ '/' | relative_url }}">Home</a></li>
+                <li><a href="{{ '/README.md' | relative_url }}">Docs</a></li>
+                <li><a href="{{ '/Part-01-Foundations/' | relative_url }}">Foundations</a></li>
+                <li><a href="{{ '/Part-02-Core-Engine/' | relative_url }}">Core Engine</a></li>
+                <li><a href="{{ '/Part-03-Query/' | relative_url }}">Query</a></li>
+                <li><a href="{{ '/Part-04-Metadata/' | relative_url }}">Metadata</a></li>
+                <li><a href="{{ '/Part-05-Server/' | relative_url }}">Server</a></li>
+                <li><a href="{{ '/Part-06-Tooling/' | relative_url }}">Tooling</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="wrapper">
+            {{ content }}
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="wrapper">
+            <h3>🐦 {{ site.title }}</h3>
+            <p>Un RDBMS moderno per l'era Apple Silicon</p>
+            
+            <div class="footer-links">
+                <a href="https://github.com/gpicchiarelli/Colibrì-DB">GitHub</a>
+                <a href="https://github.com/gpicchiarelli/Colibrì-DB/issues">Issues</a>
+                <a href="https://github.com/gpicchiarelli/Colibrì-DB/discussions">Discussions</a>
+                <a href="https://github.com/gpicchiarelli/Colibrì-DB/blob/main/LICENSE">License</a>
+            </div>
+            
+            <p>&copy; 2024 {{ site.title }} Team. Licenziato sotto BSD 3-Clause License.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add active class to navigation items
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('section[id]');
+            const navLinks = document.querySelectorAll('.site-nav a[href^="#"]');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

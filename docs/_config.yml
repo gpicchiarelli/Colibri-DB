@@ -1,0 +1,71 @@
+# GitHub Pages Configuration for ColibrìDB
+title: ColibrìDB
+description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
+author: ColibrìDB Team
+email: contact@colibridb.dev
+url: https://gpicchiarelli.github.io
+baseurl: /Colibrì-DB
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+  - scope:
+      path: ""
+      type: "docs"
+    values:
+      layout: "doc"
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Include
+include:
+  - _pages
+
+# Social links
+social:
+  name: ColibrìDB
+  links:
+    - https://github.com/gpicchiarelli/Colibrì-DB
+    - https://github.com/gpicchiarelli/Colibrì-DB/issues
+    - https://github.com/gpicchiarelli/Colibrì-DB/discussions
+
+# SEO
+seo:
+  type: Organization
+  name: ColibrìDB
+  description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
+  url: https://gpicchiarelli.github.io/Colibrì-DB
+  image: /assets/og-image.png
+  twitter:
+    username: colibridb
+  facebook:
+    app_id: 123456789

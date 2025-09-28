@@ -1,0 +1,291 @@
+/* ColibrìDB Custom Styles for GitHub Pages */
+
+:root {
+    --primary-color: #0969da;
+    --secondary-color: #656d76;
+    --success-color: #1a7f37;
+    --warning-color: #9a6700;
+    --danger-color: #cf222e;
+    --background-color: #ffffff;
+    --text-color: #24292f;
+    --border-color: #d1d9e0;
+    --code-background: #f6f8fa;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+/* Override Jekyll minima theme */
+.page-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #0550ae 100%);
+    color: white;
+    padding: 3rem 0;
+    text-align: center;
+    box-shadow: var(--shadow);
+}
+
+.page-header h1 {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.page-header .subtitle {
+    font-size: 1.25rem;
+    opacity: 0.9;
+    margin-bottom: 1.5rem;
+}
+
+/* Badge styling */
+.badges {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    color: white;
+    transition: background-color 0.2s;
+}
+
+.badge:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+/* CTA Buttons */
+.cta-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: white;
+    color: var(--primary-color);
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    text-decoration: none;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: white;
+    border-color: white;
+}
+
+.btn-secondary:hover {
+    background: white;
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+/* Feature cards */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.feature-card {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.feature-card h4 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+.feature-card ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.feature-card li {
+    padding: 0.25rem 0;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.feature-card li:before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--success-color);
+    font-weight: bold;
+}
+
+/* Code blocks */
+.highlight {
+    background: var(--code-background);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 1rem;
+    margin: 1rem 0;
+    overflow-x: auto;
+}
+
+.highlight pre {
+    margin: 0;
+    white-space: pre;
+}
+
+/* Quick start section */
+.quick-start {
+    background: var(--code-background);
+    border-radius: 8px;
+    padding: 2rem;
+    margin: 2rem 0;
+}
+
+.quick-start h3 {
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+.step {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: white;
+    border-radius: 6px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.step h4 {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+/* Navigation */
+.site-nav {
+    background: white;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.site-nav ul {
+    list-style: none;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+    margin: 0;
+    padding: 0;
+}
+
+.site-nav a {
+    color: var(--text-color);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.site-nav a:hover {
+    background: var(--code-background);
+    text-decoration: none;
+}
+
+/* Footer */
+.site-footer {
+    background: var(--text-color);
+    color: white;
+    padding: 3rem 0;
+    text-align: center;
+}
+
+.site-footer h3 {
+    margin-bottom: 1rem;
+}
+
+.site-footer p {
+    opacity: 0.8;
+    margin-bottom: 2rem;
+}
+
+.footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+}
+
+.footer-links a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.footer-links a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .page-header h1 {
+        font-size: 2rem;
+    }
+    
+    .page-header .subtitle {
+        font-size: 1rem;
+    }
+    
+    .site-nav ul {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .cta-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* GitHub-style syntax highlighting */
+.highlight .c { color: #6a737d; font-style: italic; } /* Comment */
+.highlight .k { color: #d73a49; font-weight: bold; } /* Keyword */
+.highlight .s { color: #032f62; } /* String */
+.highlight .n { color: #6f42c1; } /* Name */
+.highlight .o { color: #d73a49; } /* Operator */
