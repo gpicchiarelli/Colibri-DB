@@ -88,7 +88,11 @@ public final class FileWALManager: WALManager {
     private let groupCommitOptimizer: GroupCommitOptimizer
     
     // Enhanced group commit with timer
-    private let groupCommitQueue = DispatchQueue(label: "wal.groupcommit", qos: .userInitiated)
+    private let groupCommitQueue = DispatchQueue(
+        label: "com.colibridb.wal.groupcommit",
+        qos: .userInitiated,
+        attributes: []
+    )
     private var isGroupCommitActive = false
     private var lastFlushTime = Date()
     private var pendingCount = 0
@@ -144,10 +148,18 @@ public final class FileWALManager: WALManager {
         }
         self.fileHandle = try FileHandle(forUpdating: fileURL)
         
-        // Initialize queues
-        self.writeQueue = DispatchQueue(label: "wal.write.\(dbId)", qos: .userInitiated)
+        // Initialize queues with proper configuration
+        self.writeQueue = DispatchQueue(
+            label: "com.colibridb.wal.write.\(dbId)",
+            qos: .userInitiated,
+            attributes: .concurrent
+        )
         self.writeQueue.setSpecific(key: Self.writeQueueSpecificKey, value: ())
-        self.metricsQueue = DispatchQueue(label: "wal.metrics.\(dbId)", qos: .utility)
+        self.metricsQueue = DispatchQueue(
+            label: "com.colibridb.wal.metrics.\(dbId)",
+            qos: .utility,
+            attributes: []
+        )
         
         // Initialize metrics
         self._metrics = WALMetrics(
@@ -198,7 +210,8 @@ public final class FileWALManager: WALManager {
             case .always:
                 // Immediate write and sync
                 try writeRecordImmediately(recordWithLSN)
-                updateMetrics(operation: .append, latency: Date().timeIntervalSince(startTime), batchSize: 1)
+                let recordSize = UInt64(recordWithLSN.serializedSize)
+                updateMetrics(operation: .append, latency: Date().timeIntervalSince(startTime), batchSize: 1, bytesWritten: recordSize)
                 
             case .grouped:
                 // Add to group commit batch
@@ -225,14 +238,16 @@ public final class FileWALManager: WALManager {
                 if shouldFlush {
                     try flushPendingRecordsOptimized()
                 }
-                updateMetrics(operation: .append, latency: Date().timeIntervalSince(startTime), batchSize: 0)
+                let recordSize = UInt64(recordWithLSN.serializedSize)
+                updateMetrics(operation: .append, latency: Date().timeIntervalSince(startTime), batchSize: 0, bytesWritten: recordSize)
                 
             case .relaxed:
                 // Add to background queue
                 groupCommitLock.lock()
                 pendingRecords.append(recordWithLSN)
                 groupCommitLock.unlock()
-                updateMetrics(operation: .append, latency: Date().timeIntervalSince(startTime), batchSize: 0)
+                let recordSize = UInt64(recordWithLSN.serializedSize)
+                updateMetrics(operation: .append, latency: Date().timeIntervalSince(startTime), batchSize: 0, bytesWritten: recordSize)
             }
             
             return lsn
@@ -449,6 +464,13 @@ public final class FileWALManager: WALManager {
         }
     }
     
+    private func calculateBytesPerSecond() -> Double {
+        let timeSinceLastUpdate = Date().timeIntervalSince(operationCounts.lastUpdate)
+        guard timeSinceLastUpdate > 0 else { return 0 }
+        
+        return Double(operationCounts.totalBytesWritten) / timeSinceLastUpdate
+    }
+    
     private func writeRecordImmediately(_ record: WALRecord) throws {
         try writeRecordToFile(record)
         try fileHandle.synchronize()
@@ -494,7 +516,8 @@ public final class FileWALManager: WALManager {
             compressionRatio: compressionRatio
         )
         
-        updateMetrics(operation: .flush, latency: latency, batchSize: optimizedBatch.records.count)
+        let totalBytes = optimizedBatch.records.reduce(0) { $0 + UInt64($1.serializedSize) }
+        updateMetrics(operation: .flush, latency: latency, batchSize: optimizedBatch.records.count, bytesWritten: totalBytes)
     }
     
     /// Optimized flush with enhanced metrics and batching
@@ -537,7 +560,8 @@ public final class FileWALManager: WALManager {
             compressionRatio: uncompressedSize > 0 ? Double(optimizedBatch.estimatedSize) / Double(uncompressedSize) : 1.0
         )
         
-        updateMetrics(operation: .flush, latency: latency, batchSize: optimizedBatch.records.count)
+        let totalBytes = optimizedBatch.records.reduce(0) { $0 + UInt64($1.serializedSize) }
+        updateMetrics(operation: .flush, latency: latency, batchSize: optimizedBatch.records.count, bytesWritten: totalBytes)
     }
     
     private func writeOptimizedBatch(_ batch: GroupCommitBatch) throws -> Int {
@@ -727,7 +751,7 @@ public final class FileWALManager: WALManager {
         groupCommitTimer = nil
     }
     
-    private func updateMetrics(operation: WALOperation, latency: TimeInterval, batchSize: Int) {
+    private func updateMetrics(operation: WALOperation, latency: TimeInterval, batchSize: Int, bytesWritten: UInt64 = 0) {
         metricsQueue.async { @Sendable [weak self] in
             guard let self = self else { return }
             
@@ -735,12 +759,15 @@ public final class FileWALManager: WALManager {
             case .append:
                 self.operationCounts.appends += 1
                 self.operationCounts.totalAppendLatency += latency
+                self.operationCounts.totalBytesWritten += bytesWritten
             case .flush:
                 self.operationCounts.flushes += 1
                 self.operationCounts.totalFlushLatency += latency
                 self.operationCounts.totalBatchSize += batchSize
+                self.operationCounts.totalBytesWritten += bytesWritten
             }
             
+            self.operationCounts.lastUpdate = Date()
             self.updateMetricsIfNeeded()
         }
     }
@@ -758,7 +785,7 @@ public final class FileWALManager: WALManager {
         
         _metrics = WALMetrics(
             appendsPerSecond: appendsPerSecond,
-            bytesPerSecond: 0,  // TODO: Track bytes
+            bytesPerSecond: calculateBytesPerSecond(),
             fsyncsPerSecond: fsyncsPerSecond,
             averageBatchSize: avgBatchSize,
             p95CommitLatencyMs: avgCommitLatency,  // Simplified to average for now
@@ -786,6 +813,8 @@ private struct WALOperationCounts {
     var totalBatchSize = 0
     var totalAppendLatency: TimeInterval = 0
     var totalFlushLatency: TimeInterval = 0
+    var totalBytesWritten: UInt64 = 0
+    var lastUpdate = Date()
 }
 
 /// WAL-specific errors
