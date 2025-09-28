@@ -16,15 +16,14 @@ public final class SkipListIndex<Element: Hashable & Comparable, Reference: Hash
 
     private final class Node {
         let key: Key?
-        var refs: Array<Ref>
-        var tombstones: Array<Ref>
+        var refs: TombstoneSet<Ref>
         var next: [Node?]
         init(key: Key?, level: Int) {
             self.key = key
-            self.refs = []
-            self.tombstones = []
+            self.refs = TombstoneSet()
             self.next = Array(repeating: nil, count: level)
         }
+        var hasLive: Bool { refs.hasLive }
     }
 
     private let maxLevel: Int
@@ -52,12 +51,7 @@ public final class SkipListIndex<Element: Hashable & Comparable, Reference: Hash
         }
         x = x?.next[0]
         if let node = x, node.key == key {
-            if let idx = node.tombstones.firstIndex(of: ref) {
-                node.tombstones.remove(at: idx)
-            }
-            if !node.refs.contains(ref) {
-                node.refs.append(ref)
-            }
+            node.refs.insert(ref)
             return
         }
         let lvl = randomLevel()
@@ -66,7 +60,7 @@ public final class SkipListIndex<Element: Hashable & Comparable, Reference: Hash
             level = lvl
         }
         let node = Node(key: key, level: lvl)
-        node.refs.append(ref)
+        node.refs.insert(ref)
         for i in 0..<lvl {
             node.next[i] = update[i]?.next[i]
             update[i]?.next[i] = node
@@ -80,7 +74,7 @@ public final class SkipListIndex<Element: Hashable & Comparable, Reference: Hash
         }
         x = x?.next[0]
         if let node = x, node.key == key {
-            return node.refs
+            return node.refs.visible()
         }
         return []
     }
@@ -99,7 +93,7 @@ public final class SkipListIndex<Element: Hashable & Comparable, Reference: Hash
         while let node = x {
             guard let nodeKey = node.key else { break }
             if let hi = hi, nodeKey > hi { break }
-            result.append(contentsOf: node.refs)
+            result.append(contentsOf: node.refs.visible())
             x = node.next[0]
         }
         return result
@@ -114,12 +108,7 @@ public final class SkipListIndex<Element: Hashable & Comparable, Reference: Hash
         }
         x = x?.next[0]
         if let node = x, node.key == key {
-            if let idx = node.refs.firstIndex(of: ref) {
-                node.refs.remove(at: idx)
-                if !node.tombstones.contains(ref) {
-                    node.tombstones.append(ref)
-                }
-            }
+            node.refs.remove(ref)
         }
     }
 }

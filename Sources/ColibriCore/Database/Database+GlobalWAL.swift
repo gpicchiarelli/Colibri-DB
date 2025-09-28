@@ -111,7 +111,8 @@ extension Database {
                 tableId: table,
                 pageId: pageId,
                 slotId: slotId,
-                rowData: rowData
+                rowData: rowData,
+                isTombstone: true
             )
             
             return try wal.append(record)
@@ -180,7 +181,7 @@ extension Database {
                 txId: tid,
                 undoNextLSN: nextUndoLSN,
                 undoneOperationLSN: txLastLSN[tid] ?? 0,
-                undoAction: .heapDelete(pageId: rid.pageId, slotId: rid.slotId, rowData: rowData)
+                undoAction: .heapDelete(pageId: rid.pageId, slotId: rid.slotId, rowData: rowData, isTombstone: true)
             )
             
             return try wal.append(record)

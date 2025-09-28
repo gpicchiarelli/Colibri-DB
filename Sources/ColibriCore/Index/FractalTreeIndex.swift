@@ -16,21 +16,8 @@ public final class FractalTreeIndex<Element: Hashable & Comparable, Reference: H
     public typealias Key = Element
     public typealias Ref = Reference
 
-    private struct Entry {
-        var live: Set<Ref> = []
-        var tombstones: Set<Ref> = []
-        mutating func insert(_ ref: Ref) { tombstones.remove(ref); live.insert(ref) }
-        mutating func delete(_ ref: Ref) { if live.remove(ref) != nil { tombstones.insert(ref) } }
-        func visible() -> [Ref] { Array(live) }
-        var isDead: Bool { live.isEmpty && tombstones.isEmpty }
-        mutating func merge(with other: Entry) {
-            live.formUnion(other.live)
-            tombstones.formUnion(other.tombstones)
-        }
-    }
-
-    private var buffer: [Key: Entry] = [:]
-    private var baseTree: [Key: Entry] = [:]
+    private var buffer: [Key: TombstoneSet<Ref>] = [:]
+    private var baseTree: [Key: TombstoneSet<Ref>] = [:]
     private let bufferCapacity: Int
 
     public init(bufferCapacity: Int = 256) {
@@ -45,18 +32,18 @@ public final class FractalTreeIndex<Element: Hashable & Comparable, Reference: H
     private func flushBuffer() {
         guard !buffer.isEmpty else { return }
         for (key, entry) in buffer {
-            var stored = baseTree[key] ?? Entry()
+            var stored = baseTree[key] ?? TombstoneSet()
             stored.merge(with: entry)
             baseTree[key] = stored
         }
         buffer.removeAll(keepingCapacity: true)
     }
 
-    private func materialized() -> [Key: Entry] {
+    private func materialized() -> [Key: TombstoneSet<Ref>] {
         if buffer.isEmpty { return baseTree }
         var combined = baseTree
         for (key, entry) in buffer {
-            var stored = combined[key] ?? Entry()
+            var stored = combined[key] ?? TombstoneSet()
             stored.merge(with: entry)
             combined[key] = stored
         }
@@ -64,14 +51,14 @@ public final class FractalTreeIndex<Element: Hashable & Comparable, Reference: H
     }
 
     public func insert(_ key: Key, _ ref: Ref) throws {
-        var entry = buffer[key] ?? Entry()
+        var entry = buffer[key] ?? TombstoneSet()
         entry.insert(ref)
         buffer[key] = entry
         flushBufferIfNeeded()
     }
 
     public func searchEquals(_ key: Key) throws -> [Ref] {
-        var entry = baseTree[key] ?? Entry()
+        var entry = baseTree[key] ?? TombstoneSet()
         if let buf = buffer[key] { entry.merge(with: buf) }
         return entry.visible()
     }

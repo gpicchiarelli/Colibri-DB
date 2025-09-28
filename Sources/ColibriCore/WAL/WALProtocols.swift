@@ -305,14 +305,14 @@ public struct WALCLRRecord: WALRecord {
     
     public enum UndoAction: Codable {
         case heapInsert(pageId: UInt64, slotId: UInt16)
-        case heapDelete(pageId: UInt64, slotId: UInt16, rowData: Data)
+        case heapDelete(pageId: UInt64, slotId: UInt16, rowData: Data, isTombstone: Bool)
         case heapUpdate(pageId: UInt64, slotId: UInt16, originalData: Data)
         case indexInsert(indexId: String, keyBytes: Data, ridPageId: UInt64, ridSlotId: UInt16)
         case indexDelete(indexId: String, keyBytes: Data, ridPageId: UInt64, ridSlotId: UInt16)
         
         var pageId: UInt64? {
             switch self {
-            case .heapInsert(let pageId, _), .heapDelete(let pageId, _, _), .heapUpdate(let pageId, _, _):
+            case .heapInsert(let pageId, _), .heapDelete(let pageId, _, _, _), .heapUpdate(let pageId, _, _):
                 return pageId
             case .indexInsert(_, _, let ridPageId, _), .indexDelete(_, _, let ridPageId, _):
                 return ridPageId

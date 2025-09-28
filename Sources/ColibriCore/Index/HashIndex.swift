@@ -14,32 +14,12 @@ import Foundation
 /// Simple in-memory hash index mapping keys to reference sets.
 
 public struct HashIndex<Key: Hashable & Comparable, Ref: Hashable>: IndexProtocol {
-    private struct Entry {
-        var live: Set<Ref> = []
-        var tombstones: Set<Ref> = []
-
-        mutating func insert(_ ref: Ref) {
-            tombstones.remove(ref)
-            live.insert(ref)
-        }
-
-        mutating func remove(_ ref: Ref) {
-            if live.remove(ref) != nil {
-                tombstones.insert(ref)
-            }
-        }
-
-        func visible() -> [Ref] { Array(live) }
-
-        var isEmpty: Bool { live.isEmpty && tombstones.isEmpty }
-    }
-
-    private var map: [Key: Entry] = [:]
+    private var map: [Key: TombstoneSet<Ref>] = [:]
 
     public init() {}
 
     public mutating func insert(_ key: Key, _ ref: Ref) throws {
-        var entry = map[key] ?? Entry()
+        var entry = map[key] ?? TombstoneSet()
         entry.insert(ref)
         map[key] = entry
     }
