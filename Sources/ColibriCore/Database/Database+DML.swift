@@ -111,6 +111,12 @@ extension Database {
                     try ft.update(rid, updatedRow)
                 }
                 
+                // Update MVCC with the new version
+                mvcc.registerInsert(table: table, rid: rid, row: updatedRow, tid: tid)
+                
+                // Update indexes with the new row
+                updateIndexes(table: table, row: updatedRow, rid: rid, tid: tid)
+                
                 // Log the WAL record if needed
                 if let tid = tid {
                     let lsn = logHeapUpdate(tid: tid, table: table, pageId: rid.pageId, slotId: rid.slotId, oldRow: row, newRow: updatedRow)
@@ -141,10 +147,25 @@ extension Database {
         let handle = try lockManager.lock(.table(table), mode: .exclusive, tid: tid ?? 0, timeout: config.lockTimeoutSeconds)
         defer { if tid == nil { lockManager.unlock(handle) } }
         var updated = 0
-        for (_, row) in try scan(table, tid: tid) {
+        for (rid, row) in try scan(table, tid: tid) {
             if row[matchColumn] == matchValue {
                 var updatedRow = row
                 updatedRow[updateColumn] = updateValue
+                
+                // Update the row using the storage layer
+                if var t = tablesMem[table] {
+                    try t.update(rid, updatedRow)
+                    tablesMem[table] = t
+                } else if let ft = tablesFile[table] {
+                    try ft.update(rid, updatedRow)
+                }
+                
+                // Update MVCC with the new version
+                mvcc.registerInsert(table: table, rid: rid, row: updatedRow, tid: tid)
+                
+                // Update indexes with the new row
+                updateIndexes(table: table, row: updatedRow, rid: rid, tid: tid)
+                
                 updated += 1
             }
         }
