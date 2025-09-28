@@ -206,7 +206,7 @@ sudo systemctl stop colibridb
 cp -r /path/to/backup/colibri-data-backup-* /path/to/colibri/data
 sudo systemctl start colibridb
 
-# Contact support if data corruption suspected
+# Report data corruption issues on GitHub
 ```
 
 ### Issue: Poor Performance After Migration
@@ -266,9 +266,7 @@ swift build -c release
 sudo systemctl start colibridb
 ```
 
-## Support
-
-### Getting Help
+## Getting Help
 - **Documentation**: `docs/global-wal.md`
 - **GitHub Issues**: Report migration problems
 - **Community Forum**: Ask questions about migration
