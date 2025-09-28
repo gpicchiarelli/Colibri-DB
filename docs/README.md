@@ -164,10 +164,10 @@ La documentazione è organizzata in sezioni progressive per diversi livelli di c
 
 ### 🔧 **Guide Operative**) - Riferimenti Pratici
 
-- [**Prefazione**]({{ site.baseurl }}/docs/Prefazione) - Introduzione generale al progetto
-- [**00-Introduzione**]({{ site.baseurl }}/docs/Appendices/00-Introduzione) - Guida introduttiva
-- [**01-Glossario**]({{ site.baseurl }}/docs/Appendices/01-Glossario) - Terminologia tecnica
-- [**02-Configurazione**]({{ site.baseurl }}/docs/Appendices/02-Configurazione) - Guida alla configurazione
+- [**Prefazione**]({{ site.baseurl }}/wiki/Prefazione) - Introduzione generale al progetto
+- [**00-Introduzione**]({{ site.baseurl }}/wiki/Appendices/00-Introduzione) - Guida introduttiva
+- [**01-Glossario**]({{ site.baseurl }}/wiki/Appendices/01-Glossario) - Terminologia tecnica
+- [**02-Configurazione**]({{ site.baseurl }}/wiki/Appendices/02-Configurazione) - Guida alla configurazione
 
 ## 🔧 API Reference
 
@@ -186,7 +186,7 @@ La documentazione è organizzata in sezioni progressive per diversi livelli di c
 - [**Index API**]({{ site.baseurl }}/wiki/Part-02-Core-Engine/04-BTree-Indexes) - Gestione indici
 - [**Transaction API**]({{ site.baseurl }}/wiki/Part-02-Core-Engine/05-MVCC-Concurrency) - Gestione transazioni
 - [**CLI Commands**]({{ site.baseurl }}/wiki/Part-06-Tooling/01-User-CLI) - Comandi CLI
-- [**Configuration**]({{ site.baseurl }}/docs/Appendices/02-Configurazione) - Configurazione sistema
+- [**Configuration**]({{ site.baseurl }}/wiki/Appendices/02-Configurazione) - Configurazione sistema
 
 ## 🏗️ Architettura del Sistema
 
