@@ -86,8 +86,8 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
             <h4>1. Installazione</h4>
             <div class="code-block">
                 <pre># Clona il repository
-git clone https://github.com/gpicchiarelli/Colibri-DB.git
-cd Colibri-DB
+git clone https://github.com/gpicchiarelli/Colibrì-DB.git
+cd Colibrì-DB
 
 # Compila il progetto
 swift build
@@ -179,7 +179,7 @@ swift build
 <!-- Contributing Section -->
 <section id="contributing" class="section">
     <h2>🤝 Contribuire</h2>
-    <p>Accogliamo i contributi! Consulta le nostre <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md">Linee Guida per i Contributi</a> e il <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CODE_OF_CONDUCT.md">Codice di Condotta</a> per i dettagli.</p>
+    <p>Accogliamo i contributi! Consulta le nostre <a href="https://github.com/gpicchiarelli/Colibrì-DB/blob/main/CONTRIBUTING.md">Linee Guida per i Contributi</a> e il <a href="https://github.com/gpicchiarelli/Colibrì-DB/blob/main/CODE_OF_CONDUCT.md">Codice di Condotta</a> per i dettagli.</p>
     
     <div class="features-grid">
         <div class="feature-card">

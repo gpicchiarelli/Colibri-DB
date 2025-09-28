@@ -13,7 +13,7 @@ Il problema era causato da **caratteri speciali nel baseurl** che GitHub Pages n
 ### Configurazione Problematica
 ```yaml
 # _config.yml (PRIMA)
-baseurl: "/Colibri-DB"  # ❌ Carattere speciale 'ì'
+baseurl: "/Colibrì-DB"  # ❌ Carattere speciale 'ì'
 url: "https://gpicchiarelli.github.io"
 ```
 
@@ -34,7 +34,7 @@ url: "https://gpicchiarelli.github.io"
 
 ```yaml
 # _config.yml (DOPO)
-baseurl: "/Colibri-DB"  # ✅ URL-safe, senza caratteri speciali
+baseurl: "/Colibrì-DB"  # ✅ URL-safe, senza caratteri speciali
 url: "https://gpicchiarelli.github.io"
 ```
 
@@ -46,7 +46,7 @@ url: "https://gpicchiarelli.github.io"
 # .github/workflows/pages.yml (DOPO)
 - name: Get Pages base path
   id: vars
-  run: echo "base_path=Colibri-DB" >> $GITHUB_OUTPUT
+  run: echo "base_path=Colibrì-DB" >> $GITHUB_OUTPUT
   # ✅ Base path hardcoded URL-safe
 
 - name: Build with Jekyll
@@ -85,21 +85,21 @@ Tutti i link interni utilizzano la sintassi Jekyll corretta:
 ### Link Testati e Funzionanti
 ```bash
 # Homepage
-https://gpicchiarelli.github.io/Colibri-DB/
+https://gpicchiarelli.github.io/Colibrì-DB/
 
 # Wiki Pages
-https://gpicchiarelli.github.io/Colibri-DB/wiki/Architecture
-https://gpicchiarelli.github.io/Colibri-DB/wiki/Quick-Start
-https://gpicchiarelli.github.io/Colibri-DB/wiki/CLI-Reference
+https://gpicchiarelli.github.io/Colibrì-DB/wiki/Architecture
+https://gpicchiarelli.github.io/Colibrì-DB/wiki/Quick-Start
+https://gpicchiarelli.github.io/Colibrì-DB/wiki/CLI-Reference
 
 # Documentazione Tecnica
-https://gpicchiarelli.github.io/Colibri-DB/docs/Part-01-Foundations/00-Guida-Alla-Lettura
-https://gpicchiarelli.github.io/Colibri-DB/docs/Part-02-Core-Engine/00-Introduzione
+https://gpicchiarelli.github.io/Colibrì-DB/docs/Part-01-Foundations/00-Guida-Alla-Lettura
+https://gpicchiarelli.github.io/Colibrì-DB/docs/Part-02-Core-Engine/00-Introduzione
 ```
 
 ### Struttura URL Corretta
 ```
-https://gpicchiarelli.github.io/Colibri-DB/
+https://gpicchiarelli.github.io/Colibrì-DB/
 ├── /wiki/
 │   ├── Architecture
 │   ├── Quick-Start

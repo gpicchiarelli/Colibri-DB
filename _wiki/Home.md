@@ -8,8 +8,8 @@ description: Pagina principale della wiki di ColibrìDB
 
 <div align="center">
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/ci.yml?branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/ci.yml)
-[![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/codeql.yml?label=CodeQL&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/codeql.yml)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/ci.yml?branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/codeql.yml?label=CodeQL&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/codeql.yml)
 ![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg?style=flat-square)
 ![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey.svg?style=flat-square)
@@ -52,8 +52,8 @@ description: Pagina principale della wiki di ColibrìDB
 - [**Troubleshooting**]({{ site.baseurl }}/wiki/Troubleshooting) - Risoluzione problemi comuni
 
 ### 📖 **Documentazione Tecnica**
-- [**Manuale Completo**](https://github.com/gpicchiarelli/Colibri-DB/blob/main/docs/README.md) - Documentazione tecnica dettagliata
-- [**Roadmap del Progetto**](https://github.com/gpicchiarelli/Colibri-DB/blob/main/PROJECT_ROADMAP.md) - Piano di sviluppo e milestone
+- [**Manuale Completo**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/README.md) - Documentazione tecnica dettagliata
+- [**Roadmap del Progetto**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/PROJECT_ROADMAP.md) - Piano di sviluppo e milestone
 
 ## 🎯 Stato del Progetto
 
@@ -80,8 +80,8 @@ description: Pagina principale della wiki di ColibrìDB
 
 ```bash
 # Clona il repository
-git clone https://github.com/gpicchiarelli/Colibri-DB.git
-cd Colibri-DB
+git clone https://github.com/gpicchiarelli/Colibrì-DB.git
+cd Colibrì-DB
 
 # Compila il progetto
 swift build
@@ -112,15 +112,15 @@ ColibrìDB accoglie i contributi! Consulta la nostra [Guida per Sviluppatori]({{
 
 ## 🔗 Link Utili
 
-- [**Repository GitHub**](https://github.com/gpicchiarelli/Colibri-DB)
-- [**Issue Tracker**](https://github.com/gpicchiarelli/Colibri-DB/issues)
-- [**Discussioni**](https://github.com/gpicchiarelli/Colibri-DB/discussions)
-- [**Pull Requests**](https://github.com/gpicchiarelli/Colibri-DB/pulls)
-- [**Releases**](https://github.com/gpicchiarelli/Colibri-DB/releases)
+- [**Repository GitHub**](https://github.com/gpicchiarelli/Colibrì-DB)
+- [**Issue Tracker**](https://github.com/gpicchiarelli/Colibrì-DB/issues)
+- [**Discussioni**](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
+- [**Pull Requests**](https://github.com/gpicchiarelli/Colibrì-DB/pulls)
+- [**Releases**](https://github.com/gpicchiarelli/Colibrì-DB/releases)
 
 ## 📄 Licenza
 
-Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [LICENSE](https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE) per i dettagli.
+Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [LICENSE](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/LICENSE) per i dettagli.
 
 ---
 
@@ -128,6 +128,6 @@ Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [
 
 **ColibrìDB** - *Un RDBMS moderno per l'ecosistema Swift*
 
-[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibri-DB) • [📖 Documentazione](https://github.com/gpicchiarelli/Colibri-DB/blob/main/docs/README.md) • [🐛 Segnala Bug](https://github.com/gpicchiarelli/Colibri-DB/issues)
+[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibrì-DB) • [📖 Documentazione](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/README.md) • [🐛 Segnala Bug](https://github.com/gpicchiarelli/Colibrì-DB/issues)
 
 </div>

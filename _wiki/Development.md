@@ -31,11 +31,11 @@ ColibrìDB è un progetto open source che accoglie contributi da sviluppatori di
 
 ```bash
 # Fork del repository su GitHub, poi clona
-git clone https://github.com/YOUR_USERNAME/Colibri-DB.git
-cd Colibri-DB
+git clone https://github.com/YOUR_USERNAME/Colibrì-DB.git
+cd Colibrì-DB
 
 # Aggiungi il repository upstream
-git remote add upstream https://github.com/gpicchiarelli/Colibri-DB.git
+git remote add upstream https://github.com/gpicchiarelli/Colibrì-DB.git
 ```
 
 ### 2. Configurazione Xcode
@@ -66,7 +66,7 @@ swift run benchmarks --help
 ### Struttura del Repository
 
 ```
-Colibri-DB/
+Colibrì-DB/
 ├── Sources/
 │   ├── ColibriCore/          # Motore database core
 │   │   ├── Buffer/           # Gestione buffer pool
@@ -524,7 +524,7 @@ This approach might cause a memory leak. Consider using `weak` references or ens
 ### Community
 
 - [Swift Forums](https://forums.swift.org/)
-- [GitHub Discussions](https://github.com/gpicchiarelli/Colibri-DB/discussions)
+- [GitHub Discussions](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
 - [Discord Server](https://discord.gg/colibridb) (se disponibile)
 
 ## 🚀 Prossimi Passi

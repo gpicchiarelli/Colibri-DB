@@ -32,7 +32,7 @@ jobs:
         
       - name: Get Pages base path
         id: vars
-        run: echo "base_path=Colibri-DB" >> $GITHUB_OUTPUT
+        run: echo "base_path=Colibrì-DB" >> $GITHUB_OUTPUT
         
       - name: Build with Jekyll
         run: |
