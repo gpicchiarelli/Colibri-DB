@@ -5,15 +5,96 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ott
 ---
 
 <style>
-/* Hero Section Styles */
+/* Modern Typography and Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+    /* Modern Color Palette */
+    --primary-blue: #007AFF;
+    --primary-blue-dark: #0051D5;
+    --success-green: #34C759;
+    --warning-orange: #FF9500;
+    --danger-red: #FF3B30;
+    --accent-purple: #AF52DE;
+    --accent-pink: #FF2D92;
+    --accent-teal: #5AC8FA;
+    --accent-indigo: #5856D6;
+    --neutral-gray: #8E8E93;
+    --neutral-gray-2: #AEAEB2;
+    --neutral-gray-3: #C7C7CC;
+    --neutral-gray-4: #D1D1D6;
+    --neutral-gray-5: #E5E5EA;
+    --neutral-gray-6: #F2F2F7;
+    
+    /* Typography Scale */
+    --font-size-display: clamp(3.5rem, 8vw, 6rem);
+    --font-size-large-title: clamp(2.5rem, 6vw, 4rem);
+    --font-size-title-1: clamp(2rem, 5vw, 3rem);
+    --font-size-title-2: clamp(1.5rem, 4vw, 2.25rem);
+    --font-size-title-3: clamp(1.25rem, 3vw, 1.75rem);
+    --font-size-headline: clamp(1.125rem, 2.5vw, 1.5rem);
+    --font-size-body: clamp(1rem, 2vw, 1.125rem);
+    --font-size-callout: clamp(0.875rem, 1.5vw, 1rem);
+    --font-size-subhead: clamp(0.8125rem, 1.25vw, 0.9375rem);
+    --font-size-footnote: clamp(0.75rem, 1vw, 0.8125rem);
+    --font-size-caption: clamp(0.6875rem, 0.875vw, 0.75rem);
+    
+    /* Spacing Scale */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    --space-3xl: 4rem;
+    --space-4xl: 6rem;
+    --space-5xl: 8rem;
+    
+    /* Border Radius */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: #1d1d1f;
+    background: #ffffff;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Hero Section - Modern Style */
 .hero-section {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    padding: 4rem 0;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: var(--space-5xl) 0;
     text-align: center;
-    border-radius: 12px;
-    margin-bottom: 3rem;
     position: relative;
     overflow: hidden;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .hero-section::before {
@@ -23,103 +104,144 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ott
     left: 0;
     right: 0;
     bottom: 0;
-    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(9,105,218,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23dots)"/></svg>');
-    opacity: 0.5;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(0, 122, 255, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(52, 199, 89, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(255, 149, 0, 0.1) 0%, transparent 50%);
+    opacity: 0.8;
 }
 
 .hero-content {
     position: relative;
-    z-index: 1;
-    max-width: 800px;
+    z-index: 2;
+    max-width: 900px;
     margin: 0 auto;
-    padding: 0 2rem;
+    padding: 0 var(--space-xl);
 }
 
 .hero-content h1 {
-    font-size: 3.5rem;
-    color: #0969da;
-    margin-bottom: 1rem;
-    font-weight: 700;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: var(--font-size-display);
+    font-weight: 800;
+    color: #1d1d1f;
+    margin-bottom: var(--space-lg);
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #1d1d1f 0%, var(--primary-blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .hero-subtitle {
-    font-size: 1.5rem;
-    color: #656d76;
-    margin-bottom: 1.5rem;
+    font-size: var(--font-size-title-2);
+    color: #6e6e73;
+    margin-bottom: var(--space-xl);
     font-weight: 500;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
 }
 
 .hero-description {
-    font-size: 1.1rem;
-    color: #24292f;
+    font-size: var(--font-size-body);
+    color: #424245;
     line-height: 1.7;
-    margin-bottom: 2rem;
-    max-width: 600px;
+    margin-bottom: var(--space-2xl);
+    max-width: 700px;
     margin-left: auto;
     margin-right: auto;
+    font-weight: 400;
 }
 
 .hero-badges {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 1rem;
-    margin-bottom: 2.5rem;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-3xl);
 }
 
 .hero-badge {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    border-radius: 25px;
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-sm) var(--space-lg);
+    border-radius: var(--radius-full);
     font-weight: 600;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    font-size: var(--font-size-callout);
+    text-decoration: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.hero-badge:hover::before {
+    opacity: 1;
 }
 
 .hero-badge.swift {
-    background: linear-gradient(135deg, #FA7343, #FF8A65);
+    background: linear-gradient(135deg, var(--warning-orange), #FF6B35);
     color: white;
-    box-shadow: 0 4px 12px rgba(250, 115, 67, 0.3);
+    box-shadow: var(--shadow-lg);
 }
 
 .hero-badge.macos {
-    background: linear-gradient(135deg, #007AFF, #4FC3F7);
+    background: linear-gradient(135deg, var(--primary-blue), var(--accent-teal));
     color: white;
-    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+    box-shadow: var(--shadow-lg);
 }
 
 .hero-badge.silicon {
-    background: linear-gradient(135deg, #34C759, #66BB6A);
+    background: linear-gradient(135deg, var(--success-green), #30D158);
     color: white;
-    box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3);
+    box-shadow: var(--shadow-lg);
 }
 
 .hero-badge.features {
-    background: linear-gradient(135deg, #6C757D, #90A4AE);
+    background: linear-gradient(135deg, var(--neutral-gray), var(--neutral-gray-2));
     color: white;
-    box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+    box-shadow: var(--shadow-lg);
+}
+
+.hero-badge:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: var(--shadow-xl);
 }
 
 .hero-actions {
     display: flex;
     justify-content: center;
-    gap: 1rem;
+    gap: var(--space-lg);
     flex-wrap: wrap;
 }
 
 .btn {
     display: inline-flex;
     align-items: center;
-    padding: 0.875rem 2rem;
-    border-radius: 8px;
+    justify-content: center;
+    padding: var(--space-lg) var(--space-2xl);
+    border-radius: var(--radius-xl);
     font-weight: 600;
+    font-size: var(--font-size-body);
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 2px solid transparent;
     position: relative;
     overflow: hidden;
+    min-width: 160px;
+    height: 56px;
 }
 
 .btn::before {
@@ -130,7 +252,7 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ott
     width: 100%;
     height: 100%;
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-    transition: left 0.5s;
+    transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn:hover::before {
@@ -138,54 +260,220 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ott
 }
 
 .btn-primary {
-    background: #0969da;
+    background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark));
     color: white;
-    box-shadow: 0 4px 12px rgba(9, 105, 218, 0.3);
+    box-shadow: var(--shadow-lg);
 }
 
 .btn-primary:hover {
-    background: #0550ae;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(9, 105, 218, 0.4);
+    background: linear-gradient(135deg, var(--primary-blue-dark), #003d99);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-2xl);
 }
 
 .btn-secondary {
-    background: white;
-    color: #0969da;
-    border-color: #0969da;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--primary-blue);
+    border-color: rgba(0, 122, 255, 0.3);
+    backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-md);
 }
 
 .btn-secondary:hover {
-    background: #0969da;
+    background: var(--primary-blue);
     color: white;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(9, 105, 218, 0.3);
+    border-color: var(--primary-blue);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-xl);
 }
 
 .btn-outline {
     background: transparent;
-    color: #656d76;
-    border-color: #d1d9e0;
+    color: #6e6e73;
+    border-color: #d1d1d6;
+    backdrop-filter: blur(20px);
 }
 
 .btn-outline:hover {
-    background: #f6f8fa;
-    color: #0969da;
-    border-color: #0969da;
-    transform: translateY(-2px);
+    background: rgba(0, 122, 255, 0.1);
+    color: var(--primary-blue);
+    border-color: var(--primary-blue);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
 }
 
-/* Trademark Disclaimer Styles */
+/* Section Styles */
+.section {
+    margin-bottom: var(--space-4xl);
+    padding: var(--space-3xl) 0;
+}
+
+.section h2 {
+    font-size: var(--font-size-title-1);
+    font-weight: 700;
+    color: #1d1d1f;
+    margin-bottom: var(--space-2xl);
+    text-align: center;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+}
+
+.section h3 {
+    font-size: var(--font-size-title-2);
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: var(--space-lg);
+    letter-spacing: -0.01em;
+}
+
+.section h4 {
+    font-size: var(--font-size-title-3);
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: var(--space-md);
+    letter-spacing: -0.01em;
+}
+
+.section p {
+    font-size: var(--font-size-body);
+    color: #424245;
+    line-height: 1.7;
+    margin-bottom: var(--space-lg);
+}
+
+/* Features Grid */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-xl);
+    margin: var(--space-2xl) 0;
+}
+
+.feature-card {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-2xl);
+    backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-md);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #007AFF, #34C759, #FF9500);
+    transform: scaleX(0);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feature-card:hover::before {
+    transform: scaleX(1);
+}
+
+.feature-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-2xl);
+    border-color: rgba(0, 122, 255, 0.2);
+}
+
+.feature-card h4 {
+    color: #1d1d1f;
+    margin-bottom: var(--space-lg);
+    font-size: var(--font-size-headline);
+    font-weight: 600;
+}
+
+.feature-card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.feature-card li {
+    padding: var(--space-sm) 0;
+    position: relative;
+    padding-left: var(--space-xl);
+    font-size: var(--font-size-body);
+    color: #424245;
+    line-height: 1.6;
+}
+
+.feature-card li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #34C759;
+    font-weight: 700;
+    font-size: var(--font-size-body);
+}
+
+/* Code Blocks */
+.code-block {
+    background: #1d1d1f;
+    border-radius: var(--radius-xl);
+    padding: var(--space-xl);
+    margin: var(--space-lg) 0;
+    overflow-x: auto;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    box-shadow: var(--shadow-lg);
+}
+
+.code-block pre {
+    margin: 0;
+    white-space: pre;
+    color: #f5f5f7;
+    font-size: var(--font-size-callout);
+    line-height: 1.6;
+}
+
+/* Quick Start Section */
+.quick-start {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-2xl);
+    margin: var(--space-2xl) 0;
+    backdrop-filter: blur(20px);
+}
+
+.quick-start h3 {
+    color: #1d1d1f;
+    margin-bottom: var(--space-lg);
+    font-size: var(--font-size-title-2);
+}
+
+.step {
+    margin: var(--space-lg) 0;
+    padding: var(--space-xl);
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: var(--radius-xl);
+    border-left: 4px solid #007AFF;
+    backdrop-filter: blur(20px);
+    box-shadow: var(--shadow-sm);
+}
+
+.step h4 {
+    color: #007AFF;
+    margin-bottom: var(--space-md);
+    font-size: var(--font-size-title-3);
+}
+
+/* Trademark Disclaimer */
 .trademark-disclaimer {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border: 2px solid #dee2e6;
-    border-radius: 12px;
-    padding: 2rem;
-    margin: 2rem 0;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-2xl);
+    margin: var(--space-2xl) 0;
     text-align: center;
     position: relative;
     overflow: hidden;
+    backdrop-filter: blur(20px);
 }
 
 .trademark-disclaimer::before {
@@ -195,67 +483,106 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ott
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #ffd700, #ffed4e);
+    background: linear-gradient(90deg, #FFD700, #FFA500);
 }
 
 .trademark-disclaimer h2 {
-    color: #24292f;
-    margin-bottom: 1rem;
-    font-size: 1.5rem;
-}
-
-.trademark-disclaimer p {
-    color: #656d76;
-    line-height: 1.6;
-    margin-bottom: 0.5rem;
-}
-
-.trademark-disclaimer strong {
-    color: #0969da;
+    color: #1d1d1f;
+    margin-bottom: var(--space-lg);
+    font-size: var(--font-size-title-2);
     font-weight: 600;
 }
 
-/* Responsive Hero */
+.trademark-disclaimer p {
+    color: #424245;
+    line-height: 1.7;
+    margin-bottom: var(--space-sm);
+    font-size: var(--font-size-body);
+}
+
+.trademark-disclaimer strong {
+    color: #007AFF;
+    font-weight: 600;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
+    .hero-section {
+        padding: var(--space-3xl) 0;
+        min-height: 80vh;
+    }
+    
     .hero-content h1 {
-        font-size: 2.5rem;
+        font-size: var(--font-size-large-title);
     }
     
     .hero-subtitle {
-        font-size: 1.25rem;
+        font-size: var(--font-size-title-3);
     }
     
     .hero-description {
-        font-size: 1rem;
+        font-size: var(--font-size-callout);
     }
     
     .hero-badges {
-        gap: 0.5rem;
+        gap: var(--space-xs);
     }
     
     .hero-badge {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.8rem;
+        padding: var(--space-sm) var(--space-md);
+        font-size: var(--font-size-subhead);
     }
     
     .hero-actions {
         flex-direction: column;
         align-items: center;
+        gap: var(--space-md);
     }
     
     .btn {
         width: 100%;
-        max-width: 250px;
-        justify-content: center;
+        max-width: 280px;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
+    }
+    
+    .feature-card {
+        padding: var(--space-xl);
     }
     
     .trademark-disclaimer {
-        padding: 1.5rem;
-        margin: 1.5rem 0;
+        padding: var(--space-xl);
+        margin: var(--space-lg) 0;
     }
     
     .trademark-disclaimer h2 {
-        font-size: 1.25rem;
+        font-size: var(--font-size-title-3);
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-content {
+        padding: 0 var(--space-md);
+    }
+    
+    .hero-content h1 {
+        font-size: var(--font-size-title-1);
+    }
+    
+    .hero-subtitle {
+        font-size: var(--font-size-headline);
+    }
+    
+    .hero-badges {
+        justify-content: center;
+    }
+    
+    .hero-badge {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: var(--font-size-footnote);
     }
 }
 </style>
