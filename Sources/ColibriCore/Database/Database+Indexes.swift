@@ -104,7 +104,11 @@ extension Database {
             try? fm.removeItem(atPath: index.path + ".wal")
         }
         map.removeValue(forKey: name)
-        if map.isEmpty { indexes.removeValue(forKey: table) } else { indexes[table] = map }
+        if map.isEmpty {
+            indexes.removeValue(forKey: table)
+        } else {
+            indexes[table] = map
+        }
         try indexCatalog?.remove(name: name, table: table)
         systemCatalog?.removeIndex(name: name, table: table)
         indexStatistics.removeValue(forKey: "\(table).\(name)")

@@ -273,10 +273,14 @@ extension Database {
                 try? ft.remove(rid, pageLSN: record.lsn)
             }
             
-        case .heapDelete(_, _, let rowData):
-            // Undo of delete = insert
+        case .heapDelete(let pageId, let slotId, let rowData, let isTombstone):
+            // Undo of delete = restore slot or reinstate tombstone flag
             let row = try JSONDecoder().decode(Row.self, from: rowData)
+            let rid = RID(pageId: pageId, slotId: slotId)
             for (_, ft) in tablesFile {
+                if isTombstone {
+                    try? ft.clearTombstone(rid, pageLSN: record.lsn)
+                }
                 _ = try? ft.restore(rid, row: row, pageLSN: record.lsn)
             }
             
@@ -301,6 +305,11 @@ extension Database {
                                 try? f.remove(key: value, rid: rid)
                             }
                         }
+                    case .anyString(var idx):
+                        if let value = KeyBytes.toString(keyBytes) {
+                            idx.remove(key: value, ref: rid)
+                            tableMap[indexId] = (columns: indexDef.columns, backend: .anyString(idx))
+                        }
                     default:
                         break
                     }
@@ -318,6 +327,11 @@ extension Database {
                             if let value = KeyBytes.toSingleValue(keyBytes) {
                                 try? f.insert(key: value, rid: rid)
                             }
+                        }
+                    case .anyString(var idx):
+                        if let value = KeyBytes.toString(keyBytes) {
+                            idx.insert(key: value, ref: rid)
+                            tableMap[indexId] = (columns: indexDef.columns, backend: .anyString(idx))
                         }
                     default:
                         break

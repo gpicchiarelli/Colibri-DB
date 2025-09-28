@@ -14,34 +14,54 @@ import Foundation
 /// Simple in-memory hash index mapping keys to reference sets.
 
 public struct HashIndex<Key: Hashable & Comparable, Ref: Hashable>: IndexProtocol {
-    private var map: [Key: Set<Ref>] = [:]
+    private struct Entry {
+        var live: Set<Ref> = []
+        var tombstones: Set<Ref> = []
+
+        mutating func insert(_ ref: Ref) {
+            tombstones.remove(ref)
+            live.insert(ref)
+        }
+
+        mutating func remove(_ ref: Ref) {
+            if live.remove(ref) != nil {
+                tombstones.insert(ref)
+            }
+        }
+
+        func visible() -> [Ref] { Array(live) }
+
+        var isEmpty: Bool { live.isEmpty && tombstones.isEmpty }
+    }
+
+    private var map: [Key: Entry] = [:]
 
     public init() {}
 
-    /// Inserts a reference for the given key.
     public mutating func insert(_ key: Key, _ ref: Ref) throws {
-        var set = map[key] ?? Set<Ref>()
-        set.insert(ref)
-        map[key] = set
+        var entry = map[key] ?? Entry()
+        entry.insert(ref)
+        map[key] = entry
     }
 
-    /// Returns all references equal to `key`.
     public func searchEquals(_ key: Key) throws -> [Ref] {
-        Array(map[key] ?? [])
+        guard let entry = map[key] else { return [] }
+        return entry.visible()
     }
 
-    /// Range queries are unsupported; returns equality results only when `lo == hi`.
     public func range(_ lo: Key?, _ hi: Key?) throws -> [Ref] {
-        // Hash index is not suited for range; return equality only if lo==hi
-        if let l = lo, let h = hi, l == h { return try searchEquals(l) }
-        return []
+        guard let lo = lo, let hi = hi, lo == hi else { return [] }
+        return try searchEquals(lo)
     }
 
-    /// Removes a specific reference for the given key.
     public mutating func remove(_ key: Key, _ ref: Ref) throws {
-        guard var set = map[key] else { return }
-        set.remove(ref)
-        if set.isEmpty { map.removeValue(forKey: key) } else { map[key] = set }
+        guard var entry = map[key] else { return }
+        entry.remove(ref)
+        if entry.isEmpty {
+            map.removeValue(forKey: key)
+        } else {
+            map[key] = entry
+        }
     }
 }
 
