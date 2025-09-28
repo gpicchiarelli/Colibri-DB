@@ -23,16 +23,17 @@ struct LockManagerTests {
         let handleT2 = try manager.lock(resourceB, mode: .exclusive, tid: 2, timeout: nil)
 
         let waiterFinished = DispatchSemaphore(value: 0)
+        let t1Result = DispatchQueue(label: "t1-result")
         var t1SecondHandle: LockHandle?
         var t1Error: Error?
 
         // Start T1 trying to acquire resourceB in background
-        DispatchQueue.global().async {
+        DispatchQueue.global().async { [manager, resourceB] in
             do {
                 let h = try manager.lock(resourceB, mode: .exclusive, tid: 1, timeout: nil)
-                t1SecondHandle = h
+                t1Result.sync { t1SecondHandle = h }
             } catch {
-                t1Error = error
+                t1Result.sync { t1Error = error }
             }
             waiterFinished.signal()
         }
@@ -93,7 +94,7 @@ struct LockManagerTests {
         var exclusiveHandle: LockHandle?
         var upgradeError: Error?
 
-        DispatchQueue.global().async {
+        DispatchQueue.global().async { [manager, resource] in
             do {
                 let h = try manager.lock(resource, mode: .exclusive, tid: 1, timeout: nil)
                 exclusiveHandle = h

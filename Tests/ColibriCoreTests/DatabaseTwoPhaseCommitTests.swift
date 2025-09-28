@@ -34,8 +34,8 @@ struct DatabaseTwoPhaseCommitTests {
         let txA = try dbA.begin(isolation: .readCommitted)
         let txB = try dbB.begin(isolation: .readCommitted)
 
-        try dbA.insert(into: "events", row: ["node": .string("A"), "seq": .int(1)], tid: txA)
-        try dbB.insert(into: "events", row: ["node": .string("B"), "seq": .int(1)], tid: txB)
+        _ = try dbA.insert(into: "events", row: ["node": .string("A"), "seq": .int(1)], tid: txA)
+        _ = try dbB.insert(into: "events", row: ["node": .string("B"), "seq": .int(1)], tid: txB)
 
         let coordinator = TwoPhaseCommitCoordinator()
         let participants = [dbA.make2PCParticipant(tid: txA), dbB.make2PCParticipant(tid: txB)]
@@ -66,7 +66,7 @@ struct DatabaseTwoPhaseCommitTests {
         try db.createTable("ledger")
 
         let tx = try db.begin(isolation: .readCommitted)
-        try db.insert(into: "ledger", row: ["entry": .string("pending"), "amount": .int(10)], tid: tx)
+        _ = try db.insert(into: "ledger", row: ["entry": .string("pending"), "amount": .int(10)], tid: tx)
 
         let coordinator = TwoPhaseCommitCoordinator()
         let dbParticipant = db.make2PCParticipant(tid: tx)

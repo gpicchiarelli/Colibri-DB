@@ -55,7 +55,7 @@ struct FileWALTests {
             try db.createTable("events")
             let tid = try db.begin(isolation: .readCommitted)
             _ = try db.insert(into: "events", row: ["id": .int(1)], tid: tid)
-            try db.flushAll()
+            db.flushAll()
             try db.globalWAL?.groupCommitSync()
             // Simulate crash by dropping the instance without committing.
         }

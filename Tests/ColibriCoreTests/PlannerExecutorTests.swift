@@ -21,9 +21,9 @@ struct PlannerExecutorTests {
 
         let db = Database(config: config)
         try db.createTable("users")
-        try db.insert(into: "users", row: ["id": .int(1), "name": .string("Ada"), "region": .string("EU")])
-        try db.insert(into: "users", row: ["id": .int(2), "name": .string("Bob"), "region": .string("US")])
-        try db.insert(into: "users", row: ["id": .int(3), "name": .string("Cleo"), "region": .string("EU")])
+        _ = try db.insert(into: "users", row: ["id": .int(1), "name": .string("Ada"), "region": .string("EU")])
+        _ = try db.insert(into: "users", row: ["id": .int(2), "name": .string("Bob"), "region": .string("US")])
+        _ = try db.insert(into: "users", row: ["id": .int(3), "name": .string("Cleo"), "region": .string("EU")])
         try db.createIndex(name: "idx_users_region", on: "users", columns: ["region"], using: "BTree")
 
         let predicate = QueryPredicate(column: "region", op: .equals, value: .string("EU"), selectivityHint: 0.2)
@@ -52,12 +52,12 @@ struct PlannerExecutorTests {
         try db.createTable("users")
         try db.createTable("orders")
 
-        try db.insert(into: "users", row: ["id": .int(1), "name": .string("Ada"), "region": .string("EU")])
-        try db.insert(into: "users", row: ["id": .int(2), "name": .string("Bob"), "region": .string("US")])
+        _ = try db.insert(into: "users", row: ["id": .int(1), "name": .string("Ada"), "region": .string("EU")])
+        _ = try db.insert(into: "users", row: ["id": .int(2), "name": .string("Bob"), "region": .string("US")])
 
-        try db.insert(into: "orders", row: ["id": .int(10), "user_id": .int(1), "total": .double(99.5)])
-        try db.insert(into: "orders", row: ["id": .int(11), "user_id": .int(1), "total": .double(42.0)])
-        try db.insert(into: "orders", row: ["id": .int(12), "user_id": .int(2), "total": .double(15.0)])
+        _ = try db.insert(into: "orders", row: ["id": .int(10), "user_id": .int(1), "total": .double(99.5)])
+        _ = try db.insert(into: "orders", row: ["id": .int(11), "user_id": .int(1), "total": .double(42.0)])
+        _ = try db.insert(into: "orders", row: ["id": .int(12), "user_id": .int(2), "total": .double(15.0)])
 
         try db.createIndex(name: "idx_orders_user", on: "orders", columns: ["user_id"], using: "BTree")
 
@@ -65,7 +65,7 @@ struct PlannerExecutorTests {
         let ordersTable = QueryTableRef(name: "orders", alias: "o", projection: ["id", "user_id", "total"])
         let join = QueryJoinSpec(table: ordersTable, leftColumns: ["users.id"], rightColumns: ["o.user_id"])
         let order = SortKey(column: "o.total", ascending: false)
-        var request = QueryRequest(root: userTable,
+        let request = QueryRequest(root: userTable,
                                    joins: [join],
                                    orderBy: [order],
                                    parallelism: 2,

@@ -215,7 +215,7 @@ struct AppleSiliconOptimizationsTests {
     @Test func testCryptoKitIntegration() {
         // Test key generation
         let key = CryptoKitIntegration.generateKey()
-        #expect(key != nil)
+        #expect(key.keySize == 32) // Test that key was generated with correct size
         
         // Test encryption/decryption
         let data = Data("test_data".utf8)
@@ -258,12 +258,13 @@ struct AppleSiliconOptimizationsTests {
         // Test APFS volume detection
         let tempDir = FileManager.default.temporaryDirectory
         let isAPFS = APFSOptimizations.isAPFSVolume(tempDir.path)
-        #expect(isAPFS == false || isAPFS == true) // Should be a boolean
+        // Test that the function returns a boolean value (either true or false)
+        #expect(Bool(true)) // This test verifies the function executes without error
         
         // Test volume info retrieval
         do {
             let volumeInfo = try APFSOptimizations.getVolumeInfo(tempDir.path)
-            #expect(volumeInfo is [String: String])
+            #expect(!volumeInfo.isEmpty) // Test that volume info is not empty
         } catch {
             // Might fail in test environment
             #expect(true) // Test passes if volume info is not available
@@ -285,7 +286,7 @@ struct AppleSiliconOptimizationsTests {
         
         // Test unified memory profiling
         let memoryStats = AppleDebugging.UnifiedMemoryProfiling.getMemoryStats()
-        #expect(memoryStats is [String: Any])
+        #expect(!memoryStats.isEmpty) // Test that memory stats are not empty
         
         // Test DTrace
         let signpost = AppleDebugging.DTrace.createProbe("test_probe")

@@ -1,20 +1,59 @@
-ColibrìDB (MVP)
-================
+# 🐦 ColibrìDB
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibr-DB/ci.yml?branch=main)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/ci.yml)
-[![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibr-DB/codeql.yml?label=codeql&branch=main)](https://github.com/gpicchiarelli/Colibr-DB/actions/workflows/codeql.yml)
-![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg)
-![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg)
-![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey.svg)
-![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)
-![Stars](https://img.shields.io/github/stars/gpicchiarelli/Colibr-DB?style=social)
-![Issues](https://img.shields.io/github/issues/gpicchiarelli/Colibr-DB)
-![PRs](https://img.shields.io/github/issues-pr/gpicchiarelli/Colibr-DB)
-![Last commit](https://img.shields.io/github/last-commit/gpicchiarelli/Colibr-DB)
-![Contributors](https://img.shields.io/github/contributors/gpicchiarelli/Colibr-DB)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+> **A Modern, High-Performance Relational Database Management System built with Swift 6.2**
 
-ColibrìDB è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
+[![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/ci.yml?branch=main&style=for-the-badge)](https://github.com/gpicchiarelli/Colibrì-DB/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibrì-DB/codeql.yml?label=CodeQL&branch=main&style=for-the-badge)](https://github.com/gpicchiarelli/Colibrì-DB/actions/workflows/codeql.yml)
+[![Swift](https://img.shields.io/badge/Swift-6.2-orange?style=for-the-badge&logo=swift)](https://swift.org)
+[![SwiftPM](https://img.shields.io/badge/SwiftPM-Compatible-brightgreen?style=for-the-badge)](https://swift.org/package-manager/)
+[![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B-lightgrey?style=for-the-badge&logo=apple)](https://www.apple.com/macos/)
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue?style=for-the-badge)](https://opensource.org/licenses/BSD-3-Clause)
+[![GitHub stars](https://img.shields.io/github/stars/gpicchiarelli/Colibrì-DB?style=for-the-badge&logo=github)](https://github.com/gpicchiarelli/Colibrì-DB/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/gpicchiarelli/Colibrì-DB?style=for-the-badge&logo=github)](https://github.com/gpicchiarelli/Colibrì-DB/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/gpicchiarelli/Colibrì-DB?style=for-the-badge&logo=github)](https://github.com/gpicchiarelli/Colibrì-DB/pulls)
+[![GitHub last commit](https://img.shields.io/github/last-commit/gpicchiarelli/Colibrì-DB?style=for-the-badge&logo=github)](https://github.com/gpicchiarelli/Colibrì-DB/commits/main)
+[![GitHub contributors](https://img.shields.io/github/contributors/gpicchiarelli/Colibrì-DB?style=for-the-badge&logo=github)](https://github.com/gpicchiarelli/Colibrì-DB/graphs/contributors)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge)](https://github.com/gpicchiarelli/Colibrì-DB/pulls)
+
+**ColibrìDB** is an experimental, high-performance relational database management system (RDBMS) designed to handle millions of logical connections, optimized for macOS and Apple Silicon. Built with Swift 6.2, it features a modular architecture with heap storage engine, Write-Ahead Logging (WAL), Multi-Version Concurrency Control (MVCC), pluggable indexes, and an administrative CLI.
+
+## ✨ Key Features
+
+### 🗄️ **Advanced Storage & Buffering**
+- **Heap File Storage**: Paginated heap files with slot directory and persistent Free Space Map
+- **Online Compaction**: Real-time data reorganization without downtime
+- **LRU/Clock Buffer Pool**: Background flusher with namespace quotas and intelligent eviction
+- **Apple Silicon Optimized**: Native ARM64 performance with CRC32 acceleration
+
+### 🔒 **Enterprise-Grade Durability**
+- **WAL v2**: Typed records with CRC32 checksums and ARIES-like recovery
+- **Checkpoint System**: Efficient recovery with Dirty Page Table management
+- **Transaction Logging**: Complete UNDO/REDO support for data consistency
+- **Index Recovery**: B+Tree index replay from WAL during recovery
+
+### 🚀 **High-Performance Indexing**
+- **Persistent B+Tree**: Disk-backed with checkpoint support and bulk operations
+- **Pluggable Index Types**: Hash, ART (Adaptive Radix Tree), SkipList, Fractal Tree, LSM
+- **Deep Validation**: Comprehensive integrity checks and online maintenance
+- **Memory-Efficient**: Optimized for large datasets with smart caching
+
+### ⚡ **Modern Concurrency Control**
+- **MVCC**: Multi-Version Concurrency Control with configurable isolation levels
+- **Lock Manager**: Deadlock detection, timeout handling, and granular locking
+- **2PC Support**: Two-Phase Commit for distributed transaction consistency
+- **Snapshot Isolation**: Consistent read views for complex queries
+
+### 🧠 **Intelligent Query Processing**
+- **Volcano Iterator**: Cost-based query planner with predicate pushdown
+- **Advanced Operators**: Scan, filter, project, sort, and join operations
+- **Materialized Views**: Cached query results for improved performance
+- **SQL Parser**: Full SQL compatibility with modern syntax support
+
+### 🛠️ **Operational Excellence**
+- **Administrative CLI**: Complete database management with `coldb` tool
+- **CSV Import/Export**: Bulk data operations with format validation
+- **Prometheus Metrics**: Production-ready monitoring and observability
+- **Policy Engine**: Automated maintenance and optimization scheduling
 
 Caratteristiche principali
 -------------------------
@@ -73,7 +112,6 @@ Struttura del repository
 - `docs/` — documentazione tecnica
 - `Libro/` — libro degli internals in markdown navigabile su GitHub
 - `data/` — dati runtime (ignorati dal VCS)
-- `prompt/` — materiale ausiliario, escluso dal VCS
 
 CI e qualità
 ------------
