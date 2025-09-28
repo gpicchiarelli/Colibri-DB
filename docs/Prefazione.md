@@ -1,6 +1,6 @@
 # Prefazione
 
-ColibrìDB nasce come esperimento ingegneristico volto a dimostrare che un motore relazionale moderno può essere costruito con rigore formale mantenendo un codice sorgente leggibile. Questo manuale universitario costituisce il ponte fra teoria e implementazione: ogni sezione illustra i concetti classici dei sistemi di gestione di basi di dati e li mette in relazione diretta con le funzioni reali presenti nella codebase Swift.
+ColibrìDB nasce come esperimento ingegneristico volto a dimostrare che un motore relazionale moderno può essere costruito con rigore formale mantenendo un codice sorgente leggibile. Questo manuale costituisce il ponte fra teoria e implementazione: ogni sezione illustra i concetti classici dei sistemi di gestione di basi di dati e li mette in relazione diretta con le funzioni reali presenti nella codebase Swift.
 
 ## Obiettivi didattici
 1. **Comprensione sistemica** — Fornire una visione coerente dell'intero stack, dal modello relazionale al server SQL.
