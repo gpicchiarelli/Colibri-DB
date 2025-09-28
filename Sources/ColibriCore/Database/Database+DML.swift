@@ -115,7 +115,7 @@ extension Database {
                 mvcc.registerInsert(table: table, rid: rid, row: updatedRow, tid: tid)
                 
                 // Update indexes with the new row
-                updateIndexes(table: table, row: updatedRow, rid: rid, tid: tid)
+                try updateIndexes(table: table, row: updatedRow, rid: rid, tid: tid)
                 
                 // Log the WAL record if needed
                 if let tid = tid {
@@ -164,7 +164,7 @@ extension Database {
                 mvcc.registerInsert(table: table, rid: rid, row: updatedRow, tid: tid)
                 
                 // Update indexes with the new row
-                updateIndexes(table: table, row: updatedRow, rid: rid, tid: tid)
+                try updateIndexes(table: table, row: updatedRow, rid: rid, tid: tid)
                 
                 updated += 1
             }
@@ -215,7 +215,7 @@ extension Database {
                     rids = idx.searchEquals(stringFromValue(value))
                     skipIndexName = name
                 case .persistentBTree(let f):
-                    rids = f.searchEqualsOptimized(value)
+                    rids = try f.searchEqualsOptimized(value)
                     skipIndexName = name
                 }
 
@@ -254,7 +254,7 @@ extension Database {
                         continue
                     }
                     // Update all indexes for this row
-                    removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName, tid: tid)
+                    try removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName, tid: tid)
                     deleted += 1
                 }
                 return deleted
@@ -288,7 +288,7 @@ extension Database {
                         mvcc.registerDelete(table: table, rid: rid, row: row, tid: nil)
                     }
                 }
-                removeFromIndexes(table: table, row: row, rid: rid, tid: tid)
+                try removeFromIndexes(table: table, row: row, rid: rid, tid: tid)
                 deleted += 1
             }
         }
@@ -343,7 +343,7 @@ extension Database {
                         skipIndexName = name
                         break
                     case .persistentBTree(let f):
-                        rids = f.searchEqualsOptimized(v)
+                        rids = try f.searchEqualsOptimized(v)
                         skipIndexName = name
                         break
                     }
@@ -445,7 +445,7 @@ extension Database {
                 continue
             }
             // Batch update indexes at the end
-            removeFromIndexes(table: table, row: row, rid: rid, tid: actualTid)
+            try removeFromIndexes(table: table, row: row, rid: rid, tid: actualTid)
             deleted += 1
         }
         

@@ -196,7 +196,7 @@ extension FileBPlusTreeIndex {
         }
     }
 
-    public func range(_ lo: Value?, _ hi: Value?) -> [RID] {
+    public func range(_ lo: Value?, _ hi: Value?) throws -> [RID] {
         guard hdr.root != 0 else { return [] }
         let loK = lo.map { KeyBytes.fromValue($0).bytes }
         let hiK = hi.map { KeyBytes.fromValue($0).bytes }
@@ -227,7 +227,7 @@ extension FileBPlusTreeIndex {
         }
     }
 
-    public func range(compositeLo lo: [Value]?, compositeHi hi: [Value]?) -> [RID] {
+    public func range(compositeLo lo: [Value]?, compositeHi hi: [Value]?) throws -> [RID] {
         guard hdr.root != 0 else { return [] }
         let loK = lo.map { KeyBytes.fromValues($0).bytes }
         let hiK = hi.map { KeyBytes.fromValues($0).bytes }
@@ -258,14 +258,14 @@ extension FileBPlusTreeIndex {
         }
     }
 
-    public func rangePrefixedBy(_ prefix: [Value]) -> [RID] {
+    public func rangePrefixedBy(_ prefix: [Value]) throws -> [RID] {
         guard hdr.root != 0 else { return [] }
         let lo = KeyBytes.fromValues(prefix).bytes
         var hi = lo; hi.append(0xFF)
-        return rangeEncoded(loKey: lo, hiKey: hi)
+        return try rangeEncoded(loKey: lo, hiKey: hi)
     }
 
-    func rangeEncoded(loKey: Data, hiKey: Data) -> [RID] {
+    func rangeEncoded(loKey: Data, hiKey: Data) throws -> [RID] {
         var res: [RID] = []
         var pid = hdr.root
         while true {

@@ -40,7 +40,7 @@ extension Database {
         return (totalHits, totalMisses, totalEv, totalPages, totalCap, totalPinned, totalDirty)
     }
     /// Returns a list of human-readable buffer pool stats for tables and indexes.
-    public func bufferPoolStats() -> [String] {
+    public func bufferPoolStats() throws -> [String] {
         var lines: [String] = []
         for (t, ft) in tablesFile {
             lines.append("table=\(t) pool=\(ft.statsString())")
@@ -51,7 +51,7 @@ extension Database {
                 case .anyString:
                     lines.append("index=\(t).\(name) pool=n/a")
                 case .persistentBTree(let f):
-                    lines.append("index=\(t).\(name) \(f.dumpHeader(pageId: nil))")
+                    lines.append("index=\(t).\(name) \(try f.dumpHeader(pageId: nil))")
                 }
             }
         }

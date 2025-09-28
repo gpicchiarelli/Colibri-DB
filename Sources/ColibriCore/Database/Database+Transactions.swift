@@ -57,7 +57,7 @@ extension Database {
         guard activeTIDs.contains(tid) else { return }
         // Undo in reverse order
         let ops = (txStates[tid]?.ops ?? []).reversed()
-        for op in ops { undo(op: op, tid: tid) }
+        for op in ops { try undo(op: op, tid: tid) }
         let lsn = logTransactionAbort(tid: tid)
         txLastLSN[tid] = lsn
         activeTIDs.remove(tid)
@@ -84,7 +84,7 @@ extension Database {
         let total = state.ops.count
         guard target < total else { return }
         let tail = Array(state.ops[target..<total])
-        for op in tail.reversed() { undo(op: op, tid: tid) }
+        for op in tail.reversed() { try undo(op: op, tid: tid) }
         state.ops.removeLast(total - target)
         state.savepoints = state.savepoints.filter { $0.value <= target }
         txStates[tid] = state
@@ -133,7 +133,7 @@ extension Database {
         )
     }
 
-    func undo(op: TxOp, tid: UInt64) {
+    func undo(op: TxOp, tid: UInt64) throws {
         switch op.kind {
         case .insert:
             let clr = logCLRUndoInsert(tid: tid, table: op.table, rid: op.rid, nextUndoLSN: txLastLSN[tid] ?? 0)
@@ -143,7 +143,7 @@ extension Database {
             } else if let ft = tablesFile[op.table] {
                 try? ft.remove(op.rid)
             }
-            removeFromIndexes(table: op.table, row: op.row, rid: op.rid)
+            try removeFromIndexes(table: op.table, row: op.row, rid: op.rid)
             mvcc.undoInsert(table: op.table, rid: op.rid, tid: tid)
         case .delete:
             let clr = logCLRUndoDelete(tid: tid, table: op.table, rid: op.rid, row: op.row, nextUndoLSN: txLastLSN[tid] ?? 0)

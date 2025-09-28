@@ -164,7 +164,7 @@ extension Database {
         indexes[table] = map
     }
 
-    func removeFromIndexes(table: String, row: Row, rid: RID, skipIndexName: String? = nil, tid: UInt64? = nil) {
+    func removeFromIndexes(table: String, row: Row, rid: RID, skipIndexName: String? = nil, tid: UInt64? = nil) throws {
         guard var map = indexes[table] else { return }
         let allowed: Set<String>
         if let sc = systemCatalog {
