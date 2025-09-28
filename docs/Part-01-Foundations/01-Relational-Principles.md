@@ -1,11 +1,23 @@
 # Capitolo 1 — Principi Relazionali e Modello Dati
 
-## 1.1 Origini e definizioni
-### 1.1.1 Relazione
-Una **relazione** R su domini D₁,…,Dₙ è un sottoinsieme finito del prodotto cartesiano D₁ × … × Dₙ. In ColibrìDB ogni tupla è rappresentata dal tipo `Row`, ovvero un dizionario ordinato di valori tipizzati. La definizione è coerente con il file `Sources/ColibriCore/Types.swift`, dove `Value` incapsula i possibili domini.
+> **Obiettivo del capitolo**: collegare le definizioni formali del modello relazionale con l'implementazione concreta in ColibrìDB, utilizzando schemi, tabelle riassuntive, pseudocodice e riferimenti puntuali al codice sorgente.
+
+---
+
+## 1.1 Definizioni fondamentali
+
+| Concetto | Definizione formale | Traduzione in ColibrìDB |
+|----------|---------------------|-------------------------|
+| Relazione `R` | Sottoinsieme finito di \( D_1 \times \dots \times D_n \) | Collezione di `Row` memorizzate in `FileHeapTable` |
+| Tupla `t` | Funzione \( t: \{A_1,\dots,A_n\} \to D \) | Istanza di `Row` (dizionario ordinato `String -> Value`) |
+| Attributo `A_i` | Coppia (nome, dominio) | `CatalogColumnDefinition` |
+| Schema `S` | Insieme ordinato di attributi | `CatalogTableSchema` |
+
+### 1.1.1 Relazione e tupla
+Una **relazione** è modellata da un insieme di tuple. In ColibrìDB le tuple sono oggetti `Row` serializzati secondo i codec definiti in `Types.swift`. L'accesso per nome garantisce consistenza con la definizione matematica di funzione.
 
 ### 1.1.2 Attributi e domini
-Gli attributi sono modellati da `CatalogColumnDefinition`. La funzione di inizializzazione è la seguente:
+Gli attributi sono rappresentati da `CatalogColumnDefinition`, come mostrato nel seguente estratto:
 
 ```120:137:Sources/ColibriCore/Catalog/LogicalObjects.swift
 public struct CatalogColumnDefinition {
@@ -19,61 +31,129 @@ public struct CatalogColumnDefinition {
 }
 ```
 
-Analizzare il costruttore dimostra come i domini (tipi) siano fissati a compile-time, mentre proprietà come `nullable` e `defaultValue` determinano vincoli a runtime.
+- `name`: etichetta dell'attributo (\( A_i \)).
+- `type`: dominio (\( D_i \)), pilotato dall'enumerazione `DataType`.
+- `nullable`: rappresenta la possibilità di \(\text{NULL}\).
 
-### 1.1.3 Tupla
-Una tupla è un elemento della relazione, implementata da `Row`. La struttura consente accesso per nome e codifica JSON per persistenza.
+### 1.1.3 Schema e istanziazione
+`CatalogTableSchema` agisce come firma della relazione. L'invariante principale è che le colonne siano univoche e coerenti con i vincoli dichiarati (primarie, uniche, ecc.).
 
-## 1.2 Gerarchia dei tipi
+---
+
+## 1.2 Gerarchia dei tipi e serializzazione
+
 ### 1.2.1 Enumerazione `DataType`
-La definizione `enum DataType` specifica i domini supportati. Ogni caso ha associata una dimensione (`size`) che sarà utilizzata dal layer storage per allocare spazio.
+L'enum `DataType` definisce i domini supportati. Ogni caso riflette un tipo SQL:
 
-### 1.2.2 Serializzazione
-Il mapping `DataType` → binario avviene tramite `TypeCodec`. La funzione `encode(value:into:)` dimostra come i valori vengano trasformati in layout contiguo nelle pagine.
+| Tipo SQL | Caso `DataType` | Byte allocati | Note |
+|----------|-----------------|---------------|------|
+| `INT` | `.int` | 4 | Complemento a due |
+| `DOUBLE` | `.double` | 8 | IEEE 754 |
+| `VARCHAR(n)` | `.string` | variabile | Lunghezza prefissata |
+| `BLOB` | `.blob` | variabile | Byte raw |
 
-### 1.2.3 Impatto sulle query
-La scelta del tipo influenza il planner: `LogicalPlanner` verifica compatibilità nelle espressioni. Descriveremo esempi in §1.5.
+### 1.2.2 Codec e layout
+La serializzazione è affidata a `TypeCodec`. Il seguente pseudocodice illustra la codifica di una riga:
 
-## 1.3 Chiavi e vincoli
-### 1.3.1 Chiave primaria
-`PrimaryKeyDefinition` definisce il set di colonne che rende la relazione funzione. In `CatalogManager.createTable` si verifica l'assenza di duplicati. Nel tempo di inserimento `ExecutorInsert` chiama `IndexManager` per creare eventuali indici clustered.
+```swift
+for column in schema.columns {
+    let value = row[column.name]
+    TypeCodec.encode(value, into: pageBuffer)
+}
+```
 
-### 1.3.2 Vincoli unici
-`UniqueKeyDefinition` interviene in fase di DDL. La funzione `ensureUniqueConstraint` (Planner) crea check logici e piani di enforcement.
+Il layout binario rispetta l'ordine delle colonne, con eventuali metadati (lunghezze, flag null).
+
+### 1.2.3 Impatto su storage e query
+- **Storage**: la dimensione guida la scelta della pagina in `FreeSpaceMap`.
+- **Planner**: i tipi sono verificati durante la fase semantica (`TypeChecker`). In caso di mismatch viene sollevato `PlannerError.typeMismatch`.
+
+---
+
+## 1.3 Vincoli e chiavi
+
+### 1.3.1 Chiave primaria (`PRIMARY KEY`)
+Definizione formale: un insieme minimo di attributi \( K \) tale che \( \forall t_1,t_2 \in R, t_1[K] = t_2[K] \Rightarrow t_1 = t_2 \).
+
+Implementazione:
+- `PrimaryKeyDefinition` memorizza nome e colonne.
+- Durante `CatalogManager.createTable` viene verificata l'assenza di duplicati e, se necessario, creato un indice clustered.
+- Il planner genera vincoli logici per prevenire insert duplicati.
+
+### 1.3.2 Vincoli unici e check
+`UniqueKeyDefinition` e `CheckConstraintDefinition` sono convertiti in operatori di verifica nel planner. Le espressioni `CHECK` sono valutate da `ExpressionEvaluator` durante l'esecuzione di `INSERT/UPDATE`.
 
 ### 1.3.3 Vincoli referenziali
-`ForeignKeyDefinition` contiene le azioni `onDelete`/`onUpdate`. L'implementazione runtime è parziale; il manuale discute la progettazione futura.
+`ForeignKeyDefinition` modella la relazione \( R_1 \to R_2 \) con azioni `onDelete` e `onUpdate`. L'enforcement runtime è parziale (roadmap), ma il catalogo registra i metadati necessari (tabelle e colonne coinvolte).
 
-### 1.3.4 Check constraint
-`CheckConstraintDefinition` memorizza un'espressione da valutare; la valutazione è delegata a `ExpressionEvaluator` durante gli insert/update.
+| Azione | Semantica | Stato |
+|--------|-----------|-------|
+| `RESTRICT` | blocca l'operazione se esistono riferimenti | Supportata |
+| `CASCADE` | propaga la modifica | In roadmap |
+| `SET NULL/DEFAULT` | aggiorna il valore | In roadmap |
+
+---
 
 ## 1.4 Persistenza del catalogo
-### 1.4.1 `SystemCatalog.registerTable`
-Analizziamo il flusso di registrazione di una tabella:
-1. Si costruisce un oggetto `LogicalObject` con metadati.
-2. Se esiste già, viene aggiornato e persistito.
-3. Viene associato un `PhysicalObject` con il percorso del file heap.
 
-### 1.4.2 Snapshot e JSON
-`SystemCatalog` mantiene uno snapshot in memoria aggiornato sotto lock. La funzione `persistLocked()` esegue:
-- `JSONEncoder` su `Snapshot`.
-- Scrittura atomica su disco.
+### 1.4.1 Snapshot e JSON
+`SystemCatalog` mantiene uno `Snapshot` in memoria; ogni mutazione aggiorna lo snapshot e richiama `persistLocked()` per scrittura atomica su `data/system_catalog.json`.
 
-### 1.4.3 File system
-Il catalogo è salvato in `data/system_catalog.json`. I laboratori mostreranno come leggere e interpretare questo file.
+### 1.4.2 Flusso `registerTable`
+1. Creazione o aggiornamento di `LogicalObject`.
+2. Eventuale creazione di `PhysicalObject` (file heap).
+3. Persistenza su disco.
 
-## 1.5 Laboratorio: creazione di una tabella
-1. Eseguire `colibridb> CREATE TABLE accounts(id INT PRIMARY KEY, balance DOUBLE);`
-2. Osservare il log del catalogo: `cat data/system_catalog.json`.
-3. Commentare come `CatalogManager.createTable` orchestrai seguenti passaggi:
-   - Validazione schema.
-   - Allocazione file heap (`FileHeapTable`).
-   - Registrazione nel catalogo.
+Schema sequenziale (ASCII):
+```
++-----------+        +-----------------+        +----------------+
+| SQL DDL   | -----> | CatalogManager  | -----> | SystemCatalog  |
++-----------+        +-----------------+        +----------------+
+        |                                        |
+        v                                        v
+    File Heap                               system_catalog.json
+```
 
-## 1.6 Discussione
-Confrontiamo ColibrìDB con PostgreSQL e MySQL riguardo:
-- Gestione metadati (JSON vs catalogo relazionale).
-- Strategie di enforcement vincoli.
-- Estendibilità dei tipi.
+---
 
-Chiudiamo indicando come il Capitolo 2 si agganci a questi concetti introducendo l'algebra relazionale e la pipeline di query.
+## 1.5 Laboratorio guidato
+
+1. **Creazione tabella**
+   ```sql
+   CREATE TABLE accounts (
+       id INT PRIMARY KEY,
+       owner STRING NOT NULL,
+       balance DOUBLE DEFAULT 0.0
+   );
+   ```
+2. **Verifica catalogo**
+   ```bash
+   cat data/system_catalog.json | jq '.logical[] | select(.name=="accounts")'
+   ```
+3. **Analisi**: confrontare i metadati con la definizione SQL e verificare la presenza del file heap corrispondente.
+
+---
+
+## 1.6 Confronto e discussione
+
+| Sistema | Rappresentazione catalogo | Enforcement vincoli |
+|---------|---------------------------|---------------------|
+| ColibrìDB | JSON con snapshot atomici | Planner + executor |
+| PostgreSQL | Tabelle relazionali (`pg_class`, etc.) | Catalogo + executor |
+| MySQL | Metadati InnoDB + file `.frm` | Storage engine |
+
+### 1.6.1 Vantaggi
+- Semplicità di introspezione (JSON leggibile).
+- Aggiornamenti atomici del catalogo.
+
+### 1.6.2 Limiti e roadmap
+- Mancanza di enforcement completo per `FOREIGN KEY`.
+- Necessità di versioning del catalogo per replicazione.
+
+---
+
+## 1.7 Collegamenti
+Questo capitolo prepara il terreno per:
+- **Capitolo 2**: trasformazione dello schema in operatori logici.
+- **Capitolo 5**: relazione tra metadati e WAL nei checkpoint.
+

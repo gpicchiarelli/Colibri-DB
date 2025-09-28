@@ -1,47 +1,131 @@
 # Capitolo 2 — Algebra Relazionale e SQL in ColibrìDB
 
+> **Obiettivo**: derivare la pipeline di trasformazione SQL → AST → Piano Logico, integrando concetti di algebra relazionale, schemi grafici e riferimenti al codice.
+
+---
+
 ## 2.1 Algebra relazionale formale
-Partiamo dalla definizione classica delle operazioni:
-- **Selezione** σᵖ(R): filtraggio delle tuple che soddisfano il predicato p.
-- **Proiezione** πₐ(R): estrazione di sottoinsiemi di attributi.
-- **Join** R ⋈ S: combinazione basata su condizioni di uguaglianza o generiche.
-- **Unione** R ∪ S e differenza R − S: operazioni insiemistiche.
-- **Rinominazione** ρ: necessaria per distinguere attributi omonimi.
 
-Discussione sulle proprietà algebriche (commutatività, associatività) e loro impatto sugli algoritmi di ottimizzazione.
+Schema riassuntivo delle operazioni di base:
 
-## 2.2 AST e rappresentazione nel codice
-Il parser SQL produce un albero sintattico (`SQLStatement`). Ad esempio, la clausola SELECT è modellata da `SQLSelect` con campi `projections`, `from`, `where`, `groupBy`, `orderBy`. Nel file `Sources/ColibriCore/SQL/AST/SQLSelect.swift` possiamo osservare la definizione.
+| Operatore | Simbolo | Significato | Equivalente nel codice |
+|-----------|---------|-------------|------------------------|
+| Selezione | \( \sigma_{p}(R) \) | Filtra tuple | `LogicalPlan.filter(predicate:)`
+| Proiezione | \( \pi_{A}(R) \) | Seleziona attributi | `LogicalPlan.project(columns:)`
+| Join | \( R \Join S \) | Combina relazioni | `LogicalPlan.join(type:on:)`
+| Unione | \( R \cup S \) | Unisce relazioni | `LogicalPlan.unionAll`
+| Differenza | \( R - S \) | Sottrae relazioni | da implementare |
 
-## 2.3 Dal SQL al piano logico
-`LogicalPlanner.plan(select:)` traduce l'AST in un grafico di operatori. Analizziamo passo per passo la funzione:
-1. Costruzione di `LogicalPlan.scan(table:)` per ogni sorgente.
-2. Applicazione di `LogicalPlan.filter(predicate:)` per la clausola WHERE.
-3. Configurazione di proiezioni e aggregazioni.
+Diagramma concettuale (ASCII):
+```
+SQL Query
+   │
+   ▼
+Algebra Relazionale (LogicalPlan)
+   │
+   ▼
+Physical Plan → Executor
+```
 
-Riportiamo estratti del codice con annotazioni per ciascun passaggio.
+---
 
-## 2.4 Analisi semantica
-Il planner effettua controlli di coerenza:
-- Risoluzione dei nomi di tabelle/colonne mediante `CatalogLookup`.
-- Verifica di compatibilità dei tipi con `TypeChecker`.
-- Costruzione di `BindingContext` per supportare alias e scoping.
+## 2.2 Parsing SQL
 
-## 2.5 Regole di ottimizzazione
-Descriviamo il motore di riscrittura basato su regole (`RuleEngine`). Esempi:
-- Pushdown di selezioni: riscritte vicino alle scansioni per ridurre cardinalità.
-- Eliminazione proiezioni ridondanti.
-- Simbolicamente, σᵖ(πₐ(R)) → πₐ(σᵖ(R)).
+### 2.2.1 Lexer
+`SQLLexer` converte una stringa in token. Ogni token è rappresentato da `SQLToken` (keyword, identificatore, numero, stringa, simbolo). Il metodo `tokenize()` scorre l'input O(n) e solleva `SQLLexerError` in caso di caratteri non riconosciuti.
 
-Colleghiamo queste trasformazioni ai metodi `applySelectionPushdown` ecc.
+### 2.2.2 Parser
+Il parser ricorsivo discendente (`SQLParser`) implementa regole come:
+- `parseSelectStatement`
+- `parseInsertStatement`
+- `parseCreateTableStatement`
 
-## 2.6 Piano fisico preliminare
-Il capitolo prepara la transizione al piano fisico. Introduciamo i costi simbolici: costo di I/O per tabelle (T_pagine), costo CPU per record. Questi concetti saranno formalizzati nel Capitolo 12.
+Ogni funzione consuma token e costruisce l'AST. Diagramma UML semplificato:
+```
+SQLParser
+ ├─ parseStatement()
+ │   ├─ parseSelectStatement()
+ │   ├─ parseInsertStatement()
+ │   └─ ...
+ └─ parseExpression()
+```
 
-## 2.7 Laboratorio
-- Eseguire `SELECT balance FROM accounts WHERE id = 42`.
-- Utilizzare la modalità debug del planner (`--explain` da implementare) per stampare piani logici.
-- Annotare come la selezione viene pushdown e come vengono risolti i binding.
+---
+
+## 2.3 Costruzione dell'AST
+
+Esempio: `SELECT balance FROM accounts WHERE id = 42`
+
+1. Lexer genera token `SELECT`, `IDENT(balance)`, `FROM`, ...
+2. Parser produce AST `SQLSelect` con campi `projections`, `from`, `where`.
+3. `SQLSelect` viene trasformato in `LogicalPlan` dal planner.
+
+Tabella degli elementi AST principali:
+
+| Nodo AST | Descrizione | File sorgente |
+|----------|-------------|----------------|
+| `SQLSelect` | Query SELECT completa | `SQLParser.swift` |
+| `SQLExpression` | Albero di espressioni | `SQLParser.swift` |
+| `SQLJoin` | Clausole JOIN | `SQLParser.swift` |
+
+---
+
+## 2.4 Pianificazione logica
+
+`LogicalPlanner` converte AST in operatori algebraici:
+
+```swift
+func plan(select stmt: SQLSelect) -> LogicalPlan {
+    let source = planFromClause(stmt.from)
+    let filtered = applyWhere(stmt.where, to: source)
+    let projected = applyProjections(stmt.projections, to: filtered)
+    return projected
+}
+```
+
+- `planFromClause` genera `LogicalPlan.scan`.
+- `applyWhere` produce `LogicalPlan.filter`.
+- `applyProjections` costruisce `LogicalPlan.project`.
+
+---
+
+## 2.5 Ottimizzazioni logiche
+
+`RuleEngine` applica regole di riscrittura. Esempio di pushdown selezione:
+
+```
+Input:  π_{A}(σ_{p}(R))
+Output: σ_{p}(π_{A}(R))
+```
+
+Nel codice la regola è implementata come:
+- Condizione: `LogicalPlan.project` figlio `LogicalPlan.filter`.
+- Azione: scambiare ordine e aggiornare colonne.
+
+---
+
+## 2.6 Output del planner
+
+`LogicalPlan.describe()` restituisce una rappresentazione ad albero. Esempio:
+```
+Project [balance]
+└─ Filter [id = 42]
+   └─ TableScan [accounts]
+```
+
+Questo output conferma la sequenza `π` → `σ` → `Scan`.
+
+---
+
+## 2.7 Laboratorio: dal SQL al piano logico
+
+1. `swift run coldb --explain "SELECT balance FROM accounts WHERE id = 42"`
+2. Analizzare l'output di `LogicalPlan.describe()`.
+3. Modificare la query (aggiungere join, aggregazioni) e osservare le riscritture applicate.
+
+---
 
 ## 2.8 Collegamenti
-Questo capitolo fornisce le basi per comprendere la pipeline descritta in Parte III. Le funzioni `LogicalPlan`, `PhysicalPlan` e `Executor` saranno riprese e studiate nel dettaglio nei capitoli successivi.
+- **Capitolo 12**: prosegue la trasformazione in piano fisico (cost-based).
+- **Capitolo 13**: implementa l'esecuzione iteratore-based degli operatori logici.
+
