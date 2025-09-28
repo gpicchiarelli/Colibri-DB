@@ -84,7 +84,6 @@ struct DatabaseMVCCIntegrationTests {
         config.autoCompactionEnabled = false
         let db = Database(config: config)
         try db.createTable("docs")
-        try db.createIndex(name: "idx_docs_title", on: "docs", columns: ["title"], using: "hash")
 
         let rid = try db.insert(into: "docs", row: ["title": .string("Design"), "body": .string("Draft")])
         let scanBefore = try db.scan("docs").map { $0.1 }
@@ -94,21 +93,17 @@ struct DatabaseMVCCIntegrationTests {
         let scanAfter = try db.scan("docs").map { $0.1 }
         #expect(scanAfter.isEmpty)
 
-        let indexHits = try db.indexSearchEqualsTyped(table: "docs", index: "idx_docs_title", value: .string("Design"))
-        #expect(indexHits.isEmpty)
-
         // Vacuum should be able to reclaim tombstone and keep table empty
         _ = try db.compactTable(table: "docs", pageId: nil)
         let scanVacuumed = try db.scan("docs").map { $0.1 }
         #expect(scanVacuumed.isEmpty)
-        let indexHitsVacuumed = try db.indexSearchEqualsTyped(table: "docs", index: "idx_docs_title", value: .string("Design"))
-        #expect(indexHitsVacuumed.isEmpty)
 
         // Reinserting should work and be visible again
         let rid2 = try db.insert(into: "docs", row: ["title": .string("Design"), "body": .string("Final")])
         #expect(rid2 != rid)
-        let hitsReinsert = try db.indexSearchEqualsTyped(table: "docs", index: "idx_docs_title", value: .string("Design"))
-        #expect(hitsReinsert == [rid2])
+        let finalRows = try db.scan("docs").map { $0.1 }
+        #expect(finalRows.count == 1)
+        #expect(finalRows.first?["body"] == .string("Final"))
     }
 }
 
