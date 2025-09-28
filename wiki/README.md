@@ -10,21 +10,21 @@ Benvenuto nella wiki di ColibrDB! Qui trovi guide pratiche, riferimenti e esempi
 
 ## 🚀 Guide Rapide
 
-- **[Quick Start]({{ site.baseurl }}/docs/wiki/Quick-Start)** - Installazione e prima sessione
-- **[Architecture]({{ site.baseurl }}/docs/wiki/Architecture)** - Architettura del sistema
-- **[Configuration]({{ site.baseurl }}/docs/wiki/Configuration)** - Configurazione avanzata
+- **[Quick Start]({{ site.baseurl }}/wiki/Quick-Start)** - Installazione e prima sessione
+- **[Architecture]({{ site.baseurl }}/wiki/Architecture)** - Architettura del sistema
+- **[Configuration]({{ site.baseurl }}/wiki/Configuration)** - Configurazione avanzata
 
 ## 🔧 Riferimenti
 
-- **[CLI Reference]({{ site.baseurl }}/docs/wiki/CLI-Reference)** - Comandi completi della CLI
-- **[API Reference]({{ site.baseurl }}/docs/wiki/API-Reference)** - Documentazione delle API
-- **[Development Guide]({{ site.baseurl }}/docs/wiki/Development)** - Guida per sviluppatori
+- **[CLI Reference]({{ site.baseurl }}/wiki/CLI-Reference)** - Comandi completi della CLI
+- **[API Reference]({{ site.baseurl }}/wiki/API-Reference)** - Documentazione delle API
+- **[Development Guide]({{ site.baseurl }}/wiki/Development)** - Guida per sviluppatori
 
 ## 📈 Ottimizzazione
 
-- **[Performance Guide]({{ site.baseurl }}/docs/wiki/Performance)** - Ottimizzazioni e benchmark
-- **[Examples]({{ site.baseurl }}/docs/wiki/Examples)** - Esempi pratici e casi d'uso
-- **[Troubleshooting]({{ site.baseurl }}/docs/wiki/Troubleshooting)** - Risoluzione problemi
+- **[Performance Guide]({{ site.baseurl }}/wiki/Performance)** - Ottimizzazioni e benchmark
+- **[Examples]({{ site.baseurl }}/wiki/Examples)** - Esempi pratici e casi d'uso
+- **[Troubleshooting]({{ site.baseurl }}/wiki/Troubleshooting)** - Risoluzione problemi
 
 ## 📖 Documentazione Tecnica
 

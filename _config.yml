@@ -3,8 +3,9 @@
 
 title: ColibrDB
 description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
-baseurl: "/Colibri-DB"
-url: "https://gpicchiarelli.github.io"
+author: ColibrDB Team
+url: https://gpicchiarelli.github.io
+baseurl: /Colibri-DB
 
 # Jekyll configuration
 markdown: kramdown
@@ -14,6 +15,12 @@ theme: minima
 # GitHub Pages specific settings
 github: [metadata]
 
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
+
 # Defaults
 defaults:
   - scope:
@@ -21,15 +28,17 @@ defaults:
       type: "pages"
     values:
       layout: "default"
+  - scope:
+      path: ""
+      type: "docs"
+    values:
+      layout: "doc"
 
 # Plugins
 plugins:
   - jekyll-feed
-  - jekyll-sitemap
   - jekyll-seo-tag
-
-# Collections
-collections:
+  - jekyll-sitemap
 
 # Exclude files
 exclude:
@@ -50,3 +59,20 @@ exclude:
   - update_wiki.sh
   - create_wiki.py
   - create_wiki_curl.sh
+
+# Social links
+social:
+  name: ColibrDB
+  links:
+    - https://github.com/gpicchiarelli/Colibri-DB
+    - https://github.com/gpicchiarelli/Colibri-DB/issues
+    - https://github.com/gpicchiarelli/Colibri-DB/discussions
+
+# SEO
+seo:
+  type: Organization
+  name: ColibrDB
+  description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
+  url: https://gpicchiarelli.github.io/Colibri-DB
+  twitter:
+    username: colibridb

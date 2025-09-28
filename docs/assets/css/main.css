@@ -1,191 +1,256 @@
-/* ColibrDB Main Styles - GitHub Pages Compatible */
+/* Additional ColibrDB Documentation Styles */
 
-/* Base styles */
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
-    line-height: 1.6;
-    color: #24292f;
-    background-color: #ffffff;
+/* Enhanced typography */
+.doc-content {
+    font-size: 16px;
+    line-height: 1.7;
 }
 
-/* Wrapper for consistent max-width */
-.wrapper {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-
-/* Main content area */
-.main-content {
-    padding: 3rem 0;
-    min-height: 60vh;
-}
-
-/* Typography */
-h1, h2, h3, h4, h5, h6 {
-    color: #0969da;
-    margin-bottom: 1rem;
+.doc-content h1,
+.doc-content h2,
+.doc-content h3,
+.doc-content h4,
+.doc-content h5,
+.doc-content h6 {
     font-weight: 600;
+    line-height: 1.25;
 }
 
-h1 {
-    font-size: 2.5rem;
-    border-bottom: 2px solid #d1d9e0;
-    padding-bottom: 0.5rem;
-}
-
-h2 {
-    font-size: 2rem;
-    margin-top: 2rem;
-}
-
-h3 {
-    font-size: 1.5rem;
-}
-
-/* Links */
-a {
-    color: #0969da;
-    text-decoration: none;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-/* Code */
-code {
-    background: #f6f8fa;
-    border: 1px solid #d1d9e0;
-    border-radius: 3px;
-    padding: 0.2rem 0.4rem;
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-    font-size: 0.9em;
-}
-
-pre {
-    background: #f6f8fa;
-    border: 1px solid #d1d9e0;
+/* Code blocks */
+.doc-content pre {
+    position: relative;
+    background: #f8f8f8;
+    border: 1px solid #e1e4e8;
     border-radius: 6px;
-    padding: 1rem;
+    padding: 16px;
     overflow-x: auto;
-    margin: 1rem 0;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.45;
 }
 
-pre code {
+.doc-content pre code {
     background: none;
     border: none;
     padding: 0;
+    font-size: inherit;
+    color: inherit;
+}
+
+/* Inline code */
+.doc-content code {
+    background-color: rgba(175, 184, 193, 0.2);
+    border-radius: 3px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 0.85em;
+    padding: 0.2em 0.4em;
 }
 
 /* Tables */
-table {
+.doc-content table {
     border-collapse: collapse;
+    border-spacing: 0;
     width: 100%;
     margin: 1rem 0;
+    overflow: auto;
 }
 
-th, td {
+.doc-content table th,
+.doc-content table td {
     border: 1px solid #d1d9e0;
-    padding: 0.75rem;
+    padding: 8px 12px;
     text-align: left;
 }
 
-th {
-    background: #f6f8fa;
+.doc-content table th {
+    background-color: #f6f8fa;
     font-weight: 600;
 }
 
+.doc-content table tr:nth-child(even) {
+    background-color: #f6f8fa;
+}
+
 /* Lists */
-ul, ol {
-    margin: 1rem 0;
+.doc-content ul,
+.doc-content ol {
+    margin: 0 0 1rem 0;
     padding-left: 2rem;
 }
 
-li {
+.doc-content ul ul,
+.doc-content ul ol,
+.doc-content ol ol,
+.doc-content ol ul {
+    margin: 0;
+}
+
+.doc-content li {
+    margin: 0.25rem 0;
+}
+
+.doc-content li > p {
     margin: 0.5rem 0;
 }
 
 /* Blockquotes */
-blockquote {
+.doc-content blockquote {
     border-left: 4px solid #0969da;
-    margin: 1rem 0;
-    padding: 0.5rem 1rem;
-    background: #f6f8fa;
+    color: #656d76;
     font-style: italic;
+    margin: 1rem 0;
+    padding: 0 1rem;
 }
 
-/* Alerts/Notices */
+.doc-content blockquote > :first-child {
+    margin-top: 0;
+}
+
+.doc-content blockquote > :last-child {
+    margin-bottom: 0;
+}
+
+/* Horizontal rules */
+.doc-content hr {
+    border: 0;
+    border-top: 1px solid #e1e4e8;
+    margin: 2rem 0;
+}
+
+/* Links */
+.doc-content a {
+    color: #0969da;
+    text-decoration: none;
+}
+
+.doc-content a:hover {
+    text-decoration: underline;
+}
+
+/* Images */
+.doc-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+/* Alerts and callouts */
 .alert {
+    border: 1px solid transparent;
+    border-radius: 6px;
     padding: 1rem;
     margin: 1rem 0;
-    border-radius: 6px;
-    border-left: 4px solid;
 }
 
 .alert-info {
-    background: #dbeafe;
+    background-color: #dbeafe;
     border-color: #3b82f6;
     color: #1e40af;
 }
 
 .alert-warning {
-    background: #fef3c7;
+    background-color: #fef3c7;
     border-color: #f59e0b;
     color: #92400e;
 }
 
+.alert-error {
+    background-color: #fee2e2;
+    border-color: #ef4444;
+    color: #dc2626;
+}
+
 .alert-success {
-    background: #d1fae5;
+    background-color: #d1fae5;
     border-color: #10b981;
     color: #065f46;
 }
 
-.alert-danger {
-    background: #fee2e2;
-    border-color: #ef4444;
-    color: #991b1b;
+/* Navigation breadcrumbs */
+.breadcrumbs {
+    background: #f6f8fa;
+    border-bottom: 1px solid #d1d9e0;
+    padding: 0.5rem 0;
+    margin-bottom: 2rem;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .wrapper {
-        padding: 0 15px;
-    }
-    
-    h1 {
-        font-size: 2rem;
-    }
-    
-    h2 {
-        font-size: 1.5rem;
-    }
-    
-    .main-content {
-        padding: 2rem 0;
-    }
+.breadcrumbs ol {
+    list-style: none;
+    display: flex;
+    margin: 0;
+    padding: 0;
+}
+
+.breadcrumbs li {
+    margin: 0;
+}
+
+.breadcrumbs li:not(:last-child):after {
+    content: '›';
+    margin: 0 0.5rem;
+    color: #656d76;
+}
+
+.breadcrumbs a {
+    color: #0969da;
+    text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+    text-decoration: underline;
+}
+
+/* Page navigation */
+.page-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 2rem 0;
+    padding: 1rem 0;
+    border-top: 1px solid #e1e4e8;
+    border-bottom: 1px solid #e1e4e8;
+}
+
+.page-nav a {
+    color: #0969da;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.page-nav a:hover {
+    text-decoration: underline;
+}
+
+.page-nav .prev {
+    text-align: left;
+}
+
+.page-nav .next {
+    text-align: right;
 }
 
 /* Print styles */
 @media print {
-    .page-header,
     .site-nav,
-    .site-footer {
+    .cta-buttons,
+    .footer-links {
         display: none;
     }
     
-    .main-content {
-        padding: 0;
+    .doc-content {
+        font-size: 12pt;
+        line-height: 1.4;
     }
     
-    a {
-        color: #000;
-        text-decoration: none;
+    .doc-content h1,
+    .doc-content h2,
+    .doc-content h3 {
+        page-break-after: avoid;
     }
     
-    a[href^="http"]:after {
-        content: " (" attr(href) ")";
-        font-size: 0.8em;
-        color: #666;
+    .doc-content pre,
+    .doc-content blockquote {
+        page-break-inside: avoid;
     }
 }

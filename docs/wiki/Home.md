@@ -37,19 +37,19 @@ description: Pagina principale della wiki di ColibrDB
 ## 📚 Navigazione Wiki
 
 ### 🚀 **Per Iniziare**
-- [**Quick Start**]({{ site.baseurl }}/docs/wiki/Quick-Start) - Installazione e prima sessione
-- [**Configurazione**]({{ site.baseurl }}/docs/wiki/Configuration) - Guida completa alle impostazioni
-- [**Esempi Pratici**]({{ site.baseurl }}/docs/wiki/Examples) - Casi d'uso e tutorial
+- [**Quick Start**]({{ site.baseurl }}/wiki/Quick-Start) - Installazione e prima sessione
+- [**Configurazione**]({{ site.baseurl }}/wiki/Configuration) - Guida completa alle impostazioni
+- [**Esempi Pratici**]({{ site.baseurl }}/wiki/Examples) - Casi d'uso e tutorial
 
 ### 🏗️ **Architettura e Sviluppo**
-- [**Architettura del Sistema**]({{ site.baseurl }}/docs/wiki/Architecture) - Componenti core e design
-- [**API Reference**]({{ site.baseurl }}/docs/wiki/API-Reference) - Documentazione completa delle API
-- [**Guida per Sviluppatori**]({{ site.baseurl }}/docs/wiki/Development) - Contribuire al progetto
+- [**Architettura del Sistema**]({{ site.baseurl }}/wiki/Architecture) - Componenti core e design
+- [**API Reference**]({{ site.baseurl }}/wiki/API-Reference) - Documentazione completa delle API
+- [**Guida per Sviluppatori**]({{ site.baseurl }}/wiki/Development) - Contribuire al progetto
 
 ### 🔧 **Operazioni e Troubleshooting**
-- [**CLI Reference**]({{ site.baseurl }}/docs/wiki/CLI-Reference) - Comandi e opzioni della CLI
-- [**Performance Guide**]({{ site.baseurl }}/docs/wiki/Performance) - Benchmark e ottimizzazioni
-- [**Troubleshooting**]({{ site.baseurl }}/docs/wiki/Troubleshooting) - Risoluzione problemi comuni
+- [**CLI Reference**]({{ site.baseurl }}/wiki/CLI-Reference) - Comandi e opzioni della CLI
+- [**Performance Guide**]({{ site.baseurl }}/wiki/Performance) - Benchmark e ottimizzazioni
+- [**Troubleshooting**]({{ site.baseurl }}/wiki/Troubleshooting) - Risoluzione problemi comuni
 
 ### 📖 **Documentazione Tecnica**
 - [**Manuale Completo**]({{ site.baseurl }}/docs/README) - Documentazione tecnica dettagliata
@@ -92,7 +92,7 @@ swift build
 
 ## 🤝 Contribuire
 
-ColibrDB accoglie i contributi! Consulta la nostra [Guida per Sviluppatori]({{ site.baseurl }}/docs/wiki/Development) per iniziare.
+ColibrDB accoglie i contributi! Consulta la nostra [Guida per Sviluppatori]({{ site.baseurl }}/wiki/Development) per iniziare.
 
 ### Aree di Contributo
 - **Motore Core**: Storage, WAL, indicizzazione
