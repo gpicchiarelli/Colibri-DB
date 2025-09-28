@@ -36,7 +36,7 @@ struct LockManagerTests {
                 t1Result.sync { t1Error = error }
             }
             waiterFinished.signal()
-        }
+        } // swiftlint:disable:next sendable_closure_captures
 
         // Wait a bit for T1 to be queued waiting for resourceB
         Thread.sleep(forTimeInterval: 0.1)
