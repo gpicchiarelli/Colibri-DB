@@ -138,8 +138,8 @@ La documentazione è organizzata in più sezioni per diversi tipi di utenti:
 
 #### 🔧 **Guide Operative**
 - **Guida Configurazione** (`docs/Appendices/02-Configurazione.md`)
-- **Riferimento CLI** (`docs/Part-06-Tooling/01-User-CLI.md`)
-- **Benchmarking** (`docs/Part-07-Testing/03-Benchmarks.md`)
+- **Riferimento CLI** (`docs/wiki/Part-06-Tooling/01-User-CLI.md`)
+- **Benchmarking** (`docs/wiki/Part-07-Testing/03-Benchmarks.md`)
 - **Sicurezza** (`SECURITY.md`)
 
 ## 🏗️ Architettura
