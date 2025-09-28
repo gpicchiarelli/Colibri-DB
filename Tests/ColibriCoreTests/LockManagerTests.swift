@@ -29,7 +29,7 @@ struct LockManagerTests {
         var t1Error: Error?
 
         // Start T1 trying to acquire resourceB in background
-        DispatchQueue.global().async {
+        DispatchQueue.global().async { [manager, resourceB] in
             do {
                 let h = try manager.lock(resourceB, mode: .exclusive, tid: 1, timeout: nil)
                 t1Result.sync { t1SecondHandle = h }
@@ -98,7 +98,7 @@ struct LockManagerTests {
         var exclusiveHandle: LockHandle?
         var upgradeError: Error?
 
-        DispatchQueue.global().async {
+        DispatchQueue.global().async { [manager, resource] in
             do {
                 let h = try manager.lock(resource, mode: .exclusive, tid: 1, timeout: nil)
                 upgradeResult.sync { exclusiveHandle = h }
