@@ -109,7 +109,7 @@ extension FileBPlusTreeIndex {
                 totalKeys += 1
             }
             if leaf.nextLeaf == 0 { break }
-            if let np = try? readPage(leaf.nextLeaf) {
+            if let np = try readPage(leaf.nextLeaf) {
                 if np.type != 2 { badLeafLinks += 1; messages.append("leaf-next-not-leaf@\(curPid)->\(leaf.nextLeaf)"); break }
             } else {
                 badLeafLinks += 1
@@ -126,7 +126,7 @@ extension FileBPlusTreeIndex {
 
     public func dumpHeader(pageId: UInt64?) -> String {
         if let pid = pageId, pid > 0 {
-            guard let page = try? readPage(pid) else { return "error: cannot read page \(pid)" }
+            guard let page = try readPage(pid) else { return "error: cannot read page \(pid)" }
             if page.type == 1 {
                 let keyCount = Int(page.data.subdata(in: 1..<3).withUnsafeBytes { $0.load(as: UInt16.self) }.bigEndian)
                 let childCount = Int(page.data.subdata(in: 3..<5).withUnsafeBytes { $0.load(as: UInt16.self) }.bigEndian)
