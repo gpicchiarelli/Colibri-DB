@@ -276,7 +276,7 @@ Accogliamo i contributi! Consulta le nostre [Linee Guida per i Contributi](../CO
 
 ## 📄 Licenza
 
-Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [LICENSE](../LICENSE) per i dettagli.
+Licenza BSD 3-Clause License
 
 ---
 
@@ -284,6 +284,6 @@ Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [
 
 [⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibrì-DB) • [📖 Leggi la documentazione](docs/) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibrì-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
 
-**ColibrìDB** - *Un RDBMS moderno per l'era Apple Silicon*
+**ColibrìDB**
 
 </div>

@@ -271,8 +271,8 @@ extension Database {
         case .anyString(let idx):
             return idx.range(lo.map { stringFromValue($0) }, hi.map { stringFromValue($0) })
         case .persistentBTree(let f):
-            if pair.columns.count == 1 { return f.range(lo, hi) }
-            else { return f.range(compositeLo: lo.map { [$0] }, compositeHi: hi.map { [$0] }) }
+            if pair.columns.count == 1 { return try f.range(lo, hi) }
+            else { return try f.range(compositeLo: lo.map { [$0] }, compositeHi: hi.map { [$0] }) }
         }
     }
 
@@ -293,9 +293,9 @@ extension Database {
             throw DBError.invalidArgument("Composite range not supported for in-memory indexes")
         case .persistentBTree(let f):
             if (lo?.count ?? 0) <= 1 && (hi?.count ?? 0) <= 1 {
-                return f.range(lo?.first, hi?.first)
+                return try f.range(lo?.first, hi?.first)
             }
-            return f.range(compositeLo: lo, compositeHi: hi)
+            return try f.range(compositeLo: lo, compositeHi: hi)
         }
     }
 

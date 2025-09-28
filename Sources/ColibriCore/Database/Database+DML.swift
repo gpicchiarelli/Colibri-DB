@@ -392,7 +392,7 @@ extension Database {
                     continue 
                 }
                 // Update indexes (skip predicate index if bulk-removed)
-                removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName, tid: tid)
+                try removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName, tid: tid)
                 deleted += 1
             }
         }
