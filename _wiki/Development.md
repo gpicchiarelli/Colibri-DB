@@ -31,7 +31,7 @@ ColibrDB è un progetto open source che accoglie contributi da sviluppatori di t
 
 ```bash
 # Fork del repository su GitHub, poi clona
-git clone https://github.com/YOUR_USERNAME/Colibr-DB.git
+git clone https://github.com/gpicchiarelli/Colibr-DB.git
 cd Colibr-DB
 
 # Aggiungi il repository upstream
