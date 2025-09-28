@@ -1,4 +1,4 @@
-# 🐦 ColibrDB - GitHub Wiki
+# 🐦 Colibrì - GitHub Wiki
 
 Benvenuto nella documentazione GitHub per ColibrDB! Questa wiki fornisce una guida completa per contributori, sviluppatori e utenti del progetto.
 
