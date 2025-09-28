@@ -155,6 +155,7 @@ enum Scenario: String, CaseIterable {
     case heapScan = "heap-scan"
     // B+Tree (base)
     case btreeLookup = "btree-lookup"
+    case btreeLookupOptimized = "btree-lookup-optimized"
     // Planner (base)
     case plannerJoin = "planner-join"
 
@@ -240,6 +241,8 @@ struct BenchmarkCLI {
                 result = try runHeapScan(iterations: iterations)
             case .btreeLookup:
                 result = try runBTreeLookup(iterations: iterations)
+            case .btreeLookupOptimized:
+                result = try runBTreeLookupOptimized(iterations: iterations)
             case .plannerJoin:
                 result = try runPlannerJoin(iterations: iterations)
             case .heapDelete:

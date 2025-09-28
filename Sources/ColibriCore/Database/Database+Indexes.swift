@@ -230,7 +230,7 @@ extension Database {
         case .anyString(let idx):
             return idx.searchEquals(stringFromValue(value))
         case .persistentBTree(let f):
-            if pair.columns.count == 1 { return f.searchEquals(value) }
+            if pair.columns.count == 1 { return f.searchEqualsOptimized(value) }
             else { return f.searchEquals(composite: [value]) }
         }
     }
@@ -250,7 +250,7 @@ extension Database {
         case .anyString:
             throw DBError.invalidArgument("Composite equality not supported for in-memory indexes")
         case .persistentBTree(let f):
-            if values.count == 1 { return f.searchEquals(values[0]) }
+            if values.count == 1 { return f.searchEqualsOptimized(values[0]) }
             return f.searchEquals(composite: values)
         }
     }
@@ -320,7 +320,7 @@ extension Database {
                 guard let c = cols.first, let v = row[c] else { continue }
                 hits = idx.searchEquals(stringFromValue(v))
             case .persistentBTree(let f):
-                if cols.count == 1 { if let v = row[cols[0]] { hits = f.searchEquals(v) } else { hits = [] } }
+                if cols.count == 1 { if let v = row[cols[0]] { hits = f.searchEqualsOptimized(v) } else { hits = [] } }
                 else {
                     var vs: [Value] = []
                     var ok = true

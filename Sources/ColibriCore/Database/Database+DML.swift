@@ -215,7 +215,7 @@ extension Database {
                     rids = idx.searchEquals(stringFromValue(value))
                     skipIndexName = name
                 case .persistentBTree(let f):
-                    rids = f.searchEquals(value)
+                    rids = f.searchEqualsOptimized(value)
                     skipIndexName = name
                 }
 
@@ -343,7 +343,7 @@ extension Database {
                         skipIndexName = name
                         break
                     case .persistentBTree(let f):
-                        rids = f.searchEquals(v)
+                        rids = f.searchEqualsOptimized(v)
                         skipIndexName = name
                         break
                     }

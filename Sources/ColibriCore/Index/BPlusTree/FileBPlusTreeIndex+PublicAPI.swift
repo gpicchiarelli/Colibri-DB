@@ -98,7 +98,7 @@ extension FileBPlusTreeIndex {
         let sortedEntries = entries.sorted { 
             let key1 = KeyBytes.fromValue($0.0).bytes
             let key2 = KeyBytes.fromValue($1.0).bytes
-            return key1.lexicographicallyPrecedes(key2)
+            return compareBytes(key1, key2) < 0
         }
         
         for (key, rid) in sortedEntries {
@@ -157,6 +157,26 @@ extension FileBPlusTreeIndex {
             }
         }
     }
+    
+    /// Optimized search that avoids KeyBytes allocation in hot path
+    public func searchEqualsOptimized(_ key: Value) -> [RID] {
+        guard hdr.root != 0 else { return [] }
+        var pid = hdr.root
+        while true {
+            guard let page = try? readPage(pid) else { return [] }
+            if page.type == 1 {
+                let inpg = try! parseInternal(page.data)
+                let idx = upperBoundOptimized(keys: inpg.keys, key: key)
+                pid = inpg.children[idx]
+            } else {
+                let leaf = try! parseLeaf(page.data)
+                if let i = binarySearchOptimized(keys: leaf.keys, key: key) {
+                    return leaf.ridLists[i]
+                }
+                return []
+            }
+        }
+    }
 
     public func searchEquals(composite: [Value]) -> [RID] {
         let k = KeyBytes.fromValues(composite).bytes
@@ -194,7 +214,7 @@ extension FileBPlusTreeIndex {
                 while true {
                     while i < leaf.keys.count {
                         let k = leaf.keys[i]
-                        if let hiK = hiK, !(k.lexicographicallyPrecedes(hiK) || k == hiK) { return res }
+                        if let hiK = hiK, compareBytes(k, hiK) > 0 { return res }
                         res.append(contentsOf: leaf.ridLists[i])
                         i += 1
                     }
@@ -225,7 +245,7 @@ extension FileBPlusTreeIndex {
                 while true {
                     while i < leaf.keys.count {
                         let k = leaf.keys[i]
-                        if let hiK = hiK, !(k.lexicographicallyPrecedes(hiK) || k == hiK) { return res }
+                        if let hiK = hiK, compareBytes(k, hiK) > 0 { return res }
                         res.append(contentsOf: leaf.ridLists[i])
                         i += 1
                     }
@@ -260,7 +280,7 @@ extension FileBPlusTreeIndex {
                 while true {
                     while i < leaf.keys.count {
                         let k = leaf.keys[i]
-                        if !(k.lexicographicallyPrecedes(hiKey) || k == hiKey) { return res }
+                        if compareBytes(k, hiKey) > 0 { return res }
                         res.append(contentsOf: leaf.ridLists[i])
                         i += 1
                     }

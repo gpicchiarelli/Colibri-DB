@@ -66,8 +66,8 @@ extension FileBPlusTreeIndex {
                 if lsn != 0 && lsn < hdr.checkpointLSN { olderLSN += 1 }
                 if let d0 = firstLeafDepth { if d0 != depth { depthMismatch += 1 } } else { firstLeafDepth = depth }
                 for k in leaf.keys {
-                    if let lb = lower, !(lb.lexicographicallyPrecedes(k) || lb == k) { boundaryViolations += 1 }
-                    if let ub = upper, !(k.lexicographicallyPrecedes(ub) || k == ub) { boundaryViolations += 1 }
+                    if let lb = lower, compareBytes(lb, k) > 0 { boundaryViolations += 1 }
+                    if let ub = upper, compareBytes(k, ub) > 0 { boundaryViolations += 1 }
                     totalKeys += 1
                 }
                 return true
@@ -100,7 +100,7 @@ extension FileBPlusTreeIndex {
             leafCount += 1
             for k in leaf.keys {
                 if let pk = prevKey {
-                    if !(pk.lexicographicallyPrecedes(k) || pk == k) {
+                    if compareBytes(pk, k) > 0 {
                         messages.append("leaf-order@\(curPid)")
                         return DeepReport(ok: false, leaves: leafCount, internalNodes: internalCount, keys: totalKeys, zeroLSNPages: zeroLSN, badLeafLinks: badLeafLinks, olderThanCheckpointPages: olderLSN, messages: messages)
                     }
