@@ -176,6 +176,45 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ott
     transform: translateY(-2px);
 }
 
+/* Trademark Disclaimer Styles */
+.trademark-disclaimer {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 2rem 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.trademark-disclaimer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #ffd700, #ffed4e);
+}
+
+.trademark-disclaimer h2 {
+    color: #24292f;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.trademark-disclaimer p {
+    color: #656d76;
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+}
+
+.trademark-disclaimer strong {
+    color: #0969da;
+    font-weight: 600;
+}
+
 /* Responsive Hero */
 @media (max-width: 768px) {
     .hero-content h1 {
@@ -208,6 +247,15 @@ description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ott
         width: 100%;
         max-width: 250px;
         justify-content: center;
+    }
+    
+    .trademark-disclaimer {
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+    }
+    
+    .trademark-disclaimer h2 {
+        font-size: 1.25rem;
     }
 }
 </style>
@@ -438,5 +486,20 @@ swift build
                 <li>🌐 Futuro: Architettura distribuita</li>
             </ul>
         </div>
+    </div>
+</section>
+
+<!-- Trademark Disclaimer Section -->
+<section id="trademark-disclaimer" class="section">
+    <div class="trademark-disclaimer">
+        <h2>📋 Disclaimer sui Marchi</h2>
+        <p><strong>Apple e i suoi prodotti sono marchi registrati:</strong></p>
+        <p>
+            Apple, il logo Apple, macOS, Apple Silicon, Swift e altri marchi Apple sono 
+            marchi registrati di Apple Inc. negli Stati Uniti e in altri paesi. 
+            Colibrì DB è un progetto indipendente e non è affiliato, sponsorizzato o 
+            approvato da Apple Inc. L'uso di questi marchi è solo a scopo descrittivo 
+            per indicare la compatibilità con i prodotti Apple.
+        </p>
     </div>
 </section>
