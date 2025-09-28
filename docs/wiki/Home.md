@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: doc
 title: ColibrDB Wiki
 description: Pagina principale della wiki di ColibrDB
 ---

@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: doc
 title: Architettura del Sistema
 description: Architettura interna di ColibrDB, componenti core e interazioni
 ---

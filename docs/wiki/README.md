@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: doc
 title: ColibrDB Wiki
 description: Guida operativa e riferimenti per ColibrDB
 ---

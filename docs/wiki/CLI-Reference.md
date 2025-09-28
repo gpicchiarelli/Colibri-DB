@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: doc
 title: CLI Reference
 description: Riferimento completo per i comandi della CLI coldb
 ---

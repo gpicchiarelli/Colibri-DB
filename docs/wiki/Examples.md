@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: doc
 title: Esempi Pratici
 description: Esempi pratici e casi d'uso per ColibrDB
 ---

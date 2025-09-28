@@ -11,6 +11,9 @@ markdown: kramdown
 highlighter: rouge
 theme: minima
 
+# GitHub Pages specific settings
+github: [metadata]
+
 # Defaults
 defaults:
   - scope:
@@ -24,6 +27,12 @@ plugins:
   - jekyll-feed
   - jekyll-sitemap
   - jekyll-seo-tag
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
 
 # Exclude files
 exclude:

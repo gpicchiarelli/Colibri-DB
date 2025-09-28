@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: doc
 title: Performance Guide
 description: Guida completa alle performance e ottimizzazioni di ColibrDB
 ---

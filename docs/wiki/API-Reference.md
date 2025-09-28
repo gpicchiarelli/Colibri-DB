@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: doc
 title: API Reference
 description: Documentazione completa delle API di ColibrDB
 ---

@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: doc
 title: Guida per Sviluppatori
 description: Guida completa per contribuire allo sviluppo di ColibrDB
 ---

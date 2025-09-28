@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: doc
 title: Troubleshooting Guide
 description: Guida alla risoluzione dei problemi comuni con ColibrDB
 ---

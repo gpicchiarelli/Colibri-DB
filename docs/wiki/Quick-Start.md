@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: doc
 title: Quick Start Guide
 description: Guida rapida per installare e utilizzare ColibrDB
 ---

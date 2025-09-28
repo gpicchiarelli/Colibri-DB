@@ -1,5 +1,5 @@
 ---
-layout: page
+layout: doc
 title: Guida alla Configurazione
 description: Guida completa alla configurazione di ColibrDB
 ---
