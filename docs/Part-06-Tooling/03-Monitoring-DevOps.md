@@ -1,13 +1,70 @@
 # Capitolo 23 — Monitoring, Build e DevOps
 
-## 23.1 Build e CI
-Descriviamo la pipeline di build con `swift build`, `swift test`, integrazione con GitHub Actions o altri strumenti CI. Spieghiamo come assicurarsi dipendenze e configurazioni.
+> **Obiettivo**: fornire una guida sistematica per integrare ColibrìDB nei flussi DevOps, dalla build alla produzione, includendo monitoring e backup.
 
-## 23.2 Monitoring runtime
-`Telemetry` e `Metrics` raccolgono dati su throughput, latenza, page flush. Documentiamo come abilitare esportazione e integrarsi con grafici.
+---
 
-## 23.3 Deployment
-Strategie per distribuire ColibrìDB su macOS e Linux: configurazioni `launchd`, systemd, container.
+## 23.1 Pipeline di build
+
+- `swift build`: compila il progetto.
+- `swift test`: esegue suite di test.
+- Integrazione con CI (GitHub Actions, GitLab CI): script che automano build/test.
+
+Schema pipeline:
+```
+Commit → CI Build → Unit Tests → Integration Tests → Artifacts
+```
+
+---
+
+## 23.2 Deployment
+
+Strategie tipiche:
+- macOS: LaunchDaemon (`plist` in `Resources/`).
+- Linux: systemd unit.
+- Containerizzazione (Docker) in roadmap.
+
+Tabella parametri importanti:
+
+| Parametro | Descrizione |
+|-----------|-------------|
+| `dataDir` | Directory dati (WAL, catalogo) |
+| `logDir` | File log |
+| `checkpointInterval` | Frequenza checkpoint |
+
+---
+
+## 23.3 Monitoring
+
+Metriche disponibili via `Telemetry` e `Metrics`:
+- WAL throughput.
+- Latenza commit (p95).
+- Depth della coda group commit.
+
+Roadmap: esportazione Prometheus, dashboard Grafana.
+
+---
 
 ## 23.4 Backup e ripristino
-Procedure consigliate: checkpoint regolari, copia dei file WAL, Snapshot del catalogo.
+
+Procedure consigliate:
+1. Eseguire `\checkpoint` per garantire stato consistente.
+2. Copiare `data/` (WAL, catalogo, checkpoint).
+3. Verificare integrità con script di validazione.
+
+Ripristino: ripristinare directory e avviare server (ARIES riprodurrà eventuali operazioni incomplete).
+
+---
+
+## 23.5 Laboratorio
+
+1. Configurare un job CI che esegua `swift build` e `swift test`.
+2. Abilitare logging rotativo e monitorarlo.
+3. Simulare backup e ripristino su ambiente di staging.
+
+---
+
+## 23.6 Collegamenti
+- **Parte VII**: test/benchmark per la pipeline di qualità.
+- **Appendice B**: configurazioni per ambienti di deploy.
+

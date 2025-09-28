@@ -1,20 +1,89 @@
 # Capitolo 16 — CatalogManager e API DDL
 
+> **Obiettivo**: analizzare l'interfaccia ad alto livello che gestisce le operazioni di Data Definition Language (DDL), illustrando il flusso completo di creazione, modifica e cancellazione degli oggetti.
+
+---
+
 ## 16.1 Funzione di `CatalogManager`
-`CatalogManager` fornisce un'interfaccia ad alto livello per le operazioni DDL. Coordina `SystemCatalog`, `Database`, `StatisticsManager` e `CheckpointCatalog`.
+
+`CatalogManager` offre API per creare e modificare database, tabelle, indici, ruoli. Opera come **façade** sopra `SystemCatalog`, `Database`, `StatisticsManager`.
+
+Diagramma componenti:
+```
+CatalogManager
+ ├─ SystemCatalog
+ ├─ Database
+ └─ StatisticsManager
+```
+
+---
 
 ## 16.2 Creazione di oggetti
-- `createDatabase`: genera directory fisiche, registra metadata, inizializza catalogo.
-- `createTable`: valida schema, crea `FileHeapTable`, registra logical/physical object, aggiorna statistiche.
-- `createIndex`: crea file B+Tree, registra index, aggiorna catalogo.
 
-Analizziamo la sequenza di chiamate e gli invarianti (es. unicità nomi, esistenza tabelle).
+### 16.2.1 `createDatabase`
+- Crea directory su disco.
+- Inizializza catalogo, checkpoint, WAL.
+- Registra il database in `SystemCatalog`.
 
-## 16.3 Modifica e drop
-`alterTable`, `dropTable`, `dropIndex` eseguono le operazioni inverse. Discutiamo la gestione di lock e la necessità di transazioni.
+### 16.2.2 `createTable`
+Sequence diagram (ASCII):
+```
+Client → CatalogManager → validateSchema
+          ↓
+        Database.createTable
+          ↓
+        SystemCatalog.registerTable
+          ↓
+        StatisticsManager.initTableStats
+```
 
-## 16.4 Cache
-`CatalogManager` mantiene cache in-memory per ridurre accessi a `SystemCatalog`. Spieghiamo invalidazioni e thread-safety.
+Passi principali:
+1. Validazione schema (unicità nomi colonne, compliance tipi).
+2. Creazione file heap (`FileHeapTable`) e registrazione fisica.
+3. Aggiornamento catalogo e statistiche.
+
+### 16.2.3 `createIndex`
+- Verifica esistenza tabella.
+- Costruisce B+Tree (`FileBPlusTreeIndex`).
+- Aggiorna catalogo e statistiche.
+
+---
+
+## 16.3 Modifiche e drop
+
+| Operazione | Funzione | Effetti |
+|------------|----------|---------|
+| Alter table | `alterTable` | Aggiorna schema, invalidazione cache |
+| Drop table | `dropTable` | Rimuove entry dal catalogo, elimina file |
+| Drop index | `dropIndex` | Rimuove index dal catalogo e file indice |
+
+### 16.3.1 `dropTable`
+Pseudocodice:
+```swift
+func dropTable(name) {
+    database.removeTableFiles(name)
+    systemCatalog.removeLogical(name, .table)
+    statisticsManager.deleteTableStats(name)
+}
+```
+
+---
+
+## 16.4 Cache e invalidazioni
+
+`CatalogManager` mantiene cache in-memory (es. schema tabelle). Ogni operazione DDL invalida le entry coinvolte per garantire consistenza.
+
+---
 
 ## 16.5 Laboratorio
-- Eseguire `CREATE`/`DROP` e osservare gli effetti su `system_catalog.json` e file fisici.
+
+1. Creare una tabella via CLI.
+2. Usare `coldb-dev \catalog list` (da implementare) per visualizzare stato.
+3. Eseguire `DROP TABLE` e verificare che file e metadati siano rimossi.
+
+---
+
+## 16.6 Collegamenti
+- **Capitolo 15**: dettagli su `SystemCatalog`.
+- **Parte V**: comandi server e CLI DDL passano tramite `CatalogManager`.
+

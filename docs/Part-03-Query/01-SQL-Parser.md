@@ -1,26 +1,131 @@
 # Capitolo 10 — Parsing SQL e Costruzione AST
 
-## 10.1 Teoria del parsing
-Una grammatica SQL semplificata può essere definita in forma BNF. Spieghiamo concetti quali terminali, non terminali, regole di produzione. Presentiamo l'algoritmo top-down utilizzato dal parser.
+> **Obiettivo**: trasformare una stringa SQL in una rappresentazione strutturata (AST) con un approccio formale. Useremo notazione BNF, diagrammi, tabelle ed esempi pratici.
 
-## 10.2 Lexer
-`SQLLexer` effettua tokenizzazione. Analizziamo funzioni `tokenize`, gestione string literal, numeri, identificatori. Descriviamo la complessità O(n) e gli errori sollevati (`SQLLexerError`).
+---
 
-## 10.3 Parser
-`SQLParser` implementa un parser ricorsivo discendente. Per ogni tipo di statement (`SELECT`, `INSERT`, `CREATE`, etc.) descriviamo la funzione corrispondente (`parseSelectStatement`, `parseCreateTableStatement`). Utilizziamo snippet di codice e commenti per illustrare la logica.
+## 10.1 Grammatica SQL semplificata
 
-### 10.3.1 Gestione vincoli
-`parseConstraint()` riconosce `PRIMARY KEY`, `FOREIGN KEY`, `UNIQUE`, `CHECK`. Spieghiamo come vengono convertiti in `SQLConstraint`.
+### 10.1.1 BNF
+```
+<statement> ::= <select> | <insert> | <update> | <delete> | <create> | <drop>
+<select> ::= SELECT <projection> FROM <from> [WHERE <predicate>] [GROUP BY <columns>] [ORDER BY <columns>]
+<projection> ::= * | <expression> {, <expression>}
+<from> ::= <table> {JOIN <table> ON <predicate>}
+```
 
-### 10.3.2 Gestione espressioni
-`parseExpression()` costruisce alberi binari per operatori aritmetici/logici. Introduciamo precedenze e associatività.
+Tabella sintesi (estratto):
 
-## 10.4 Costruzione AST
-Una volta riconosciuta la sintassi, il parser restituisce `SQLStatement`. Analizziamo la struttura delle classi `SQLSelect`, `SQLInsert`, ecc. Illustreremo come l'AST sia un grafo aciclico con riferimenti a espressioni e clausole.
+| Non terminale | Espansione |
+|---------------|------------|
+| `<table>` | `<identifier>` |
+| `<predicate>` | `<expression> <operator> <expression>` |
+| `<expression>` | `<term> {(+|-) <term>}` |
 
-## 10.5 Error handling
-Il parser genera `SQLParseError` con messaggi esplicativi. Discutiamo l'importanza di una buona diagnostica.
+### 10.1.2 Tokenizzazione
+`SQLLexer` spezza la stringa in token: keyword, identificatori, letterali, simboli. Il metodo `tokenize()` scorre l'input una volta (O(n)).
 
-## 10.6 Laboratorio
-- Provare a parsare statement validi e invalidi usando `SQLParser.parse(sql)` da REPL Swift.
-- Osservare l'AST generato serializzandolo in JSON per verifica.
+---
+
+## 10.2 Architettura del parser
+
+Diagramma di chiamate (semplificato):
+```
+SQLParser.parse(sql)
+  ├─ SQLLexer.tokenize()
+  └─ SQLParser(tokens)
+       └─ parseStatement()
+            ├─ parseSelectStatement()
+            ├─ parseInsertStatement()
+            ├─ parseUpdateStatement()
+            └─ parseDeleteStatement()
+```
+
+### 10.2.1 Gestione stati
+`SQLParser` mantiene `tokens` e `position`. Funzione `currentToken()` restituisce il token corrente, `consume(expected)` avanza e verifica.
+
+---
+
+## 10.3 Esempio guidato
+
+Consideriamo `SELECT balance FROM accounts WHERE id = 42`.
+
+1. **Token**: `SELECT`, `IDENT(balance)`, `FROM`, `IDENT(accounts)`, `WHERE`, `IDENT(id)`, `OP(=)`, `NUM(42)`.
+2. **Parsing**: `parseSelectStatement` costruisce `SQLSelect` con:
+   - `projections = [.column("balance")]`
+   - `from = [.table("accounts")]`
+   - `where = .binary(.column("id"), .equals, .literal(42))`
+
+Tabella AST (estratto):
+
+| Campo | Valore |
+|-------|--------|
+| `SQLSelect.projections` | `[SelectColumn(expression: .column("balance"))]` |
+| `SQLSelect.from` | `[SQLTableReference(name: "accounts")]` |
+| `SQLSelect.where` | `SQLExpression.binary(...)` |
+
+---
+
+## 10.4 Gestione DDL
+`parseCreateTableStatement()` riconosce colonne e vincoli. Diagramma di flusso:
+```
+CREATE TABLE
+    ├─ parseIdentifier() (nome tabella)
+    └─ parseColumnDefinition() / parseConstraint()
+```
+
+Vincoli gestiti:
+- `PRIMARY KEY`
+- `FOREIGN KEY`
+- `UNIQUE`
+- `CHECK`
+
+### 10.4.1 Funzione `parseColumnDefinition`
+Analizza attributi (tipo, nullable, default, primary, unique). Restituisce `SQLColumnDefinition`.
+
+---
+
+## 10.5 Gestione espressioni
+
+`parseExpression()` implementa un parser a precedenza. Struttura tipica:
+- `parseOr` → `parseAnd` → `parseComparison` → `parseTerm` → `parseFactor`.
+
+Tabella operatori e precedenze:
+
+| Livello | Operatori |
+|---------|-----------|
+| 1 (alto) | `*`, `/` |
+| 2 | `+`, `-` |
+| 3 | `=`, `<`, `>` |
+| 4 (basso) | `AND`, `OR` |
+
+---
+
+## 10.6 Error handling
+
+Il parser solleva `SQLParseError` con descrizioni precise. Esempio: se appare un token inatteso, `parseStatement()` lancia `unexpectedToken("Expected statement keyword")`.
+
+### 10.6.1 Schema di diagnosi
+```
+if token ≠ atteso:
+    throw SQLParseError.expectedToken(atteso, actual: tokenDescription(token))
+```
+
+---
+
+## 10.7 Laboratorio
+
+1. Avviare REPL Swift (`swift`), importare `ColibriCore`, eseguire:
+   ```swift
+   let ast = try SQLParser.parse("SELECT 1 + 2")
+   print(ast)
+   ```
+2. Provare statement errati per vedere gli errori (es. `SELECT FROM`).
+3. Serializzare l'AST in JSON (creare funzione `encodeAST` per debugging).
+
+---
+
+## 10.8 Collegamenti
+- **Capitolo 11**: il piano logico usa l'AST come input.
+- **Appendice Glossario**: definizioni di AST, parser, token.
+
