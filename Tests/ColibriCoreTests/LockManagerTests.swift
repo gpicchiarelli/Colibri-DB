@@ -91,15 +91,16 @@ struct LockManagerTests {
         let sharedT2 = try manager.lock(resource, mode: .shared, tid: 2, timeout: nil)
 
         let upgradeFinished = DispatchSemaphore(value: 0)
+        let upgradeResult = DispatchQueue(label: "upgrade-result")
         var exclusiveHandle: LockHandle?
         var upgradeError: Error?
 
         DispatchQueue.global().async { [manager, resource] in
             do {
                 let h = try manager.lock(resource, mode: .exclusive, tid: 1, timeout: nil)
-                exclusiveHandle = h
+                upgradeResult.sync { exclusiveHandle = h }
             } catch {
-                upgradeError = error
+                upgradeResult.sync { upgradeError = error }
             }
             upgradeFinished.signal()
         }
