@@ -16,9 +16,8 @@ Usa questa sezione per dire alle persone quali versioni del tuo progetto sono at
 
 Se hai trovato una vulnerabilità di sicurezza in ColibrìDB, ti preghiamo di segnalarla in modo responsabile:
 
-1. **Email Privata**: Invia i dettagli a [security@colibridb.dev](mailto:security@colibridb.dev)
-2. **GitHub Security Advisory**: Usa il [form di segnalazione](https://github.com/gpicchiarelli/Colibrì-DB/security/advisories/new)
-3. **Non aprire issue pubbliche** per vulnerabilità di sicurezza
+1. **GitHub Security Advisory**: Usa il [form di segnalazione](https://github.com/gpicchiarelli/Colibrì-DB/security/advisories/new)
+2. **Non aprire issue pubbliche** per vulnerabilità di sicurezza
 
 ### Informazioni da Includere
 
