@@ -30,7 +30,7 @@ plugins:
 
 # Collections
 collections:
-  docs:
+  wiki:
     output: true
     permalink: /:collection/:name/
 
