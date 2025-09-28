@@ -1,19 +1,19 @@
 //
 //  ConfigurationManager.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-26.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
-// Theme: Configuration management system for ColibrìDB.
+// Theme: Configuration management system for ColibrDB.
 
 import Foundation
 import os.log
 
-/// Configuration manager for ColibrìDB
+/// Configuration manager for ColibrDB
 public final class ConfigurationManager {
     private let logger = Logger(subsystem: "com.colibridb.config", category: "manager")
     private var configurations: [String: Any] = [:]
@@ -26,7 +26,7 @@ public final class ConfigurationManager {
     /// Loads default configurations
     private func loadDefaultConfigurations() {
         // Database configurations
-        set("database.name", value: "ColibrìDB")
+        set("database.name", value: "ColibrDB")
         set("database.version", value: "1.0.0")
         set("database.encoding", value: "utf8")
         set("database.collation", value: "utf8_general_ci")

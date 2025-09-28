@@ -1,6 +1,6 @@
 ---
 name: ✨ Feature Request
-about: Suggerisci un'idea per ColibrìDB
+about: Suggerisci un'idea per ColibrDB
 title: '[FEATURE] '
 labels: ['enhancement', 'needs-triage']
 assignees: ''
@@ -74,7 +74,7 @@ assignees: ''
 
 ---
 
-## 🏗️ Architettura ColibrìDB - Riferimento per Feature
+## 🏗️ Architettura ColibrDB - Riferimento per Feature
 
 ### Principi di Design
 - **Performance First**: Ogni componente ottimizzato per velocità e throughput

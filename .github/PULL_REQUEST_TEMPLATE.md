@@ -1,4 +1,4 @@
-# 🐦 ColibrìDB - Pull Request
+# 🐦 ColibrDB - Pull Request
 
 ## 📋 Descrizione
 <!-- Fornisci una descrizione chiara e concisa di cosa fa questa PR -->
@@ -55,7 +55,7 @@ Closes #(numero-issue)
 
 ---
 
-## 🏗️ Architettura ColibrìDB
+## 🏗️ Architettura ColibrDB
 
 ### Componenti Principali
 - **ColibriCore**: Motore database core (Storage, WAL, MVCC, Indici)

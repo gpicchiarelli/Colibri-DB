@@ -1,12 +1,12 @@
 ---
 layout: page
 title: Troubleshooting Guide
-description: Guida alla risoluzione dei problemi comuni con ColibrìDB
+description: Guida alla risoluzione dei problemi comuni con ColibrDB
 ---
 
 # 🚨 Troubleshooting Guide
 
-Guida completa per risolvere i problemi più comuni con ColibrìDB.
+Guida completa per risolvere i problemi più comuni con ColibrDB.
 
 ## 🎯 Panoramica
 
@@ -426,7 +426,7 @@ colibridb> \config set connectionTimeoutSeconds 300
 #!/bin/bash
 # Script di health check completo
 
-echo "=== ColibrìDB Health Check ==="
+echo "=== ColibrDB Health Check ==="
 
 # Verifica stato database
 echo "1. Database Status:"
@@ -682,7 +682,7 @@ Quando crei un'issue su GitHub, includi:
 
 <div align="center">
 
-**🚨 Troubleshooting ColibrìDB** - *Risolvi problemi e ottimizza le performance*
+**🚨 Troubleshooting ColibrDB** - *Risolvi problemi e ottimizza le performance*
 
 [← Development Guide]({{ site.baseurl }}/wiki/Development) • [Performance Guide →]({{ site.baseurl }}/wiki/Performance)
 

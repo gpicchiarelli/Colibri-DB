@@ -1,12 +1,12 @@
 ---
 layout: page
 title: Performance Guide
-description: Guida completa alle performance e ottimizzazioni di ColibrìDB
+description: Guida completa alle performance e ottimizzazioni di ColibrDB
 ---
 
 # ⚡ Performance Guide
 
-Guida completa per ottimizzare le performance di ColibrìDB.
+Guida completa per ottimizzare le performance di ColibrDB.
 
 ## 🎯 Panoramica
 
@@ -334,7 +334,7 @@ done
 #!/bin/bash
 # Script dashboard performance
 
-echo "=== ColibrìDB Performance Dashboard ==="
+echo "=== ColibrDB Performance Dashboard ==="
 echo "Timestamp: $(date)"
 echo
 
@@ -559,7 +559,7 @@ crontab -e
 
 <div align="center">
 
-**⚡ Performance Guide ColibrìDB** - *Ottimizza le performance per il massimo throughput*
+**⚡ Performance Guide ColibrDB** - *Ottimizza le performance per il massimo throughput*
 
 [← Troubleshooting]({{ site.baseurl }}/wiki/Troubleshooting) • [Examples →]({{ site.baseurl }}/wiki/Examples)
 

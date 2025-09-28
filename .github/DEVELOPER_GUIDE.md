@@ -1,6 +1,6 @@
-# 🏗️ ColibrìDB Developer Guide
+# 🏗️ ColibrDB Developer Guide
 
-Questa guida fornisce informazioni dettagliate per sviluppatori che vogliono contribuire al core di ColibrìDB.
+Questa guida fornisce informazioni dettagliate per sviluppatori che vogliono contribuire al core di ColibrDB.
 
 ## 📋 Indice
 - [Architettura Generale](#architettura-generale)
@@ -14,7 +14,7 @@ Questa guida fornisce informazioni dettagliate per sviluppatori che vogliono con
 ## 🏗️ Architettura Generale
 
 ### Principi Fondamentali
-ColibrìDB è progettato seguendo questi principi:
+ColibrDB è progettato seguendo questi principi:
 
 1. **Performance First**: Ogni componente è ottimizzato per velocità e throughput
 2. **Modularità**: Architettura pluggabile per indici e storage
@@ -25,7 +25,7 @@ ColibrìDB è progettato seguendo questi principi:
 ### Diagramma Architetturale
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    ColibrìDB Architecture                    │
+│                    ColibrDB Architecture                    │
 ├─────────────────────────────────────────────────────────────┤
 │  CLI (coldb)  │  Server (coldb-server)  │  Benchmarks      │
 ├─────────────────────────────────────────────────────────────┤
@@ -208,11 +208,11 @@ public final class MVCCManager {
 ```swift
 //
 //  NomeFile.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by [Nome] on [Data].
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
@@ -505,4 +505,4 @@ swift test --configuration release
 
 ---
 
-Questa guida fornisce le basi per contribuire efficacemente al core di ColibrìDB. Per domande specifiche, consulta la documentazione tecnica in `docs/` o apri una discussione su GitHub.
+Questa guida fornisce le basi per contribuire efficacemente al core di ColibrDB. Per domande specifiche, consulta la documentazione tecnica in `docs/` o apri una discussione su GitHub.

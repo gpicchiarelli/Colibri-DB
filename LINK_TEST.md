@@ -1,4 +1,4 @@
-# 🔗 Test dei Link del Sito ColibrìDB
+# 🔗 Test dei Link del Sito ColibrDB
 
 Questo file documenta tutti i link del sito per verificare che funzionino correttamente.
 

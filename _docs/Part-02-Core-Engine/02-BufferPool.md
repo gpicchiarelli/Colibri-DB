@@ -1,12 +1,12 @@
 ---
 layout: page
 title: Buffer Pool Management
-description: Capitolo 6 - Gestione del buffer pool in ColibrìDB
+description: Capitolo 6 - Gestione del buffer pool in ColibrDB
 ---
 
 # Capitolo 6 — Buffer Pool e Gestione Pagine
 
-> **Obiettivo**: analizzare il sottosistema buffer pool con schemi, tabelle riassuntive e laboratori. Dimostrare come ColibrìDB realizzi la coerenza tra memoria e disco.
+> **Obiettivo**: analizzare il sottosistema buffer pool con schemi, tabelle riassuntive e laboratori. Dimostrare come ColibrDB realizzi la coerenza tra memoria e disco.
 
 ---
 
@@ -15,7 +15,7 @@ description: Capitolo 6 - Gestione del buffer pool in ColibrìDB
 Il buffer pool è una struttura cache che mantiene in memoria un sottoinsieme delle pagine di disco. Il problema classico è il **caching con politiche di rimpiazzamento**.
 
 ### 6.1.1 Politica LRU
-ColibrìDB utilizza una variante LRU (Least Recently Used). Formalmente, il buffer seleziona come vittima la pagina con timestamp di accesso minimo tra quelle con `pinCount = 0`.
+ColibrDB utilizza una variante LRU (Least Recently Used). Formalmente, il buffer seleziona come vittima la pagina con timestamp di accesso minimo tra quelle con `pinCount = 0`.
 
 ### 6.1.2 Equazioni base
 - Miss rate approssimato \( R_m = \frac{\text{misses}}{\text{accessi totali}} \)

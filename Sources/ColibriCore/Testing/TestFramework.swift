@@ -1,19 +1,19 @@
 //
 //  TestFramework.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-01-27.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
-// Theme: Comprehensive testing framework for ColibrìDB.
+// Theme: Comprehensive testing framework for ColibrDB.
 
 import Foundation
 import os.log
 
-/// Comprehensive test framework for ColibrìDB
+/// Comprehensive test framework for ColibrDB
 public final class TestFramework {
     private let logger = Logger(subsystem: "com.colibridb.testing", category: "framework")
     private let database: Database

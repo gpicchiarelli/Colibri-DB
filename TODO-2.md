@@ -1,4 +1,4 @@
-# ColibrìDB — Piano di Lavoro verso RDBMS Completo profilato.
+# ColibrDB — Piano di Lavoro verso RDBMS Completo profilato.
 
 ---
 ## Principi guida

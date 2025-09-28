@@ -1,16 +1,16 @@
 ---
 layout: page
 title: API Reference
-description: Documentazione completa delle API di ColibrìDB
+description: Documentazione completa delle API di ColibrDB
 ---
 
 # 📚 API Reference
 
-Documentazione completa delle API pubbliche di ColibrìDB.
+Documentazione completa delle API pubbliche di ColibrDB.
 
 ## 🎯 Panoramica
 
-ColibrìDB espone un'API modulare organizzata in diversi livelli:
+ColibrDB espone un'API modulare organizzata in diversi livelli:
 
 - **Database Core**: API principale per operazioni database
 - **Storage Engine**: API per gestione storage e pagine
@@ -759,7 +759,7 @@ print("Hit rate: \(bufferStats.hitRate)%")
 
 <div align="center">
 
-**📚 API Reference ColibrìDB** - *Documentazione completa per sviluppatori*
+**📚 API Reference ColibrDB** - *Documentazione completa per sviluppatori*
 
 [← CLI Reference]({{ site.baseurl }}/wiki/CLI-Reference) • [Development Guide →]({{ site.baseurl }}/wiki/Development)
 

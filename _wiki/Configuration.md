@@ -1,12 +1,12 @@
 ---
 layout: page
 title: Guida alla Configurazione
-description: Guida completa alla configurazione di ColibrìDB
+description: Guida completa alla configurazione di ColibrDB
 ---
 
 # ⚙️ Guida alla Configurazione
 
-Questa guida completa ti aiuterà a configurare ColibrìDB per le tue esigenze specifiche.
+Questa guida completa ti aiuterà a configurare ColibrDB per le tue esigenze specifiche.
 
 ## 📁 File di Configurazione
 
@@ -568,7 +568,7 @@ echo "Buffer pool size: $buffer_pool_size bytes"
 
 <div align="center">
 
-**⚙️ Configurazione ColibrìDB** - *Ottimizza le performance per le tue esigenze*
+**⚙️ Configurazione ColibrDB** - *Ottimizza le performance per le tue esigenze*
 
 [← Architettura]({{ site.baseurl }}/wiki/Architecture) • [CLI Reference →]({{ site.baseurl }}/wiki/CLI-Reference)
 

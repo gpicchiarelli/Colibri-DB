@@ -1,4 +1,4 @@
-# 📜 Codice di Condotta per ColibrìDB
+# 📜 Codice di Condotta per ColibrDB
 
 Questo Codice di Condotta è adattato dal [Contributor Covenant][homepage], versione 1.4, disponibile su https://www.contributor-covenant.org/version/1/4/code-of-conduct.html
 

@@ -1,6 +1,6 @@
 //
 //  CLI.swift
-//  ColibrìDB - Production CLI Core
+//  ColibrDB - Production CLI Core
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
@@ -8,7 +8,7 @@
 import Foundation
 import ColibriCore
 
-/// Professional command-line interface for ColibrìDB production use
+/// Professional command-line interface for ColibrDB production use
 public class ProductionCLI {
     internal let database: Database
     internal let formatter = CLIFormatter()

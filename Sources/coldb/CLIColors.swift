@@ -1,6 +1,6 @@
 //
 //  CLIColors.swift
-//  ColibrìDB - CLI Color Support
+//  ColibrDB - CLI Color Support
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //

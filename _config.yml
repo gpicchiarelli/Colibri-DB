@@ -1,7 +1,7 @@
-# ColibrìDB Documentation Site
+# ColibrDB Documentation Site
 # GitHub Pages configuration
 
-title: ColibrìDB
+title: ColibrDB
 description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
 baseurl: "/Colibr-DB"
 url: "https://gpicchiarelli.github.io"

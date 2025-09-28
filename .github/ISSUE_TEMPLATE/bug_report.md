@@ -1,6 +1,6 @@
 ---
 name: 🐛 Bug Report
-about: Crea un report per aiutarci a migliorare ColibrìDB
+about: Crea un report per aiutarci a migliorare ColibrDB
 title: '[BUG] '
 labels: ['bug', 'needs-triage']
 assignees: ''
@@ -30,7 +30,7 @@ assignees: ''
 <!-- Compila le informazioni sul tuo ambiente -->
 - **OS**: [es. macOS 14.0, Linux Ubuntu 22.04]
 - **Swift Version**: [es. 6.2]
-- **ColibrìDB Version**: [es. v0.1.0-alpha]
+- **ColibrDB Version**: [es. v0.1.0-alpha]
 - **Architecture**: [es. ARM64, x86_64]
 
 ## 📋 Configurazione
@@ -69,7 +69,7 @@ Inserisci qui i log di errore
 
 ---
 
-## 🏗️ Architettura ColibrìDB - Riferimento Rapido
+## 🏗️ Architettura ColibrDB - Riferimento Rapido
 
 ### Componenti Principali
 - **ColibriCore**: Motore database core

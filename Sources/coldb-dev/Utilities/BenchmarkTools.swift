@@ -1,10 +1,10 @@
 //
 //  BenchmarkTools.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
@@ -14,7 +14,7 @@ import Foundation
 import ColibriCore
 import os.log
 
-/// Comprehensive benchmark tools for ColibrìDB performance testing
+/// Comprehensive benchmark tools for ColibrDB performance testing
 public class BenchmarkTools {
     private let database: Database
     private let logger = Logger(subsystem: "com.colibridb.benchmark", category: "tools")

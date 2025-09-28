@@ -1,10 +1,10 @@
 //
 //  IOHints.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-26.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 //
 // Theme: Adaptive I/O hints wrapping platform syscalls for hot paths.
 

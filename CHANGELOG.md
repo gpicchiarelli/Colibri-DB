@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Tutte le modifiche note a ColibrìDB.
+Tutte le modifiche note a ColibrDB.
 
 Unreleased
 --

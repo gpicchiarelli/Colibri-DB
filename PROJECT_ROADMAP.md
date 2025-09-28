@@ -1,4 +1,4 @@
-# 🚀 ColibrìDB - Project Roadmap & Milestone Planning
+# 🚀 ColibrDB - Project Roadmap & Milestone Planning
 
 *Data: 28 Settembre 2025*
 
@@ -231,4 +231,4 @@ Migliorare qualità del codice e testing:
 
 ---
 
-*Questo roadmap è stato generato automaticamente basato sull'analisi approfondita del codice ColibrìDB. Ogni issue è stata valutata per criticità, impatto e complessità per ottimizzare la produttività e la qualità del sistema.*
+*Questo roadmap è stato generato automaticamente basato sull'analisi approfondita del codice ColibrDB. Ogni issue è stata valutata per criticità, impatto e complessità per ottimizzare la produttività e la qualità del sistema.*

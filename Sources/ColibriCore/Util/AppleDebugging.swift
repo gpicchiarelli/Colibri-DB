@@ -1,6 +1,6 @@
 //
 //  AppleDebugging.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-26.
 //

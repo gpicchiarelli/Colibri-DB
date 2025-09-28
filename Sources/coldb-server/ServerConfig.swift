@@ -262,7 +262,7 @@ public struct ConfigurationParser {
     }
     
     private static func printHelp() {
-        print("ColibrìDB Server")
+        print("ColibrDB Server")
         print("Usage: coldb-server [options]")
         print("")
         print("Options:")

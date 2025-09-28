@@ -1,17 +1,17 @@
 //
 //  SystemCatalog.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 
 // Theme: System catalog archive recording objects, roles, and stats.
 
 import Foundation
 
 /// Persistent catalog that tracks logical (tables, indexes, views, sequences) and physical
-/// objects (heap files, index files, segments) for ColibrìDB.
+/// objects (heap files, index files, segments) for ColibrDB.
 public final class SystemCatalog {
     public enum LogicalKind: String, Codable, Sendable { case table, index, view, sequence }
     public enum PhysicalKind: String, Codable, Sendable { case heapFile, indexFile, segment, other }

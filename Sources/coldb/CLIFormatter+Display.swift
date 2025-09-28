@@ -1,6 +1,6 @@
 //
 //  CLIFormatter+Display.swift
-//  ColibrìDB - CLI Display Extension
+//  ColibrDB - CLI Display Extension
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //

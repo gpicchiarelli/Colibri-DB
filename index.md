@@ -1,13 +1,13 @@
 ---
 layout: default
-title: ColibrìDB
+title: ColibrDB
 description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2
 ---
 
 <!-- Overview Section -->
 <section id="overview" class="section">
     <h2>🎯 Panoramica</h2>
-    <p><strong>ColibrìDB</strong> è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa <code>coldb</code>.</p>
+    <p><strong>ColibrDB</strong> è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa <code>coldb</code>.</p>
 </section>
 
 <!-- Features Section -->
@@ -154,7 +154,7 @@ swift build
 <!-- Architecture Section -->
 <section id="architecture" class="section">
     <h2>🏗️ Architettura del Sistema</h2>
-    <p>ColibrìDB è progettato con un'architettura modulare che separa chiaramente le responsabilità:</p>
+    <p>ColibrDB è progettato con un'architettura modulare che separa chiaramente le responsabilità:</p>
     
     <div class="features-grid">
         <div class="feature-card">

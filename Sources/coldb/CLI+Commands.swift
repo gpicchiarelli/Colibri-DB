@@ -1,6 +1,6 @@
 //
 //  CLI+Commands.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-27.
 //
@@ -14,7 +14,7 @@ extension CLI {
     /// Displays help information for available commands.
     func help() {
         print("""
-        ColibrìDB CLI Commands:
+        ColibrDB CLI Commands:
         
         General:
           \\help          - Show this help

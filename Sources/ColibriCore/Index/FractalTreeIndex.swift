@@ -1,10 +1,10 @@
 //
 //  FractalTreeIndex.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 
 // Theme: Fractal tree laboratory exploring buffered hierarchical merges.
 

@@ -1,12 +1,12 @@
 ---
 layout: page
 title: Parte III — Pipeline di Query e Ottimizzazione
-description: Pipeline di query e ottimizzazione in ColibrìDB
+description: Pipeline di query e ottimizzazione in ColibrDB
 ---
 
 # Parte III — Pipeline di Query e Ottimizzazione
 
-Questa parte del manuale approfondisce l'intero ciclo di vita di una query SQL in ColibrìDB. Analizzeremo:
+Questa parte del manuale approfondisce l'intero ciclo di vita di una query SQL in ColibrDB. Analizzeremo:
 1. **Parsing** — dalla stringa SQL all'albero sintattico astratto (AST).
 2. **Pianificazione logica** — trasformazione dell'AST in un piano basato su operatori relazionali.
 3. **Ottimizzazione** — applicazione di regole logiche e stime di costo.

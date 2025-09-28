@@ -1,10 +1,10 @@
 //
 //  Protocols.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
@@ -12,7 +12,7 @@
 
 import Foundation
 /// Core protocols defining pluggable components (indexes, storage, WAL, buffers),
-/// as well as policy and optimization interfaces used by ColibrìDB.
+/// as well as policy and optimization interfaces used by ColibrDB.
 
 // MARK: - Index
 

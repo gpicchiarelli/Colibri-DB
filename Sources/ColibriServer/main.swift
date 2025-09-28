@@ -1,23 +1,23 @@
 //
 //  main.swift
-//  ColibrìDB Server
+//  ColibrDB Server
 //
 //  Created by Giacomo Picchiarelli on 2025-09-26.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
-// Theme: Main entry point for ColibrìDB HTTP server.
+// Theme: Main entry point for ColibrDB HTTP server.
 
 import Foundation
 import os.log
 
-/// Main entry point for ColibrìDB HTTP server
+/// Main entry point for ColibrDB HTTP server
 public func main() {
     let logger = Logger(subsystem: "com.colibridb.server", category: "main")
     
-    logger.info("Starting ColibrìDB HTTP Server")
+    logger.info("Starting ColibrDB HTTP Server")
     
     // Parse command line arguments
     let arguments = CommandLine.arguments
@@ -44,7 +44,7 @@ public func main() {
         lockTimeoutSeconds: 30.0
     )
     
-    // Initialize ColibrìDB
+    // Initialize ColibrDB
     let colibriDB = ColibriDB(config: config)
     
     do {
@@ -62,7 +62,7 @@ public func main() {
         logger.info("HTTP server started on \(host):\(port)")
         
         // Print server information
-        print("🚀 ColibrìDB HTTP Server")
+        print("🚀 ColibrDB HTTP Server")
         print("========================")
         print("Host: \(host)")
         print("Port: \(port)")
@@ -155,7 +155,7 @@ private func setupSignalHandlers(server: ColibriServer, colibriDB: ColibriDB) {
 /// Prints usage information
 private func printUsage() {
     print("""
-    ColibrìDB HTTP Server
+    ColibrDB HTTP Server
     
     Usage: colibri-server [options]
     

@@ -1,19 +1,19 @@
 //
 //  TelemetryManager.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-01-27.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
-// Theme: Comprehensive telemetry and monitoring system for ColibrìDB.
+// Theme: Comprehensive telemetry and monitoring system for ColibrDB.
 
 import Foundation
 import os.log
 
-/// Comprehensive telemetry manager for ColibrìDB
+/// Comprehensive telemetry manager for ColibrDB
 public final class TelemetryManager {
     private let logger = Logger(subsystem: "com.colibridb.telemetry", category: "manager")
     

@@ -1,6 +1,6 @@
-# 🤝 Contribuire a ColibrìDB
+# 🤝 Contribuire a ColibrDB
 
-Grazie per il tuo interesse a contribuire a ColibrìDB! Questo documento fornisce linee guida per contribuire efficacemente al progetto.
+Grazie per il tuo interesse a contribuire a ColibrDB! Questo documento fornisce linee guida per contribuire efficacemente al progetto.
 
 ## 📋 Indice
 - [Come Contribuire](#come-contribuire)
@@ -22,7 +22,7 @@ Grazie per il tuo interesse a contribuire a ColibrìDB! Questo documento fornisc
 - 🔧 **Refactoring**: Miglioramento del codice esistente
 
 ### Prima di Iniziare
-1. Controlla le [issue esistenti](https://github.com/gpicchiarelli/Colibrì-DB/issues)
+1. Controlla le [issue esistenti](https://github.com/gpicchiarelli/Colibr-DB/issues)
 2. Assicurati che la tua idea non sia già in discussione
 3. Per feature importanti, apri prima una issue per discussione
 
@@ -38,11 +38,11 @@ Grazie per il tuo interesse a contribuire a ColibrìDB! Questo documento fornisc
 ```bash
 # 1. Fork del repository su GitHub
 # 2. Clona il tuo fork
-git clone https://github.com/[TUO-USERNAME]/Colibrì-DB.git
-cd Colibrì-DB
+git clone https://github.com/[TUO-USERNAME]/Colibr-DB.git
+cd Colibr-DB
 
 # 3. Aggiungi il repository originale come upstream
-git remote add upstream https://github.com/gpicchiarelli/Colibrì-DB.git
+git remote add upstream https://github.com/gpicchiarelli/Colibr-DB.git
 
 # 4. Installa le dipendenze
 swift package resolve
@@ -56,7 +56,7 @@ swift test
 
 ### Struttura del Progetto
 ```
-Colibrì-DB/
+Colibr-DB/
 ├── Sources/
 │   ├── ColibriCore/          # Motore database core
 │   │   ├── Buffer/           # Gestione buffer pool
@@ -87,11 +87,11 @@ Colibrì-DB/
 ```swift
 //
 //  NomeFile.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by [Nome] on [Data].
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
@@ -122,7 +122,7 @@ public final class NomeClasse {
 }
 ```
 
-### Convenzioni Specifiche ColibrìDB
+### Convenzioni Specifiche ColibrDB
 - **Performance First**: Ogni componente deve essere ottimizzato per velocità
 - **Thread Safety**: Usare `NSLock` o strutture lock-free per concorrenza
 - **Memory Management**: Evitare retain cycles e memory leak
@@ -307,12 +307,12 @@ swift run benchmarks --btree-lookups
 
 ## 📄 Licenza
 
-Contribuendo a ColibrìDB, accetti che le tue modifiche saranno licenziate sotto la [Licenza BSD 3-Clause](LICENSE).
+Contribuendo a ColibrDB, accetti che le tue modifiche saranno licenziate sotto la [Licenza BSD 3-Clause](LICENSE).
 
 ## 🙏 Riconoscimenti
 
-Grazie a tutti i contributori che rendono ColibrìDB possibile! I tuoi contributi sono apprezzati e aiutano a costruire un database migliore per tutti.
+Grazie a tutti i contributori che rendono ColibrDB possibile! I tuoi contributi sono apprezzati e aiutano a costruire un database migliore per tutti.
 
 ---
 
-**Hai domande?** Apri una [discussione](https://github.com/gpicchiarelli/Colibrì-DB/discussions) o contatta il team di sviluppo!
+**Hai domande?** Apri una [discussione](https://github.com/gpicchiarelli/Colibr-DB/discussions) o contatta il team di sviluppo!

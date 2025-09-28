@@ -1,4 +1,4 @@
-# ColibrìDB Development Roadmap & Validation Checklist
+# ColibrDB Development Roadmap & Validation Checklist
 
 ## Quick Validation Results ✅
 

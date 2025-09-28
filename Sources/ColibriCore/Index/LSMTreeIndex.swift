@@ -1,10 +1,10 @@
 //
 //  LSMTreeIndex.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 
 // Theme: Log-structured forest sketching deferred-write indexing.
 

@@ -1,12 +1,12 @@
 ---
 layout: page
 title: Quick Start Guide
-description: Guida rapida per installare e utilizzare ColibrìDB
+description: Guida rapida per installare e utilizzare ColibrDB
 ---
 
 # 🚀 Quick Start Guide
 
-Questa guida ti aiuterà a installare e utilizzare ColibrìDB in pochi minuti.
+Questa guida ti aiuterà a installare e utilizzare ColibrDB in pochi minuti.
 
 ## 📋 Prerequisiti
 
@@ -319,7 +319,7 @@ Se incontri problemi:
 
 <div align="center">
 
-**🎉 Congratulazioni!** Hai completato il Quick Start di ColibrìDB.
+**🎉 Congratulazioni!** Hai completato il Quick Start di ColibrDB.
 
 [← Torna alla Home]({{ site.baseurl }}/wiki/Home) • [Architettura del Sistema →]({{ site.baseurl }}/wiki/Architecture)
 

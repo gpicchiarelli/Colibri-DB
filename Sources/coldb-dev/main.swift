@@ -1,10 +1,10 @@
 //
 //  main.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
@@ -30,7 +30,7 @@ while i < args.count {
 
 // Initialize Apple Silicon optimizations
 let logger = Logger(subsystem: "com.colibridb", category: "coldb-dev")
-logger.info("Initializing ColibrìDB Development CLI with Apple Silicon optimizations")
+logger.info("Initializing ColibrDB Development CLI with Apple Silicon optimizations")
 
 // Initialize Apple Silicon integration
 AppleSiliconIntegration.initialize()

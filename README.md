@@ -1,4 +1,4 @@
-# 🐦 ColibrìDB
+# 🐦 ColibrDB
 
 > **Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2**
 
@@ -15,7 +15,7 @@
 ![Contributors](https://img.shields.io/github/contributors/gpicchiarelli/Colibr-DB?style=flat-square)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
 
-**ColibrìDB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
+**ColibrDB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
 
 ## ✨ Caratteristiche Principali
 

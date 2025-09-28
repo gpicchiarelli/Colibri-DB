@@ -1,20 +1,20 @@
 //
 //  ColibriServer.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-26.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
-// Theme: HTTP server for ColibrìDB with REST API.
+// Theme: HTTP server for ColibrDB with REST API.
 
 import Foundation
 import Network
 import os.log
 
-/// HTTP server for ColibrìDB
+/// HTTP server for ColibrDB
 public final class ColibriServer {
     private let logger = Logger(subsystem: "com.colibridb.server", category: "http")
     private let colibriDB: ColibriDB
@@ -50,7 +50,7 @@ public final class ColibriServer {
             return
         }
         
-        logger.info("Starting ColibrìDB HTTP server on \(host):\(port)")
+        logger.info("Starting ColibrDB HTTP server on \(host):\(port)")
         
         do {
             // Create listener
@@ -72,7 +72,7 @@ public final class ColibriServer {
             listener?.start(queue: connectionQueue)
             
             isRunning = true
-            logger.info("ColibrìDB HTTP server started successfully")
+            logger.info("ColibrDB HTTP server started successfully")
             
         } catch {
             logger.error("Failed to start HTTP server: \(error.localizedDescription)")
@@ -90,7 +90,7 @@ public final class ColibriServer {
             return
         }
         
-        logger.info("Stopping ColibrìDB HTTP server")
+        logger.info("Stopping ColibrDB HTTP server")
         
         // Stop listener
         listener?.cancel()
@@ -103,7 +103,7 @@ public final class ColibriServer {
         connections.removeAll()
         
         isRunning = false
-        logger.info("ColibrìDB HTTP server stopped")
+        logger.info("ColibrDB HTTP server stopped")
     }
     
     /// Handles new connections

@@ -36,7 +36,7 @@ def create_wiki_page(title, content):
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github.v3+json",
-        "User-Agent": "ColibrìDB-Wiki-Script"
+        "User-Agent": "ColibrDB-Wiki-Script"
     }
     
     data = {
@@ -60,7 +60,7 @@ def create_wiki_page(title, content):
         return False
 
 def main():
-    print("🚀 Creazione wiki ColibrìDB su GitHub...")
+    print("🚀 Creazione wiki ColibrDB su GitHub...")
     
     # Ottieni token GitHub
     global GITHUB_TOKEN

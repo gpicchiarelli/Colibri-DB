@@ -1,10 +1,10 @@
 //
 //  Signpost.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-26.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 //
 // Theme: Lightweight wrapper around os_signpost with graceful no-op fallback.
 

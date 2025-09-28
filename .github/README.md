@@ -1,6 +1,6 @@
-# 🐦 ColibrìDB - GitHub Wiki
+# 🐦 ColibrDB - GitHub Wiki
 
-Benvenuto nella documentazione GitHub per ColibrìDB! Questa wiki fornisce una guida completa per contributori, sviluppatori e utenti del progetto.
+Benvenuto nella documentazione GitHub per ColibrDB! Questa wiki fornisce una guida completa per contributori, sviluppatori e utenti del progetto.
 
 ## 📚 Indice della Documentazione
 
@@ -26,8 +26,8 @@ Benvenuto nella documentazione GitHub per ColibrìDB! Questa wiki fornisce una g
 ### 1. Setup Iniziale
 ```bash
 # Clona il repository
-git clone https://github.com/gpicchiarelli/Colibrì-DB.git
-cd Colibrì-DB
+git clone https://github.com/gpicchiarelli/Colibr-DB.git
+cd Colibr-DB
 
 # Installa dipendenze
 swift package resolve
@@ -41,7 +41,7 @@ swift test
 
 ### 2. Prima Contribuzione
 1. Leggi il [Contributing Guide](CONTRIBUTING.md)
-2. Controlla le [issue esistenti](https://github.com/gpicchiarelli/Colibrì-DB/issues)
+2. Controlla le [issue esistenti](https://github.com/gpicchiarelli/Colibr-DB/issues)
 3. Crea un branch per la tua feature
 4. Implementa le modifiche seguendo le convenzioni
 5. Aggiungi test per le nuove funzionalità
@@ -189,11 +189,11 @@ swift run benchmarks --transaction-throughput
 
 ## 🔗 Link Utili
 
-- **Repository**: [github.com/gpicchiarelli/Colibrì-DB](https://github.com/gpicchiarelli/Colibrì-DB)
+- **Repository**: [github.com/gpicchiarelli/Colibr-DB](https://github.com/gpicchiarelli/Colibr-DB)
 - **Documentazione**: [docs/](../docs/)
-- **Issues**: [github.com/gpicchiarelli/Colibrì-DB/issues](https://github.com/gpicchiarelli/Colibrì-DB/issues)
-- **Discussions**: [github.com/gpicchiarelli/Colibrì-DB/discussions](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
-- **Releases**: [github.com/gpicchiarelli/Colibrì-DB/releases](https://github.com/gpicchiarelli/Colibrì-DB/releases)
+- **Issues**: [github.com/gpicchiarelli/Colibr-DB/issues](https://github.com/gpicchiarelli/Colibr-DB/issues)
+- **Discussions**: [github.com/gpicchiarelli/Colibr-DB/discussions](https://github.com/gpicchiarelli/Colibr-DB/discussions)
+- **Releases**: [github.com/gpicchiarelli/Colibr-DB/releases](https://github.com/gpicchiarelli/Colibr-DB/releases)
 
 ## 📞 Supporto
 
@@ -209,6 +209,6 @@ swift run benchmarks --transaction-throughput
 
 ---
 
-**Grazie per il tuo interesse in ColibrìDB!** 🐦
+**Grazie per il tuo interesse in ColibrDB!** 🐦
 
 La tua partecipazione alla comunità è preziosa e aiuta a costruire un database migliore per tutti. Non esitare a contribuire, fare domande o condividere le tue idee!

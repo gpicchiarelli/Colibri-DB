@@ -6,7 +6,7 @@
 //
 //  Created by Giacomo Picchiarelli on 2025-09-27.
 //
-// Theme: ColibrìDB Network Server - High-performance database server with SwiftNIO
+// Theme: ColibrDB Network Server - High-performance database server with SwiftNIO
 
 import Foundation
 import NIO
@@ -43,7 +43,7 @@ final class DatabaseServer {
     }
     
     func start() throws {
-        logInfo("🚀 Starting ColibrìDB Server...")
+        logInfo("🚀 Starting ColibrDB Server...")
         logInfo("📊 Database: \(config.dataDirectory)")
         logInfo("🌐 Server: \(config.host):\(config.port)")
         logInfo("🔒 SSL: \(config.sslEnabled ? "Enabled" : "Disabled")")
@@ -83,7 +83,7 @@ final class DatabaseServer {
     }
     
     func stop() throws {
-        logInfo("🛑 Stopping ColibrìDB Server...")
+        logInfo("🛑 Stopping ColibrDB Server...")
         
         connectionManager.closeAllConnections()
         

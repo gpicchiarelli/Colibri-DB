@@ -1,12 +1,12 @@
 //
 //  AppleSiliconOptimizations.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-26.
 //
 
 /**
- * Apple Silicon Optimizations for ColibrìDB
+ * Apple Silicon Optimizations for ColibrDB
  * =========================================
  * 
  * This module provides hardware-specific optimizations for Apple Silicon chips (M1/M2/M3),

@@ -6,7 +6,7 @@ description: Capitolo 23 - Monitoring e operazioni DevOps
 
 # Capitolo 23 — Monitoring, Build e DevOps
 
-> **Obiettivo**: fornire una guida sistematica per integrare ColibrìDB nei flussi DevOps, dalla build alla produzione, includendo monitoring e backup.
+> **Obiettivo**: fornire una guida sistematica per integrare ColibrDB nei flussi DevOps, dalla build alla produzione, includendo monitoring e backup.
 
 ---
 

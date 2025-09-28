@@ -12,7 +12,7 @@ description: Capitolo 3 - Teoria delle transazioni e ACID
 - **Isolamento**: le transazioni concorrenti appaiono come se eseguite in sequenza.
 - **Durabilità**: gli effetti committati persistono nonostante guasti.
 
-## 3.2 Transaction Manager in ColibrìDB
+## 3.2 Transaction Manager in ColibrDB
 Il modulo `Database+Transactions.swift` implementa un transaction manager basato su ID numerici (`tid`).
 
 ### 3.2.1 Strutture dati
@@ -25,7 +25,7 @@ Il modulo `Database+Transactions.swift` implementa un transaction manager basato
 - `abortTransaction(tid:)`: emette record di abort e chiama l'algoritmo di undo.
 
 ## 3.3 Isolamento e livelli
-ColibrìDB attualmente implementa un isolamento basato su snapshot (MVCC). Il livello `readCommitted` è la default, mentre `repeatableRead` e `serializable` sono in roadmap.
+ColibrDB attualmente implementa un isolamento basato su snapshot (MVCC). Il livello `readCommitted` è la default, mentre `repeatableRead` e `serializable` sono in roadmap.
 
 ## 3.4 Interazione con il WAL
 - `logTransactionBegin`/`Commit`/`Abort` generano record `WALBeginRecord`, `WALCommitRecord`, `WALAbortRecord`.

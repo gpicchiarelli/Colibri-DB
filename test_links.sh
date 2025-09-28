@@ -2,7 +2,7 @@
 
 # Script per testare i link del sito
 
-echo "🔗 Testando i link del sito ColibrìDB..."
+echo "🔗 Testando i link del sito ColibrDB..."
 
 # Base URL del sito
 BASE_URL="https://gpicchiarelli.github.io/Colibri-DB"

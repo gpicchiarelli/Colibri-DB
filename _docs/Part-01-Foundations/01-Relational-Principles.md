@@ -6,13 +6,13 @@ description: Capitolo 1 - Principi del modello relazionale
 
 # Capitolo 1 — Principi Relazionali e Modello Dati
 
-> **Obiettivo del capitolo**: collegare le definizioni formali del modello relazionale con l'implementazione concreta in ColibrìDB, utilizzando schemi, tabelle riassuntive, pseudocodice e riferimenti puntuali al codice sorgente.
+> **Obiettivo del capitolo**: collegare le definizioni formali del modello relazionale con l'implementazione concreta in ColibrDB, utilizzando schemi, tabelle riassuntive, pseudocodice e riferimenti puntuali al codice sorgente.
 
 ---
 
 ## 1.1 Definizioni fondamentali
 
-| Concetto | Definizione formale | Traduzione in ColibrìDB |
+| Concetto | Definizione formale | Traduzione in ColibrDB |
 |----------|---------------------|-------------------------|
 | Relazione `R` | Sottoinsieme finito di \( D_1 \times \dots \times D_n \) | Collezione di `Row` memorizzate in `FileHeapTable` |
 | Tupla `t` | Funzione \( t: \{A_1,\dots,A_n\} \to D \) | Istanza di `Row` (dizionario ordinato `String -> Value`) |
@@ -20,7 +20,7 @@ description: Capitolo 1 - Principi del modello relazionale
 | Schema `S` | Insieme ordinato di attributi | `CatalogTableSchema` |
 
 ### 1.1.1 Relazione e tupla
-Una **relazione** è modellata da un insieme di tuple. In ColibrìDB le tuple sono oggetti `Row` serializzati secondo i codec definiti in `Types.swift`. L'accesso per nome garantisce consistenza con la definizione matematica di funzione.
+Una **relazione** è modellata da un insieme di tuple. In ColibrDB le tuple sono oggetti `Row` serializzati secondo i codec definiti in `Types.swift`. L'accesso per nome garantisce consistenza con la definizione matematica di funzione.
 
 ### 1.1.2 Attributi e domini
 Gli attributi sono rappresentati da `CatalogColumnDefinition`, come mostrato nel seguente estratto:
@@ -144,7 +144,7 @@ Schema sequenziale (ASCII):
 
 | Sistema | Rappresentazione catalogo | Enforcement vincoli |
 |---------|---------------------------|---------------------|
-| ColibrìDB | JSON con snapshot atomici | Planner + executor |
+| ColibrDB | JSON con snapshot atomici | Planner + executor |
 | PostgreSQL | Tabelle relazionali (`pg_class`, etc.) | Catalogo + executor |
 | MySQL | Metadati InnoDB + file `.frm` | Storage engine |
 

@@ -1,23 +1,23 @@
 //
 //  ColibriDBExample.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-26.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
-// Theme: Example usage of ColibrìDB system.
+// Theme: Example usage of ColibrDB system.
 
 import Foundation
 import ColibriCore
 
-/// Example usage of ColibrìDB
+/// Example usage of ColibrDB
 public class ColibriDBExample {
     
     public static func runExample() {
-        print("🚀 ColibrìDB Example")
+        print("🚀 ColibrDB Example")
         print("===================")
         
         // Create database configuration
@@ -36,7 +36,7 @@ public class ColibriDBExample {
             lockTimeoutSeconds: 30.0
         )
         
-        // Initialize ColibrìDB
+        // Initialize ColibrDB
         let colibriDB = ColibriDB(config: config)
         
         do {

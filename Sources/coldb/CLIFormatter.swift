@@ -1,6 +1,6 @@
 //
 //  CLIFormatter.swift
-//  ColibrìDB - CLI Formatting and Display
+//  ColibrDB - CLI Formatting and Display
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
@@ -16,7 +16,7 @@ public class CLIFormatter {
     func printWelcome() {
         print(colors.header("""
         ╔═══════════════════════════════════════════════════════════╗
-        ║                     🐦 ColibrìDB                          ║
+        ║                     🐦 ColibrDB                          ║
         ║              Professional SQL Database                     ║
         ║                                                           ║
         ║  Type \\help for commands, \\quit to exit                   ║
@@ -26,16 +26,16 @@ public class CLIFormatter {
     }
     
     func printGoodbye() {
-        print(colors.info("\n👋 Thank you for using ColibrìDB!\n"))
+        print(colors.info("\n👋 Thank you for using ColibrDB!\n"))
     }
     
     func printHelp() {
-        print(colors.header("📚 ColibrìDB Commands:"))
+        print(colors.header("📚 ColibrDB Commands:"))
         print()
         
         print(colors.section("Meta Commands:"))
         print("  \\help, \\h, \\?         Show this help")
-        print("  \\quit, \\q, \\exit      Exit ColibrìDB")
+        print("  \\quit, \\q, \\exit      Exit ColibrDB")
         print("  \\version, \\v          Show version information")
         print("  \\status, \\s           Show database status")
         print("  \\timing               Toggle timing display")
@@ -64,7 +64,7 @@ public class CLIFormatter {
     }
     
     func printVersion() {
-        print(colors.header("ColibrìDB Version Information:"))
+        print(colors.header("ColibrDB Version Information:"))
         print("  Version: 1.0.0")
         print("  Platform: \(ProcessInfo.processInfo.operatingSystemVersionString)")
         print("  Swift: \(version())")

@@ -1,4 +1,4 @@
-Contribuire a ColibrìDB
+Contribuire a ColibrDB
 =======================
 
 Grazie per il tuo interesse! Questo progetto accoglie con piacere issue, proposte e PR.

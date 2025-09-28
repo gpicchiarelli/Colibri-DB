@@ -1,6 +1,6 @@
-# 🐦 ColibrìDB Website
+# 🐦 ColibrDB Website
 
-Questo è il sito web di ColibrìDB, costruito con Jekyll e GitHub Pages.
+Questo è il sito web di ColibrDB, costruito con Jekyll e GitHub Pages.
 
 ## 🚀 Test Locale
 
@@ -97,7 +97,7 @@ Il file `.github/workflows/pages.yml` contiene la configurazione per:
 
 ## 📚 Documentazione
 
-- **Wiki Operativa**: Guide pratiche per l'uso di ColibrìDB
+- **Wiki Operativa**: Guide pratiche per l'uso di ColibrDB
 - **Manuale Tecnico**: Documentazione approfondita per sviluppatori
 - **API Reference**: Documentazione completa delle API
 - **Esempi**: Casi d'uso pratici e tutorial

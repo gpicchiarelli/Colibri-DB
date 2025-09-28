@@ -7,7 +7,7 @@ REPO_OWNER="gpicchiarelli"
 REPO_NAME="Colibr-DB"
 WIKI_DIR="docs/wiki"
 
-echo "🚀 Creazione wiki ColibrìDB su GitHub..."
+echo "🚀 Creazione wiki ColibrDB su GitHub..."
 
 # Ottieni token GitHub
 GITHUB_TOKEN=$(gh auth token)

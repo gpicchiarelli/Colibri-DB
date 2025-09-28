@@ -1,19 +1,19 @@
 //
 //  APIHandler.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-26.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
-// Theme: REST API handler for ColibrìDB server.
+// Theme: REST API handler for ColibrDB server.
 
 import Foundation
 import os.log
 
-/// API handler for ColibrìDB HTTP server
+/// API handler for ColibrDB HTTP server
 public final class APIHandler {
     private let logger = Logger(subsystem: "com.colibridb.server", category: "api")
     private let colibriDB: ColibriDB

@@ -1,6 +1,6 @@
-# 🧪 ColibrìDB Testing Guide
+# 🧪 ColibrDB Testing Guide
 
-Questa guida fornisce informazioni complete sul sistema di testing di ColibrìDB, inclusi test unitari, integration test, benchmark e best practices.
+Questa guida fornisce informazioni complete sul sistema di testing di ColibrDB, inclusi test unitari, integration test, benchmark e best practices.
 
 ## 📋 Indice
 - [Panoramica Testing](#panoramica-testing)
@@ -16,7 +16,7 @@ Questa guida fornisce informazioni complete sul sistema di testing di ColibrìDB
 ## 🎯 Panoramica Testing
 
 ### Filosofia di Testing
-ColibrìDB adotta un approccio multi-livello per garantire qualità e performance:
+ColibrDB adotta un approccio multi-livello per garantire qualità e performance:
 
 1. **Unit Tests**: Test di singole funzioni e classi
 2. **Integration Tests**: Test di workflow end-to-end
@@ -611,4 +611,4 @@ struct TestData {
 
 ---
 
-Questa guida fornisce le basi per scrivere test efficaci per ColibrìDB. Per domande specifiche, consulta la documentazione tecnica o apri una discussione su GitHub.
+Questa guida fornisce le basi per scrivere test efficaci per ColibrDB. Per domande specifiche, consulta la documentazione tecnica o apri una discussione su GitHub.

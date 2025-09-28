@@ -1,6 +1,6 @@
-# 🚀 ColibrìDB Release Guide
+# 🚀 ColibrDB Release Guide
 
-Questa guida fornisce informazioni complete sul processo di release di ColibrìDB, inclusi versioning, deployment e best practices.
+Questa guida fornisce informazioni complete sul processo di release di ColibrDB, inclusi versioning, deployment e best practices.
 
 ## 📋 Indice
 - [Panoramica Release](#panoramica-release)
@@ -14,7 +14,7 @@ Questa guida fornisce informazioni complete sul processo di release di ColibrìD
 ## 🎯 Panoramica Release
 
 ### Filosofia di Release
-ColibrìDB segue un approccio semver (Semantic Versioning) con release incrementali:
+ColibrDB segue un approccio semver (Semantic Versioning) con release incrementali:
 
 - **Major (X.0.0)**: Breaking changes, architettura significativa
 - **Minor (X.Y.0)**: Nuove features, backward compatible
@@ -203,8 +203,8 @@ pkgbuild --root .build/release --identifier com.colibridb.server --version 0.2.0
 ```ruby
 class Colibridb < Formula
   desc "High-performance RDBMS written in Swift"
-  homepage "https://github.com/gpicchiarelli/Colibrì-DB"
-  url "https://github.com/gpicchiarelli/Colibrì-DB/releases/download/v0.2.0/colibridb-v0.2.0-macos.tar.gz"
+  homepage "https://github.com/gpicchiarelli/Colibr-DB"
+  url "https://github.com/gpicchiarelli/Colibr-DB/releases/download/v0.2.0/colibridb-v0.2.0-macos.tar.gz"
   sha256 "sha256-hash"
   license "BSD-3-Clause"
 
@@ -431,4 +431,4 @@ swift run coldb --dashboard
 
 ---
 
-Questa guida fornisce le basi per gestire il processo di release di ColibrìDB. Per domande specifiche, consulta la documentazione tecnica o apri una discussione su GitHub.
+Questa guida fornisce le basi per gestire il processo di release di ColibrDB. Per domande specifiche, consulta la documentazione tecnica o apri una discussione su GitHub.

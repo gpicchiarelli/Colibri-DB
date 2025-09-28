@@ -1,19 +1,19 @@
 //
 //  ErrorManager.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-26.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
-// Theme: Comprehensive error management system for ColibrìDB.
+// Theme: Comprehensive error management system for ColibrDB.
 
 import Foundation
 import os.log
 
-/// Error manager for ColibrìDB
+/// Error manager for ColibrDB
 public final class ErrorManager {
     private let logger = Logger(subsystem: "com.colibridb.error", category: "manager")
     private var errorHistory: [ErrorEntry] = []

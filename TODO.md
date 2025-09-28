@@ -1,4 +1,4 @@
-# ColibrìDB — Piano di Lavoro verso RDBMS Completo
+# ColibrDB — Piano di Lavoro verso RDBMS Completo
 
 ## Principi guida
 - Ogni componente deve essere progettato per la **massima velocità e throughput**, riducendo al minimo la latenza.  

@@ -6,7 +6,7 @@ description: Capitolo 26 - Benchmark e performance
 
 # Capitolo 26 — Benchmarking e Performance Engineering
 
-> **Obiettivo**: illustrare come misurare le prestazioni di ColibrìDB in modo rigoroso, definendo scenari, metriche e procedure di analisi.
+> **Obiettivo**: illustrare come misurare le prestazioni di ColibrDB in modo rigoroso, definendo scenari, metriche e procedure di analisi.
 
 ---
 

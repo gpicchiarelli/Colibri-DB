@@ -1,19 +1,19 @@
 //
 //  AdvancedReportGenerator.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-01-27.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
-// Theme: Advanced reporting and analysis system for ColibrìDB.
+// Theme: Advanced reporting and analysis system for ColibrDB.
 
 import Foundation
 import os.log
 
-/// Advanced report generator for ColibrìDB
+/// Advanced report generator for ColibrDB
 public final class AdvancedReportGenerator {
     private let logger = Logger(subsystem: "com.colibridb.reporting", category: "generator")
     private let database: Database

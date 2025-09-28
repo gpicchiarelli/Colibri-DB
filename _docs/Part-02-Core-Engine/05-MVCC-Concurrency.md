@@ -1,12 +1,12 @@
 ---
 layout: page
 title: MVCC e Concorrenza
-description: Capitolo 9 - MVCC e controllo concorrenza in ColibrìDB
+description: Capitolo 9 - MVCC e controllo concorrenza in ColibrDB
 ---
 
 # Capitolo 9 — Concorrenza, MVCC e Versioning
 
-> **Obiettivo**: spiegare il controllo di concorrenza MVCC di ColibrìDB con un approccio formale, diagrammi temporali e laboratori pratici.
+> **Obiettivo**: spiegare il controllo di concorrenza MVCC di ColibrDB con un approccio formale, diagrammi temporali e laboratori pratici.
 
 ---
 

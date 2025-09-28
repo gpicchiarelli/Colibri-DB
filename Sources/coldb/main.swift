@@ -1,10 +1,10 @@
 //
 //  main.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
@@ -13,7 +13,7 @@
 import Foundation
 import ColibriCore
 
-// Simple CLI parser for ColibrìDB (MVP)
+// Simple CLI parser for ColibrDB (MVP)
 
 /// Interactive command interpreter connecting CLI commands to the database core.
 struct CLI {
@@ -27,7 +27,7 @@ struct CLI {
 
     /// Displays the CLI banner and brief usage hint.
     func printBanner() {
-        print("ColibrìDB CLI (coldb) — MVP")
+        print("ColibrDB CLI (coldb) — MVP")
         print("Type \\help for help, \\exit to quit.\n")
     }
 

@@ -1,12 +1,12 @@
 ---
 layout: page
 title: Introduzione alla Parte II — Motore Core
-description: Introduzione al motore core di ColibrìDB
+description: Introduzione al motore core di ColibrDB
 ---
 
 # Introduzione alla Parte II — Motore Core
 
-La Parte II costituisce il nucleo tecnico del manuale: qui dimostriamo come ColibrìDB implementa i meccanismi di persistenza, recovery, gestione della memoria e concorrenza. Ogni capitolo segue un'impostazione scientifica:
+La Parte II costituisce il nucleo tecnico del manuale: qui dimostriamo come ColibrDB implementa i meccanismi di persistenza, recovery, gestione della memoria e concorrenza. Ogni capitolo segue un'impostazione scientifica:
 
 1. **Modello teorico**: richiamo al framework matematico (ad es. logica temporale per il WAL, teoria delle code per il buffer pool, algebra dei B+Tree).
 2. **Derivazione implementativa**: analisi dettagliata delle funzioni Swift, con enunciazione di invarianti e complessità.

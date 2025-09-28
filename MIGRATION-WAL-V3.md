@@ -2,7 +2,7 @@
 
 ## Overview
 
-ColibrìDB has migrated from multiple separate WAL files to a unified **Global WAL** system. This provides better consistency, performance, and recovery capabilities.
+ColibrDB has migrated from multiple separate WAL files to a unified **Global WAL** system. This provides better consistency, performance, and recovery capabilities.
 
 ## What Changed
 
@@ -77,7 +77,7 @@ cp -r /path/to/colibri/data /path/to/backup/colibri-data-backup-$(date +%Y%m%d)
 cp /path/to/colibri/data/wal.log /path/to/backup/wal-v2-backup.log
 ```
 
-### Step 2: Upgrade ColibrìDB
+### Step 2: Upgrade ColibrDB
 
 ```bash
 # Update to WAL V3 version
@@ -274,7 +274,7 @@ sudo systemctl start colibridb
 ### Migration Checklist
 - [ ] Backup existing data
 - [ ] Stop database service
-- [ ] Upgrade ColibrìDB to WAL V3
+- [ ] Upgrade ColibrDB to WAL V3
 - [ ] Remove old WAL files
 - [ ] Start database
 - [ ] Verify data integrity

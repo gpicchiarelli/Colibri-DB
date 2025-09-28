@@ -1,17 +1,17 @@
 //
 //  Config.swift
-//  ColibrìDB
+//  ColibrDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
-// ColibrìDB — BSD 3-Clause License
+// ColibrDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 
 // Theme: Configuration atlas capturing runtime knobs and defaults.
 
 import Foundation
-/// Runtime configuration for ColibrìDB.
+/// Runtime configuration for ColibrDB.
 /// Provides sensible defaults and backward‑compatible decoding.
 
 public struct DBConfig: Codable {

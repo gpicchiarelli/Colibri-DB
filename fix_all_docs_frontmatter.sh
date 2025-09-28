@@ -36,7 +36,7 @@ add_frontmatter "docs/Part-01-Foundations/03-Transactions-Theory.md" "Teoria del
 add_frontmatter "docs/Part-01-Foundations/04-Storage-Principles.md" "Principi di Storage" "Capitolo 4 - Principi di storage e persistenza"
 
 # Parte III - Query
-add_frontmatter "docs/Part-03-Query/01-SQL-Parser.md" "SQL Parser" "Capitolo 13 - Parser SQL in ColibrìDB"
+add_frontmatter "docs/Part-03-Query/01-SQL-Parser.md" "SQL Parser" "Capitolo 13 - Parser SQL in ColibrDB"
 add_frontmatter "docs/Part-03-Query/02-Logical-Planning.md" "Logical Planning" "Capitolo 14 - Pianificazione logica delle query"
 add_frontmatter "docs/Part-03-Query/03-Physical-Planning.md" "Physical Planning" "Capitolo 15 - Pianificazione fisica delle query"
 add_frontmatter "docs/Part-03-Query/04-Execution-Engine.md" "Execution Engine" "Capitolo 16 - Motore di esecuzione query"
@@ -64,7 +64,7 @@ add_frontmatter "docs/Appendices/01-Glossario.md" "Glossario" "Appendice A - Glo
 add_frontmatter "docs/Appendices/02-Configurazione.md" "Configurazione" "Appendice B - Guida alla configurazione"
 
 # File speciali
-add_frontmatter "docs/Prefazione.md" "Prefazione" "Prefazione alla documentazione ColibrìDB"
-add_frontmatter "docs/README.md" "Documentazione ColibrìDB" "Documentazione tecnica completa di ColibrìDB"
+add_frontmatter "docs/Prefazione.md" "Prefazione" "Prefazione alla documentazione ColibrDB"
+add_frontmatter "docs/README.md" "Documentazione ColibrDB" "Documentazione tecnica completa di ColibrDB"
 
 echo "🎉 Front matter aggiunto a tutti i file della documentazione!"
