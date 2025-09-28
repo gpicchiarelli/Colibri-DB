@@ -112,55 +112,55 @@ swift build
 La documentazione è organizzata in sezioni progressive per diversi livelli di competenza:
 
 #### **Parte I: Fondamenti**) - Teoria e Principi
-- [**00-Guida-Alla-Lettura**]({{ site.baseurl }}/docs/Part-01-Foundations/00-Guida-Alla-Lettura)) - Come navigare la documentazione
-- [**01-Relational-Principles**]({{ site.baseurl }}/docs/Part-01-Foundations/01-Relational-Principles)) - Principi relazionali e algebra
-- [**02-Algebra-SQL**]({{ site.baseurl }}/docs/Part-01-Foundations/02-Algebra-SQL)) - Algebra relazionale e SQL
-- [**03-Transactions-Theory**]({{ site.baseurl }}/docs/Part-01-Foundations/03-Transactions-Theory)) - Teoria delle transazioni
-- [**04-Storage-Principles**]({{ site.baseurl }}/docs/Part-01-Foundations/04-Storage-Principles)) - Principi di storage e persistenza
+- [**00-Guida-Alla-Lettura**]({{ site.baseurl }}/wiki/Part-01-Foundations/00-Guida-Alla-Lettura)) - Come navigare la documentazione
+- [**01-Relational-Principles**]({{ site.baseurl }}/wiki/Part-01-Foundations/01-Relational-Principles)) - Principi relazionali e algebra
+- [**02-Algebra-SQL**]({{ site.baseurl }}/wiki/Part-01-Foundations/02-Algebra-SQL)) - Algebra relazionale e SQL
+- [**03-Transactions-Theory**]({{ site.baseurl }}/wiki/Part-01-Foundations/03-Transactions-Theory)) - Teoria delle transazioni
+- [**04-Storage-Principles**]({{ site.baseurl }}/wiki/Part-01-Foundations/04-Storage-Principles)) - Principi di storage e persistenza
 
 #### **Parte II: Motore Core**) - Architettura Interna
-- [**00-Introduzione**]({{ site.baseurl }}/docs/Part-02-Core-Engine/00-Introduzione)) - Panoramica del motore core
-- [**01-WAL-and-Recovery**]({{ site.baseurl }}/docs/Part-02-Core-Engine/01-WAL-and-Recovery)) - Write-Ahead Logging e recovery
-- [**02-BufferPool**]({{ site.baseurl }}/docs/Part-02-Core-Engine/02-BufferPool)) - Gestione buffer pool e caching
-- [**03-Heap-Storage**]({{ site.baseurl }}/docs/Part-02-Core-Engine/03-Heap-Storage)) - Storage engine e heap files
-- [**04-BTree-Indexes**]({{ site.baseurl }}/docs/Part-02-Core-Engine/04-BTree-Indexes)) - Indici B+Tree e strutture dati
-- [**05-MVCC-Concurrency**]({{ site.baseurl }}/docs/Part-02-Core-Engine/05-MVCC-Concurrency)) - Controllo concorrenza MVCC
+- [**00-Introduzione**]({{ site.baseurl }}/wiki/Part-02-Core-Engine/00-Introduzione)) - Panoramica del motore core
+- [**01-WAL-and-Recovery**]({{ site.baseurl }}/wiki/Part-02-Core-Engine/01-WAL-and-Recovery)) - Write-Ahead Logging e recovery
+- [**02-BufferPool**]({{ site.baseurl }}/wiki/Part-02-Core-Engine/02-BufferPool)) - Gestione buffer pool e caching
+- [**03-Heap-Storage**]({{ site.baseurl }}/wiki/Part-02-Core-Engine/03-Heap-Storage)) - Storage engine e heap files
+- [**04-BTree-Indexes**]({{ site.baseurl }}/wiki/Part-02-Core-Engine/04-BTree-Indexes)) - Indici B+Tree e strutture dati
+- [**05-MVCC-Concurrency**]({{ site.baseurl }}/wiki/Part-02-Core-Engine/05-MVCC-Concurrency)) - Controllo concorrenza MVCC
 
 #### **Parte III: Elaborazione Query**) - Pipeline di Esecuzione
-- [**00-Introduzione**]({{ site.baseurl }}/docs/Part-03-Query/00-Introduzione)) - Panoramica del query processor
-- [**01-SQL-Parser**]({{ site.baseurl }}/docs/Part-03-Query/01-SQL-Parser)) - Parser SQL e AST
-- [**02-Logical-Planning**]({{ site.baseurl }}/docs/Part-03-Query/02-Logical-Planning)) - Pianificazione logica
-- [**03-Physical-Planning**]({{ site.baseurl }}/docs/Part-03-Query/03-Physical-Planning)) - Pianificazione fisica
-- [**04-Execution-Engine**]({{ site.baseurl }}/docs/Part-03-Query/04-Execution-Engine)) - Motore di esecuzione
-- [**05-Advanced-Features**]({{ site.baseurl }}/docs/Part-03-Query/05-Advanced-Features)) - Funzionalità avanzate
+- [**00-Introduzione**]({{ site.baseurl }}/wiki/Part-03-Query/00-Introduzione)) - Panoramica del query processor
+- [**01-SQL-Parser**]({{ site.baseurl }}/wiki/Part-03-Query/01-SQL-Parser)) - Parser SQL e AST
+- [**02-Logical-Planning**]({{ site.baseurl }}/wiki/Part-03-Query/02-Logical-Planning)) - Pianificazione logica
+- [**03-Physical-Planning**]({{ site.baseurl }}/wiki/Part-03-Query/03-Physical-Planning)) - Pianificazione fisica
+- [**04-Execution-Engine**]({{ site.baseurl }}/wiki/Part-03-Query/04-Execution-Engine)) - Motore di esecuzione
+- [**05-Advanced-Features**]({{ site.baseurl }}/wiki/Part-03-Query/05-Advanced-Features)) - Funzionalità avanzate
 
 #### **Parte IV: Metadati**) - Catalogo e Statistiche
-- [**00-Introduzione**]({{ site.baseurl }}/docs/Part-04-Metadata/00-Introduzione) - Panoramica del sistema metadati
-- [**01-CatalogCore**]({{ site.baseurl }}/docs/Part-04-Metadata/01-CatalogCore) - Catalogo di sistema core
-- [**02-CatalogManager**]({{ site.baseurl }}/docs/Part-04-Metadata/02-CatalogManager) - Gestione catalogo
-- [**03-Statistics**]({{ site.baseurl }}/docs/Part-04-Metadata/03-Statistics) - Statistiche e ottimizzazione
+- [**00-Introduzione**]({{ site.baseurl }}/wiki/Part-04-Metadata/00-Introduzione) - Panoramica del sistema metadati
+- [**01-CatalogCore**]({{ site.baseurl }}/wiki/Part-04-Metadata/01-CatalogCore) - Catalogo di sistema core
+- [**02-CatalogManager**]({{ site.baseurl }}/wiki/Part-04-Metadata/02-CatalogManager) - Gestione catalogo
+- [**03-Statistics**]({{ site.baseurl }}/wiki/Part-04-Metadata/03-Statistics) - Statistiche e ottimizzazione
 
 #### **Parte V: Server**) - Architettura di Rete
-- [**00-Introduzione**]({{ site.baseurl }}/docs/Part-05-Server/00-Introduzione) - Panoramica del server
-- [**01-ServerArchitecture**]({{ site.baseurl }}/docs/Part-05-Server/01-ServerArchitecture) - Architettura server
-- [**02-Wire-Protocol**]({{ site.baseurl }}/docs/Part-05-Server/02-Wire-Protocol) - Protocollo di comunicazione
-- [**03-ServerOperations**]({{ site.baseurl }}/docs/Part-05-Server/03-ServerOperations) - Operazioni server
+- [**00-Introduzione**]({{ site.baseurl }}/wiki/Part-05-Server/00-Introduzione) - Panoramica del server
+- [**01-ServerArchitecture**]({{ site.baseurl }}/wiki/Part-05-Server/01-ServerArchitecture) - Architettura server
+- [**02-Wire-Protocol**]({{ site.baseurl }}/wiki/Part-05-Server/02-Wire-Protocol) - Protocollo di comunicazione
+- [**03-ServerOperations**]({{ site.baseurl }}/wiki/Part-05-Server/03-ServerOperations) - Operazioni server
 
 #### **Parte VI: Strumenti**) - CLI e DevOps
-- [**00-Introduzione**]({{ site.baseurl }}/docs/Part-06-Tooling/00-Introduzione) - Panoramica degli strumenti
-- [**01-User-CLI**]({{ site.baseurl }}/docs/Part-06-Tooling/01-User-CLI) - CLI utente e amministrativa
-- [**02-Dev-CLI**]({{ site.baseurl }}/docs/Part-06-Tooling/02-Dev-CLI) - CLI per sviluppatori
-- [**03-Monitoring-DevOps**]({{ site.baseurl }}/docs/Part-06-Tooling/03-Monitoring-DevOps) - Monitoring e DevOps
+- [**00-Introduzione**]({{ site.baseurl }}/wiki/Part-06-Tooling/00-Introduzione) - Panoramica degli strumenti
+- [**01-User-CLI**]({{ site.baseurl }}/wiki/Part-06-Tooling/01-User-CLI) - CLI utente e amministrativa
+- [**02-Dev-CLI**]({{ site.baseurl }}/wiki/Part-06-Tooling/02-Dev-CLI) - CLI per sviluppatori
+- [**03-Monitoring-DevOps**]({{ site.baseurl }}/wiki/Part-06-Tooling/03-Monitoring-DevOps) - Monitoring e DevOps
 
 #### **Parte VII: Testing**) - Qualità e Performance
-- [**00-Introduzione**]({{ site.baseurl }}/docs/Part-07-Testing/00-Introduzione) - Strategia di testing
-- [**01-Unit-Tests**]({{ site.baseurl }}/docs/Part-07-Testing/01-Unit-Tests) - Test unitari
-- [**02-Integration-Tests**]({{ site.baseurl }}/docs/Part-07-Testing/02-Integration-Tests) - Test di integrazione
-- [**03-Benchmarks**]({{ site.baseurl }}/docs/Part-07-Testing/03-Benchmarks) - Benchmarking e performance
+- [**00-Introduzione**]({{ site.baseurl }}/wiki/Part-07-Testing/00-Introduzione) - Strategia di testing
+- [**01-Unit-Tests**]({{ site.baseurl }}/wiki/Part-07-Testing/01-Unit-Tests) - Test unitari
+- [**02-Integration-Tests**]({{ site.baseurl }}/wiki/Part-07-Testing/02-Integration-Tests) - Test di integrazione
+- [**03-Benchmarks**]({{ site.baseurl }}/wiki/Part-07-Testing/03-Benchmarks) - Benchmarking e performance
 
 #### **Parte VIII: Futuro**) - Roadmap e Estensioni
-- [**00-Introduzione**]({{ site.baseurl }}/docs/Part-08-Future/00-Introduzione) - Visione futura
-- [**01-Roadmap**]({{ site.baseurl }}/docs/Part-08-Future/01-Roadmap) - Roadmap di sviluppo
+- [**00-Introduzione**]({{ site.baseurl }}/wiki/Part-08-Future/00-Introduzione) - Visione futura
+- [**01-Roadmap**]({{ site.baseurl }}/wiki/Part-08-Future/01-Roadmap) - Roadmap di sviluppo
 
 ### 🔧 **Guide Operative**) - Riferimenti Pratici
 
@@ -182,10 +182,10 @@ La documentazione è organizzata in sezioni progressive per diversi livelli di c
 
 ### Quick Links
 
-- [**Database API**]({{ site.baseurl }}/docs/Part-02-Core-Engine/03-Heap-Storage) - Operazioni database
-- [**Index API**]({{ site.baseurl }}/docs/Part-02-Core-Engine/04-BTree-Indexes) - Gestione indici
-- [**Transaction API**]({{ site.baseurl }}/docs/Part-02-Core-Engine/05-MVCC-Concurrency) - Gestione transazioni
-- [**CLI Commands**]({{ site.baseurl }}/docs/Part-06-Tooling/01-User-CLI) - Comandi CLI
+- [**Database API**]({{ site.baseurl }}/wiki/Part-02-Core-Engine/03-Heap-Storage) - Operazioni database
+- [**Index API**]({{ site.baseurl }}/wiki/Part-02-Core-Engine/04-BTree-Indexes) - Gestione indici
+- [**Transaction API**]({{ site.baseurl }}/wiki/Part-02-Core-Engine/05-MVCC-Concurrency) - Gestione transazioni
+- [**CLI Commands**]({{ site.baseurl }}/wiki/Part-06-Tooling/01-User-CLI) - Comandi CLI
 - [**Configuration**]({{ site.baseurl }}/docs/Appendices/02-Configurazione) - Configurazione sistema
 
 ## 🏗️ Architettura del Sistema
