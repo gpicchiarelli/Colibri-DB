@@ -54,13 +54,14 @@ public struct PrimaryKeyConstraint: Constraint {
     public let columns: [String]
     public let isDeferrable: Bool
     public let initiallyDeferred: Bool
-    public let type: ConstraintType = .primaryKey
+    public let type: ConstraintType
     
     public init(name: String, columns: [String], isDeferrable: Bool = false, initiallyDeferred: Bool = false) {
         self.name = name
         self.columns = columns
         self.isDeferrable = isDeferrable
         self.initiallyDeferred = initiallyDeferred
+        self.type = .primaryKey
     }
     
     public func validate(_ row: Row, in table: String) throws -> ConstraintValidationResult {
@@ -87,13 +88,14 @@ public struct UniqueConstraint: Constraint {
     public let columns: [String]
     public let isDeferrable: Bool
     public let initiallyDeferred: Bool
-    public let type: ConstraintType = .unique
+    public let type: ConstraintType
     
     public init(name: String, columns: [String], isDeferrable: Bool = false, initiallyDeferred: Bool = false) {
         self.name = name
         self.columns = columns
         self.isDeferrable = isDeferrable
         self.initiallyDeferred = initiallyDeferred
+        self.type = .unique
     }
     
     public func validate(_ row: Row, in table: String) throws -> ConstraintValidationResult {
@@ -113,13 +115,14 @@ public struct NotNullConstraint: Constraint {
     public let columns: [String]
     public let isDeferrable: Bool
     public let initiallyDeferred: Bool
-    public let type: ConstraintType = .notNull
+    public let type: ConstraintType
     
     public init(name: String, column: String, isDeferrable: Bool = false, initiallyDeferred: Bool = false) {
         self.name = name
         self.columns = [column]
         self.isDeferrable = isDeferrable
         self.initiallyDeferred = initiallyDeferred
+        self.type = .notNull
     }
     
     public func validate(_ row: Row, in table: String) throws -> ConstraintValidationResult {
@@ -296,7 +299,7 @@ public struct ForeignKeyConstraint: Constraint {
     public let columns: [String]
     public let isDeferrable: Bool
     public let initiallyDeferred: Bool
-    public let type: ConstraintType = .foreignKey
+    public let type: ConstraintType
     public let referencedTable: String
     public let referencedColumns: [String]
     public let onDelete: ForeignKeyAction
@@ -325,6 +328,7 @@ public struct ForeignKeyConstraint: Constraint {
         self.onUpdate = onUpdate
         self.isDeferrable = isDeferrable
         self.initiallyDeferred = initiallyDeferred
+        self.type = .foreignKey
     }
     
     public func validate(_ row: Row, in table: String) throws -> ConstraintValidationResult {

@@ -142,146 +142,146 @@ La documentazione è organizzata in più sezioni per diversi tipi di utenti:
 - **Benchmarking** (`docs/Part-07-Testing/03-Benchmarks.md`)
 - **Sicurezza** (`SECURITY.md`)
 
-## 🏗️ Architecture
+## 🏗️ Architettura
 
-### Repository Structure
+### Struttura del Repository
 
 ```
 Colibrì-DB/
 ├── Sources/
-│   ├── ColibriCore/          # Core database engine
-│   │   ├── Buffer/           # Buffer pool management
-│   │   ├── Catalog/          # System catalog
-│   │   ├── Database/         # Database operations
-│   │   ├── Index/            # Index implementations
-│   │   ├── Storage/          # Storage engine
-│   │   ├── Transactions/     # MVCC and locking
+│   ├── ColibriCore/          # Motore database core
+│   │   ├── Buffer/           # Gestione buffer pool
+│   │   ├── Catalog/          # Catalogo di sistema
+│   │   ├── Database/         # Operazioni database
+│   │   ├── Index/            # Implementazioni indici
+│   │   ├── Storage/          # Motore storage
+│   │   ├── Transactions/     # MVCC e locking
 │   │   ├── WAL/              # Write-Ahead Logging
 │   │   └── ...
-│   ├── coldb/                # Administrative CLI
-│   ├── coldb-server/         # Network server
-│   └── benchmarks/           # Performance testing
-├── Tests/                    # Test suite
-├── docs/                     # Technical documentation
-├── Examples/                 # Usage examples
-└── Resources/                # Configuration files
+│   ├── coldb/                # CLI amministrativa
+│   ├── coldb-server/         # Server di rete
+│   └── benchmarks/           # Test di performance
+├── Tests/                    # Suite di test
+├── docs/                     # Documentazione tecnica
+├── Examples/                 # Esempi di utilizzo
+└── Resources/                # File di configurazione
 ```
 
-### Core Components
+### Componenti Core
 
-- **Storage Engine**: Heap file-based storage with slot directory
-- **Buffer Pool**: LRU/Clock eviction with background flushing
-- **WAL System**: ARIES-compliant recovery with CRC32 checksums
-- **Index Engine**: Pluggable B+Tree, Hash, ART, and LSM implementations
-- **Transaction Manager**: MVCC with configurable isolation levels
-- **Query Processor**: Volcano iterator with cost-based optimization
+- **Storage Engine**: Storage basato su file heap con slot directory
+- **Buffer Pool**: Eviction LRU/Clock con flush in background
+- **Sistema WAL**: Recovery ARIES-compliant con checksum CRC32
+- **Motore Indici**: Implementazioni pluggabili B+Tree, Hash, ART e LSM
+- **Transaction Manager**: MVCC con livelli di isolamento configurabili
+- **Query Processor**: Iterator Volcano con ottimizzazione cost-based
 
-## 🧪 Testing & Quality
+## 🧪 Testing e Qualità
 
 ### Continuous Integration
-- **GitHub Actions**: Automated build and test execution
-- **CodeQL**: Static analysis and security scanning
-- **Swift Testing**: Modern testing framework integration
+- **GitHub Actions**: Esecuzione automatica build e test
+- **CodeQL**: Analisi statica e security scanning
+- **Swift Testing**: Integrazione framework di test moderno
 
-### Test Coverage
-- **Unit Tests**: Core functionality validation
-- **Integration Tests**: End-to-end workflow testing
-- **Benchmarks**: Performance regression detection
-- **Stress Tests**: High-load scenario validation
+### Copertura Test
+- **Unit Tests**: Validazione funzionalità core
+- **Integration Tests**: Test workflow end-to-end
+- **Benchmarks**: Rilevamento regressioni performance
+- **Stress Tests**: Validazione scenari ad alto carico
 
-### Running Tests
+### Esecuzione Test
 
 ```bash
-# Run all tests
+# Esegui tutti i test
 swift test
 
-# Run specific test categories
+# Esegui categorie specifiche di test
 swift test --filter WAL
 swift test --filter Buffer
 swift test --filter BTree
 
-# Run benchmarks
+# Esegui benchmark
 swift run benchmarks --help
 ```
 
 ## 📊 Performance
 
-### Target Performance Metrics
-- **WAL Throughput**: 10,000+ operations/second
-- **B+Tree Lookups**: 1M+ lookups/second
-- **Transaction Throughput**: 1,000+ transactions/second
+### Metriche Performance Target
+- **WAL Throughput**: 10,000+ operazioni/secondo
+- **B+Tree Lookups**: 1M+ lookups/secondo
+- **Transaction Throughput**: 1,000+ transazioni/secondo
 - **Buffer Pool Hit Rate**: >95%
 
 ### Benchmarking
 
 ```bash
-# WAL performance
+# Performance WAL
 swift run benchmarks --wal-throughput --duration 30s
 
-# B+Tree operations
+# Operazioni B+Tree
 swift run benchmarks --btree-lookups --keys 1000000
 
-# Transaction throughput
+# Throughput transazioni
 swift run benchmarks --transaction-throughput --duration 30s
 
-# Buffer pool efficiency
+# Efficienza buffer pool
 swift run benchmarks --buffer-hit-rate --workload mixed
 ```
 
-## 🤝 Contributing
+## 🤝 Contribuire
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) for details.
+Accogliamo i contributi! Consulta le nostre [Linee Guida per i Contributi](CONTRIBUTING.md) e il [Codice di Condotta](CODE_OF_CONDUCT.md) per i dettagli.
 
-### Development Setup
+### Setup di Sviluppo
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass
-6. Submit a pull request
+1. Fork del repository
+2. Crea un branch per la feature
+3. Apporta le modifiche
+4. Aggiungi test per le nuove funzionalità
+5. Assicurati che tutti i test passino
+6. Invia una pull request
 
-### Areas for Contribution
+### Aree per i Contributi
 
-- **Core Engine**: Storage, WAL, indexing improvements
-- **Query Processing**: Parser enhancements, optimization
-- **Testing**: Additional test coverage, benchmarks
-- **Documentation**: Technical writing, examples
-- **Tooling**: CLI improvements, monitoring tools
+- **Motore Core**: Miglioramenti storage, WAL, indicizzazione
+- **Elaborazione Query**: Miglioramenti parser, ottimizzazione
+- **Testing**: Copertura test aggiuntiva, benchmark
+- **Documentazione**: Scrittura tecnica, esempi
+- **Strumenti**: Miglioramenti CLI, strumenti di monitoring
 
 ## 📈 Roadmap
 
-### Current Status: MVP (Alpha)
-- ✅ Core storage engine with WAL
-- ✅ B+Tree indexes with recovery
-- ✅ Basic MVCC and transaction support
-- ✅ Administrative CLI
-- ✅ Comprehensive documentation
+### Stato Attuale: MVP (Alpha)
+- ✅ Motore storage core con WAL
+- ✅ Indici B+Tree con recovery
+- ✅ Supporto MVCC e transazioni base
+- ✅ CLI amministrativa
+- ✅ Documentazione completa
 
-### Upcoming Features
-- **Beta Release**: Multi-user server mode, concurrent transactions
-- **Production Release**: Full SQL compliance, advanced monitoring
-- **Future**: Distributed architecture, cloud-native deployment
+### Funzionalità in Arrivo
+- **Release Beta**: Modalità server multi-utente, transazioni concorrenti
+- **Release Produzione**: Conformità SQL completa, monitoring avanzato
+- **Futuro**: Architettura distribuita, deployment cloud-native
 
-See [ROADMAP.md](ROADMAP.md) for detailed development plans.
+Vedi [ROADMAP.md](ROADMAP.md) per i piani di sviluppo dettagliati.
 
-## 📄 License
+## 📄 Licenza
 
-This project is licensed under the **BSD 3-Clause License** - see the [LICENSE](LICENSE) file for details.
+Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [LICENSE](LICENSE) per i dettagli.
 
-## 🙏 Acknowledgments
+## 🙏 Ringraziamenti
 
-- **Apple**: For Swift language and development tools
-- **Community**: Contributors and early adopters
-- **Academic**: Database systems research and literature
-- **Open Source**: Inspiration from existing database projects
+- **Apple**: Per il linguaggio Swift e gli strumenti di sviluppo
+- **Comunità**: Contributori e early adopter
+- **Accademia**: Ricerca e letteratura sui sistemi database
+- **Open Source**: Ispirazione da progetti database esistenti
 
 ---
 
 <div align="center">
 
-**Built with ❤️ in Swift for the Apple Ecosystem**
+**Costruito con ❤️ in Swift per l'Ecosistema Apple**
 
-[⭐ Star us on GitHub](https://github.com/gpicchiarelli/Colibrì-DB) • [📖 Read the docs](docs/) • [🐛 Report issues](https://github.com/gpicchiarelli/Colibrì-DB/issues) • [💬 Join discussions](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
+[⭐ Dacci una stella su GitHub](https://github.com/gpicchiarelli/Colibrì-DB) • [📖 Leggi la documentazione](docs/) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibrì-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
 
 </div>

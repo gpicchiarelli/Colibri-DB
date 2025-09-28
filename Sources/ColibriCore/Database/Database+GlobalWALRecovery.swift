@@ -297,7 +297,7 @@ extension Database {
             // Undo of index insert = delete
             let rid = RID(pageId: ridPageId, slotId: ridSlotId)
             for tableName in indexes.keys {
-                var tableMap = indexes[tableName]
+                let tableMap = indexes[tableName]
                 guard var indexMap = tableMap, let indexDef = indexMap[indexId] else { continue }
                     switch indexDef.backend {
                     case .persistentBTree(let f):
@@ -312,8 +312,6 @@ extension Database {
                             indexMap[indexId] = (columns: indexDef.columns, backend: .anyString(idx))
                             indexes[tableName] = indexMap
                         }
-                    default:
-                        break
                     }
             }
             
@@ -321,7 +319,7 @@ extension Database {
             // Undo of index delete = insert
             let rid = RID(pageId: ridPageId, slotId: ridSlotId)
             for tableName in indexes.keys {
-                var tableMap = indexes[tableName]
+                let tableMap = indexes[tableName]
                 guard var indexMap = tableMap, let indexDef = indexMap[indexId] else { continue }
                     switch indexDef.backend {
                     case .persistentBTree(let f):
@@ -336,8 +334,6 @@ extension Database {
                             indexMap[indexId] = (columns: indexDef.columns, backend: .anyString(idx))
                             indexes[tableName] = indexMap
                         }
-                    default:
-                        break
                     }
             }
         }

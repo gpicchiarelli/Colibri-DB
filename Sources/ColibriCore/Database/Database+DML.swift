@@ -224,7 +224,7 @@ extension Database {
                     if var t = tablesMem[table] {
                         guard let r = try? t.read(rid) else { continue }
                         row = r
-                        try t.remove(rid)
+                        t.remove(rid)
                         tablesMem[table] = t
                         mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
                     } else if let ft = tablesFile[table] {
@@ -263,7 +263,7 @@ extension Database {
         for (rid, row) in rows {
             if let v = row[column], v == value {
                 if var t = tablesMem[table] {
-                    try t.remove(rid)
+                    t.remove(rid)
                     tablesMem[table] = t
                     mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
                 } else if let ft = tablesFile[table] {
@@ -362,7 +362,7 @@ extension Database {
                     for (k, v) in predicates { if row[k] != v { match = false; break } }
                     if !match { continue }
                     mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
-                    try t.remove(rid)
+                    t.remove(rid)
                     tablesMem[table] = t
                 } else if let ft = tablesFile[table] {
                     guard let r = try? ft.read(rid) else { continue }
