@@ -106,62 +106,62 @@ swift build
 La documentazione è organizzata in sezioni progressive per diversi livelli di competenza:
 
 #### **Parte I: Fondamenti** - Teoria e Principi
-- [**00-Guida-Alla-Lettura**](Part-01-Foundations/00-Guida-Alla-Lettura.md) - Come navigare la documentazione
-- [**01-Relational-Principles**](Part-01-Foundations/01-Relational-Principles.md) - Principi relazionali e algebra
-- [**02-Algebra-SQL**](Part-01-Foundations/02-Algebra-SQL.md) - Algebra relazionale e SQL
-- [**03-Transactions-Theory**](Part-01-Foundations/03-Transactions-Theory.md) - Teoria delle transazioni
-- [**04-Storage-Principles**](Part-01-Foundations/04-Storage-Principles.md) - Principi di storage e persistenza
+- [**00-Guida-Alla-Lettura**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-01-Foundations/00-Guida-Alla-Lettura.md) - Come navigare la documentazione
+- [**01-Relational-Principles**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-01-Foundations/01-Relational-Principles.md) - Principi relazionali e algebra
+- [**02-Algebra-SQL**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-01-Foundations/02-Algebra-SQL.md) - Algebra relazionale e SQL
+- [**03-Transactions-Theory**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-01-Foundations/03-Transactions-Theory.md) - Teoria delle transazioni
+- [**04-Storage-Principles**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-01-Foundations/04-Storage-Principles.md) - Principi di storage e persistenza
 
 #### **Parte II: Motore Core** - Architettura Interna
-- [**00-Introduzione**](Part-02-Core-Engine/00-Introduzione.md) - Panoramica del motore core
-- [**01-WAL-and-Recovery**](Part-02-Core-Engine/01-WAL-and-Recovery.md) - Write-Ahead Logging e recovery
-- [**02-BufferPool**](Part-02-Core-Engine/02-BufferPool.md) - Gestione buffer pool e caching
-- [**03-Heap-Storage**](Part-02-Core-Engine/03-Heap-Storage.md) - Storage engine e heap files
-- [**04-BTree-Indexes**](Part-02-Core-Engine/04-BTree-Indexes.md) - Indici B+Tree e strutture dati
-- [**05-MVCC-Concurrency**](Part-02-Core-Engine/05-MVCC-Concurrency.md) - Controllo concorrenza MVCC
+- [**00-Introduzione**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-02-Core-Engine/00-Introduzione.md) - Panoramica del motore core
+- [**01-WAL-and-Recovery**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-02-Core-Engine/01-WAL-and-Recovery.md) - Write-Ahead Logging e recovery
+- [**02-BufferPool**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-02-Core-Engine/02-BufferPool.md) - Gestione buffer pool e caching
+- [**03-Heap-Storage**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-02-Core-Engine/03-Heap-Storage.md) - Storage engine e heap files
+- [**04-BTree-Indexes**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-02-Core-Engine/04-BTree-Indexes.md) - Indici B+Tree e strutture dati
+- [**05-MVCC-Concurrency**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-02-Core-Engine/05-MVCC-Concurrency.md) - Controllo concorrenza MVCC
 
 #### **Parte III: Elaborazione Query** - Pipeline di Esecuzione
-- [**00-Introduzione**](Part-03-Query/00-Introduzione.md) - Panoramica del query processor
-- [**01-SQL-Parser**](Part-03-Query/01-SQL-Parser.md) - Parser SQL e AST
-- [**02-Logical-Planning**](Part-03-Query/02-Logical-Planning.md) - Pianificazione logica
-- [**03-Physical-Planning**](Part-03-Query/03-Physical-Planning.md) - Pianificazione fisica
-- [**04-Execution-Engine**](Part-03-Query/04-Execution-Engine.md) - Motore di esecuzione
-- [**05-Advanced-Features**](Part-03-Query/05-Advanced-Features.md) - Funzionalità avanzate
+- [**00-Introduzione**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-03-Query/00-Introduzione.md) - Panoramica del query processor
+- [**01-SQL-Parser**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-03-Query/01-SQL-Parser.md) - Parser SQL e AST
+- [**02-Logical-Planning**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-03-Query/02-Logical-Planning.md) - Pianificazione logica
+- [**03-Physical-Planning**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-03-Query/03-Physical-Planning.md) - Pianificazione fisica
+- [**04-Execution-Engine**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-03-Query/04-Execution-Engine.md) - Motore di esecuzione
+- [**05-Advanced-Features**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-03-Query/05-Advanced-Features.md) - Funzionalità avanzate
 
 #### **Parte IV: Metadati** - Catalogo e Statistiche
-- [**00-Introduzione**](Part-04-Metadata/00-Introduzione.md) - Panoramica del sistema metadati
-- [**01-CatalogCore**](Part-04-Metadata/01-CatalogCore.md) - Catalogo di sistema core
-- [**02-CatalogManager**](Part-04-Metadata/02-CatalogManager.md) - Gestione catalogo
-- [**03-Statistics**](Part-04-Metadata/03-Statistics.md) - Statistiche e ottimizzazione
+- [**00-Introduzione**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-04-Metadata/00-Introduzione.md) - Panoramica del sistema metadati
+- [**01-CatalogCore**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-04-Metadata/01-CatalogCore.md) - Catalogo di sistema core
+- [**02-CatalogManager**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-04-Metadata/02-CatalogManager.md) - Gestione catalogo
+- [**03-Statistics**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-04-Metadata/03-Statistics.md) - Statistiche e ottimizzazione
 
 #### **Parte V: Server** - Architettura di Rete
-- [**00-Introduzione**](Part-05-Server/00-Introduzione.md) - Panoramica del server
-- [**01-ServerArchitecture**](Part-05-Server/01-ServerArchitecture.md) - Architettura server
-- [**02-Wire-Protocol**](Part-05-Server/02-Wire-Protocol.md) - Protocollo di comunicazione
-- [**03-ServerOperations**](Part-05-Server/03-ServerOperations.md) - Operazioni server
+- [**00-Introduzione**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-05-Server/00-Introduzione.md) - Panoramica del server
+- [**01-ServerArchitecture**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-05-Server/01-ServerArchitecture.md) - Architettura server
+- [**02-Wire-Protocol**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-05-Server/02-Wire-Protocol.md) - Protocollo di comunicazione
+- [**03-ServerOperations**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-05-Server/03-ServerOperations.md) - Operazioni server
 
 #### **Parte VI: Strumenti** - CLI e DevOps
-- [**00-Introduzione**](Part-06-Tooling/00-Introduzione.md) - Panoramica degli strumenti
-- [**01-User-CLI**](Part-06-Tooling/01-User-CLI.md) - CLI utente e amministrativa
-- [**02-Dev-CLI**](Part-06-Tooling/02-Dev-CLI.md) - CLI per sviluppatori
-- [**03-Monitoring-DevOps**](Part-06-Tooling/03-Monitoring-DevOps.md) - Monitoring e DevOps
+- [**00-Introduzione**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-06-Tooling/00-Introduzione.md) - Panoramica degli strumenti
+- [**01-User-CLI**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-06-Tooling/01-User-CLI.md) - CLI utente e amministrativa
+- [**02-Dev-CLI**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-06-Tooling/02-Dev-CLI.md) - CLI per sviluppatori
+- [**03-Monitoring-DevOps**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-06-Tooling/03-Monitoring-DevOps.md) - Monitoring e DevOps
 
 #### **Parte VII: Testing** - Qualità e Performance
-- [**00-Introduzione**](Part-07-Testing/00-Introduzione.md) - Strategia di testing
-- [**01-Unit-Tests**](Part-07-Testing/01-Unit-Tests.md) - Test unitari
-- [**02-Integration-Tests**](Part-07-Testing/02-Integration-Tests.md) - Test di integrazione
-- [**03-Benchmarks**](Part-07-Testing/03-Benchmarks.md) - Benchmarking e performance
+- [**00-Introduzione**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-07-Testing/00-Introduzione.md) - Strategia di testing
+- [**01-Unit-Tests**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-07-Testing/01-Unit-Tests.md) - Test unitari
+- [**02-Integration-Tests**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-07-Testing/02-Integration-Tests.md) - Test di integrazione
+- [**03-Benchmarks**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-07-Testing/03-Benchmarks.md) - Benchmarking e performance
 
 #### **Parte VIII: Futuro** - Roadmap e Estensioni
-- [**00-Introduzione**](Part-08-Future/00-Introduzione.md) - Visione futura
-- [**01-Roadmap**](Part-08-Future/01-Roadmap.md) - Roadmap di sviluppo
+- [**00-Introduzione**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-08-Future/00-Introduzione.md) - Visione futura
+- [**01-Roadmap**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-08-Future/01-Roadmap.md) - Roadmap di sviluppo
 
 ### 🔧 **Guide Operative** - Riferimenti Pratici
 
-- [**Prefazione**](Prefazione.md) - Introduzione generale al progetto
-- [**00-Introduzione**](Appendices/00-Introduzione.md) - Guida introduttiva
-- [**01-Glossario**](Appendices/01-Glossario.md) - Terminologia tecnica
-- [**02-Configurazione**](Appendices/02-Configurazione.md) - Guida alla configurazione
+- [**Prefazione**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Prefazione.md) - Introduzione generale al progetto
+- [**00-Introduzione**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Appendices/00-Introduzione.md) - Guida introduttiva
+- [**01-Glossario**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Appendices/01-Glossario.md) - Terminologia tecnica
+- [**02-Configurazione**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Appendices/02-Configurazione.md) - Guida alla configurazione
 
 ## 🔧 API Reference
 
@@ -176,11 +176,11 @@ La documentazione è organizzata in sezioni progressive per diversi livelli di c
 
 ### Quick Links
 
-- [**Database API**](Part-02-Core-Engine/03-Heap-Storage.md) - Operazioni database
-- [**Index API**](Part-02-Core-Engine/04-BTree-Indexes.md) - Gestione indici
-- [**Transaction API**](Part-02-Core-Engine/05-MVCC-Concurrency.md) - Gestione transazioni
-- [**CLI Commands**](Part-06-Tooling/01-User-CLI.md) - Comandi CLI
-- [**Configuration**](Appendices/02-Configurazione.md) - Configurazione sistema
+- [**Database API**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-02-Core-Engine/03-Heap-Storage.md) - Operazioni database
+- [**Index API**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-02-Core-Engine/04-BTree-Indexes.md) - Gestione indici
+- [**Transaction API**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-02-Core-Engine/05-MVCC-Concurrency.md) - Gestione transazioni
+- [**CLI Commands**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Part-06-Tooling/01-User-CLI.md) - Comandi CLI
+- [**Configuration**](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/docs/Appendices/02-Configurazione.md) - Configurazione sistema
 
 ## 🏗️ Architettura del Sistema
 
@@ -250,7 +250,7 @@ swift run benchmarks --help
 
 ## 🤝 Contribuire
 
-Accogliamo i contributi! Consulta le nostre [Linee Guida per i Contributi](../CONTRIBUTING.md) e il [Codice di Condotta](../CODE_OF_CONDUCT.md).
+Accogliamo i contributi! Consulta le nostre [Linee Guida per i Contributi](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/CONTRIBUTING.md) e il [Codice di Condotta](https://github.com/gpicchiarelli/Colibrì-DB/blob/main/CODE_OF_CONDUCT.md).
 
 ### Aree per i Contributi
 
@@ -282,7 +282,7 @@ Licenza BSD 3-Clause License
 
 <div align="center">
 
-[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibrì-DB) • [📖 Leggi la documentazione](docs/) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibrì-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
+[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibrì-DB) • [📖 Leggi la documentazione](https://github.com/gpicchiarelli/Colibrì-DB/tree/main/docs) • [🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibrì-DB/issues) • [💬 Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibrì-DB/discussions)
 
 **ColibrìDB**
 
