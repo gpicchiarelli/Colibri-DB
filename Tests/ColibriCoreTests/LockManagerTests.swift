@@ -7,15 +7,12 @@
 
 // Theme: Lock manager reenactments testing contention scenarios.
 
-// swiftlint:disable:next sendable_closure_captures
-
 import Foundation
 import Dispatch
 @_spi(Experimental) import Testing
-@testable import ColibriCore
+@preconcurrency @testable import ColibriCore
 
 // Suppress Sendable warnings for test closures
-// swiftlint:disable:next sendable_closure_captures
 
 @Suite(.serialized)
 struct LockManagerTests {
@@ -33,8 +30,7 @@ struct LockManagerTests {
         var t1Error: Error?
 
         // Start T1 trying to acquire resourceB in background
-        // swiftlint:disable:next sendable_closure_captures
-        DispatchQueue.global().async { @Sendable in
+        DispatchQueue.global().async {
             do {
                 let h = try manager.lock(resourceB, mode: .exclusive, tid: 1, timeout: nil)
                 t1Result.sync { t1SecondHandle = h }
@@ -42,7 +38,7 @@ struct LockManagerTests {
                 t1Result.sync { t1Error = error }
             }
             waiterFinished.signal()
-        } // swiftlint:disable:next sendable_closure_captures
+        }
 
         // Wait a bit for T1 to be queued waiting for resourceB
         Thread.sleep(forTimeInterval: 0.1)
@@ -103,8 +99,7 @@ struct LockManagerTests {
         var exclusiveHandle: LockHandle?
         var upgradeError: Error?
 
-        // swiftlint:disable:next sendable_closure_captures
-        DispatchQueue.global().async { @Sendable in
+        DispatchQueue.global().async {
             do {
                 let h = try manager.lock(resource, mode: .exclusive, tid: 1, timeout: nil)
                 upgradeResult.sync { exclusiveHandle = h }
@@ -112,7 +107,7 @@ struct LockManagerTests {
                 upgradeResult.sync { upgradeError = error }
             }
             upgradeFinished.signal()
-        } // swiftlint:disable:next sendable_closure_captures
+        }
 
         Thread.sleep(forTimeInterval: 0.05)
         manager.unlock(sharedT2)
