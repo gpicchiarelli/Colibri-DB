@@ -15,10 +15,10 @@ theme: minima
 collections:
   wiki:
     output: true
-    permalink: /wiki/:name/
+    permalink: /:collection/:name/
   docs:
     output: true
-    permalink: /docs/:path/
+    permalink: /:collection/:path/
 
 # Defaults
 defaults:
