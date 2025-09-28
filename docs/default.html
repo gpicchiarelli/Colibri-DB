@@ -114,7 +114,7 @@
         /* Header */
         .header {
             background: var(--white);
-            border-bottom: 1px solid var(--gray-8);
+            border-bottom: 1px solid var(--gray-200);
             padding: var(--space-8) 0;
             text-align: center;
         }
@@ -148,19 +148,22 @@
         .badge {
             display: inline-flex;
             align-items: center;
-            padding: var(--space-2) var(--space-4);
-            background: var(--gray-10);
-            border: 1px solid var(--gray-8);
+            padding: var(--space-3) var(--space-5);
+            background: var(--white);
+            border: 1px solid var(--gray-300);
             border-radius: var(--radius-full);
             font-size: var(--font-size-callout);
-            font-weight: 500;
+            font-weight: 400;
             text-decoration: none;
-            color: var(--gray-1);
-            transition: background-color 0.2s ease;
+            color: var(--gray-600);
+            transition: all 0.2s ease;
+            letter-spacing: 0.01em;
         }
 
         .badge:hover {
-            background: var(--gray-9);
+            background: var(--gray-50);
+            border-color: var(--gray-400);
+            color: var(--gray-800);
         }
 
         .cta-buttons {
@@ -186,29 +189,31 @@
         }
 
         .btn-primary {
-            background: var(--primary-blue);
+            background: var(--black);
             color: var(--white);
-            border-color: var(--primary-blue);
+            border-color: var(--black);
         }
 
         .btn-primary:hover {
-            background: var(--primary-blue-hover);
+            background: var(--gray-800);
+            border-color: var(--gray-800);
         }
 
         .btn-secondary {
             background: var(--white);
-            color: var(--primary-blue);
-            border-color: var(--gray-7);
+            color: var(--black);
+            border-color: var(--gray-300);
         }
 
         .btn-secondary:hover {
-            background: var(--gray-10);
+            background: var(--gray-50);
+            border-color: var(--gray-400);
         }
 
         /* Navigation */
         .nav {
             background: var(--white);
-            border-bottom: 1px solid var(--gray-8);
+            border-bottom: 1px solid var(--gray-200);
             padding: var(--space-4) 0;
             position: sticky;
             top: 0;
@@ -226,7 +231,7 @@
         }
 
         .nav a {
-            color: var(--gray-1);
+            color: var(--black);
             text-decoration: none;
             font-weight: 500;
             padding: var(--space-2) var(--space-4);
@@ -236,7 +241,7 @@
         }
 
         .nav a:hover, .nav a.active {
-            background: var(--gray-10);
+            background: var(--gray-50);
             color: var(--primary-blue);
         }
 
@@ -253,7 +258,7 @@
         .section h1 {
             font-size: var(--font-size-title-1);
             font-weight: 600;
-            color: var(--gray-1);
+            color: var(--black);
             margin-bottom: var(--space-6);
             text-align: center;
             letter-spacing: -0.022em;
@@ -263,7 +268,7 @@
         .section h2 {
             font-size: var(--font-size-title-2);
             font-weight: 600;
-            color: var(--gray-1);
+            color: var(--black);
             margin-bottom: var(--space-4);
             letter-spacing: -0.011em;
         }
@@ -271,7 +276,7 @@
         .section h3 {
             font-size: var(--font-size-title-3);
             font-weight: 600;
-            color: var(--gray-1);
+            color: var(--black);
             margin-bottom: var(--space-3);
             letter-spacing: -0.011em;
         }
@@ -279,14 +284,14 @@
         .section h4 {
             font-size: var(--font-size-headline);
             font-weight: 600;
-            color: var(--gray-1);
+            color: var(--black);
             margin-bottom: var(--space-2);
             letter-spacing: -0.011em;
         }
 
         .section p {
             font-size: var(--font-size-body);
-            color: var(--gray-3);
+            color: var(--gray-700);
             line-height: 1.47;
             margin-bottom: var(--space-4);
         }
@@ -299,7 +304,7 @@
         .section li {
             margin-bottom: var(--space-2);
             font-size: var(--font-size-body);
-            color: var(--gray-3);
+            color: var(--gray-700);
             line-height: 1.47;
         }
 
@@ -311,7 +316,7 @@
 
         .wiki-content h1 {
             font-size: var(--font-size-title-1);
-            color: var(--gray-1);
+            color: var(--black);
             margin-bottom: var(--space-6);
             border-bottom: 2px solid var(--primary-blue);
             padding-bottom: var(--space-3);
@@ -319,21 +324,21 @@
 
         .wiki-content h2 {
             font-size: var(--font-size-title-2);
-            color: var(--gray-1);
+            color: var(--black);
             margin: var(--space-12) 0 var(--space-4) 0;
-            border-bottom: 1px solid var(--gray-8);
+            border-bottom: 1px solid var(--gray-200);
             padding-bottom: var(--space-2);
         }
 
         .wiki-content h3 {
             font-size: var(--font-size-title-3);
-            color: var(--gray-1);
+            color: var(--black);
             margin: var(--space-8) 0 var(--space-3) 0;
         }
 
         .wiki-content h4 {
             font-size: var(--font-size-headline);
-            color: var(--gray-1);
+            color: var(--black);
             margin: var(--space-6) 0 var(--space-2) 0;
         }
 
@@ -342,8 +347,8 @@
             padding-left: var(--space-4);
             margin: var(--space-4) 0;
             font-style: italic;
-            color: var(--gray-4);
-            background: var(--gray-10);
+            color: var(--gray-600);
+            background: var(--gray-50);
             padding: var(--space-4);
             border-radius: var(--radius-lg);
         }
@@ -359,19 +364,19 @@
         }
 
         .wiki-content th, .wiki-content td {
-            border: 1px solid var(--gray-8);
+            border: 1px solid var(--gray-200);
             padding: var(--space-4);
             text-align: left;
         }
 
         .wiki-content th {
-            background: var(--gray-10);
+            background: var(--gray-50);
             font-weight: 600;
-            color: var(--gray-1);
+            color: var(--black);
         }
 
         .wiki-content code {
-            background: var(--gray-10);
+            background: var(--gray-50);
             padding: var(--space-1) var(--space-2);
             border-radius: var(--radius-sm);
             font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
@@ -380,7 +385,7 @@
         }
 
         .wiki-content pre {
-            background: var(--gray-1);
+            background: var(--black);
             border-radius: var(--radius-lg);
             padding: var(--space-6);
             overflow-x: auto;
@@ -392,7 +397,7 @@
         .wiki-content pre code {
             background: none;
             padding: 0;
-            color: var(--gray-10);
+            color: var(--gray-50);
             font-size: var(--font-size-callout);
         }
 
@@ -409,7 +414,7 @@
 
         /* Footer */
         .footer {
-            background: var(--gray-1);
+            background: var(--black);
             color: var(--white);
             padding: var(--space-16) 0 var(--space-8) 0;
         }
@@ -471,7 +476,7 @@
 
         .trademark-disclaimer {
             background: var(--gray-2);
-            border: 1px solid var(--gray-3);
+            border: 1px solid var(--gray-700);
             border-radius: var(--radius-lg);
             padding: var(--space-6);
             margin-bottom: var(--space-8);
