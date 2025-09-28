@@ -761,6 +761,6 @@ print("Hit rate: \(bufferStats.hitRate)%")
 
 **📚 API Reference ColibrDB** - *Documentazione completa per sviluppatori*
 
-[← CLI Reference]({{ site.baseurl }}/wiki/CLI-Reference) • [Development Guide →]({{ site.baseurl }}/wiki/Development)
+[← CLI Reference]({{ site.baseurl }}/docs/wiki/CLI-Reference) • [Development Guide →]({{ site.baseurl }}/docs/wiki/Development)
 
 </div>

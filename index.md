@@ -128,13 +128,13 @@ swift build
         <div class="feature-card">
             <h4>🚀 Wiki Operativa</h4>
             <ul>
-                <li><a href="{{ site.baseurl }}/wiki/Quick-Start">Quick Start</a> - Installazione e prima sessione</li>
-                <li><a href="{{ site.baseurl }}/wiki/Architecture">Architecture</a> - Architettura del sistema</li>
-                <li><a href="{{ site.baseurl }}/wiki/CLI-Reference">CLI Reference</a> - Comandi completi</li>
-                <li><a href="{{ site.baseurl }}/wiki/API-Reference">API Reference</a> - Documentazione API</li>
-                <li><a href="{{ site.baseurl }}/wiki/Performance">Performance</a> - Ottimizzazioni e benchmark</li>
-                <li><a href="{{ site.baseurl }}/wiki/Troubleshooting">Troubleshooting</a> - Risoluzione problemi</li>
-                <li><a href="{{ site.baseurl }}/wiki/Examples">Examples</a> - Esempi pratici</li>
+                <li><a href="{{ site.baseurl }}/docs/wiki/Quick-Start">Quick Start</a> - Installazione e prima sessione</li>
+                <li><a href="{{ site.baseurl }}/docs/wiki/Architecture">Architecture</a> - Architettura del sistema</li>
+                <li><a href="{{ site.baseurl }}/docs/wiki/CLI-Reference">CLI Reference</a> - Comandi completi</li>
+                <li><a href="{{ site.baseurl }}/docs/wiki/API-Reference">API Reference</a> - Documentazione API</li>
+                <li><a href="{{ site.baseurl }}/docs/wiki/Performance">Performance</a> - Ottimizzazioni e benchmark</li>
+                <li><a href="{{ site.baseurl }}/docs/wiki/Troubleshooting">Troubleshooting</a> - Risoluzione problemi</li>
+                <li><a href="{{ site.baseurl }}/docs/wiki/Examples">Examples</a> - Esempi pratici</li>
             </ul>
         </div>
         <div class="feature-card">

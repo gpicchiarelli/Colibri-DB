@@ -11,15 +11,6 @@ markdown: kramdown
 highlighter: rouge
 theme: minima
 
-# Collections
-collections:
-  wiki:
-    output: true
-    permalink: /:collection/:name/
-  docs:
-    output: true
-    permalink: /:collection/:path/
-
 # Defaults
 defaults:
   - scope:
@@ -27,16 +18,6 @@ defaults:
       type: "pages"
     values:
       layout: "default"
-  - scope:
-      path: ""
-      type: "wiki"
-    values:
-      layout: "page"
-  - scope:
-      path: ""
-      type: "docs"
-    values:
-      layout: "page"
 
 # Plugins
 plugins:
