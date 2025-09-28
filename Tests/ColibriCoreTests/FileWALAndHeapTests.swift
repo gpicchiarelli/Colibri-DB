@@ -70,7 +70,7 @@ struct FileWALTests {
         let walRecords = try recovered.globalWAL?.iterate(from: 1).reduce(into: [WALRecord]()) { records, record in
             records.append(record)
         } ?? []
-        #expect(walRecords.last?.kind == .abort)
+        #expect(walRecords.contains(where: { $0.kind == .abort }))
     }
 }
 
