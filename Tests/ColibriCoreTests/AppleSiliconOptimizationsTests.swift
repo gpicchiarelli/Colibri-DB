@@ -257,7 +257,7 @@ struct AppleSiliconOptimizationsTests {
     @Test func testAPFSOptimizations() {
         // Test APFS volume detection
         let tempDir = FileManager.default.temporaryDirectory
-        let isAPFS = APFSOptimizations.isAPFSVolume(tempDir.path)
+        _ = APFSOptimizations.isAPFSVolume(tempDir.path)
         // Test that the function returns a boolean value (either true or false)
         #expect(Bool(true)) // This test verifies the function executes without error
         
