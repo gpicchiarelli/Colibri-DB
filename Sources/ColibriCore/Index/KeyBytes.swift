@@ -170,6 +170,13 @@ extension KeyBytes {
         return nil
     }
 
+    /// Attempts to decode key bytes representing a single string value.
+    public static func toString(_ data: Data) -> String? {
+        guard let value = toSingleValue(data) else { return nil }
+        if case let .string(str) = value { return str }
+        return nil
+    }
+
     public static func toValues(_ data: Data, count: Int) -> [Value]? {
         var vals: [Value] = []
         if data.first == 0xFE {

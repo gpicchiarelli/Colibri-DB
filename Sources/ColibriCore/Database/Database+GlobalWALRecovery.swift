@@ -277,11 +277,15 @@ extension Database {
             // Undo of delete = restore slot or reinstate tombstone flag
             let row = try JSONDecoder().decode(Row.self, from: rowData)
             let rid = RID(pageId: pageId, slotId: slotId)
-            for (_, ft) in tablesFile {
+            for (name, ft) in tablesFile {
                 if isTombstone {
                     try? ft.clearTombstone(rid, pageLSN: record.lsn)
                 }
                 _ = try? ft.restore(rid, row: row, pageLSN: record.lsn)
+            }
+            if var tableEntry = tablesMem[record.tableId] {
+                tableEntry.register(row: row, rid: rid, isTombstone: isTombstone)
+                tablesMem[record.tableId] = tableEntry
             }
             
         case .heapUpdate(let pageId, let slotId, let originalData):

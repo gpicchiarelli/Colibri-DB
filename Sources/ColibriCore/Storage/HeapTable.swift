@@ -28,31 +28,27 @@ public struct HeapTable: TableStorageProtocol {
         return rid
     }
 
-    public func scan(includeTombstones: Bool = false) throws -> AnySequence<(RID, Row?, Bool)> {
-        let keys = rows.keys.sorted { lhs, rhs in
-            if lhs.pageId == rhs.pageId { return lhs.slotId < rhs.slotId }
-            return lhs.pageId < rhs.pageId
-        }
-        var index = 0
-        let iterator = AnyIterator<(RID, Row?, Bool)> {
-            while index < keys.count {
-                let rid = keys[index]
-                index += 1
-                guard let entry = rows[rid] else { continue }
-                if !includeTombstones && entry.isTombstone { continue }
-                return (rid, entry.isTombstone ? nil : entry.row, entry.isTombstone)
+    public func scan() throws -> AnySequence<(RID, Row)> {
+        let iterator = rows.makeIterator()
+        var currentIterator = iterator
+        return AnySequence(AnyIterator {
+            while let next = currentIterator.next() {
+                let (rid, entry) = next
+                guard !entry.isTombstone else { continue }
+                return (rid, entry.row)
             }
             return nil
-        }
-        return AnySequence(iterator)
+        })
     }
 
-    public func scan() throws -> AnySequence<(RID, Row)> {
-        var iterator = try scan(includeTombstones: false).makeIterator()
+    public func scan(includeTombstones: Bool) throws -> AnySequence<(RID, Row)> {
+        let iterator = rows.makeIterator()
+        var currentIterator = iterator
         return AnySequence(AnyIterator {
-            while let next = iterator.next() {
-                let (rid, row, _) = next
-                if let row = row { return (rid, row) }
+            while let next = currentIterator.next() {
+                let (rid, entry) = next
+                if !includeTombstones && entry.isTombstone { continue }
+                return (rid, entry.row)
             }
             return nil
         })
@@ -70,21 +66,19 @@ public struct HeapTable: TableStorageProtocol {
     }
 
     public mutating func remove(_ rid: RID) {
-        if var row = rows[rid] {
-            row["__is_tombstone"] = .bool(true)
-            rows[rid] = row
-        }
+        rows[rid]?.isTombstone = true
     }
     
     public mutating func restore(_ rid: RID, row: Row) {
-        rows[rid] = row
+        rows[rid] = Entry(row: row, isTombstone: false)
     }
 
     public mutating func clearTombstone(_ rid: RID) {
-        if var row = rows[rid] {
-            row["__is_tombstone"] = .bool(false)
-            rows[rid] = row
-        }
+        rows[rid]?.isTombstone = false
+    }
+
+    public mutating func register(row: Row, rid: RID, isTombstone: Bool = false) {
+        rows[rid] = Entry(row: row, isTombstone: isTombstone)
     }
 }
 

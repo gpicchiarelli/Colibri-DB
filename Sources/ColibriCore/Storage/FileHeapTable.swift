@@ -474,6 +474,15 @@ public final class FileHeapTable: TableStorageProtocol {
         try write(page: &page, pageLSN: pageLSN)
     }
 
+    public func clearTombstone(_ rid: RID, pageLSN: UInt64? = nil) throws {
+        var page = try readPage(rid.pageId)
+        page.clearTombstone(slotId: rid.slotId)
+        if let lsn = pageLSN, lsn != 0 {
+            page.setPageLSN(lsn)
+        }
+        try write(page: &page)
+    }
+
     public func restore(_ rid: RID, row: Row) {
         try? restore(rid, row: row, pageLSN: nil)
     }
