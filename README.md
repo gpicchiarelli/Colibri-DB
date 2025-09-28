@@ -120,27 +120,27 @@ Il file `colibridb.conf.json` controlla tutte le impostazioni del database:
 }
 ```
 
-## 📚 Documentation
+## 📚 Documentazione
 
-### 📖 Comprehensive Technical Documentation
+### 📖 Manuale Tecnico Completo
 
-Our documentation is organized into multiple sections for different audiences:
+La documentazione è organizzata in più sezioni per diversi tipi di utenti:
 
-#### 🎓 **University Manual** (`docs/`)
-- **Part I: Foundations** - Relational principles, SQL algebra, transaction theory
-- **Part II: Core Engine** - WAL, Buffer Pool, Heap Storage, B+Tree Indexes, MVCC
-- **Part III: Query Processing** - SQL Parser, Logical/Physical Planning, Execution Engine
-- **Part IV: Metadata** - Catalog Core, Statistics, Schema Management
-- **Part V: Server** - Architecture, Wire Protocol, Operations
-- **Part VI: Tooling** - User CLI, Dev CLI, Monitoring & DevOps
-- **Part VII: Testing** - Unit Tests, Integration Tests, Benchmarks
-- **Part VIII: Future** - Roadmap and Extensions
+#### 🎓 **Manuale Universitario** (`docs/`)
+- **Parte I: Fondamenti** - Principi relazionali, algebra SQL, teoria delle transazioni
+- **Parte II: Motore Core** - WAL, Buffer Pool, Heap Storage, Indici B+Tree, MVCC
+- **Parte III: Elaborazione Query** - SQL Parser, Planning Logico/Fisico, Execution Engine
+- **Parte IV: Metadati** - Catalog Core, Statistiche, Gestione Schema
+- **Parte V: Server** - Architettura, Wire Protocol, Operazioni
+- **Parte VI: Strumenti** - User CLI, Dev CLI, Monitoring & DevOps
+- **Parte VII: Testing** - Unit Tests, Integration Tests, Benchmarks
+- **Parte VIII: Futuro** - Roadmap ed Estensioni
 
-#### 🔧 **Operational Guides**
-- **Configuration Guide** (`docs/Appendices/02-Configurazione.md`)
-- **CLI Reference** (`docs/Part-06-Tooling/01-User-CLI.md`)
+#### 🔧 **Guide Operative**
+- **Guida Configurazione** (`docs/Appendices/02-Configurazione.md`)
+- **Riferimento CLI** (`docs/Part-06-Tooling/01-User-CLI.md`)
 - **Benchmarking** (`docs/Part-07-Testing/03-Benchmarks.md`)
-- **Security** (`SECURITY.md`)
+- **Sicurezza** (`SECURITY.md`)
 
 ## 🏗️ Architecture
 

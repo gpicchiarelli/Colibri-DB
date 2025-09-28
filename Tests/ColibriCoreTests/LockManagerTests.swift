@@ -12,7 +12,6 @@ import Dispatch
 @_spi(Experimental) import Testing
 @preconcurrency @testable import ColibriCore
 
-// Suppress Sendable warnings for test closures
 
 @Suite(.serialized)
 struct LockManagerTests {
