@@ -182,6 +182,7 @@ enum Scenario: String, CaseIterable {
     case idxLSMRange = "idx-lsm-range"
     case idxTombstone = "idx-tombstone"
     case txCommit = "tx-commit"
+    case txCommitGrouped = "tx-commit-grouped"
     case txRollback = "tx-rollback"
     case txContention = "tx-contention"
     case mvccSnapshotRead = "mvcc-snapshot-read"
@@ -287,6 +288,8 @@ struct BenchmarkCLI {
                 result = try runIndexTombstone(iterations: iterations, kind: "Hash", granular: granular)
             case .txCommit:
                 result = try runTxCommit(iterations: iterations, granular: granular)
+            case .txCommitGrouped:
+                result = try runTxCommitGrouped(iterations: iterations, granular: granular)
             case .txRollback:
                 result = try runTxRollback(iterations: iterations, granular: granular)
             case .txContention:

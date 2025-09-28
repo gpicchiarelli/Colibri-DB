@@ -47,6 +47,51 @@ extension BenchmarkCLI {
             return BenchmarkResult(name: Scenario.txCommit.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["wal_enabled":"true", "storage":"FileHeap"], systemMetrics: systemMetrics)
         }
     }
+    
+    static func runTxCommitGrouped(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+        let fm = FileManager.default
+        let tmp = try makeTempDir()
+
+        var cfg = DBConfig(dataDir: tmp.path, storageEngine: "FileHeap")
+        cfg.autoCompactionEnabled = false
+        cfg.walEnabled = true
+        cfg.walFullFSyncEnabled = false
+        cfg.walGroupCommitMs = 2.0  // Aggressive group commit
+
+        let db = Database(config: cfg)
+        try db.createTable("t")
+
+
+        // Warmup
+        _ = warmupInserts(db: db, table: "t", count: min(1_000, iterations / 10))
+
+        let clock = ContinuousClock(); let start = clock.now
+        if granular {
+            var lat: [Double] = []; lat.reserveCapacity(iterations)
+            for i in 0..<iterations {
+                let t0 = clock.now
+                let tid = try db.begin()
+                _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "data": .string("value_\(i)_with_some_data")], tid: tid)
+                try db.commit(tid)
+                let t1 = clock.now
+                lat.append(msDelta(t0, t1))
+            }
+            let elapsed = clock.now - start
+            let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
+            try? fm.removeItem(at: tmp)
+            return BenchmarkResult(name: "tx-commit-grouped", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled":"true", "storage":"FileHeap", "group_commit":"optimized"], systemMetrics: systemMetrics)
+        } else {
+            for i in 0..<iterations {
+                let tid = try db.begin()
+                _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "data": .string("value_\(i)_with_some_data")], tid: tid)
+                try db.commit(tid)
+            }
+            let elapsed = clock.now - start
+            let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
+            try? fm.removeItem(at: tmp)
+            return BenchmarkResult(name: "tx-commit-grouped", iterations: iterations, elapsed: elapsed, metadata: ["wal_enabled":"true", "storage":"FileHeap", "group_commit":"optimized"], systemMetrics: systemMetrics)
+        }
+    }
 
     static func runTxRollback(iterations: Int, granular: Bool) throws -> BenchmarkResult {
         let fm = FileManager.default
