@@ -97,7 +97,7 @@ struct LockManagerTests {
         var exclusiveHandle: LockHandle?
         var upgradeError: Error?
 
-        DispatchQueue.global().async {
+        DispatchQueue.global().async { @Sendable in
             do {
                 let h = try manager.lock(resource, mode: .exclusive, tid: 1, timeout: nil)
                 upgradeResult.sync { exclusiveHandle = h }
