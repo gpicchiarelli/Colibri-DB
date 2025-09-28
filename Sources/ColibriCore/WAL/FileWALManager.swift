@@ -87,6 +87,14 @@ public final class FileWALManager: WALManager {
     private let groupCommitTimeoutMs: Double
     private let groupCommitOptimizer: GroupCommitOptimizer
     
+    // Enhanced group commit with timer
+    private let groupCommitQueue = DispatchQueue(label: "wal.groupcommit", qos: .userInitiated)
+    private var isGroupCommitActive = false
+    private var lastFlushTime = Date()
+    private var pendingCount = 0
+    private var totalBatches = 0
+    private var totalBatchSize = 0
+    
     // Compression
     private let compressionAlgorithm: CompressionAlgorithm
     private let compressionThreshold: Int = 1024  // Only compress records larger than this
@@ -196,6 +204,7 @@ public final class FileWALManager: WALManager {
                 // Add to group commit batch
                 groupCommitLock.lock()
                 pendingRecords.append(recordWithLSN)
+                pendingCount += 1
                 
                 // Check if we should flush using optimizer
                 let oldestAge: TimeInterval
@@ -214,7 +223,7 @@ public final class FileWALManager: WALManager {
                 groupCommitLock.unlock()
                 
                 if shouldFlush {
-                    try flushPendingRecords()
+                    try flushPendingRecordsOptimized()
                 }
                 updateMetrics(operation: .append, latency: Date().timeIntervalSince(startTime), batchSize: 0)
                 
@@ -333,6 +342,18 @@ public final class FileWALManager: WALManager {
     /// Get optimization metrics from the group commit optimizer
     public var optimizationMetrics: GroupCommitMetrics {
         return groupCommitOptimizer.currentMetrics
+    }
+    
+    /// Enhanced group commit metrics
+    public var groupCommitMetrics: (avgBatchSize: Double, fsyncsPerSecond: Double, totalBatches: Int) {
+        groupCommitLock.lock()
+        defer { groupCommitLock.unlock() }
+        
+        let avgBatchSize = totalBatches > 0 ? Double(totalBatchSize) / Double(totalBatches) : 0.0
+        let timeSinceLastFlush = Date().timeIntervalSince(lastFlushTime)
+        let fsyncsPerSecond = timeSinceLastFlush > 0 ? Double(totalBatches) / timeSinceLastFlush : 0.0
+        
+        return (avgBatchSize: avgBatchSize, fsyncsPerSecond: fsyncsPerSecond, totalBatches: totalBatches)
     }
     
     // MARK: - Lifecycle
@@ -471,6 +492,49 @@ public final class FileWALManager: WALManager {
             batchSize: optimizedBatch.records.count,
             latency: latency,
             compressionRatio: compressionRatio
+        )
+        
+        updateMetrics(operation: .flush, latency: latency, batchSize: optimizedBatch.records.count)
+    }
+    
+    /// Optimized flush with enhanced metrics and batching
+    private func flushPendingRecordsOptimized() throws {
+        groupCommitLock.lock()
+        let recordsToFlush = pendingRecords
+        pendingRecords.removeAll()
+        pendingCount = 0
+        groupCommitLock.unlock()
+        
+        guard !recordsToFlush.isEmpty else { return }
+        
+        let startTime = Date()
+        totalBatches += 1
+        totalBatchSize += recordsToFlush.count
+        
+        // Optimize batch using group commit optimizer
+        let optimizedBatch = groupCommitOptimizer.optimizeBatch(recordsToFlush)
+        
+        // Write optimized batch
+        let uncompressedSize = try writeOptimizedBatch(optimizedBatch)
+        
+        // Single fsync for the entire batch
+        try fileHandle.synchronize()
+        
+        // Update flushed LSN
+        if let lastRecord = optimizedBatch.records.last {
+            lsnLock.lock()
+            _flushedLSN = max(_flushedLSN, lastRecord.lsn)
+            lsnLock.unlock()
+        }
+        
+        let latency = Date().timeIntervalSince(startTime)
+        lastFlushTime = Date()
+        
+        // Record performance for optimization
+        groupCommitOptimizer.recordBatchPerformance(
+            batchSize: optimizedBatch.records.count,
+            latency: latency,
+            compressionRatio: uncompressedSize > 0 ? Double(optimizedBatch.estimatedSize) / Double(uncompressedSize) : 1.0
         )
         
         updateMetrics(operation: .flush, latency: latency, batchSize: optimizedBatch.records.count)
@@ -651,10 +715,7 @@ public final class FileWALManager: WALManager {
         timer.schedule(deadline: .now() + .milliseconds(Int(currentTimeout)), repeating: .milliseconds(Int(currentTimeout)))
         
         timer.setEventHandler { [weak self] in
-            try? self?.flushPendingRecords()
-            
-            // Restart timer with updated timeout from optimizer
-            self?.startGroupCommitTimer()
+            try? self?.flushPendingRecordsOptimized()
         }
         
         timer.resume()
