@@ -63,6 +63,46 @@ extension BenchmarkCLI {
         }
     }
 
+    static func runHeapDeleteBatch(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+        let fm = FileManager.default
+        let tmp = fm.temporaryDirectory.appendingPathComponent("colibridb-bench-\(UUID().uuidString)", isDirectory: true)
+        try fm.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tmp) }
+        var cfg = DBConfig(dataDir: tmp.path, storageEngine: "InMemory")
+        cfg.autoCompactionEnabled = false
+        let db = Database(config: cfg)
+        try db.createTable("t")
+        
+        // Insert all rows and collect RIDs
+        var rids: [RID] = []
+        rids.reserveCapacity(iterations)
+        for i in 0..<iterations { 
+            let rid = try db.insert(into: "t", row: ["id": .int(Int64(i)), "p": .string("v\(i)")])
+            rids.append(rid)
+        }
+        
+        let clock = ContinuousClock(); let start = clock.now
+        var total = 0
+        if granular {
+            var lat: [Double] = []; lat.reserveCapacity(iterations / 100) // Batch every 100 deletes
+            for batchStart in stride(from: 0, to: iterations, by: 100) {
+                let t0 = clock.now
+                let batchEnd = min(batchStart + 100, iterations)
+                let batchRids = Array(rids[batchStart..<batchEnd])
+                total &+= try db.deleteBatch(table: "t", rids: batchRids)
+                let t1 = clock.now
+                lat.append(msDelta(t0, t1))
+            }
+            let elapsed = clock.now - start
+            return BenchmarkResult(name: "heap-delete-batch", iterations: total, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory", "batch_size":"100"]) 
+        } else {
+            // Single batch delete
+            total = try db.deleteBatch(table: "t", rids: rids)
+            let elapsed = clock.now - start
+            return BenchmarkResult(name: "heap-delete-batch", iterations: total, elapsed: elapsed, metadata: ["storage":"InMemory", "batch_size":"all"]) 
+        }
+    }
+
     static func runHeapReadRID(iterations: Int, granular: Bool) throws -> BenchmarkResult {
         let fm = FileManager.default
         let tmp = fm.temporaryDirectory.appendingPathComponent("colibridb-bench-\(UUID().uuidString)", isDirectory: true)

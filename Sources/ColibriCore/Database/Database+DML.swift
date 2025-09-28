@@ -224,7 +224,8 @@ extension Database {
                     if var t = tablesMem[table] {
                         guard let r = try? t.read(rid) else { continue }
                         row = r
-                        t.remove(rid)
+                        // Use tombstone instead of physical removal
+                        t.remove(rid) // This marks as tombstone in HeapTable
                         tablesMem[table] = t
                         mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
                     } else if let ft = tablesFile[table] {
@@ -233,7 +234,8 @@ extension Database {
                         var lsn: UInt64 = 0
                         if let tid = tid {
                             lsn = logHeapDelete(tid: tid, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
-                            try ft.remove(rid)
+                            // Use tombstone instead of physical removal
+                            try ft.remove(rid) // This marks as tombstone in FileHeapTable
                             var state = txStates[tid] ?? TxState()
                             state.ops.append(TxOp(kind: .delete, table: table, rid: rid, row: row))
                             txStates[tid] = state
@@ -244,6 +246,7 @@ extension Database {
                             lsn = logHeapDelete(tid: 0, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
                             lastDBLSN = max(lastDBLSN, lsn)
                             if dpt[rid.pageId] == nil { dpt[rid.pageId] = lsn }
+                            // Use tombstone instead of physical removal
                             if lsn != 0 { try ft.remove(rid, pageLSN: lsn) } else { try ft.remove(rid) }
                             mvcc.registerDelete(table: table, rid: rid, row: row, tid: nil)
                         }
@@ -397,6 +400,55 @@ extension Database {
         // PERFORMANCE FIX: Remove expensive full table scan fallback
         // If no indexes were available, return 0 instead of scanning entire table
         // Full scan should be explicit opt-in for safety
+        return deleted
+    }
+    
+    /// Batch delete optimization for better performance
+    /// - Parameters:
+    ///   - table: Table name
+    ///   - rids: Array of RIDs to delete
+    ///   - tid: Optional transaction id
+    /// - Returns: Number of rows deleted
+    public func deleteBatch(table: String, rids: [RID], tid: UInt64? = nil) throws -> Int {
+        guard !rids.isEmpty else { return 0 }
+        
+        var deleted = 0
+        let actualTid = tid ?? begin()
+        
+        // Process all deletes in a single transaction using tombstone approach
+        for rid in rids {
+            let row: Row
+            if var t = tablesMem[table] {
+                guard let r = try? t.read(rid) else { continue }
+                row = r
+                // Use tombstone instead of physical removal
+                t.remove(rid) // This marks as tombstone in HeapTable
+                tablesMem[table] = t
+                mvcc.registerDelete(table: table, rid: rid, row: row, tid: actualTid)
+            } else if let ft = tablesFile[table] {
+                guard let r = try? ft.read(rid) else { continue }
+                row = r
+                let lsn = logHeapDelete(tid: actualTid, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                // Use tombstone instead of physical removal
+                try ft.remove(rid) // This marks as tombstone in FileHeapTable
+                var state = txStates[actualTid] ?? TxState()
+                state.ops.append(TxOp(kind: .delete, table: table, rid: rid, row: row))
+                txStates[actualTid] = state
+                if dpt[rid.pageId] == nil { dpt[rid.pageId] = lastDBLSN }
+                mvcc.registerDelete(table: table, rid: rid, row: row, tid: actualTid)
+            } else {
+                continue
+            }
+            // Batch update indexes at the end
+            removeFromIndexes(table: table, row: row, rid: rid, tid: actualTid)
+            deleted += 1
+        }
+        
+        // Commit if we started the transaction
+        if tid == nil {
+            try commit(actualTid)
+        }
+        
         return deleted
     }
 }

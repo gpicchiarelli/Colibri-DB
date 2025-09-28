@@ -13,7 +13,7 @@ import Foundation
 extension FileBPlusTreeIndex {
     // MARK: - Public API
 
-    public func insert(key: Value, rid: RID) throws {
+    public func insert(key: Value, rid: RID, sync: Bool = true) throws {
         let k = KeyBytes.fromValue(key).bytes
         let lsn: UInt64
         if false { // WAL disabled
@@ -27,7 +27,7 @@ extension FileBPlusTreeIndex {
             try writeLeaf(pageId: leafId, keys: [k], ridLists: [[rid]], nextLeaf: 0, pageLSN: lsn)
             hdr.root = leafId
             try writeHeader()
-            try fh.synchronize()
+            if sync { try fh.synchronize() }
             // WAL functionality disabled
             return
         }
@@ -38,7 +38,7 @@ extension FileBPlusTreeIndex {
             hdr.root = newRoot
             try writeHeader()
         }
-        try fh.synchronize()
+        if sync { try fh.synchronize() }
         // WAL functionality disabled
     }
 
@@ -79,6 +79,39 @@ extension FileBPlusTreeIndex {
         }
         try fh.synchronize()
         // WAL functionality disabled
+    }
+
+    /// Batch insert optimization for better performance
+    /// - Parameters:
+    ///   - entries: Array of (key, rid) pairs to insert
+    ///   - pageLSN: Page LSN for WAL consistency
+    /// - Throws: Database errors
+    public func insertBatch(entries: [(Value, RID)], pageLSN: UInt64 = 0) throws {
+        guard !entries.isEmpty else { return }
+        
+        // Sort entries by key for better cache locality and reduced splits
+        let sortedEntries = entries.sorted { KeyBytes.fromValue($0.0).bytes < KeyBytes.fromValue($1.0).bytes }
+        
+        for (key, rid) in sortedEntries {
+            let k = KeyBytes.fromValue(key).bytes
+            if hdr.root == 0 {
+                let leafId = try allocPage()
+                try writeLeaf(pageId: leafId, keys: [k], ridLists: [[rid]], nextLeaf: 0, pageLSN: pageLSN)
+                hdr.root = leafId
+                try writeHeader()
+            } else {
+                let (promoKey, promoRight) = try insertRecursive(pageId: hdr.root, key: k, rid: rid, lsn: pageLSN)
+                if let pk = promoKey, let right = promoRight {
+                    let newRoot = try allocPage()
+                    try writeInternal(pageId: newRoot, keys: [pk], children: [hdr.root, right], pageLSN: pageLSN)
+                    hdr.root = newRoot
+                    try writeHeader()
+                }
+            }
+        }
+        
+        // Single synchronize at the end instead of per-insert
+        try fh.synchronize()
     }
 
     public func insert(composite: [Value], rid: RID, pageLSN: UInt64) throws {

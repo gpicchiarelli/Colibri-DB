@@ -101,6 +101,74 @@ extension BenchmarkCLI {
         }
     }
 
+    static func runBTreeInsertBatch(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+        let fm = FileManager.default
+        let tmp = try makeTempDir(); defer { try? fm.removeItem(at: tmp) }
+        var cfg = DBConfig(dataDir: tmp.path)
+        cfg.storageEngine = "FileHeap"
+        cfg.autoCompactionEnabled = false
+        let db = Database(config: cfg)
+        try db.createTable("t")
+        try db.createIndex(name: "idx", on: "t", columns: ["id"], using: "BTree")
+        
+        let n0 = cappedDiskIterations(iterations)
+        let n = granular ? n0 : min(n0, 200)
+        
+        // Prepare batch data
+        var entries: [(Value, RID)] = []
+        entries.reserveCapacity(n)
+        
+        let clock = ContinuousClock(); let start = clock.now
+        if granular {
+            var lat: [Double] = []; lat.reserveCapacity(n / 100) // Batch every 100 inserts
+            for batchStart in stride(from: 0, to: n, by: 100) {
+                let t0 = clock.now
+                let batchEnd = min(batchStart + 100, n)
+                entries.removeAll(keepingCapacity: true)
+                
+                // Insert batch
+                for i in batchStart..<batchEnd {
+                    let rid = try db.insert(into: "t", row: ["id": .int(Int64(i)), "p": .string("v\(i)")])
+                    entries.append((.int(Int64(i)), rid))
+                }
+                
+                // Update index in batch
+                if let index = db.indexes["t"]?["idx"] {
+                    switch index.backend {
+                    case .persistentBTree(let fbt):
+                        try fbt.insertBatch(entries: entries)
+                    default:
+                        break
+                    }
+                }
+                
+                let t1 = clock.now
+                lat.append(msDelta(t0, t1))
+            }
+            let elapsed = clock.now - start
+            return BenchmarkResult(name: "btree-insert-batch", iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","batch_size":"100","warmup_done":"true"]) 
+        } else {
+            // Single batch insert
+            for i in 0..<n {
+                let rid = try db.insert(into: "t", row: ["id": .int(Int64(i)), "p": .string("v\(i)")])
+                entries.append((.int(Int64(i)), rid))
+            }
+            
+            // Update index in single batch
+            if let index = db.indexes["t"]?["idx"] {
+                switch index.backend {
+                case .persistentBTree(let fbt):
+                    try fbt.insertBatch(entries: entries)
+                default:
+                    break
+                }
+            }
+            
+            let elapsed = clock.now - start
+            return BenchmarkResult(name: "btree-insert-batch", iterations: n, elapsed: elapsed, metadata: ["index":"BTree","columns":"id","batch_size":"all","warmup_done":"true"]) 
+        }
+    }
+
     static func runBTreeBulkBuild(iterations: Int) throws -> BenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir(); defer { try? fm.removeItem(at: tmp) }
