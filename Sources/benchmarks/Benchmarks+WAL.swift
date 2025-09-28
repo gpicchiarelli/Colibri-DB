@@ -47,7 +47,7 @@ extension BenchmarkCLI {
     static func runWALAppend(iterations: Int, algorithm: CompressionAlgorithm, granular: Bool) throws -> BenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
-        let walPath = tmp.appendingPathComponent("wal.log").path
+        _ = tmp.appendingPathComponent("wal.log").path
 
         // Crea configurazione per WAL globale
         var cfg = DBConfig(dataDir: tmp.path)

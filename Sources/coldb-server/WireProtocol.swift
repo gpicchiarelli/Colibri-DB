@@ -261,7 +261,7 @@ public final class WireProtocolHandler: ChannelInboundHandler {
     
     private func processMessages(context: ChannelHandlerContext) {
         while messageBuffer.count >= 5 {
-            let typeByte = messageBuffer[0]
+            let _ = messageBuffer[0] // typeByte
             let lengthData = messageBuffer.subdata(in: 1..<5)
             let length = lengthData.withUnsafeBytes { $0.load(as: Int32.self).bigEndian }
             

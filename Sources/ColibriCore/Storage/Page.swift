@@ -169,10 +169,10 @@ public struct Page {
         var liveBytes = 0
         if header.slotCount > 0 {
             for sid in 1...header.slotCount {
-                let slotPos = pageSize - Int(sid) * Page.slotSize
-                let slot: PageSlot = data.withUnsafeBytes { ptr in
-                    ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
-                }
+        let slotPos = pageSize - Int(sid) * Page.slotSize
+        let slot: PageSlot = data.withUnsafeBytes { ptr in
+            ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
+        }
                 if slot.length == 0 || slot.isTombstone {
                     deadTuples += 1
                 } else {
@@ -270,10 +270,10 @@ public struct Page {
         var gained = 0
         var tuples: [(slot: UInt16, data: Data)] = []
         for sid in 1...header.slotCount {
-            let slotPos = pageSize - Int(sid) * Page.slotSize
-            var slot: PageSlot = data.withUnsafeBytes { ptr in
-                ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
-            }
+        let slotPos = pageSize - Int(sid) * Page.slotSize
+        let slot: PageSlot = data.withUnsafeBytes { ptr in
+            ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
+        }
             if slot.length == 0 || slot.isTombstone { continue }
             let start = Int(slot.offset)
             let end = start + Int(slot.length)
@@ -285,12 +285,12 @@ public struct Page {
         let originalFree = availableSpaceForInsert()
         header.freeStart = UInt16(Page.headerSize)
         header.freeEnd = UInt16(pageSize)
-        for (slotId, payload) in tuples {
+        for (_, payload) in tuples {
             let need = payload.count
             let slotOffset = Int(header.freeEnd) - Page.slotSize
             let offset = header.freeStart
             newData.replaceSubrange(Int(offset)..<Int(offset)+need, with: payload)
-            var slot = PageSlot(offset: offset, length: UInt16(need), tombstone: false)
+            let slot = PageSlot(offset: offset, length: UInt16(need), tombstone: false)
             withUnsafeBytes(of: slot) { src in
                 newData.replaceSubrange(slotOffset..<slotOffset+Page.slotSize, with: src)
             }

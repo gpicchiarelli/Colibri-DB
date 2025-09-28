@@ -312,10 +312,9 @@ extension BenchmarkCLI {
 
         if granular {
             var lat: [Double] = []; lat.reserveCapacity(iterations)
-            for i in 0..<iterations {
+            for _ in 0..<iterations {
                 let t0 = clock.now
                 let tid = try db.begin(isolation: .readCommitted)
-                let queryId = Int64(i % 100)  // Query per ID esistenti
                 _ = try db.scan("t", tid: tid)
                 try db.commit(tid)
                 let t1 = clock.now
@@ -326,9 +325,8 @@ extension BenchmarkCLI {
             try? fm.removeItem(at: tmp)
             return BenchmarkResult(name: Scenario.queryLatency.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["query_type": "scan", "isolation": "read_committed"], systemMetrics: systemMetrics)
         } else {
-            for i in 0..<iterations {
+            for _ in 0..<iterations {
                 let tid = try db.begin(isolation: .readCommitted)
-                let queryId = Int64(i % 100)
                 _ = try db.scan("t", tid: tid)
                 try db.commit(tid)
             }
