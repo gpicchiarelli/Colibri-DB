@@ -154,7 +154,7 @@ extension Database {
             } else if let ft = tablesFile[op.table] {
                 try? ft.restore(op.rid, row: op.row)
             }
-            updateIndexes(table: op.table, row: op.row, rid: op.rid)
+            try updateIndexes(table: op.table, row: op.row, rid: op.rid)
             mvcc.undoDelete(table: op.table, rid: op.rid, tid: tid)
         case .update:
             // For update: restore original row

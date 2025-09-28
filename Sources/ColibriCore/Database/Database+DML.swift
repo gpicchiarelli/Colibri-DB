@@ -36,7 +36,7 @@ extension Database {
             let rid = try t.insert(row)
             tablesMem[table] = t
             mvcc.registerInsert(table: table, rid: rid, row: row, tid: tid)
-            updateIndexes(table: table, row: row, rid: rid, tid: tid)
+            try updateIndexes(table: table, row: row, rid: rid, tid: tid)
             return rid
         }
         
@@ -66,7 +66,7 @@ extension Database {
                 assert(rid == predictedRID, "RID prediction failed: predicted=\(predictedRID), actual=\(rid)")
             }
             mvcc.registerInsert(table: table, rid: rid, row: row, tid: tid)
-            updateIndexes(table: table, row: row, rid: rid, tid: tid)
+            try updateIndexes(table: table, row: row, rid: rid, tid: tid)
             return rid
         }
         throw DBError.notFound("Table \(table)")
