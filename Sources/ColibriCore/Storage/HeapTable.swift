@@ -31,26 +31,14 @@ public struct HeapTable: TableStorageProtocol {
     public func scan() throws -> AnySequence<(RID, Row)> {
         let iterator = rows.makeIterator()
         var currentIterator = iterator
-        return AnySequence(AnyIterator {
-            while let next = currentIterator.next() {
-                let (rid, entry) = next
-                guard !entry.isTombstone else { continue }
-                return (rid, entry.row)
-            }
-            return nil
+        return AnySequence(rows.compactMap { rid, entry in
+            entry.isTombstone ? nil : (rid, entry.row)
         })
     }
 
     public func scan(includeTombstones: Bool) throws -> AnySequence<(RID, Row)> {
-        let iterator = rows.makeIterator()
-        var currentIterator = iterator
-        return AnySequence(AnyIterator {
-            while let next = currentIterator.next() {
-                let (rid, entry) = next
-                if !includeTombstones && entry.isTombstone { continue }
-                return (rid, entry.row)
-            }
-            return nil
+        return AnySequence(rows.compactMap { rid, entry in
+            (!includeTombstones && entry.isTombstone) ? nil : (rid, entry.row)
         })
     }
 

@@ -55,20 +55,22 @@ struct FileWALTests {
             try db.createTable("events")
             let tid = try db.begin(isolation: .readCommitted)
             _ = try db.insert(into: "events", row: ["id": .int(1)], tid: tid)
-            db.flushAll()
-            try db.wal?.flushPending()
+            try db.flushAll()
+            try db.globalWAL?.groupCommitSync()
             // Simulate crash by dropping the instance without committing.
         }
 
         let recovered = Database(config: config)
         try recovered.createTable("events")
-        try recovered.replayDBWAL()
+        try recovered.replayGlobalWAL()
 
         let rows = try recovered.scan("events")
         #expect(rows.isEmpty)
 
-        let walRecords = try recovered.wal?.readAll() ?? []
-        #expect(walRecords.last?.type == .abort)
+        let walRecords = try recovered.globalWAL?.iterate(from: 1).reduce(into: [WALRecord]()) { records, record in
+            records.append(record)
+        } ?? []
+        #expect(walRecords.last?.kind == .abort)
     }
 }
 

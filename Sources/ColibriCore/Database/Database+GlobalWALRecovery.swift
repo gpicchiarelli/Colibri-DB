@@ -277,15 +277,11 @@ extension Database {
             // Undo of delete = restore slot or reinstate tombstone flag
             let row = try JSONDecoder().decode(Row.self, from: rowData)
             let rid = RID(pageId: pageId, slotId: slotId)
-            for (name, ft) in tablesFile {
+            for (_, ft) in tablesFile {
                 if isTombstone {
                     try? ft.clearTombstone(rid, pageLSN: record.lsn)
                 }
                 _ = try? ft.restore(rid, row: row, pageLSN: record.lsn)
-            }
-            if var tableEntry = tablesMem[record.tableId] {
-                tableEntry.register(row: row, rid: rid, isTombstone: isTombstone)
-                tablesMem[record.tableId] = tableEntry
             }
             
         case .heapUpdate(let pageId, let slotId, let originalData):
@@ -300,8 +296,9 @@ extension Database {
         case .indexInsert(let indexId, let keyBytes, let ridPageId, let ridSlotId):
             // Undo of index insert = delete
             let rid = RID(pageId: ridPageId, slotId: ridSlotId)
-            for (_, tableMap) in indexes {
-                if let indexDef = tableMap[indexId] {
+            for tableName in indexes.keys {
+                var tableMap = indexes[tableName]
+                guard var indexMap = tableMap, let indexDef = indexMap[indexId] else { continue }
                     switch indexDef.backend {
                     case .persistentBTree(let f):
                         if indexDef.columns.count == 1 {
@@ -312,19 +309,20 @@ extension Database {
                     case .anyString(var idx):
                         if let value = KeyBytes.toString(keyBytes) {
                             idx.remove(key: value, ref: rid)
-                            tableMap[indexId] = (columns: indexDef.columns, backend: .anyString(idx))
+                            indexMap[indexId] = (columns: indexDef.columns, backend: .anyString(idx))
+                            indexes[tableName] = indexMap
                         }
                     default:
                         break
                     }
-                }
             }
             
         case .indexDelete(let indexId, let keyBytes, let ridPageId, let ridSlotId):
             // Undo of index delete = insert
             let rid = RID(pageId: ridPageId, slotId: ridSlotId)
-            for (_, tableMap) in indexes {
-                if let indexDef = tableMap[indexId] {
+            for tableName in indexes.keys {
+                var tableMap = indexes[tableName]
+                guard var indexMap = tableMap, let indexDef = indexMap[indexId] else { continue }
                     switch indexDef.backend {
                     case .persistentBTree(let f):
                         if indexDef.columns.count == 1 {
@@ -335,12 +333,12 @@ extension Database {
                     case .anyString(var idx):
                         if let value = KeyBytes.toString(keyBytes) {
                             idx.insert(key: value, ref: rid)
-                            tableMap[indexId] = (columns: indexDef.columns, backend: .anyString(idx))
+                            indexMap[indexId] = (columns: indexDef.columns, backend: .anyString(idx))
+                            indexes[tableName] = indexMap
                         }
                     default:
                         break
                     }
-                }
             }
         }
     }
