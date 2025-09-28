@@ -19,25 +19,6 @@ extension BenchmarkCLI {
         try db.createIndex(name: "idx_bench_id", on: "bench", columns: ["id"], using: "BTree")
         try db.rebuildIndex(table: "bench", index: "idx_bench_id")
         
-        // Debug: Check if index was created
-        let validation = try db.validateIndex(table: "bench", index: "idx_bench_id")
-        print("DEBUG: Index validation - total: \(validation.total), indexed: \(validation.indexed), missing: \(validation.missing)")
-        
-        // Debug: Check if data was inserted
-        let rows = try db.scan("bench")
-        print("DEBUG: Inserted \(rows.count) rows")
-        if rows.count > 0 {
-            print("DEBUG: First row: \(rows[0])")
-        }
-        
-        // Debug: Test direct table scan
-        print("DEBUG: Testing direct table scan...")
-        let allRows = try db.scan("bench")
-        print("DEBUG: All rows: \(allRows.count)")
-        for i in 0..<min(5, iterations) {
-            let matchingRows = allRows.filter { $0.1["id"] == .int(Int64(i)) }
-            print("DEBUG: Rows with id=\(i): \(matchingRows.count)")
-        }
         
         // Warm-up: carica livelli alti/prime foglie
         for i in 0..<min(1_000, iterations) { _ = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(i))) }
@@ -45,9 +26,7 @@ extension BenchmarkCLI {
         let clock = ContinuousClock(); let start = clock.now
         for i in 0..<iterations {
             let hits = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(i)))
-            if hits.isEmpty {
-                print("WARNING: No hits found for i=\(i)")
-            }
+            precondition(!hits.isEmpty)
         }
         let elapsed = clock.now - start
         return BenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done":"true"]) 
@@ -80,9 +59,7 @@ extension BenchmarkCLI {
         let clock = ContinuousClock(); let start = clock.now
         for i in 0..<iterations {
             let hits = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(i)))
-            if hits.isEmpty {
-                print("WARNING: No hits found for i=\(i)")
-            }
+            precondition(!hits.isEmpty)
         }
         let elapsed = clock.now - start
         return BenchmarkResult(name: "btree-lookup-optimized", iterations: iterations, elapsed: elapsed, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done":"true", "optimized":"true"]) 

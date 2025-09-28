@@ -230,7 +230,7 @@ extension Database {
         case .anyString(let idx):
             return idx.searchEquals(stringFromValue(value))
         case .persistentBTree(let f):
-            if pair.columns.count == 1 { return f.searchEqualsOptimized(value) }
+            if pair.columns.count == 1 { return f.searchEquals(value) }
             else { return f.searchEquals(composite: [value]) }
         }
     }
@@ -369,12 +369,16 @@ extension Database {
             let cols = pair.columns
             for (rid, row) in try scan(table) {
                 if cols.count == 1 {
-                    if let v = row[cols[0]] { try? idx.insert(key: v, rid: rid) }
+                    if let v = row[cols[0]] { 
+                        try idx.insert(key: v, rid: rid) 
+                    }
                 } else {
                     var vs: [Value] = []
                     var ok = true
                     for c in cols { guard let v = row[c] else { ok = false; break }; vs.append(v) }
-                    if ok { try? idx.insert(composite: vs, rid: rid) }
+                    if ok { 
+                        try idx.insert(composite: vs, rid: rid) 
+                    }
                 }
             }
             map[index] = (columns: cols, backend: .persistentBTree(idx))
