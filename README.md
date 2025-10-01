@@ -14,6 +14,7 @@
 ![Last commit](https://img.shields.io/github/last-commit/gpicchiarelli/Colibri-DB?style=flat-square)
 ![Contributors](https://img.shields.io/github/contributors/gpicchiarelli/Colibri-DB?style=flat-square)
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
+[![Tooling](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/tooling.yml?label=Tooling&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibri-DB/actions/workflows/tooling.yml)
 
 **ColibrDB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
 
