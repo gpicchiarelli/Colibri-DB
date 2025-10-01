@@ -20,6 +20,7 @@ Stile
 - Swift 6, protocol-first, errori tipizzati.
 - Mantieni le modifiche focalizzate e piccole.
 - Aggiorna la documentazione (`docs/`) quando modifichi comportamenti o API.
+- Esegui `swiftformat` e `swiftlint` con i profili in `Configuration/` prima di aprire una PR.
 
 Commit e PR
 --
