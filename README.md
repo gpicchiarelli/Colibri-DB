@@ -142,6 +142,16 @@ La documentazione è organizzata in più sezioni per diversi tipi di utenti:
 - **Benchmarking** (`docs/wiki/Part-07-Testing/03-Benchmarks.md`)
 - **Sicurezza** (`SECURITY.md`)
 
+
+## 🧰 Workflow Sviluppo
+
+Usa gli strumenti condivisi per mantenere il codice coerente prima di aprire una PR:
+
+```bash
+make format
+make lint
+```
+
 ## 🏗️ Architettura
 
 ### Struttura del Repository
