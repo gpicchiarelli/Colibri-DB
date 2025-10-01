@@ -190,6 +190,12 @@ public final class FileWALManager: WALManager {
         try? close()
     }
     
+    /// Serializes a record to compute its payload size without mutating state.
+    private func serializedSize(of record: WALRecord) -> Int {
+        let encoder = JSONEncoder()
+        return (try? encoder.encode(record).count) ?? 0
+    }
+
     // MARK: - WALWriter Implementation
     
     @discardableResult
@@ -210,7 +216,7 @@ public final class FileWALManager: WALManager {
             case .always:
                 // Immediate write and sync
                 try writeRecordImmediately(recordWithLSN)
-                let recordSize = UInt64(recordWithLSN.serializedSize)
+                let recordSize = UInt64(serializedSize(of: recordWithLSN))
                 updateMetrics(operation: .append, latency: Date().timeIntervalSince(startTime), batchSize: 1, bytesWritten: recordSize)
                 
             case .grouped:
@@ -238,7 +244,7 @@ public final class FileWALManager: WALManager {
                 if shouldFlush {
                     try flushPendingRecordsOptimized()
                 }
-                let recordSize = UInt64(recordWithLSN.serializedSize)
+                let recordSize = UInt64(serializedSize(of: recordWithLSN))
                 updateMetrics(operation: .append, latency: Date().timeIntervalSince(startTime), batchSize: 0, bytesWritten: recordSize)
                 
             case .relaxed:
@@ -246,7 +252,7 @@ public final class FileWALManager: WALManager {
                 groupCommitLock.lock()
                 pendingRecords.append(recordWithLSN)
                 groupCommitLock.unlock()
-                let recordSize = UInt64(recordWithLSN.serializedSize)
+                let recordSize = UInt64(serializedSize(of: recordWithLSN))
                 updateMetrics(operation: .append, latency: Date().timeIntervalSince(startTime), batchSize: 0, bytesWritten: recordSize)
             }
             
@@ -516,7 +522,7 @@ public final class FileWALManager: WALManager {
             compressionRatio: compressionRatio
         )
         
-        let totalBytes = optimizedBatch.records.reduce(0) { $0 + UInt64($1.serializedSize) }
+        let totalBytes = UInt64(uncompressedSize)
         updateMetrics(operation: .flush, latency: latency, batchSize: optimizedBatch.records.count, bytesWritten: totalBytes)
     }
     
@@ -560,7 +566,7 @@ public final class FileWALManager: WALManager {
             compressionRatio: uncompressedSize > 0 ? Double(optimizedBatch.estimatedSize) / Double(uncompressedSize) : 1.0
         )
         
-        let totalBytes = optimizedBatch.records.reduce(0) { $0 + UInt64($1.serializedSize) }
+        let totalBytes = UInt64(uncompressedSize)
         updateMetrics(operation: .flush, latency: latency, batchSize: optimizedBatch.records.count, bytesWritten: totalBytes)
     }
     
