@@ -53,6 +53,24 @@
             "name": "Release coldb-server",
             "program": "${workspaceFolder:Colibrì-DB}/.build/release/coldb-server",
             "preLaunchTask": "swift: Build Release coldb-server"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Debug coldb-dev",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/debug/coldb-dev",
+            "preLaunchTask": "swift: Build Debug coldb-dev"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Release coldb-dev",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/release/coldb-dev",
+            "preLaunchTask": "swift: Build Release coldb-dev"
         }
     ]
 }

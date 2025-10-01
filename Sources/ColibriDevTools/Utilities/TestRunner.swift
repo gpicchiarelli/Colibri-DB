@@ -12,11 +12,11 @@
 
 import Foundation
 import ColibriCore
+import os.log
 
 enum TestError: Error {
     case constraintValidationFailed
 }
-import os.log
 
 /// Automated test runner for ColibrDB development
 public class TestRunner {
