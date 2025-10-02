@@ -224,6 +224,17 @@ extension Database {
         }
     }
     
+    /// Get table statistics for query optimization
+    public func getTableStatistics(_ tableName: String) throws -> CatalogTableStatistics? {
+        guard let catalog = systemCatalog else { return nil }
+        // Try to find table by name in catalog
+        let tables = try catalog.listTables()
+        guard let tableInfo = tables.first(where: { $0.name == tableName }) else {
+            return nil
+        }
+        return try catalog.getTableStatistics(tableInfo.id)
+    }
+    
     /// Close the database and release resources
     public func close() throws {
         try globalWAL?.close()

@@ -100,7 +100,7 @@ public final class QueryOptimizer {
         var optimizedRequest = request
         
         // Simple predicate pushdown: move equality predicates to appropriate tables
-        for (index, join) in request.joins.enumerated() {
+        for (_, join) in request.joins.enumerated() {
             var rootPredicates = optimizedRequest.root.predicates
             var joinPredicates = join.table.predicates
             
@@ -143,14 +143,14 @@ public final class QueryOptimizer {
     }
     
     /// 🚀 OPTIMIZATION: Estimate row count for simple operators
-    public static func estimateRowCount(_ operator: PlanOperator, database: Database) -> Int {
-        switch operator {
+    public static func estimateRowCount(_ planOperator: PlanOperator, database: Database) -> Int {
+        switch planOperator {
         case let tableScan as TableScanOperator:
             let stats = try? database.getTableStatistics(tableScan.table)
-            return stats?.rowCount ?? 1000
+            return Int(stats?.rowCount ?? 1000)
         case let indexScan as IndexScanOperator:
             let stats = try? database.getTableStatistics(indexScan.table)
-            let baseRows = stats?.rowCount ?? 1000
+            let baseRows = Int(stats?.rowCount ?? 1000)
             return max(1, Int(Double(baseRows) * 0.1)) // Assume 10% selectivity
         default:
             return 1000 // Default estimate
@@ -180,12 +180,12 @@ public final class QueryOptimizer {
     }
     
     /// 🚀 OPTIMIZATION: Enhanced cost calculation with memory factor
-    public static func enhancedCost(of operator: PlanOperator, costModel: CostModel) -> (cpu: Double, io: Double, memory: Double) {
-        let baseCost = costModel.cost(of: operator)
+    public static func enhancedCost(of planOperator: PlanOperator, costModel: CostModel) -> (cpu: Double, io: Double, memory: Double) {
+        let baseCost = costModel.cost(of: planOperator)
         
         // Estimate memory usage
         let memoryCost: Double
-        switch operator {
+        switch planOperator {
         case is HashJoinOperator:
             memoryCost = 10000.0 // Hash joins need significant memory
         case is SortOperator:
@@ -201,7 +201,7 @@ public final class QueryOptimizer {
     public static func suggestParallelism(for request: QueryRequest, database: Database) -> Int? {
         // Simple heuristic: use parallelism for large tables
         let stats = try? database.getTableStatistics(request.root.name)
-        let rowCount = stats?.rowCount ?? 0
+        let rowCount = Int(stats?.rowCount ?? 0)
         
         if rowCount > 100000 {
             return min(4, max(2, rowCount / 50000)) // 2-4 threads for large tables

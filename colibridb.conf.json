@@ -9,6 +9,17 @@
   "cliEnabled": true,
   "metricsEnabled": true,
   "serverEnabled": false,
-  "indexImplementation": "Hash"
-  ,"storageEngine": "FileHeap"
+  "indexImplementation": "Hash",
+  "storageEngine": "FileHeap",
+  "performanceOptimizations": {
+    "lockStripingEnabled": true,
+    "lockStripeCount": 64,
+    "binarySerializationEnabled": true,
+    "btreeCachingEnabled": true,
+    "btreeCacheSize": 1000,
+    "queryPlanCacheEnabled": true,
+    "queryPlanCacheSize": 500,
+    "periodicCleanupEnabled": true,
+    "periodicCleanupIntervalSeconds": 300
+  }
 }

@@ -1,4 +1,4 @@
-# 🐦 ColibrDB
+# 🐦 ColibrìDB
 
 > **Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2**
 
@@ -16,7 +16,7 @@
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
 [![Tooling](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/tooling.yml?label=Tooling&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibri-DB/actions/workflows/tooling.yml)
 
-**ColibrDB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
+**ColibrìDB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
 
 ## ✨ Caratteristiche Principali
 
@@ -55,6 +55,13 @@
 - **Import/Export CSV**: Operazioni bulk con validazione formato
 - **Metriche Prometheus**: Monitoring e osservabilità pronti per produzione
 - **Policy Engine**: Manutenzione e ottimizzazione automatizzate
+
+### ⚡ **Ottimizzazioni Performance**
+- **Lock Striping**: Riduzione contention con 64 stripe per lock manager
+- **Serializzazione Binaria**: Formato binario custom 3-5x più veloce di JSON
+- **B-Tree Caching**: Page cache intelligente con LRU eviction
+- **Query Plan Cache**: Caching dei piani di esecuzione per query frequenti
+- **Adaptive Algorithms**: Split points adattivi e prefetching intelligente
 
 ## 🚀 Avvio Rapido
 
