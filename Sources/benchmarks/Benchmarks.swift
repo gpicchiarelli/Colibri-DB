@@ -398,6 +398,9 @@ enum Scenario: String, CaseIterable {
 
 @main
 struct BenchmarkCLI {
+    // Global seeded random number generator
+    static var seededRNG: SeededRandomNumberGenerator?
+    
     // ISO8601 formatter helper
     static func formatTimestamp(_ date: Date) -> String {
         let formatter = ISO8601DateFormatter()
@@ -518,15 +521,13 @@ struct BenchmarkCLI {
         // Set random seed if provided
         if let seed = seed {
             srand48(Int(seed))
+            seededRNG = SeededRandomNumberGenerator(seed: seed)
+        } else {
+            seededRNG = SeededRandomNumberGenerator(seed: UInt64.random(in: 1...UInt64.max))
         }
         
-        // Note: warmup flag is available for future implementation
-        // Currently all scenarios perform warmup by default
-        _ = warmup  // Suppress unused variable warning
-        
-        // Note: enableSysMetrics flag is available for future implementation
-        // Currently system metrics are collected by individual scenarios if needed
-        _ = enableSysMetrics  // Suppress unused variable warning
+        // Pass flags to scenarios for conditional behavior
+        let scenarioFlags = ScenarioFlags(enableSysMetrics: enableSysMetrics, noWarmup: !warmup)
 
         let scenarios = selected.map { [$0] } ?? Scenario.allCases
         for scenario in scenarios {

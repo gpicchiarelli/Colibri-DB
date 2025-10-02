@@ -250,9 +250,9 @@ extension BenchmarkCLI {
             var lat: [Double] = []; lat.reserveCapacity(q)
             var total = 0
             for _ in 0..<q {
-                let base = Int.random(in: 0..<(max(1, n - 10)))
+                let base = Int.random(in: 0..<(max(1, n - 10)), using: &BenchmarkCLI.seededRNG!)
                 let lo = Value.int(Int64(base))
-                let hi = Value.int(Int64(base + Int.random(in: 0..<10)))
+                let hi = Value.int(Int64(base + Int.random(in: 0..<10, using: &BenchmarkCLI.seededRNG!)))
                 let t0 = clock.now
                 let hits = try db.indexRangeTyped(table: "t", index: "idx", lo: lo, hi: hi)
                 let t1 = clock.now

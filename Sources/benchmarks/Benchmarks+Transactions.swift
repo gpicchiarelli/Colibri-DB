@@ -192,9 +192,9 @@ extension BenchmarkCLI {
             while keepWriting.load(ordering: .relaxed) {
                 do {
                     if toggler {
-                        _ = try db.deleteEquals(table: "t", column: "id", value: .int(Int64(Int.random(in: 0..<max(1, iterations)))))
+                        _ = try db.deleteEquals(table: "t", column: "id", value: .int(Int64(Int.random(in: 0..<max(1, iterations), using: &BenchmarkCLI.seededRNG!))))
                     } else {
-                        _ = try db.insert(into: "t", row: ["id": .int(Int64(Int.random(in: 0..<Int.max>>20)))])
+                        _ = try db.insert(into: "t", row: ["id": .int(Int64(Int.random(in: 0..<Int.max>>20, using: &BenchmarkCLI.seededRNG!)))])
                     }
                     toggler.toggle()
                 } catch { /* ignore */ }

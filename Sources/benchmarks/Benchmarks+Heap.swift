@@ -10,7 +10,7 @@ extension BenchmarkCLI {
         try db.createTable("bench")
         
         let (latencies, elapsed) = try measureLatenciesVoid(iterations: iterations) {
-            let i = Int.random(in: 0..<iterations) // Randomize to avoid cache effects
+            let i = Int.random(in: 0..<iterations, using: &BenchmarkCLI.seededRNG!) // Randomize to avoid cache effects
             _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
         }
         
