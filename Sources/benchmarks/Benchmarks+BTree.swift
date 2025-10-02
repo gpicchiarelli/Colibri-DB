@@ -108,10 +108,11 @@ extension BenchmarkCLI {
 
             var lookupIndex = 0
             let (latencies, elapsed) = try measureLatenciesVoid(iterations: iterations) {
-                let hits = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(lookupIndex)))
+                let currentIndex = lookupIndex
+                let hits = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(currentIndex)))
                 lookupIndex = (lookupIndex + 1) % iterations
                 if hits.isEmpty {
-                    throw DBError.notFound("No hits for key \(lookupIndex)")
+                    throw DBError.notFound("No hits for key \(currentIndex)")
                 }
             }
             
