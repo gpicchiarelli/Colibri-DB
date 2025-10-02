@@ -28,6 +28,12 @@ struct SeededRandomNumberGenerator: RandomNumberGenerator {
     }
 }
 
+// MARK: - Scenario Configuration Flags
+struct ScenarioFlags {
+    let enableSysMetrics: Bool
+    let noWarmup: Bool
+}
+
 // Precomputed statistics for performance optimization
 struct LatencyStats {
     let sorted: [Double]
