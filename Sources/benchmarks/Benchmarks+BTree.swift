@@ -62,12 +62,15 @@ extension BenchmarkCLI {
         var config = DBConfig(dataDir: tempDir.path)
         config.autoCompactionEnabled = false
         let db = Database(config: config)
+        
+        // Create table and index first, then insert data
         try db.createTable("bench")
+        try db.createIndex(name: "idx_bench_id", on: "bench", columns: ["id"], using: "Hash")
+        
+        // Insert data with index already present
         for i in 0..<iterations {
             _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
         }
-        try db.createIndex(name: "idx_bench_id", on: "bench", columns: ["id"], using: "BTree")
-        try db.rebuildIndexBulk(table: "bench", index: "idx_bench_id")
         
         // Get direct access to the B+Tree index for optimized lookup
         // Note: We'll use the public API instead of direct access
