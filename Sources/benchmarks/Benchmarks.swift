@@ -424,6 +424,38 @@ enum Scenario: String, CaseIterable {
     case indexDeletionConsistency = "index-deletion-consistency"
     case indexUpdateConsistency = "index-update-consistency"
     case crossIndexVerification = "cross-index-verification"
+    
+    // Test LSM e compaction
+    case lsmWritePerformance = "lsm-write-performance"
+    case lsmCompaction = "lsm-compaction"
+    case lsmTombstoneHandling = "lsm-tombstone-handling"
+    case lsmRangeQueries = "lsm-range-queries"
+    
+    // Test memory backpressure
+    case memoryPressureAdvanced = "memory-pressure-advanced"
+    case backpressureTest = "backpressure-test"
+    case memoryLeakTest = "memory-leak-test"
+    case sustainedWriteTest = "sustained-write-test"
+    
+    // Test planner/optimizer avanzati
+    case catalogStatistics = "catalog-statistics"
+    case cardinalityEstimation = "cardinality-estimation"
+    case costEstimation = "cost-estimation"
+    case explainPlans = "explain-plans"
+    case queryOptimization = "query-optimization"
+    case indexSelection = "index-selection"
+    case joinOrderOptimization = "join-order-optimization"
+    case predicatePushdown = "predicate-pushdown"
+    
+    // Test errori e recovery interni
+    case ioFailureRecovery = "io-failure-recovery"
+    case pageCorruptionRecovery = "page-corruption-recovery"
+    case checksumFailureRecovery = "checksum-failure-recovery"
+    case deadlockRecovery = "deadlock-recovery"
+    case timeoutRecovery = "timeout-recovery"
+    case transactionAbortRecovery = "transaction-abort-recovery"
+    case indexCorruptionRecovery = "index-corruption-recovery"
+    case walCorruptionRecovery = "wal-corruption-recovery"
 
     static func from(_ string: String) -> Scenario? { Scenario(rawValue: string.lowercased()) }
 }
@@ -720,6 +752,62 @@ struct BenchmarkCLI {
                 baseResult = try runIndexUpdateConsistency(iterations: iterations)
             case .crossIndexVerification:
                 baseResult = try runCrossIndexVerification(iterations: iterations)
+                
+            // Test LSM e compaction
+            case .lsmWritePerformance:
+                baseResult = try runLSMWritePerformance(iterations: iterations)
+            case .lsmCompaction:
+                baseResult = try runLSMCompaction(iterations: iterations)
+            case .lsmTombstoneHandling:
+                baseResult = try runLSMTombstoneHandling(iterations: iterations)
+            case .lsmRangeQueries:
+                baseResult = try runLSMRangeQueries(iterations: iterations)
+                
+            // Test memory backpressure
+            case .memoryPressureAdvanced:
+                baseResult = try runMemoryPressureTest(iterations: iterations)
+            case .backpressureTest:
+                baseResult = try runBackpressureTest(iterations: iterations, concurrentWorkers: 4)
+            case .memoryLeakTest:
+                baseResult = try runMemoryLeakTest(iterations: iterations)
+        case .sustainedWriteTest:
+            baseResult = try runSustainedWriteTest(iterations: iterations, duration: 30.0)
+            
+        // Test planner/optimizer avanzati
+        case .catalogStatistics:
+            baseResult = try runCatalogStatisticsTest(iterations: iterations)
+        case .cardinalityEstimation:
+            baseResult = try runCardinalityEstimationTest(iterations: iterations)
+        case .costEstimation:
+            baseResult = try runCostEstimationTest(iterations: iterations)
+        case .explainPlans:
+            baseResult = try runExplainPlansTest(iterations: iterations)
+        case .queryOptimization:
+            baseResult = try runQueryOptimizationTest(iterations: iterations)
+        case .indexSelection:
+            baseResult = try runIndexSelectionTest(iterations: iterations)
+        case .joinOrderOptimization:
+            baseResult = try runJoinOrderOptimizationTest(iterations: iterations)
+        case .predicatePushdown:
+            baseResult = try runPredicatePushdownTest(iterations: iterations)
+            
+        // Test errori e recovery interni
+        case .ioFailureRecovery:
+            baseResult = try runIOFailureRecoveryTest(iterations: iterations)
+        case .pageCorruptionRecovery:
+            baseResult = try runPageCorruptionRecoveryTest(iterations: iterations)
+        case .checksumFailureRecovery:
+            baseResult = try runChecksumFailureRecoveryTest(iterations: iterations)
+        case .deadlockRecovery:
+            baseResult = try runDeadlockRecoveryTest(iterations: iterations)
+        case .timeoutRecovery:
+            baseResult = try runTimeoutRecoveryTest(iterations: iterations)
+        case .transactionAbortRecovery:
+            baseResult = try runTransactionAbortRecoveryTest(iterations: iterations)
+        case .indexCorruptionRecovery:
+            baseResult = try runIndexCorruptionRecoveryTest(iterations: iterations)
+        case .walCorruptionRecovery:
+            baseResult = try runWALCorruptionRecoveryTest(iterations: iterations)
                 }
                 
                 // Use system metrics from the scenario result (if any)
