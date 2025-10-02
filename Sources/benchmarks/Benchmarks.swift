@@ -23,7 +23,7 @@ struct LatencyStats {
     let p999: Double
     
     init(latenciesMs: [Double]) {
-        guard !latenciesMs.isEmpty else {
+        if latenciesMs.isEmpty {
             self.sorted = []
             self.mean = 0
             self.stddev = 0
@@ -34,42 +34,53 @@ struct LatencyStats {
             self.p95 = 0
             self.p99 = 0
             self.p999 = 0
-            return
-        }
-        
-        self.sorted = latenciesMs.sorted()
-        self.mean = latenciesMs.reduce(0, +) / Double(latenciesMs.count)
-        
-        if latenciesMs.count > 1 {
-            let variance = latenciesMs.reduce(0.0) { $0 + ($1 - self.mean) * ($1 - self.mean) } / Double(latenciesMs.count - 1)
-            self.stddev = variance.squareRoot()
         } else {
-            self.stddev = 0
-        }
-        
-        self.minMs = self.sorted.first ?? 0
-        self.maxMs = self.sorted.last ?? 0
-        
-        // Precompute percentiles using linear interpolation
-        func percentile(_ p: Double) -> Double {
-            let n = self.sorted.count
-            let index = (p / 100.0) * Double(n - 1)
-            let lowerIndex = Int(index)
-            let upperIndex = min(lowerIndex + 1, n - 1)
+            let sorted = latenciesMs.sorted()
+            let mean = latenciesMs.reduce(0, +) / Double(latenciesMs.count)
             
-            if lowerIndex == upperIndex {
-                return self.sorted[lowerIndex]
+            let stddev: Double
+            if latenciesMs.count > 1 {
+                let variance = latenciesMs.reduce(0.0) { $0 + ($1 - mean) * ($1 - mean) } / Double(latenciesMs.count - 1)
+                stddev = variance.squareRoot()
+            } else {
+                stddev = 0
             }
             
-            let weight = index - Double(lowerIndex)
-            return self.sorted[lowerIndex] * (1.0 - weight) + self.sorted[upperIndex] * weight
+            let minMs = sorted.first ?? 0
+            let maxMs = sorted.last ?? 0
+            
+            // Precompute percentiles using linear interpolation
+            func percentile(_ p: Double, in sorted: [Double]) -> Double {
+                let n = sorted.count
+                let index = (p / 100.0) * Double(n - 1)
+                let lowerIndex = Int(index)
+                let upperIndex = min(lowerIndex + 1, n - 1)
+                
+                if lowerIndex == upperIndex {
+                    return sorted[lowerIndex]
+                }
+                
+                let weight = index - Double(lowerIndex)
+                return sorted[lowerIndex] * (1.0 - weight) + sorted[upperIndex] * weight
+            }
+            
+            let p50 = percentile(50, in: sorted)
+            let p90 = percentile(90, in: sorted)
+            let p95 = percentile(95, in: sorted)
+            let p99 = percentile(99, in: sorted)
+            let p999 = percentile(99.9, in: sorted)
+            
+            self.sorted = sorted
+            self.mean = mean
+            self.stddev = stddev
+            self.minMs = minMs
+            self.maxMs = maxMs
+            self.p50 = p50
+            self.p90 = p90
+            self.p95 = p95
+            self.p99 = p99
+            self.p999 = p999
         }
-        
-        self.p50 = percentile(50)
-        self.p90 = percentile(90)
-        self.p95 = percentile(95)
-        self.p99 = percentile(99)
-        self.p999 = percentile(99.9)
     }
 }
 
@@ -85,12 +96,12 @@ struct BenchmarkResult {
     private let stats: LatencyStats
 
     private var totalMs: Double {
-        Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000.0
+        BenchmarkCLI.durationToMs(elapsed)
     }
 
     var opsPerSecond: Double {
         guard elapsed > .zero && iterations > 0 else { return 0 }
-        let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000_000.0
+        let seconds = BenchmarkCLI.durationToSeconds(elapsed)
         return Double(iterations) / seconds
     }
     
@@ -172,7 +183,7 @@ struct BenchmarkResult {
         self.name = name
         self.iterations = iterations
         self.elapsed = elapsed
-        let ms = Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000.0
+        let ms = BenchmarkCLI.durationToMs(elapsed)
         let count = max(1, iterations)
         self.latenciesMs = Array(repeating: ms / Double(count), count: count)
         self.metadata = [:]
@@ -184,7 +195,7 @@ struct BenchmarkResult {
         self.name = name
         self.iterations = iterations
         self.elapsed = elapsed
-        let ms = Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000.0
+        let ms = BenchmarkCLI.durationToMs(elapsed)
         let count = max(1, iterations)
         self.latenciesMs = Array(repeating: ms / Double(count), count: count)
         self.metadata = metadata
@@ -199,6 +210,7 @@ struct BenchmarkResult {
         self.latenciesMs = latenciesMs
         self.metadata = [:]
         self.systemMetrics = systemMetrics
+        self.stats = LatencyStats(latenciesMs: latenciesMs)
     }
 
     init(name: String, iterations: Int, elapsed: Duration, latenciesMs: [Double], metadata: [String:String], systemMetrics: SystemMetrics? = nil) {
@@ -208,6 +220,7 @@ struct BenchmarkResult {
         self.latenciesMs = latenciesMs
         self.metadata = metadata
         self.systemMetrics = systemMetrics
+        self.stats = LatencyStats(latenciesMs: latenciesMs)
     }
 }
 
@@ -268,10 +281,19 @@ enum Scenario: String, CaseIterable {
 
 @main
 struct BenchmarkCLI {
-    // Helper for ISO8601 formatting
+    // ISO8601 formatter helper
     static func formatTimestamp(_ date: Date) -> String {
         let formatter = ISO8601DateFormatter()
         return formatter.string(from: date)
+    }
+    
+    // Centralized time conversion helpers
+    static func durationToMs(_ duration: Duration) -> Double {
+        return Double(duration.components.seconds) * 1_000 + Double(duration.components.attoseconds) / 1_000_000_000_000_000.0
+    }
+    
+    static func durationToSeconds(_ duration: Duration) -> Double {
+        return Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1_000_000_000_000_000_000.0
     }
     
     static func main() throws {
@@ -304,9 +326,8 @@ struct BenchmarkCLI {
         let scenarios = selected.map { [$0] } ?? Scenario.allCases
         for scenario in scenarios {
             do {
-                // Collect system metrics if enabled
-                let systemMetrics: SystemMetrics? = enableSysMetrics ? {
-                    // Create a dummy database for system monitoring
+                // Collect system metrics if enabled (before benchmark)
+                let systemMetricsBefore: SystemMetrics? = enableSysMetrics ? {
                     let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
                     try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
                     defer { try? FileManager.default.removeItem(at: tempDir) }
@@ -410,6 +431,66 @@ struct BenchmarkCLI {
                 baseResult = try runQueryLatency(iterations: iterations, granular: granular)
                 }
                 
+                // Collect system metrics after benchmark if enabled
+                let systemMetricsAfter: SystemMetrics? = enableSysMetrics ? {
+                    let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+                    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                    defer { try? FileManager.default.removeItem(at: tempDir) }
+                    
+                    let config = DBConfig(dataDir: tempDir.path)
+                    let db = Database(config: config)
+                    let monitor = SystemMonitor(database: db)
+                    return monitor.getCurrentMetrics()
+                }() : nil
+                
+                // Create combined system metrics with before/after data
+                let combinedSystemMetrics: SystemMetrics? = {
+                    guard let before = systemMetricsBefore, let after = systemMetricsAfter else {
+                        return systemMetricsBefore ?? systemMetricsAfter
+                    }
+                    
+                    // Create a combined metrics showing the delta
+                    return SystemMetrics(
+                        timestamp: after.timestamp,
+                        cpu: CPUMetrics(
+                            usage: after.cpu.usage - before.cpu.usage,
+                            userTime: after.cpu.userTime - before.cpu.userTime,
+                            systemTime: after.cpu.systemTime - before.cpu.systemTime,
+                            idleTime: after.cpu.idleTime - before.cpu.idleTime,
+                            coreCount: after.cpu.coreCount
+                        ),
+                        memory: MemoryMetrics(
+                            usage: after.memory.usage - before.memory.usage,
+                            totalBytes: after.memory.totalBytes,
+                            usedBytes: after.memory.usedBytes - before.memory.usedBytes,
+                            freeBytes: after.memory.freeBytes - before.memory.freeBytes,
+                            cachedBytes: after.memory.cachedBytes - before.memory.cachedBytes
+                        ),
+                        io: IOMetrics(
+                            readLatency: after.io.readLatency - before.io.readLatency,
+                            writeLatency: after.io.writeLatency - before.io.writeLatency,
+                            readThroughput: after.io.readThroughput - before.io.readThroughput,
+                            writeThroughput: after.io.writeThroughput - before.io.writeThroughput,
+                            readCount: after.io.readCount - before.io.readCount,
+                            writeCount: after.io.writeCount - before.io.writeCount
+                        ),
+                        queries: QueryMetrics(
+                            activeQueries: after.queries.activeQueries - before.queries.activeQueries,
+                            totalQueries: after.queries.totalQueries - before.queries.totalQueries,
+                            averageExecutionTime: after.queries.averageExecutionTime - before.queries.averageExecutionTime,
+                            slowQueries: after.queries.slowQueries - before.queries.slowQueries,
+                            failedQueries: after.queries.failedQueries - before.queries.failedQueries
+                        ),
+                        transactions: TransactionMetrics(
+                            activeCount: after.transactions.activeCount - before.transactions.activeCount,
+                            totalCount: after.transactions.totalCount - before.transactions.totalCount,
+                            averageDuration: after.transactions.averageDuration - before.transactions.averageDuration,
+                            committedCount: after.transactions.committedCount - before.transactions.committedCount,
+                            abortedCount: after.transactions.abortedCount - before.transactions.abortedCount
+                        )
+                    )
+                }()
+                
                 // Create result with system metrics if enabled
                 let result = BenchmarkResult(
                     name: baseResult.name,
@@ -417,7 +498,7 @@ struct BenchmarkCLI {
                     elapsed: baseResult.elapsed,
                     latenciesMs: baseResult.latenciesMs,
                     metadata: baseResult.metadata,
-                    systemMetrics: systemMetrics
+                    systemMetrics: combinedSystemMetrics
                 )
                 
                 let enriched = attachConfigMetadata(result: result)
