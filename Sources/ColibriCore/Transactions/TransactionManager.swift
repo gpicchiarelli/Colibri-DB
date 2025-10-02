@@ -255,7 +255,7 @@ public struct TransactionContext {
 // IsolationLevel is defined in Isolation.swift
 
 /// Transaction timeout handler
-public final class TransactionTimeoutHandler {
+public final class TransactionTimeoutHandler: @unchecked Sendable {
     private let transactionManager: TransactionManager
     private let timeout: TimeInterval
     private var timer: Timer?

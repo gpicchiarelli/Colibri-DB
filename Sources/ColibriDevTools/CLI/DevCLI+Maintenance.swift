@@ -113,8 +113,12 @@ extension DevCLI {
     
     /// Shows buffer pool statistics
     private func handleBufferPoolStats() {
-        for line in db.bufferPoolStats() { 
-            print(line) 
+        do {
+            for line in try db.bufferPoolStats() { 
+                print(line) 
+            }
+        } catch {
+            print("Error getting buffer pool stats: \(error)")
         }
     }
     

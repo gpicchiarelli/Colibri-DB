@@ -11,7 +11,7 @@
 import Foundation
 
 /// Identifies logical resources that can be locked by the transaction/lock manager.
-public enum LockTarget: Hashable, CustomStringConvertible {
+public enum LockTarget: Hashable, CustomStringConvertible, Sendable {
     case table(String)
     case row(table: String, rid: RID)
     case index(table: String, name: String)
@@ -32,7 +32,7 @@ public enum LockTarget: Hashable, CustomStringConvertible {
 }
 
 /// Opaque handle returned when acquiring a lock; required to release the lock explicitly.
-public struct LockHandle: Hashable {
+public struct LockHandle: Hashable, Sendable {
     public let resource: LockTarget
     public let tid: UInt64
     public let mode: LockMode

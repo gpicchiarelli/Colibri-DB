@@ -233,7 +233,7 @@ public enum WireProtocolError: Error, LocalizedError {
 
 // MARK: - Protocol Handler
 
-public final class WireProtocolHandler: ChannelInboundHandler {
+public final class WireProtocolHandler: ChannelInboundHandler, @unchecked Sendable {
     public typealias InboundIn = ByteBuffer
     public typealias OutboundOut = ByteBuffer
     

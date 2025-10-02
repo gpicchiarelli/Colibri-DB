@@ -89,25 +89,28 @@ extension DevCLI {
         }
         
         // Handle JSON values (with 'j' prefix)
-        if s.hasPrefix("j:") {
-            let jsonStr = String(s.dropFirst(2))
-            if let jsonData = jsonStr.data(using: .utf8) { return .json(jsonData) }
-        }
+        // TODO: JSON type not available in Value enum
+        // if s.hasPrefix("j:") {
+        //     let jsonStr = String(s.dropFirst(2))
+        //     if let jsonData = jsonStr.data(using: .utf8) { return .json(jsonData) }
+        // }
         
+        // TODO: BLOB type not available in Value enum
         // Handle BLOB values (with 'b:' prefix)
-        if s.hasPrefix("b:") {
-            let blobStr = String(s.dropFirst(2))
-            if let blobData = Data(base64Encoded: blobStr) { return .blob(blobData) }
-        }
+        // if s.hasPrefix("b:") {
+        //     let blobStr = String(s.dropFirst(2))
+        //     if let blobData = Data(base64Encoded: blobStr) { return .blob(blobData) }
+        // }
         
+        // TODO: enumValue type not available in Value enum
         // Handle ENUM values (with 'e:' prefix)
-        if s.hasPrefix("e:") {
-            let enumStr = String(s.dropFirst(2))
-            let parts = enumStr.split(separator: ".", maxSplits: 1)
-            if parts.count == 2 {
-                return .enumValue(String(parts[0]), String(parts[1]))
-            }
-        }
+        // if s.hasPrefix("e:") {
+        //     let enumStr = String(s.dropFirst(2))
+        //     let parts = enumStr.split(separator: ".", maxSplits: 1)
+        //     if parts.count == 2 {
+        //         return .enumValue(String(parts[0]), String(parts[1]))
+        //     }
+        // }
         
         // Default to string
         return .string(s)

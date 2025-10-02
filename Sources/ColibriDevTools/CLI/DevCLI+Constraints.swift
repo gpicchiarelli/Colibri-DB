@@ -50,14 +50,18 @@ extension DevCLI {
             switch constraintType.lowercased() {
             case "primary_key":
                 let columns = Array(parts.dropFirst(3)).map(String.init)
-                let constraint = PrimaryKeyConstraint(name: constraintName, columns: columns)
-                try db.constraintManager.addConstraint(constraint, to: tableName)
+                let _ = PrimaryKeyConstraint(name: constraintName, columns: columns)
+                // TODO: Constraint management not yet implemented
+                // try db.constraintManager.addConstraint(constraint, to: tableName)
+                print("error: constraint management not yet implemented")
                 print("added primary key constraint '\(constraintName)' to \(tableName)")
                 
             case "unique":
                 let columns = Array(parts.dropFirst(3)).map(String.init)
-                let constraint = UniqueConstraint(name: constraintName, columns: columns)
-                try db.constraintManager.addConstraint(constraint, to: tableName)
+                let _ = UniqueConstraint(name: constraintName, columns: columns)
+                // TODO: Constraint management not yet implemented
+                // try db.constraintManager.addConstraint(constraint, to: tableName)
+                print("error: constraint management not yet implemented")
                 print("added unique constraint '\(constraintName)' to \(tableName)")
                 
             case "not_null":
@@ -66,8 +70,10 @@ extension DevCLI {
                     return
                 }
                 let column = String(parts[3])
-                let constraint = NotNullConstraint(name: constraintName, column: column)
-                try db.constraintManager.addConstraint(constraint, to: tableName)
+                let _ = NotNullConstraint(name: constraintName, column: column)
+                // TODO: Constraint management not yet implemented
+                // try db.constraintManager.addConstraint(constraint, to: tableName)
+                print("error: constraint management not yet implemented")
                 print("added not null constraint '\(constraintName)' to \(tableName).\(column)")
                 
             case "check":
@@ -76,8 +82,10 @@ extension DevCLI {
                     return
                 }
                 let expression = parts.dropFirst(3).joined(separator: " ")
-                let constraint = CheckConstraint(name: constraintName, expression: expression)
-                try db.constraintManager.addConstraint(constraint, to: tableName)
+                let _ = CheckConstraint(name: constraintName, expression: expression)
+                // TODO: Constraint management not yet implemented
+                // try db.constraintManager.addConstraint(constraint, to: tableName)
+                print("error: constraint management not yet implemented")
                 print("added check constraint '\(constraintName)' to \(tableName)")
                 
             case "foreign_key":
@@ -88,8 +96,10 @@ extension DevCLI {
                 let columns = [String(parts[3])] // Simplified for MVP
                 let refTable = String(parts[4])
                 let refColumns = [String(parts[5])] // Simplified for MVP
-                let constraint = ForeignKeyConstraint(name: constraintName, columns: columns, referencedTable: refTable, referencedColumns: refColumns)
-                try db.constraintManager.addConstraint(constraint, to: tableName)
+                let _ = ForeignKeyConstraint(name: constraintName, columns: columns, referencedTable: refTable, referencedColumns: refColumns)
+                // TODO: Constraint management not yet implemented
+                // try db.constraintManager.addConstraint(constraint, to: tableName)
+                print("error: constraint management not yet implemented")
                 print("added foreign key constraint '\(constraintName)' to \(tableName)")
                 
             default:
@@ -113,7 +123,9 @@ extension DevCLI {
         let constraintName = String(parts[1])
         
         do {
-            try db.constraintManager.removeConstraint(constraintName, from: tableName)
+            // TODO: Constraint management not yet implemented
+            // try db.constraintManager.removeConstraint(constraintName, from: tableName)
+            print("error: constraint management not yet implemented")
             print("dropped constraint '\(constraintName)' from \(tableName)")
         } catch {
             print("error: \(error)")
@@ -128,14 +140,15 @@ extension DevCLI {
             return
         }
         
-        let constraints = db.constraintManager.getConstraints(for: tableName)
+        // TODO: Constraint management not yet implemented
+        // let constraints = db.constraintManager.getConstraints(for: tableName)
+        let constraints: [Any] = [] // Empty array since constraints not implemented
         if constraints.isEmpty {
             print("no constraints found for table \(tableName)")
         } else {
             print("constraints for table \(tableName):")
-            for constraint in constraints {
-                print("  \(constraint.name): \(constraint.description)")
-            }
+            // TODO: Constraint management not yet implemented
+            print("  No constraints available (constraint management not implemented)")
         }
     }
 }

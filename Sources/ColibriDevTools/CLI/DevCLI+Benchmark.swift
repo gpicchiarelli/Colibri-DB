@@ -15,10 +15,10 @@ import ColibriCore
 
 extension DevCLI {
     
-    private static var benchmarkTools: BenchmarkTools?
+    @MainActor private static var benchmarkTools: BenchmarkTools?
     
     /// Handles benchmark-related commands
-    mutating func handleBenchmarkCommands(_ trimmed: String) {
+    @MainActor mutating func handleBenchmarkCommands(_ trimmed: String) {
         if trimmed.hasPrefix("\\benchmark sql") {
             handleBenchmarkSQL(trimmed)
             return
@@ -53,7 +53,7 @@ extension DevCLI {
     // MARK: - Benchmark Commands
     
     /// Benchmark SQL operations
-    private func handleBenchmarkSQL(_ trimmed: String) {
+    @MainActor private func handleBenchmarkSQL(_ trimmed: String) {
         let parts = trimmed.split(separator: " ")
         let iterations = Int(parts.first(where: { $0.hasPrefix("iterations=") })?.dropFirst("iterations=".count) ?? "1000") ?? 1000
         
@@ -75,7 +75,7 @@ extension DevCLI {
     }
     
     /// Benchmark constraint operations
-    private func handleBenchmarkConstraints(_ trimmed: String) {
+    @MainActor private func handleBenchmarkConstraints(_ trimmed: String) {
         let parts = trimmed.split(separator: " ")
         let iterations = Int(parts.first(where: { $0.hasPrefix("iterations=") })?.dropFirst("iterations=".count) ?? "1000") ?? 1000
         
@@ -90,7 +90,7 @@ extension DevCLI {
     }
     
     /// Benchmark data type operations
-    private func handleBenchmarkTypes(_ trimmed: String) {
+    @MainActor private func handleBenchmarkTypes(_ trimmed: String) {
         let parts = trimmed.split(separator: " ")
         let iterations = Int(parts.first(where: { $0.hasPrefix("iterations=") })?.dropFirst("iterations=".count) ?? "10000") ?? 10000
         
@@ -105,7 +105,7 @@ extension DevCLI {
     }
     
     /// Benchmark memory operations
-    private func handleBenchmarkMemory(_ trimmed: String) {
+    @MainActor private func handleBenchmarkMemory(_ trimmed: String) {
         let parts = trimmed.split(separator: " ")
         let iterations = Int(parts.first(where: { $0.hasPrefix("iterations=") })?.dropFirst("iterations=".count) ?? "100") ?? 100
         
@@ -121,7 +121,7 @@ extension DevCLI {
     }
     
     /// Run comprehensive benchmark suite
-    private func handleBenchmarkSuite(_ trimmed: String) {
+    @MainActor private func handleBenchmarkSuite(_ trimmed: String) {
         if Self.benchmarkTools == nil {
             Self.benchmarkTools = BenchmarkTools(database: db)
         }
@@ -140,7 +140,7 @@ extension DevCLI {
     }
     
     /// Run custom benchmark
-    private func handleBenchmarkCustom(_ trimmed: String) {
+    @MainActor private func handleBenchmarkCustom(_ trimmed: String) {
         let parts = trimmed.split(separator: " ")
         guard parts.count >= 3 else {
             print("usage: \\benchmark custom <name> <iterations> <operation>")
@@ -189,12 +189,13 @@ extension DevCLI {
         // Create table
         try db.createTable("custom_benchmark")
         
+        // TODO: Implement alterTable and dropTable methods in Database class
         // Alter table
-        try db.alterTable("custom_benchmark", operation: .addColumn("id", "int"))
-        try db.alterTable("custom_benchmark", operation: .addColumn("name", "string"))
+        // try db.alterTable("custom_benchmark", operation: .addColumn("id", "int"))
+        // try db.alterTable("custom_benchmark", operation: .addColumn("name", "string"))
         
         // Drop table
-        try db.dropTable("custom_benchmark")
+        // try db.dropTable("custom_benchmark")
     }
     
     private func executeDataOperations() throws {
@@ -215,8 +216,9 @@ extension DevCLI {
             _ = try db.deleteEquals(table: "custom_data_benchmark", column: "id", value: .int(Int64(i)))
         }
         
+        // TODO: Implement dropTable method in Database class
         // Drop table
-        try db.dropTable("custom_data_benchmark")
+        // try db.dropTable("custom_data_benchmark")
     }
     
     private func executeIndexOperations() throws {
@@ -237,8 +239,9 @@ extension DevCLI {
             _ = try db.indexSearchEqualsTyped(table: "custom_index_benchmark", index: "idx_id", value: .int(Int64(i)))
         }
         
+        // TODO: Implement dropTable method in Database class
         // Drop table (index will be dropped automatically)
-        try db.dropTable("custom_index_benchmark")
+        // try db.dropTable("custom_index_benchmark")
     }
     
     private func executeTransactionOperations() throws {
@@ -269,8 +272,9 @@ extension DevCLI {
         // Rollback transaction
         try db.rollback(tid2)
         
+        // TODO: Implement dropTable method in Database class
         // Drop table
-        try db.dropTable("custom_txn_benchmark")
+        // try db.dropTable("custom_txn_benchmark")
     }
 }
 

@@ -34,7 +34,7 @@ class DevCLITableTests {
     
     // MARK: - Table Creation Tests
     
-    func testCreateTable() {
+    @MainActor func testCreateTable() {
         let output = captureOutput {
             cli.parseAndRun("\\create table test_table")
         }
@@ -45,7 +45,7 @@ class DevCLITableTests {
         assert(tables.contains("test_table"))
     }
     
-    func testCreateTableInvalidCommand() {
+    @MainActor func testCreateTableInvalidCommand() {
         let output = captureOutput {
             cli.parseAndRun("\\create table")
         }
@@ -53,7 +53,7 @@ class DevCLITableTests {
         assert(!output.contains("created"))
     }
     
-    func testCreateDuplicateTable() {
+    @MainActor func testCreateDuplicateTable() {
         // Create first table
         cli.parseAndRun("\\create table test_table")
         
@@ -66,7 +66,7 @@ class DevCLITableTests {
     
     // MARK: - Table Deletion Tests
     
-    func testDropTable() {
+    @MainActor func testDropTable() {
         // Create table first
         cli.parseAndRun("\\create table test_table")
         
@@ -80,7 +80,7 @@ class DevCLITableTests {
         assert(!tables.contains("test_table"))
     }
     
-    func testDropNonExistentTable() {
+    @MainActor func testDropNonExistentTable() {
         let output = captureOutput {
             cli.parseAndRun("\\drop table non_existent")
         }
@@ -89,7 +89,7 @@ class DevCLITableTests {
     
     // MARK: - Table Alteration Tests
     
-    func testAlterTableRename() {
+    @MainActor func testAlterTableRename() {
         // Create table first
         cli.parseAndRun("\\create table test_table")
         
@@ -104,7 +104,7 @@ class DevCLITableTests {
         assert(tables.contains("new_table"))
     }
     
-    func testAlterTableAddColumn() {
+    @MainActor func testAlterTableAddColumn() {
         // Create table first
         cli.parseAndRun("\\create table test_table")
         
@@ -114,7 +114,7 @@ class DevCLITableTests {
         assert(output.contains("added column new_column string to test_table"))
     }
     
-    func testAlterTableDropColumn() {
+    @MainActor func testAlterTableDropColumn() {
         // Create table and add column first
         cli.parseAndRun("\\create table test_table")
         cli.parseAndRun("\\alter table test_table add new_column string")
@@ -125,7 +125,7 @@ class DevCLITableTests {
         assert(output.contains("dropped column new_column from test_table"))
     }
     
-    func testAlterTableInvalidOperation() {
+    @MainActor func testAlterTableInvalidOperation() {
         cli.parseAndRun("\\create table test_table")
         
         let output = captureOutput {

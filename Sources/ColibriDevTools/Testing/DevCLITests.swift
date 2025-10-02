@@ -71,7 +71,7 @@ class DevCLITests {
     
     // MARK: - Command Parsing Tests
     
-    func testCommandParsing() {
+    @MainActor func testCommandParsing() {
         // Test basic command recognition
         let testCases = [
             ("\\help", "help"),
@@ -89,7 +89,7 @@ class DevCLITests {
         }
     }
     
-    func testInvalidCommand() {
+    @MainActor func testInvalidCommand() {
         let output = captureOutput {
             cli.parseAndRun("\\invalid_command")
         }

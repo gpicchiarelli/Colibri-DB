@@ -15,11 +15,11 @@ import ColibriCore
 
 extension DevCLI {
     
-    private static var performanceMonitor: PerformanceMonitor?
-    private static var cpuProfiler: CPUProfiler?
+    @MainActor private static var performanceMonitor: PerformanceMonitor?
+    @MainActor private static var cpuProfiler: CPUProfiler?
     
     /// Handles monitoring-related commands
-    mutating func handleMonitoringCommands(_ trimmed: String) {
+    @MainActor mutating func handleMonitoringCommands(_ trimmed: String) {
         if trimmed.hasPrefix("\\monitor stats") {
             handleMonitorStats(trimmed)
             return
@@ -69,7 +69,7 @@ extension DevCLI {
     // MARK: - Monitor Commands
     
     /// Monitor real-time statistics
-    private func handleMonitorStats(_ trimmed: String) {
+    @MainActor private func handleMonitorStats(_ trimmed: String) {
         let parts = trimmed.split(separator: " ")
         let interval = Double(parts.first(where: { $0.hasPrefix("interval=") })?.dropFirst("interval=".count) ?? "1.0") ?? 1.0
         let duration = Double(parts.first(where: { $0.hasPrefix("duration=") })?.dropFirst("duration=".count) ?? "60.0") ?? 60.0
@@ -109,7 +109,7 @@ extension DevCLI {
     }
     
     /// Monitor performance metrics
-    private func handleMonitorPerformance(_ trimmed: String) {
+    @MainActor private func handleMonitorPerformance(_ trimmed: String) {
         if let monitor = Self.performanceMonitor {
             let summary = monitor.getPerformanceSummary()
             print("=== Performance Monitor ===")
@@ -154,7 +154,7 @@ extension DevCLI {
     }
     
     /// Stop monitoring
-    private func handleMonitorStop() {
+    @MainActor private func handleMonitorStop() {
         Self.performanceMonitor?.stopMonitoring()
         print("Monitoring stopped")
     }
@@ -162,7 +162,7 @@ extension DevCLI {
     // MARK: - Profile Commands
     
     /// Start profiling
-    private func handleProfileStart(_ trimmed: String) {
+    @MainActor private func handleProfileStart(_ trimmed: String) {
         if Self.cpuProfiler == nil {
             Self.cpuProfiler = CPUProfiler(database: db)
         }
@@ -172,7 +172,7 @@ extension DevCLI {
     }
     
     /// Stop profiling
-    private func handleProfileStop() {
+    @MainActor private func handleProfileStop() {
         Self.cpuProfiler?.stopProfiling()
         
         if let profiler = Self.cpuProfiler {

@@ -15,7 +15,7 @@ import ColibriCore
 import os.log
 
 /// Real-time performance monitoring for ColibrDB
-public class PerformanceMonitor {
+public final class PerformanceMonitor: @unchecked Sendable {
     private let database: Database
     private let logger = Logger(subsystem: "com.colibridb.monitor", category: "performance")
     private var isMonitoring = false

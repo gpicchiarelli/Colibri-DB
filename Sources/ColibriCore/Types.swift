@@ -13,7 +13,7 @@
 import Foundation
 
 /// Record Identifier (pageId, slotId)
-public struct RID: Hashable, Codable, CustomStringConvertible {
+public struct RID: Hashable, Codable, CustomStringConvertible, Sendable {
     public let pageId: UInt64
     public let slotId: UInt16
     public init(pageId: UInt64, slotId: UInt16) {

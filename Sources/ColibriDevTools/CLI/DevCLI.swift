@@ -16,7 +16,7 @@ import os.log
 
 /// Development CLI interpreter connecting CLI commands to the database core.
 /// This is the development version with additional debugging and testing capabilities.
-struct DevCLI {
+struct DevCLI: @unchecked Sendable {
     let db: Database
     let cfgPath: String?
     var currentTID: UInt64? = nil
@@ -124,7 +124,7 @@ struct DevCLI {
     }
 
     /// Parses a raw input line and dispatches the associated command handler.
-    mutating func parseAndRun(_ line: String) {
+    @MainActor mutating func parseAndRun(_ line: String) {
         let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         
@@ -182,7 +182,7 @@ struct DevCLI {
         }
         
         if trimmed.hasPrefix("\\sql ") {
-            handleSQLCommands(trimmed)
+            _ = handleSQLCommands(trimmed)
             return
         }
         
@@ -244,9 +244,6 @@ struct DevCLI {
         case .null: return "NULL"
         case .date(let d): return ISO8601DateFormatter().string(from: d)
         case .decimal(let d): return d.description
-        case .blob(let d): return "<BLOB:\(d.count) bytes>"
-        case .json(let d): return String(data: d, encoding: .utf8) ?? "<INVALID JSON>"
-        case .enumValue(let enumName, let value): return "\(enumName).\(value)"
         }
     }
     
@@ -380,9 +377,6 @@ struct DevCLI {
                     case .some(.null): s = ""
                     case .some(.date(let d)): s = ISO8601DateFormatter().string(from: d)
                     case .some(.decimal(let d)): s = d.description
-                    case .some(.blob(let d)): s = "<BLOB:\(d.count) bytes>"
-                    case .some(.json(let d)): s = String(data: d, encoding: .utf8) ?? "<INVALID JSON>"
-                    case .some(.enumValue(let enumName, let value)): s = "\(enumName).\(value)"
                     case .none: s = ""
                     }
                     fields.append(csvEscape(s))

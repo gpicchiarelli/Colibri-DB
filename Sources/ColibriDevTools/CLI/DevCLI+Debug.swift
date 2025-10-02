@@ -72,7 +72,10 @@ extension DevCLI {
             // Wait for monitoring to complete
             DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
                 let analysis = monitor.getAnalysis()
-                self.printMemoryMonitoringResults(analysis)
+                print("=== Memory Monitoring Results ===")
+                print("Peak Memory: \(String(format: "%.2f", Double(analysis.peakResidentSize) / 1024.0 / 1024.0)) MB")
+                print("Average Memory: \(String(format: "%.2f", Double(analysis.averageResidentSize) / 1024.0 / 1024.0)) MB")
+                print("Memory Growth: \(String(format: "%.2f", Double(analysis.memoryGrowth) / 1024.0 / 1024.0)) MB")
             }
         }
     }

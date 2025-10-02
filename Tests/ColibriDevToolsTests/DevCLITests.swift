@@ -54,7 +54,7 @@ final class DevCLITests: XCTestCase {
         XCTAssertTrue(output.contains(tempDirectory.path))
     }
 
-    func testParseAndRunHandlesKnownCommand() {
+    @MainActor func testParseAndRunHandlesKnownCommand() {
         var mutableCLI = cli!
         let output = captureOutput {
             mutableCLI.parseAndRun("\\help")
@@ -62,7 +62,7 @@ final class DevCLITests: XCTestCase {
         XCTAssertTrue(output.contains("Commands:"))
     }
 
-    func testParseAndRunRejectsUnknownCommand() {
+    @MainActor func testParseAndRunRejectsUnknownCommand() {
         var mutableCLI = cli!
         let output = captureOutput {
             mutableCLI.parseAndRun("\\totally_unknown")

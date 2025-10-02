@@ -14,7 +14,7 @@ import Foundation
 import os.log
 
 /// System monitor for performance tracking and analysis
-public final class SystemMonitor {
+public final class SystemMonitor: @unchecked Sendable {
     private let logger = Logger(subsystem: "com.colibridb.monitor", category: "system")
     private let database: Database
     

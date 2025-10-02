@@ -12,7 +12,7 @@ import ColibriCore
 
 // MARK: - Connection Manager
 
-public final class ConnectionManager {
+public final class ConnectionManager: @unchecked Sendable {
     private let maxConnections: Int
     private let connectionTimeout: TimeInterval
     private let queryTimeout: TimeInterval
@@ -114,7 +114,7 @@ public struct ConnectionID: Hashable, CustomStringConvertible, Sendable {
 
 // MARK: - Database Connection
 
-public final class DatabaseConnection {
+public final class DatabaseConnection: @unchecked Sendable {
     public let id: ConnectionID
     private let channel: Channel
     private let database: Database

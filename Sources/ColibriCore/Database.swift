@@ -16,7 +16,7 @@ import Foundation
 /// policy e cataloghi, offrendo un'unica facciata ai comandi della CLI e agli
 /// operatori di query. Ogni metodo adotta lock/MVCC/WAL in modo coerente così
 /// che le estensioni future (planner, server remoto) possano delegare qui.
-public final class Database {
+public final class Database: @unchecked Sendable {
     /// Configurazione runtime (pagina, buffer, isolamento, policy, ecc.).
     public let config: DBConfig
 

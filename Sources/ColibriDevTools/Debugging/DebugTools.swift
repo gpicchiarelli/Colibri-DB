@@ -133,23 +133,9 @@ public class DebugTools {
         var validationTimes: [String: TimeInterval] = [:]
         
         for table in tables {
-            let constraints = database.constraintManager.getConstraints(for: table)
-            totalConstraints += constraints.count
-            
-            for constraint in constraints {
-                let type = String(describing: type(of: constraint))
-                constraintTypes[type, default: 0] += 1
-                
-                // Measure validation time
-                let startTime = CFAbsoluteTimeGetCurrent()
-                do {
-                    _ = try database.constraintManager.validateTable(table, rows: [])
-                } catch {
-                    // Continue even if validation fails
-                }
-                let endTime = CFAbsoluteTimeGetCurrent()
-                validationTimes[constraint.name] = endTime - startTime
-            }
+            // Note: Constraint management not yet implemented in Database class
+            // TODO: Implement constraint management when available
+            totalConstraints += 0
         }
         
         return ConstraintAnalysis(
@@ -303,7 +289,7 @@ public struct TypeSystemAnalysis {
 
 // MARK: - Memory Monitor
 
-public class MemoryMonitor {
+public final class MemoryMonitor: @unchecked Sendable {
     private let database: Database
     private let interval: TimeInterval
     private let duration: TimeInterval

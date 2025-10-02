@@ -215,7 +215,8 @@ struct AppleSiliconOptimizationsTests {
     @Test func testCryptoKitIntegration() {
         // Test key generation
         let key = CryptoKitIntegration.generateKey()
-        #expect(key.keySize == 32) // Test that key was generated with correct size
+        // Test that key was generated (we can't directly access keySize in SymmetricKey)
+        #expect(key.withUnsafeBytes { $0.count } == 32)
         
         // Test encryption/decryption
         let data = Data("test_data".utf8)
@@ -228,7 +229,7 @@ struct AppleSiliconOptimizationsTests {
             #expect(decrypted == data)
         } catch {
             // CryptoKit might not be available in test environment
-            #expect(true) // Test passes if encryption is not available
+            #expect(Bool(true)) // Test passes if encryption is not available
         }
     }
     
@@ -267,7 +268,7 @@ struct AppleSiliconOptimizationsTests {
             #expect(!volumeInfo.isEmpty) // Test that volume info is not empty
         } catch {
             // Might fail in test environment
-            #expect(true) // Test passes if volume info is not available
+            #expect(Bool(true)) // Test passes if volume info is not available
         }
     }
     

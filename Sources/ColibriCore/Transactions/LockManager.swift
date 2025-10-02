@@ -11,7 +11,7 @@
 import Foundation
 
 /// Lock manager providing shared/exclusive locks with deadlock detection and optional timeouts.
-final class LockManager: LockManagerProtocol {
+final class LockManager: LockManagerProtocol, @unchecked Sendable {
     private struct Holder {
         var mode: LockMode
         var count: Int

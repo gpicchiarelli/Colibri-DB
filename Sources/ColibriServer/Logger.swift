@@ -147,7 +147,7 @@ public struct ConsoleLogOutput: LogOutput {
     }
 }
 
-public final class FileLogOutput: LogOutput {
+public final class FileLogOutput: LogOutput, @unchecked Sendable {
     private let fileHandle: FileHandle
     private let queue: DispatchQueue
     

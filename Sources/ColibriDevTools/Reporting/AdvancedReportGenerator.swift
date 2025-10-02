@@ -12,6 +12,7 @@
 
 import Foundation
 import os.log
+import ColibriCore
 
 /// Advanced report generator for ColibrDB
 public final class AdvancedReportGenerator {
@@ -413,9 +414,9 @@ public final class AdvancedReportGenerator {
     }
     
     /// Calculates recommendation priority
-    private func calculateRecommendationPriority() -> RecommendationPriority {
+    private func calculateRecommendationPriority() -> RecommendationPriorityCounts {
         // Implementation to calculate recommendation priority
-        return RecommendationPriority(
+        return RecommendationPriorityCounts(
             high: 2,
             medium: 3,
             low: 1
@@ -646,7 +647,7 @@ public struct RecommendationsSection {
     public let reliabilityRecommendations: [Recommendation]
     public let maintainabilityRecommendations: [Recommendation]
     public let scalabilityRecommendations: [Recommendation]
-    public let priority: RecommendationPriority
+    public let priority: RecommendationPriorityCounts
 }
 
 /// Recommendation
@@ -677,7 +678,7 @@ public enum RecommendationPriority {
 }
 
 /// Recommendation priority counts
-public struct RecommendationPriority {
+public struct RecommendationPriorityCounts {
     public let high: Int
     public let medium: Int
     public let low: Int

@@ -171,9 +171,10 @@ extension DevCLI {
                     case .some(.null): s = ""
                     case .some(.date(let d)): s = ISO8601DateFormatter().string(from: d)
                     case .some(.decimal(let d)): s = d.description
-                    case .some(.blob(let d)): s = "<BLOB:\(d.count) bytes>"
-                    case .some(.json(let d)): s = String(data: d, encoding: .utf8) ?? "<INVALID JSON>"
-                    case .some(.enumValue(let enumName, let value)): s = "\(enumName).\(value)"
+                    // TODO: blob, json, enumValue types not available in Value enum
+                    // case .some(.blob(let d)): s = "<BLOB:\(d.count) bytes>"
+                    // case .some(.json(let d)): s = String(data: d, encoding: .utf8) ?? "<INVALID JSON>"
+                    // case .some(.enumValue(let enumName, let value)): s = "\(enumName).\(value)"
                     case .none: s = ""
                     }
                     fields.append(csvEscape(s))

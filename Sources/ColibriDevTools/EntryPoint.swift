@@ -10,7 +10,7 @@ import ColibriCore
 import os.log
 
 /// Bootstraps the developer CLI (`coldb-dev`) with Apple Silicon optimisations.
-public func runColdBDevCLI(arguments: [String]) throws {
+@MainActor public func runColdBDevCLI(arguments: [String]) throws {
     var configPath: String?
     var index = 1
     while index < arguments.count {

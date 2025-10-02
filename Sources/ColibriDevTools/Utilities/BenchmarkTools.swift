@@ -26,7 +26,7 @@ public class BenchmarkTools {
     // MARK: - SQL Performance Benchmarks
     
     /// Benchmarks SQL parsing performance
-    public func benchmarkSQLParsing(iterations: Int = 1000) -> BenchmarkResult {
+    public func benchmarkSQLParsing(iterations: Int = 1000) -> BenchmarkToolsResult {
         logger.info("Starting SQL parsing benchmark with \(iterations) iterations")
         
         let sqlQueries = [
@@ -64,7 +64,7 @@ public class BenchmarkTools {
         
         let averageDuration = totalDuration / Double(iterations)
         
-        return BenchmarkResult(
+        return BenchmarkToolsResult(
             name: "SQL Parsing",
             iterations: iterations,
             totalDuration: totalDuration,
@@ -77,7 +77,7 @@ public class BenchmarkTools {
     }
     
     /// Benchmarks SQL execution performance
-    public func benchmarkSQLExecution(iterations: Int = 100) -> BenchmarkResult {
+    public func benchmarkSQLExecution(iterations: Int = 100) -> BenchmarkToolsResult {
         logger.info("Starting SQL execution benchmark with \(iterations) iterations")
         
         // Setup test data
@@ -123,9 +123,10 @@ public class BenchmarkTools {
         let averageDuration = totalDuration / Double(iterations)
         
         // Cleanup
-        try? database.dropTable("benchmark_users")
+        // TODO: Implement dropTable method in Database class
+        // try? database.dropTable("benchmark_users")
         
-        return BenchmarkResult(
+        return BenchmarkToolsResult(
             name: "SQL Execution",
             iterations: iterations,
             totalDuration: totalDuration,
@@ -140,17 +141,18 @@ public class BenchmarkTools {
     // MARK: - Constraint Validation Benchmarks
     
     /// Benchmarks constraint validation performance
-    public func benchmarkConstraintValidation(iterations: Int = 1000) -> BenchmarkResult {
+    public func benchmarkConstraintValidation(iterations: Int = 1000) -> BenchmarkToolsResult {
         logger.info("Starting constraint validation benchmark with \(iterations) iterations")
         
         // Setup test table with constraints
         try? database.createTable("benchmark_constraints")
         
         // Add multiple constraints
-        for i in 1...10 {
-            let constraint = NotNullConstraint(name: "nn_\(i)", column: "col_\(i)")
-            try? database.constraintManager.addConstraint(constraint, to: "benchmark_constraints")
-        }
+        // TODO: Implement constraint management in Database class
+        // for i in 1...10 {
+        //     let constraint = NotNullConstraint(name: "nn_\(i)", column: "col_\(i)")
+        //     try? database.constraintManager.addConstraint(constraint, to: "benchmark_constraints")
+        // }
         
         var totalDuration: TimeInterval = 0
         var minDuration: TimeInterval = Double.greatestFiniteMagnitude
@@ -159,13 +161,14 @@ public class BenchmarkTools {
         for _ in 0..<iterations {
             let startTime = CFAbsoluteTimeGetCurrent()
             
-            do {
-                let constraints = database.constraintManager.getConstraints(for: "benchmark_constraints")
-                for _ in constraints {
-                    _ = try database.constraintManager.validateTable("benchmark_constraints", rows: [])
-                }
-            } catch {
-            }
+            // TODO: Implement constraint management in Database class
+            // do {
+            //     let constraints = database.constraintManager.getConstraints(for: "benchmark_constraints")
+            //     for _ in constraints {
+            //         _ = try database.constraintManager.validateTable("benchmark_constraints", rows: [])
+            //     }
+            // } catch {
+            // }
             
             let endTime = CFAbsoluteTimeGetCurrent()
             let duration = endTime - startTime
@@ -178,9 +181,10 @@ public class BenchmarkTools {
         let averageDuration = totalDuration / Double(iterations)
         
         // Cleanup
-        try? database.dropTable("benchmark_constraints")
+        // TODO: Implement dropTable method in Database class
+        // try? database.dropTable("benchmark_constraints")
         
-        return BenchmarkResult(
+        return BenchmarkToolsResult(
             name: "Constraint Validation",
             iterations: iterations,
             totalDuration: totalDuration,
@@ -195,7 +199,7 @@ public class BenchmarkTools {
     // MARK: - Data Type Operation Benchmarks
     
     /// Benchmarks data type conversion performance
-    public func benchmarkDataTypeOperations(iterations: Int = 10000) -> BenchmarkResult {
+    public func benchmarkDataTypeOperations(iterations: Int = 10000) -> BenchmarkToolsResult {
         logger.info("Starting data type operations benchmark with \(iterations) iterations")
         
         let cli = DevCLI(db: database, cfgPath: nil)
@@ -233,7 +237,7 @@ public class BenchmarkTools {
         
         let averageDuration = totalDuration / Double(iterations)
         
-        return BenchmarkResult(
+        return BenchmarkToolsResult(
             name: "Data Type Operations",
             iterations: iterations,
             totalDuration: totalDuration,
@@ -248,7 +252,7 @@ public class BenchmarkTools {
     // MARK: - Memory Allocation Benchmarks
     
     /// Benchmarks memory allocation patterns
-    public func benchmarkMemoryAllocation(iterations: Int = 100) -> BenchmarkResult {
+    public func benchmarkMemoryAllocation(iterations: Int = 100) -> BenchmarkToolsResult {
         logger.info("Starting memory allocation benchmark with \(iterations) iterations")
         
         var totalDuration: TimeInterval = 0
@@ -262,7 +266,8 @@ public class BenchmarkTools {
                 // Create and destroy tables
                 for i in 1...10 {
                     try database.createTable("memory_test_\(i)")
-                    try database.dropTable("memory_test_\(i)")
+                    // TODO: Implement dropTable method in Database class
+                    // try database.dropTable("memory_test_\(i)")
                 }
                 
                 // Insert and delete data
@@ -271,7 +276,8 @@ public class BenchmarkTools {
                     let row: Row = ["id": .int(Int64(i)), "value": .string("Value \(i)")]
                     _ = try database.insert(into: "memory_data", row: row)
                 }
-                try database.dropTable("memory_data")
+                // TODO: Implement dropTable method in Database class
+                // try database.dropTable("memory_data")
             } catch {
             }
             
@@ -285,7 +291,7 @@ public class BenchmarkTools {
         
         let averageDuration = totalDuration / Double(iterations)
         
-        return BenchmarkResult(
+        return BenchmarkToolsResult(
             name: "Memory Allocation",
             iterations: iterations,
             totalDuration: totalDuration,
@@ -304,7 +310,7 @@ public class BenchmarkTools {
         logger.info("Starting comprehensive benchmark suite")
         let startTime = Date()
         
-        var results: [BenchmarkResult] = []
+        var results: [BenchmarkToolsResult] = []
         
         // SQL benchmarks
         results.append(benchmarkSQLParsing(iterations: 1000))
@@ -337,7 +343,7 @@ public class BenchmarkTools {
         name: String,
         iterations: Int,
         operation: () throws -> T
-    ) -> BenchmarkResult {
+    ) -> BenchmarkToolsResult {
         logger.info("Starting custom benchmark '\(name)' with \(iterations) iterations")
         
         var totalDuration: TimeInterval = 0
@@ -362,7 +368,7 @@ public class BenchmarkTools {
         
         let averageDuration = totalDuration / Double(iterations)
         
-        return BenchmarkResult(
+        return BenchmarkToolsResult(
             name: name,
             iterations: iterations,
             totalDuration: totalDuration,
@@ -377,7 +383,7 @@ public class BenchmarkTools {
 
 // MARK: - Data Structures
 
-public struct BenchmarkResult {
+public struct BenchmarkToolsResult {
     public let name: String
     public let iterations: Int
     public let totalDuration: TimeInterval
@@ -407,7 +413,7 @@ public struct BenchmarkResult {
 public struct BenchmarkSuiteResult {
     public let totalBenchmarks: Int
     public let totalDuration: TimeInterval
-    public let results: [BenchmarkResult]
+    public let results: [BenchmarkToolsResult]
     public let timestamp: Date
     
     public var averageOperationsPerSecond: Double {
@@ -425,7 +431,7 @@ public struct BenchmarkSuiteResult {
 // MARK: - Benchmark Reporter
 
 public class BenchmarkReporter {
-    public static func generateReport(_ result: BenchmarkResult) -> String {
+    public static func generateReport(_ result: BenchmarkToolsResult) -> String {
         var report = "=== Benchmark Report: \(result.name) ===\n"
         report += "Iterations: \(result.iterations)\n"
         report += "Total Duration: \(String(format: "%.4f", result.totalDuration))s\n"

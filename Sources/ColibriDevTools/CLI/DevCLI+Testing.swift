@@ -15,10 +15,10 @@ import ColibriCore
 
 extension DevCLI {
     
-    private static var testRunner: TestRunner?
+    @MainActor private static var testRunner: TestRunner?
     
     /// Handles testing-related commands
-    mutating func handleTestingCommands(_ trimmed: String) {
+    @MainActor mutating func handleTestingCommands(_ trimmed: String) {
         if trimmed.hasPrefix("\\test run") {
             handleTestRun(trimmed)
             return
@@ -63,7 +63,7 @@ extension DevCLI {
     // MARK: - Test Commands
     
     /// Run all tests
-    private func handleTestRun(_ trimmed: String) {
+    @MainActor private func handleTestRun(_ trimmed: String) {
         if Self.testRunner == nil {
             Self.testRunner = TestRunner(database: db)
         }
@@ -100,7 +100,7 @@ extension DevCLI {
     }
     
     /// Run unit tests
-    private func handleTestUnit(_ trimmed: String) {
+    @MainActor private func handleTestUnit(_ trimmed: String) {
         if Self.testRunner == nil {
             Self.testRunner = TestRunner(database: db)
         }
@@ -131,7 +131,7 @@ extension DevCLI {
     }
     
     /// Run integration tests
-    private func handleTestIntegration(_ trimmed: String) {
+    @MainActor private func handleTestIntegration(_ trimmed: String) {
         if Self.testRunner == nil {
             Self.testRunner = TestRunner(database: db)
         }
@@ -162,7 +162,7 @@ extension DevCLI {
     }
     
     /// Run performance tests
-    private func handleTestPerformance(_ trimmed: String) {
+    @MainActor private func handleTestPerformance(_ trimmed: String) {
         if Self.testRunner == nil {
             Self.testRunner = TestRunner(database: db)
         }
@@ -200,7 +200,7 @@ extension DevCLI {
     }
     
     /// Run stress tests
-    private func handleTestStress(_ trimmed: String) {
+    @MainActor private func handleTestStress(_ trimmed: String) {
         if Self.testRunner == nil {
             Self.testRunner = TestRunner(database: db)
         }
@@ -240,7 +240,7 @@ extension DevCLI {
     }
     
     /// Run automated tests
-    private func handleTestAuto(_ trimmed: String) {
+    @MainActor private func handleTestAuto(_ trimmed: String) {
         let parts = trimmed.split(separator: " ")
         let interval = Double(parts.first(where: { $0.hasPrefix("interval=") })?.dropFirst("interval=".count) ?? "300.0") ?? 300.0 // 5 minutes default
         
@@ -253,7 +253,7 @@ extension DevCLI {
     }
     
     /// Run regression tests
-    private func handleTestRegression(_ trimmed: String) {
+    @MainActor private func handleTestRegression(_ trimmed: String) {
         print("Running regression test suite...")
         
         if Self.testRunner == nil {
@@ -291,7 +291,7 @@ extension DevCLI {
     }
     
     /// Run memory leak tests
-    private func handleTestMemory(_ trimmed: String) {
+    @MainActor private func handleTestMemory(_ trimmed: String) {
         print("Running memory leak tests...")
         
         let debugTools = DebugTools(database: db)
@@ -306,7 +306,8 @@ extension DevCLI {
             // Create and destroy tables
             for j in 1...100 {
                 try? db.createTable("memory_test_\(i)_\(j)")
-                try? db.dropTable("memory_test_\(i)_\(j)")
+                // TODO: dropTable not available in Database
+                // try? db.dropTable("memory_test_\(i)_\(j)")
             }
             
             // Insert and delete data
@@ -315,7 +316,8 @@ extension DevCLI {
                 let row: Row = ["id": .int(Int64(k)), "value": .string("Value \(k)")]
                 _ = try? db.insert(into: "memory_data_\(i)", row: row)
             }
-            try? db.dropTable("memory_data_\(i)")
+            // TODO: dropTable not available in Database
+            // try? db.dropTable("memory_data_\(i)")
             
             // Check memory usage
             let currentMemory = debugTools.analyzeMemory()

@@ -53,7 +53,7 @@ private extension Data {
 }
 
 /// File-based implementation of the global WAL manager
-public final class FileWALManager: WALManager {
+public final class FileWALManager: WALManager, @unchecked Sendable {
     
     // MARK: - Constants and Configuration
     

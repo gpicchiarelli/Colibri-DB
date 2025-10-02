@@ -23,9 +23,9 @@ struct FileBPlusTreeIndexTests {
         let rid = RID(pageId: 1, slotId: 1)
         try index.insert(key: Value.int(42), rid: rid)
 
-        let matches = index.searchEquals(Value.int(42))
+        let matches = try index.searchEquals(Value.int(42))
         #expect(matches == [rid])
-        #expect(index.searchEquals(Value.int(7)).isEmpty)
+        #expect(try index.searchEquals(Value.int(7)).isEmpty)
     }
 
     @Test func systemCatalogRegistersTable() throws {
@@ -80,12 +80,12 @@ struct FileBPlusTreeIndexTests {
             try index.insert(key: .int(Int64(key)), rid: rid)
         }
 
-        let report = index.validateDeep()
+        let report = try index.validateDeep()
         #expect(report.ok)
         #expect(report.leaves > 1)
         #expect(report.internalNodes >= 1)
 
-        let rids = index.range(nil, nil)
+        let rids = try index.range(nil, nil)
         #expect(Set(rids) == Set(keyByRid.keys))
         let keys = rids.compactMap { keyByRid[$0] }
         #expect(keys.count == 64)
@@ -103,7 +103,7 @@ struct FileBPlusTreeIndexTests {
             try index.insert(key: .int(Int64(key)), rid: rid)
         }
 
-        let baseline = index.validateDeep()
+        let baseline = try index.validateDeep()
         #expect(baseline.ok)
 
         var lastKeyChecked: Int = -1
@@ -112,7 +112,7 @@ struct FileBPlusTreeIndexTests {
             guard let rid = ridByKey[key] else { continue }
             try index.remove(key: .int(Int64(key)), rid: rid)
             lastKeyChecked = key
-            let report = index.validateDeep()
+            let report = try index.validateDeep()
             if !report.ok {
                 problematicReport = report
                 break
@@ -135,7 +135,7 @@ struct FileBPlusTreeIndexTests {
             try index.insert(key: .int(Int64(key)), rid: rid)
         }
 
-        let baseline = index.validateDeep()
+        let baseline = try index.validateDeep()
         #expect(baseline.ok)
         #expect(baseline.internalNodes > 0)
 
@@ -143,14 +143,14 @@ struct FileBPlusTreeIndexTests {
             guard let rid = ridByKey.removeValue(forKey: key) else { continue }
             keyByRid.removeValue(forKey: rid)
             try index.remove(key: .int(Int64(key)), rid: rid)
-            let report = index.validateDeep()
+            let report = try index.validateDeep()
             #expect(report.ok, "validateDeep failed after deleting key \(key): \(report.messages)")
         }
 
-        let finalReport = index.validateDeep()
+        let finalReport = try index.validateDeep()
         #expect(finalReport.ok)
 
-        let remaining = index.range(nil, nil)
+        let remaining = try index.range(nil, nil)
         #expect(remaining.count == 2)
         let remainingKeys = remaining.compactMap { keyByRid[$0] }
         #expect(Set(remainingKeys) == Set([0, 1]))
@@ -162,14 +162,14 @@ struct FileBPlusTreeIndexTests {
 
         let rid = RID(pageId: 1, slotId: 1)
         try index.insert(key: .string("ghost"), rid: rid)
-        #expect(index.searchEquals(.string("ghost")) == [rid])
+        #expect(try index.searchEquals(.string("ghost")) == [rid])
 
         try index.remove(key: .string("ghost"), rid: rid)
-        #expect(index.searchEquals(.string("ghost")).isEmpty)
+        #expect(try index.searchEquals(.string("ghost")).isEmpty)
 
         // Reinsert same RID should resurrect visibility
         try index.insert(key: .string("ghost"), rid: rid)
-        #expect(index.searchEquals(.string("ghost")) == [rid])
+        #expect(try index.searchEquals(.string("ghost")) == [rid])
     }
 }
 

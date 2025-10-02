@@ -74,7 +74,7 @@ public protocol TransactionManagerProtocol {
     func rollback(_ tid: UInt64) throws
 }
 
-public enum LockMode { case shared, exclusive }
+public enum LockMode: Sendable { case shared, exclusive }
 
 /// Lock manager abstraction with shared/exclusive modes.
 public protocol LockManagerProtocol {
