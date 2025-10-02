@@ -152,27 +152,29 @@ public final class LRUBufferPool: BufferPoolProtocol {
     }
     
     /// Parallel flush implementation using concurrent workers.
+    /// 🔧 FIX: Use proper synchronization to avoid race conditions
     private func flushAllParallel(_ dirtyPages: [PageID]) throws {
-        let workerCount = min(4, dirtyPages.count)
-        let chunkSize = max(1, dirtyPages.count / workerCount)
-        
+        // Instead of using DispatchQueue.concurrentPerform which bypasses our queue,
+        // we'll flush in batches on our synchronized queue to avoid race conditions
+        let batchSize = 8
         var errors: [Error] = []
-        let errorLock = NSLock()
         
-        DispatchQueue.concurrentPerform(iterations: workerCount) { @Sendable [weak self] worker in
-            guard let self = self else { return }
-            let start = worker * chunkSize
-            let end = min(start + chunkSize, dirtyPages.count)
-            let chunk = Array(dirtyPages[start..<end])
+        for i in stride(from: 0, to: dirtyPages.count, by: batchSize) {
+            let endIndex = min(i + batchSize, dirtyPages.count)
+            let batch = Array(dirtyPages[i..<endIndex])
             
-            for id in chunk {
-                do {
-                    try self.flushPage(id)
-                } catch {
-                    errorLock.lock()
-                    errors.append(error)
-                    errorLock.unlock()
+            do {
+                try q.sync {
+                    for id in batch {
+                        // Direct flush without calling flushPage to avoid double sync
+                        guard dirty.contains(id), let e = map[id] else { continue }
+                        try flush(id, e.data)
+                        dirty.remove(id)
+                    }
                 }
+            } catch {
+                errors.append(error)
+                break // Stop on first error
             }
         }
         
