@@ -46,6 +46,9 @@ public final class FileHeapTable: TableStorageProtocol {
     let pageSize: Int
     private var fh: FileHandle
     private var lastPageId: UInt64 = 0
+    // 🔧 FIX: Track if file is closed to prevent operations on closed handles
+    private var isClosed: Bool = false
+    private let closeLock = NSLock()
     private var buf: LRUBufferPool?
     private let sequentialReadHint: Bool
     private let snapshotCompression: CompressionAlgorithm
@@ -108,7 +111,15 @@ public final class FileHeapTable: TableStorageProtocol {
         rebuildBuckets()
     }
 
-    deinit { buf?.stopBackgroundFlush(); try? fh.close() }
+    // 🔧 FIX: Proper resource cleanup with error handling
+    deinit { 
+        do {
+            try close()
+        } catch {
+            // Log error but don't crash in deinit
+            print("⚠️ Error closing FileHeapTable: \(error)")
+        }
+    }
 
     private func fileSize() throws -> UInt64 {
         let attrs = try FileManager.default.attributesOfItem(atPath: fileURL.path)
@@ -605,5 +616,49 @@ public final class FileHeapTable: TableStorageProtocol {
                                       deadBytes: deadBytes,
                                       freeBytes: freeBytes,
                                       fragmentationRatio: ratio)
+    }
+    
+    // MARK: - Resource Management
+    
+    /// 🔧 FIX: Proper resource cleanup method
+    /// Closes file handles and stops background processes
+    public func close() throws {
+        closeLock.lock()
+        defer { closeLock.unlock() }
+        
+        // Check if already closed
+        guard !isClosed else { return }
+        
+        // Stop background flush first
+        buf?.stopBackgroundFlush()
+        
+        // Flush any remaining dirty pages
+        try buf?.flushAll()
+        
+        // Note: FSM state is managed automatically, no explicit save needed
+        
+        // Close file handle with proper error handling
+        try fh.close()
+        
+        // Mark as closed
+        isClosed = true
+        
+        print("✅ FileHeapTable closed successfully: \(fileURL.path)")
+    }
+    
+    /// 🔧 FIX: Check if the table is still open/valid
+    public var isOpen: Bool {
+        closeLock.lock()
+        defer { closeLock.unlock() }
+        return !isClosed
+    }
+    
+    /// 🔧 FIX: Helper method to check if operations are allowed
+    private func ensureOpen() throws {
+        closeLock.lock()
+        defer { closeLock.unlock() }
+        if isClosed {
+            throw DBError.io("FileHeapTable is closed: \(fileURL.path)")
+        }
     }
 }

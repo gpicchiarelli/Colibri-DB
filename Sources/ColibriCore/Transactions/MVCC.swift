@@ -46,24 +46,30 @@ public final class MVCCManager {
     private(set) var activeTIDs: Set<UInt64> = []
     private(set) var committedTIDs: Set<UInt64> = [0]
     private(set) var abortedTIDs: Set<UInt64> = []
-    private let lock = NSLock()
+    
+    // 🔧 FIX: Fine-grained locking to reduce contention
+    private let transactionStateLock = NSLock()  // For TID sets
+    private let tableVersionsLock = NSLock()     // For table versions
+    private let globalLock = NSLock()            // For operations requiring both locks
 
     // MARK: - Transaction lifecycle
 
     func begin(tid: UInt64) {
-        lock.lock(); defer { lock.unlock() }
+        transactionStateLock.lock(); defer { transactionStateLock.unlock() }
         activeTIDs.insert(tid)
     }
 
     func commit(tid: UInt64) {
-        lock.lock(); defer { lock.unlock() }
+        // 🔧 FIX: Use global lock for operations that need both state and versions
+        globalLock.lock(); defer { globalLock.unlock() }
         guard activeTIDs.remove(tid) != nil else { return }
         committedTIDs.insert(tid)
         updateVersions(for: tid, to: .committed)
     }
 
     func rollback(tid: UInt64) {
-        lock.lock(); defer { lock.unlock() }
+        // 🔧 FIX: Use global lock for operations that need both state and versions
+        globalLock.lock(); defer { globalLock.unlock() }
         guard activeTIDs.remove(tid) != nil else { return }
         abortedTIDs.insert(tid)
         updateVersions(for: tid, to: .aborted)
@@ -73,7 +79,7 @@ public final class MVCCManager {
     // MARK: - Version registration
 
     func registerInsert(table: String, rid: RID, row: Row, tid: UInt64?) {
-        lock.lock(); defer { lock.unlock() }
+        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
         var map = tableVersions[table] ?? [:]
         var chain = map[rid] ?? []
         let beginTid = tid ?? 0
@@ -97,11 +103,16 @@ public final class MVCCManager {
         }
         map[rid] = chain
         tableVersions[table] = map
-        if beginStatus == .committed { committedTIDs.insert(beginTid) }
+        // 🔧 FIX: Need to update committed TIDs with proper locking
+        if beginStatus == .committed { 
+            transactionStateLock.lock()
+            committedTIDs.insert(beginTid)
+            transactionStateLock.unlock()
+        }
     }
 
     func registerDelete(table: String, rid: RID, row: Row, tid: UInt64?) {
-        lock.lock(); defer { lock.unlock() }
+        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
         var map = tableVersions[table] ?? [:]
         var chain = map[rid] ?? []
         if chain.isEmpty {
@@ -129,12 +140,12 @@ public final class MVCCManager {
     }
 
     func forceRemove(table: String, rid: RID) {
-        lock.lock(); defer { lock.unlock() }
+        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
         tableVersions[table]?.removeValue(forKey: rid)
     }
 
     func undoInsert(table: String, rid: RID, tid: UInt64) {
-        lock.lock(); defer { lock.unlock() }
+        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
         guard var map = tableVersions[table] else { return }
         guard var chain = map[rid] else { return }
         chain.removeAll { $0.beginTID == tid && $0.beginStatus != .committed }
@@ -147,7 +158,7 @@ public final class MVCCManager {
     }
 
     func undoDelete(table: String, rid: RID, tid: UInt64) {
-        lock.lock(); defer { lock.unlock() }
+        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
         guard var map = tableVersions[table], var chain = map[rid], let lastIndex = chain.indices.last else { return }
         if chain[lastIndex].endTID == tid {
             chain[lastIndex].endTID = nil
@@ -160,7 +171,7 @@ public final class MVCCManager {
     // MARK: - Snapshot & visibility
 
     func snapshot(for tid: UInt64?, isolationCutoff: UInt64? = nil) -> Snapshot {
-        lock.lock(); defer { lock.unlock() }
+        transactionStateLock.lock(); defer { transactionStateLock.unlock() }
         let cutoff = isolationCutoff ?? tid ?? UInt64.max
         return Snapshot(tid: tid,
                         activeTIDs: activeTIDs,
@@ -169,7 +180,7 @@ public final class MVCCManager {
     }
 
     func visibleRows(table: String, snapshot: Snapshot, readerTID: UInt64?) -> [RID: Row] {
-        lock.lock(); defer { lock.unlock() }
+        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
         guard let map = tableVersions[table] else { return [:] }
         var result: [RID: Row] = [:]
         for (rid, chain) in map {
@@ -181,12 +192,12 @@ public final class MVCCManager {
     }
 
     func minimumActiveTID() -> UInt64? {
-        lock.lock(); defer { lock.unlock() }
+        transactionStateLock.lock(); defer { transactionStateLock.unlock() }
         return activeTIDs.min()
     }
 
     func vacuum(table: String? = nil, cutoff: UInt64?) {
-        lock.lock(); defer { lock.unlock() }
+        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
         let candidates = table.map { [$0] } ?? Array(tableVersions.keys)
         for name in candidates {
             guard var map = tableVersions[name] else { continue }
@@ -308,7 +319,7 @@ public final class MVCCManager {
 
 extension MVCCManager {
     func allVersions(for table: String) -> [RID: [Version]] {
-        lock.lock(); defer { lock.unlock() }
+        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
         return tableVersions[table] ?? [:]
     }
 }

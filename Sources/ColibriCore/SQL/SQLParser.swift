@@ -17,11 +17,150 @@ public struct SQLParser {
         self.tokens = tokens
     }
     
+    // 🔧 FIX: SQL Injection Prevention with input validation and sanitization
     public static func parse(_ sql: String) throws -> SQLStatement {
-        var lexer = SQLLexer(input: sql)
+        // Input validation
+        try validateSQLInput(sql)
+        
+        // Sanitize input
+        let sanitizedSQL = try sanitizeSQLInput(sql)
+        
+        var lexer = SQLLexer(input: sanitizedSQL)
         let tokens = try lexer.tokenize()
+        
+        // Additional token validation
+        try validateTokens(tokens)
+        
         var parser = SQLParser(tokens: tokens)
         return try parser.parseStatement()
+    }
+    
+    // MARK: - Security & Validation
+    
+    /// 🔧 FIX: Comprehensive SQL input validation
+    private static func validateSQLInput(_ sql: String) throws {
+        // Check for null bytes and control characters
+        if sql.contains("\0") {
+            throw SQLParseError.invalidInput("SQL contains null bytes")
+        }
+        
+        // Check for excessive length (prevent DoS)
+        let maxLength = 1_000_000 // 1MB limit
+        if sql.count > maxLength {
+            throw SQLParseError.invalidInput("SQL statement too long (max: \(maxLength) characters)")
+        }
+        
+        // Check for suspicious patterns that might indicate injection
+        let suspiciousPatterns = [
+            // SQL injection patterns
+            "\\bunion\\s+select\\b",
+            "\\bor\\s+1\\s*=\\s*1\\b",
+            "\\band\\s+1\\s*=\\s*1\\b",
+            "\\bor\\s+'.*'\\s*=\\s*'.*'\\b",
+            "\\bdrop\\s+table\\b",
+            "\\btruncate\\s+table\\b",
+            "\\bdelete\\s+from\\s+\\w+\\s*;\\s*drop\\b",
+            // Command injection patterns
+            "\\bexec\\s*\\(",
+            "\\beval\\s*\\(",
+            "\\bsystem\\s*\\(",
+            // Path traversal in string literals
+            "\\.\\./",
+            "\\\\\\.\\.\\\\",
+            // Excessive nested queries
+            "\\(\\s*select\\s+.*\\(\\s*select\\s+.*\\(\\s*select"
+        ]
+        
+        for pattern in suspiciousPatterns {
+            let regex = try NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+            let range = NSRange(location: 0, length: sql.utf16.count)
+            if regex.firstMatch(in: sql, options: [], range: range) != nil {
+                throw SQLParseError.suspiciousInput("Potentially malicious SQL pattern detected: \(pattern)")
+            }
+        }
+        
+        // Check for excessive semicolons (multiple statements)
+        let semicolonCount = sql.filter { $0 == ";" }.count
+        if semicolonCount > 1 {
+            throw SQLParseError.invalidInput("Multiple statements not allowed (found \(semicolonCount) semicolons)")
+        }
+        
+        print("✅ SQL input validation passed")
+    }
+    
+    /// 🔧 FIX: SQL input sanitization
+    private static func sanitizeSQLInput(_ sql: String) throws -> String {
+        var sanitized = sql
+        
+        // Remove dangerous control characters but preserve newlines and tabs
+        sanitized = sanitized.filter { char in
+            char.isASCII && (char.isWhitespace || char.isLetter || char.isNumber || char.isPunctuation || char.isSymbol || char == "\n" || char == "\t")
+        }
+        
+        // Normalize whitespace
+        sanitized = sanitized.replacingOccurrences(
+            of: "\\s+", 
+            with: " ", 
+            options: .regularExpression
+        ).trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Remove comments that could hide malicious code
+        // Note: This is aggressive - in production you might want to preserve legitimate comments
+        sanitized = sanitized.replacingOccurrences(
+            of: "--.*$", 
+            with: "", 
+            options: .regularExpression
+        )
+        
+        sanitized = sanitized.replacingOccurrences(
+            of: "/\\*.*?\\*/", 
+            with: "", 
+            options: .regularExpression
+        )
+        
+        print("✅ SQL input sanitized")
+        return sanitized
+    }
+    
+    /// 🔧 FIX: Token-level validation
+    private static func validateTokens(_ tokens: [SQLToken]) throws {
+        // Check for excessive token count (DoS prevention)
+        let maxTokens = 10_000
+        if tokens.count > maxTokens {
+            throw SQLParseError.invalidInput("Too many tokens (max: \(maxTokens))")
+        }
+        
+        // Check for suspicious token patterns
+        var consecutiveStrings = 0
+        var consecutiveOperators = 0
+        
+        for token in tokens {
+            switch token {
+            case .literal(.string(_)):
+                consecutiveStrings += 1
+                consecutiveOperators = 0
+                
+                // Prevent excessive string concatenation attacks
+                if consecutiveStrings > 50 {
+                    throw SQLParseError.suspiciousInput("Excessive string literals detected")
+                }
+                
+            case .operator_(_):
+                consecutiveOperators += 1
+                consecutiveStrings = 0
+                
+                // Prevent operator flooding
+                if consecutiveOperators > 20 {
+                    throw SQLParseError.suspiciousInput("Excessive operators detected")
+                }
+                
+            default:
+                consecutiveStrings = 0
+                consecutiveOperators = 0
+            }
+        }
+        
+        print("✅ Token validation passed (\(tokens.count) tokens)")
     }
     
     // MARK: - Main Parse Methods

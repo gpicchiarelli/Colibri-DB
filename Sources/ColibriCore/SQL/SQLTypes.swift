@@ -301,4 +301,7 @@ public enum SQLParseError: Error, Equatable {
     case invalidSyntax(String)
     case unsupportedFeature(String)
     case endOfInput
+    // 🔧 FIX: Security-related error cases
+    case invalidInput(String)
+    case suspiciousInput(String)
 }

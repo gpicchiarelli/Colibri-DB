@@ -48,6 +48,8 @@ extension Database {
         lastCommittedClockTimestamp = serialClock.next()
         txContexts.removeValue(forKey: tid)
         preparedTransactions.remove(tid)
+        // 🔧 FIX: Clean up txLastLSN to prevent memory leak
+        txLastLSN.removeValue(forKey: tid)
     }
 
     /// Rolls back a transaction, undoing its recorded operations.
@@ -66,6 +68,8 @@ extension Database {
         lockManager.unlockAll(for: tid)
         txContexts.removeValue(forKey: tid)
         preparedTransactions.remove(tid)
+        // 🔧 FIX: Clean up txLastLSN to prevent memory leak
+        txLastLSN.removeValue(forKey: tid)
     }
 
     /// Creates a named savepoint within the given transaction.
