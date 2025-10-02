@@ -3,7 +3,7 @@ import ColibriCore
 
 extension BenchmarkCLI {
     // MARK: - Planner base
-    static func runPlannerJoin(iterations: Int) throws -> BenchmarkResult {
+    static func runPlannerJoin(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
         let fm = FileManager.default
         let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -29,6 +29,11 @@ extension BenchmarkCLI {
         let join = QueryJoinSpec(table: orders, leftColumns: ["users.id"], rightColumns: ["o.user_id"])
         let request = QueryRequest(root: users, joins: [join], orderBy: [SortKey(column: "o.total", ascending: false)], parallelism: 2)
 
+        // Warm-up query if not disabled
+        if !flags.noWarmup {
+            _ = try db.executeQuery(request)
+        }
+        
         // Eseguiamo multiple query per avere latenze significative
         let queryIterations = max(1, iterations / 100) // Multiple query per avere dati significativi
         let (results, latencies, elapsed) = try measureLatencies(iterations: queryIterations) {
@@ -38,9 +43,9 @@ extension BenchmarkCLI {
         let totalRows = results.reduce(0) { $0 + $1.count }
         if totalRows <= 0 {
             print("⚠️  Warning: No rows found in planner benchmark")
-            return BenchmarkResult(name: "planner-join", iterations: 0, elapsed: .zero, metadata: ["total_rows":"0", "warmup_done":"false"])
+            return BenchmarkResult(name: "planner-join", iterations: 0, elapsed: .zero, metadata: ["total_rows":"0", "warmup_done": flags.noWarmup ? "false" : "true"])
         }
-        return BenchmarkResult(name: Scenario.plannerJoin.rawValue, iterations: queryIterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["total_rows":"\(totalRows)", "warmup_done":"false"])
+        return BenchmarkResult(name: Scenario.plannerJoin.rawValue, iterations: queryIterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["total_rows":"\(totalRows)", "warmup_done": flags.noWarmup ? "false" : "true"])
     }
 
     // MARK: - Planner estesi

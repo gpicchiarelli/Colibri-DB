@@ -3,27 +3,34 @@ import ColibriCore
 
 extension BenchmarkCLI {
     // MARK: - Heap (base)
-    static func runHeapInsert(iterations: Int) throws -> BenchmarkResult {
+    static func runHeapInsert(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
         var config = DBConfig(storageEngine: "InMemory")
         config.autoCompactionEnabled = false
         let db = Database(config: config)
         try db.createTable("bench")
         
         let (latencies, elapsed) = try measureLatenciesVoid(iterations: iterations) {
-            let i = Int.random(in: 0..<iterations, using: &BenchmarkCLI.seededRNG!) // Randomize to avoid cache effects
+            let i = BenchmarkCLI.withSeededRNG { rng in
+                Int.random(in: 0..<iterations, using: &rng!)
+            }
             _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
         }
         
-        return BenchmarkResult(name: Scenario.heapInsert.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory"]) 
+        return BenchmarkResult(name: Scenario.heapInsert.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory", "warmup_done": flags.noWarmup ? "false" : "true"]) 
     }
 
-    static func runHeapScan(iterations: Int) throws -> BenchmarkResult {
+    static func runHeapScan(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
         var config = DBConfig(storageEngine: "InMemory")
         config.autoCompactionEnabled = false
         let db = Database(config: config)
         try db.createTable("bench")
         for i in 0..<iterations {
             _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
+        }
+        
+        // Warm-up scan if not disabled
+        if !flags.noWarmup {
+            _ = try db.scan("bench")
         }
         
         // Per scan, misuriamo multiple scansioni per avere latenze significative
@@ -35,13 +42,13 @@ extension BenchmarkCLI {
         let totalRows = results.reduce(0) { $0 + $1.count }
         if totalRows <= 0 {
             print("⚠️  Warning: No rows found in heap scan")
-            return BenchmarkResult(name: "heap-scan", iterations: 0, elapsed: .zero, metadata: ["total_rows":"0", "warmup_done":"false"])
+            return BenchmarkResult(name: "heap-scan", iterations: 0, elapsed: .zero, metadata: ["total_rows":"0", "warmup_done": flags.noWarmup ? "false" : "true"])
         }
-        return BenchmarkResult(name: Scenario.heapScan.rawValue, iterations: scanIterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory", "total_rows":"\(totalRows)"]) 
+        return BenchmarkResult(name: Scenario.heapScan.rawValue, iterations: scanIterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory", "total_rows":"\(totalRows)", "warmup_done": flags.noWarmup ? "false" : "true"]) 
     }
 
     // MARK: - Heap (estesi)
-    static func runHeapDelete(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runHeapDelete(iterations: Int, granular: Bool, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
         let fm = FileManager.default
         let tmp = fm.temporaryDirectory.appendingPathComponent("colibridb-bench-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: tmp, withIntermediateDirectories: true)
@@ -51,6 +58,7 @@ extension BenchmarkCLI {
         let db = Database(config: cfg)
         try db.createTable("t")
         for i in 0..<iterations { _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "p": .string("v\(i)")]) }
+        
         let clock = ContinuousClock(); let start = clock.now
         var total = 0
         if granular {
@@ -62,11 +70,11 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory"]) 
+            return BenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory", "warmup_done": flags.noWarmup ? "false" : "true"]) 
         } else {
             for i in 0..<iterations { total &+= try db.deleteEquals(table: "t", column: "id", value: .int(Int64(i))) }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed, metadata: ["storage":"InMemory"]) 
+            return BenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed, metadata: ["storage":"InMemory", "warmup_done": flags.noWarmup ? "false" : "true"]) 
         }
     }
 

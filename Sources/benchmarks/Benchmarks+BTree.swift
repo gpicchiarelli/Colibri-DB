@@ -3,7 +3,7 @@ import ColibriCore
 
 extension BenchmarkCLI {
     // MARK: - B+Tree base
-    static func runBTreeLookup(iterations: Int) throws -> BenchmarkResult {
+    static func runBTreeLookup(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
         let fm = FileManager.default
         let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -22,9 +22,11 @@ extension BenchmarkCLI {
             _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
         }
         
-        // Warm-up: carica livelli alti/prime foglie
-        for i in 0..<min(1_000, iterations) { 
-            _ = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(i)))
+        // Warm-up: carica livelli alti/prime foglie (se non disabilitato)
+        if !flags.noWarmup {
+            for i in 0..<min(1_000, iterations) { 
+                _ = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(i)))
+            }
         }
 
         let clock = ContinuousClock(); let start = clock.now
@@ -50,10 +52,11 @@ extension BenchmarkCLI {
             latencies.append(latencyMs)
         }
         let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done":"true"]) 
+        
+        return BenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done": flags.noWarmup ? "false" : "true"]) 
     }
     
-    static func runBTreeLookupOptimized(iterations: Int) throws -> BenchmarkResult {
+    static func runBTreeLookupOptimized(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
         let fm = FileManager.default
         let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -250,9 +253,13 @@ extension BenchmarkCLI {
             var lat: [Double] = []; lat.reserveCapacity(q)
             var total = 0
             for _ in 0..<q {
-                let base = Int.random(in: 0..<(max(1, n - 10)), using: &BenchmarkCLI.seededRNG!)
+                let base = BenchmarkCLI.withSeededRNG { rng in
+                    Int.random(in: 0..<(max(1, n - 10)), using: &rng!)
+                }
                 let lo = Value.int(Int64(base))
-                let hi = Value.int(Int64(base + Int.random(in: 0..<10, using: &BenchmarkCLI.seededRNG!)))
+                let hi = Value.int(Int64(base + BenchmarkCLI.withSeededRNG { rng in
+                    Int.random(in: 0..<10, using: &rng!)
+                }))
                 let t0 = clock.now
                 let hits = try db.indexRangeTyped(table: "t", index: "idx", lo: lo, hi: hi)
                 let t1 = clock.now

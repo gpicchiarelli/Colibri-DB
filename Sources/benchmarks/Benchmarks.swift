@@ -404,8 +404,29 @@ enum Scenario: String, CaseIterable {
 
 @main
 struct BenchmarkCLI {
-    // Global seeded random number generator
-    static var seededRNG: SeededRandomNumberGenerator?
+    // Global seeded random number generator (thread-safe)
+    private static let rngLock = NSLock()
+    nonisolated(unsafe) private static var _seededRNG: SeededRandomNumberGenerator?
+    
+    static var seededRNG: SeededRandomNumberGenerator? {
+        get {
+            rngLock.lock()
+            defer { rngLock.unlock() }
+            return _seededRNG
+        }
+        set {
+            rngLock.lock()
+            defer { rngLock.unlock() }
+            _seededRNG = newValue
+        }
+    }
+    
+    // Thread-safe access to seeded RNG for random number generation
+    static func withSeededRNG<T>(_ block: (inout SeededRandomNumberGenerator?) -> T) -> T {
+        rngLock.lock()
+        defer { rngLock.unlock() }
+        return block(&_seededRNG)
+    }
     
     // ISO8601 formatter helper
     static func formatTimestamp(_ date: Date) -> String {
@@ -541,17 +562,17 @@ struct BenchmarkCLI {
                 let baseResult: BenchmarkResult
                 switch scenario {
             case .heapInsert:
-                baseResult = try runHeapInsert(iterations: iterations)
+                baseResult = try runHeapInsert(iterations: iterations, flags: scenarioFlags)
             case .heapScan:
-                baseResult = try runHeapScan(iterations: iterations)
+                baseResult = try runHeapScan(iterations: iterations, flags: scenarioFlags)
             case .btreeLookup:
-                baseResult = try runBTreeLookup(iterations: iterations)
+                baseResult = try runBTreeLookup(iterations: iterations, flags: scenarioFlags)
             case .btreeLookupOptimized:
-                baseResult = try runBTreeLookupOptimized(iterations: iterations)
+                baseResult = try runBTreeLookupOptimized(iterations: iterations, flags: scenarioFlags)
             case .plannerJoin:
-                baseResult = try runPlannerJoin(iterations: iterations)
+                baseResult = try runPlannerJoin(iterations: iterations, flags: scenarioFlags)
             case .heapDelete:
-                baseResult = try runHeapDelete(iterations: iterations, granular: granular)
+                baseResult = try runHeapDelete(iterations: iterations, granular: granular, flags: scenarioFlags)
             case .heapReadRID:
                 baseResult = try runHeapReadRID(iterations: iterations, granular: granular)
             case .fileHeapInsertWalOff:
@@ -639,9 +660,28 @@ struct BenchmarkCLI {
                 
                 // Handle output format and destination
                 if let outputFile = outputFile {
+                    // Create directory if it doesn't exist
+                    let outputURL = URL(fileURLWithPath: outputFile)
+                    let outputDir = outputURL.deletingLastPathComponent()
+                    if !FileManager.default.fileExists(atPath: outputDir.path) {
+                        do {
+                            try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true, attributes: nil)
+                        } catch {
+                            print("⚠️  Error creating output directory '\(outputDir.path)': \(error)")
+                            print("Continuing with remaining scenarios...")
+                            continue
+                        }
+                    }
+                    
                     // Write to file
-                    let output = generateOutput(result: enriched, format: formatJSON ? .json : (csvFormat ? .csv : .text))
-                    try output.write(toFile: outputFile, atomically: true, encoding: .utf8)
+                    do {
+                        let output = generateOutput(result: enriched, format: formatJSON ? .json : (csvFormat ? .csv : .text))
+                        try output.write(toFile: outputFile, atomically: true, encoding: .utf8)
+                    } catch {
+                        print("⚠️  Error writing to file '\(outputFile)': \(error)")
+                        print("Continuing with remaining scenarios...")
+                        continue
+                    }
                 } else {
                     // Print to stdout
                     enriched.printReport(format: formatJSON ? .json : (csvFormat ? .csv : .text))
