@@ -226,13 +226,36 @@ extension Database {
     
     /// Get table statistics for query optimization
     public func getTableStatistics(_ tableName: String) throws -> CatalogTableStatistics? {
-        guard let catalog = systemCatalog else { return nil }
-        // Try to find table by name in catalog
-        let tables = try catalog.listTables()
-        guard let tableInfo = tables.first(where: { $0.name == tableName }) else {
-            return nil
+        // For now, return basic statistics based on actual table data
+        // This is a simplified implementation for query optimization
+        
+        // Check memory tables
+        if let table = tablesMem[tableName] {
+            let rows = try? table.scan()
+            let count = rows?.reduce(0) { count, _ in count + 1 } ?? 0
+            return CatalogTableStatistics(
+                tableId: UUID(),
+                rowCount: UInt64(count),
+                avgRowSize: 100, // Default estimate
+                totalSize: UInt64(count * 100),
+                lastAnalyzed: Date()
+            )
         }
-        return try catalog.getTableStatistics(tableInfo.id)
+        
+        // Check file tables
+        if let table = tablesFile[tableName] {
+            let rows = try? table.scan()
+            let count = rows?.reduce(0) { count, _ in count + 1 } ?? 0
+            return CatalogTableStatistics(
+                tableId: UUID(),
+                rowCount: UInt64(count),
+                avgRowSize: 100, // Default estimate
+                totalSize: UInt64(count * 100),
+                lastAnalyzed: Date()
+            )
+        }
+        
+        return nil
     }
     
     /// Close the database and release resources
