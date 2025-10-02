@@ -36,13 +36,62 @@ final class LockManager: LockManagerProtocol, @unchecked Sendable {
 
     private var table: [LockTarget: Entry] = [:]
     private var locksByTid: [UInt64: Set<LockTarget>] = [:]
-    private let mutex = NSLock()
+    
+    // 🚀 OPTIMIZATION: Lock striping to reduce contention
+    private let stripeCount: Int = 64  // Power of 2 for efficient modulo
+    private var stripes: [NSLock] = []
+    private let globalLock = NSLock()  // For operations requiring all stripes
     private let defaultTimeout: TimeInterval
 
     init(defaultTimeout: TimeInterval) {
         self.defaultTimeout = defaultTimeout
+        
+        // 🚀 OPTIMIZATION: Initialize lock stripes for reduced contention
+        self.stripes = (0..<stripeCount).map { _ in NSLock() }
+        print("🚀 LockManager initialized with \(stripeCount) lock stripes for optimal performance")
     }
 
+    // MARK: - 🚀 OPTIMIZATION: Lock Striping Helpers
+    
+    /// Get the stripe index for a lock target (hash-based distribution)
+    private func getStripeIndex(for target: LockTarget) -> Int {
+        return abs(target.hashValue) % stripeCount
+    }
+    
+    /// Execute code with the appropriate stripe lock
+    private func withStripeLock<T>(for target: LockTarget, _ block: () throws -> T) rethrows -> T {
+        let stripe = stripes[getStripeIndex(for: target)]
+        stripe.lock()
+        defer { stripe.unlock() }
+        return try block()
+    }
+    
+    /// Execute code with multiple stripe locks (ordered to prevent deadlock)
+    private func withMultipleStripeLocks<T>(for targets: [LockTarget], _ block: () throws -> T) rethrows -> T {
+        let indices = Set(targets.map { getStripeIndex(for: $0) }).sorted()
+        
+        // Lock in ascending order to prevent deadlock
+        for index in indices {
+            stripes[index].lock()
+        }
+        
+        defer {
+            // Unlock in reverse order
+            for index in indices.reversed() {
+                stripes[index].unlock()
+            }
+        }
+        
+        return try block()
+    }
+    
+    /// Execute code with global lock (for operations requiring all stripes)
+    private func withGlobalLock<T>(_ block: () throws -> T) rethrows -> T {
+        globalLock.lock()
+        defer { globalLock.unlock() }
+        return try block()
+    }
+    
     // MARK: - Locking API
 
     @discardableResult
@@ -51,82 +100,113 @@ final class LockManager: LockManagerProtocol, @unchecked Sendable {
         let waiter = Waiter(tid: tid, mode: mode)
         var enqueued = false
 
-        mutex.lock()
+        // 🚀 OPTIMIZATION: Use stripe lock with optimized structure
         while true {
-            var entry = table[resource] ?? Entry()
-            if canGrant(mode: mode, tid: tid, holders: entry.holders) {
-                let resolvedMode = resolveMode(current: entry.holders[tid]?.mode, requested: mode)
-                var holder = entry.holders[tid] ?? Holder(mode: resolvedMode, count: 0)
-                holder.count += 1
-                holder.mode = resolvedMode
-                entry.holders[tid] = holder
-                table[resource] = entry
-                locksByTid[tid, default: []].insert(resource)
-                mutex.unlock()
-                return LockHandle(resource: resource, tid: tid, mode: resolvedMode)
-            }
-
-            if !enqueued {
-                entry.waiters.append(waiter)
-                table[resource] = entry
-                enqueued = true
-                if let cycle = detectDeadlock(startingFrom: tid) {
-                    _ = remove(waiter: waiter, from: resource)
-                    mutex.unlock()
-                    throw DBError.deadlock("\(cycle)")
+            // Try to acquire lock without waiting
+            let acquired: LockHandle? = try withStripeLock(for: resource) {
+                var entry = table[resource] ?? Entry()
+                
+                if canGrant(mode: mode, tid: tid, holders: entry.holders) {
+                    let resolvedMode = resolveMode(current: entry.holders[tid]?.mode, requested: mode)
+                    var holder = entry.holders[tid] ?? Holder(mode: resolvedMode, count: 0)
+                    holder.count += 1
+                    holder.mode = resolvedMode
+                    entry.holders[tid] = holder
+                    table[resource] = entry
+                    locksByTid[tid, default: []].insert(resource)
+                    return LockHandle(resource: resource, tid: tid, mode: resolvedMode)
                 }
-            }
 
-            mutex.unlock()
+                if !enqueued {
+                    entry.waiters.append(waiter)
+                    table[resource] = entry
+                    enqueued = true
+                    if let cycle = detectDeadlock(startingFrom: tid) {
+                        _ = remove(waiter: waiter, from: resource)
+                        throw DBError.deadlock("\(cycle)")
+                    }
+                }
+                
+                return nil  // Need to wait
+            }
+            
+            if let handle = acquired {
+                return handle
+            }
+            
+            // Wait outside the lock to reduce contention
             let waitResult: DispatchTimeoutResult
             if effectiveTimeout <= 0 {
                 waitResult = waiter.semaphore.wait(timeout: .distantFuture)
             } else {
                 waitResult = waiter.semaphore.wait(timeout: .now() + effectiveTimeout)
             }
-            mutex.lock()
+            
             if waitResult == .timedOut {
-                if remove(waiter: waiter, from: resource) {
-                    mutex.unlock()
+                let removed = try withStripeLock(for: resource) {
+                    return remove(waiter: waiter, from: resource)
+                }
+                if removed {
                     throw DBError.lockTimeout("Lock request \(mode) on \(resource) timed out")
                 }
             }
-            // Otherwise, loop and attempt to acquire again.
+            // Loop and try again
         }
     }
 
     func unlock(_ handle: LockHandle) {
-        mutex.lock()
-        let resource = handle.resource
-        var signals: [Waiter] = []
-        if var entry = table[resource], var holder = entry.holders[handle.tid] {
-            holder.count -= 1
-            if holder.count <= 0 {
-                entry.holders.removeValue(forKey: handle.tid)
-                locksByTid[handle.tid]?.remove(resource)
-                if locksByTid[handle.tid]?.isEmpty == true { locksByTid.removeValue(forKey: handle.tid) }
-            } else {
-                entry.holders[handle.tid] = holder
+        // 🚀 OPTIMIZATION: Use stripe lock for unlock operations
+        let signals = withStripeLock(for: handle.resource) {
+            let resource = handle.resource
+            var signals: [Waiter] = []
+            if var entry = table[resource], var holder = entry.holders[handle.tid] {
+                holder.count -= 1
+                if holder.count <= 0 {
+                    entry.holders.removeValue(forKey: handle.tid)
+                    locksByTid[handle.tid]?.remove(resource)
+                    if locksByTid[handle.tid]?.isEmpty == true { locksByTid.removeValue(forKey: handle.tid) }
+                } else {
+                    entry.holders[handle.tid] = holder
+                }
+                table[resource] = entry
+                signals = tryGrantWaiters(on: resource)
             }
-            table[resource] = entry
-            signals = tryGrantWaiters(on: resource)
+            return signals
         }
-        mutex.unlock()
+        
+        // Signal waiters outside the lock to reduce contention
         for waiter in signals { waiter.semaphore.signal() }
     }
 
     func unlockAll(for tid: UInt64) {
-        mutex.lock()
-        guard let resources = locksByTid.removeValue(forKey: tid) else { mutex.unlock(); return }
-        var signals: [Waiter] = []
-        for resource in resources {
-            if var entry = table[resource] {
-                entry.holders.removeValue(forKey: tid)
-                table[resource] = entry
-                signals.append(contentsOf: tryGrantWaiters(on: resource))
+        // 🚀 OPTIMIZATION: Use multiple stripe locks for unlockAll
+        let signals: [Waiter] = withGlobalLock {
+            guard let resources = locksByTid.removeValue(forKey: tid) else { return [] }
+            var allSignals: [Waiter] = []
+            
+            // Group resources by stripe to minimize lock operations
+            let resourcesByStripe = Dictionary(grouping: resources) { resource in
+                getStripeIndex(for: resource)
             }
+            
+            for (stripeIndex, stripeResources) in resourcesByStripe {
+                let stripe = stripes[stripeIndex]
+                stripe.lock()
+                defer { stripe.unlock() }
+                
+                for resource in stripeResources {
+                    if var entry = table[resource] {
+                        entry.holders.removeValue(forKey: tid)
+                        table[resource] = entry
+                        allSignals.append(contentsOf: tryGrantWaiters(on: resource))
+                    }
+                }
+            }
+            
+            return allSignals
         }
-        mutex.unlock()
+        
+        // Signal waiters outside the locks to reduce contention
         for waiter in signals { waiter.semaphore.signal() }
     }
 

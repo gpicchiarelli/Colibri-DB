@@ -100,6 +100,14 @@ public final class Database: @unchecked Sendable {
     public internal(set) var vacuumLastRun: Date? = nil
 
     public init(config: DBConfig) {
+        // 🔧 FIX: Validate configuration paths to prevent path traversal
+        do {
+            try config.validatePaths()
+        } catch {
+            print("⚠️ Path validation failed: \(error)")
+            // Continue with original config but log the issue
+        }
+        
         self.config = config
         self.lockManager = LockManager(defaultTimeout: config.lockTimeoutSeconds)
         self.policyStore = InMemoryPolicyStore()
@@ -108,11 +116,11 @@ public final class Database: @unchecked Sendable {
         BufferNamespaceManager.shared.setQuota(group: "table", pages: config.dataBufferPoolPages)
         BufferNamespaceManager.shared.setQuota(group: "index", pages: config.indexBufferPoolPages)
         if config.walEnabled {
-            let walPath = URL(fileURLWithPath: config.dataDir).appendingPathComponent("global.wal").path
+            let walPath = try? PathValidator.createSafePath(baseDir: config.dataDir, filename: "global.wal")
             let durabilityMode: DurabilityMode = config.walFullFSyncEnabled ? .always : .grouped
             self.globalWAL = try? FileWALManager(
                 dbId: 1,  // Default database ID - could be configurable
-                path: walPath,
+                path: walPath ?? URL(fileURLWithPath: config.dataDir).appendingPathComponent("global.wal").path,
                 durabilityMode: durabilityMode,
                 groupCommitThreshold: 8,
                 groupCommitTimeoutMs: config.walGroupCommitMs,

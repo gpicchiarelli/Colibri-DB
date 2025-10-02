@@ -42,7 +42,8 @@ extension FileBPlusTreeIndex {
             return (nil, nil)
         } else {
             var leaf = try parseLeaf(page.data)
-            if let i = binarySearch(keys: leaf.keys, key: key) {
+            // 🚀 OPTIMIZATION: Use optimized binary search
+            if let i = binarySearchOptimized(keys: leaf.keys, key: key) {
                 var set = Set(leaf.ridLists[i])
                 set.insert(rid)
                 leaf.ridLists[i] = Array(set)
@@ -53,8 +54,8 @@ extension FileBPlusTreeIndex {
             }
             let size = serializedLeafSize(keys: leaf.keys, ridLists: leaf.ridLists)
             if size > pageSize {
-                // Optimized split: use 60/40 ratio to reduce future splits
-                let splitPoint = Int(Double(leaf.keys.count) * 0.6)
+                // 🚀 OPTIMIZATION: Use adaptive split point based on key distribution
+                let splitPoint = calculateAdaptiveSplitPoint(keys: leaf.keys)
                 let rightKeys = Array(leaf.keys[splitPoint...])
                 let rightRids = Array(leaf.ridLists[splitPoint...])
                 let leftKeys = Array(leaf.keys[..<splitPoint])

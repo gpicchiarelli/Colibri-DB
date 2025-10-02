@@ -140,11 +140,14 @@ public final class FileWALManager: WALManager, @unchecked Sendable {
         }
         self.groupCommitOptimizer = GroupCommitOptimizer(policy: optimizerPolicy, compressionAlgorithm: compressionAlgorithm)
         
+        // 🔧 FIX: Validate path to prevent path traversal attacks
+        let validatedPath = try PathValidator.validateFileForWriting(path)
+        
         // Initialize file
-        self.fileURL = URL(fileURLWithPath: path)
+        self.fileURL = URL(fileURLWithPath: validatedPath)
         let fileManager = FileManager.default
-        if !fileManager.fileExists(atPath: path) {
-            fileManager.createFile(atPath: path, contents: nil)
+        if !fileManager.fileExists(atPath: validatedPath) {
+            fileManager.createFile(atPath: validatedPath, contents: nil)
         }
         self.fileHandle = try FileHandle(forUpdating: fileURL)
         
