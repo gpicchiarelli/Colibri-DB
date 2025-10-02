@@ -45,6 +45,55 @@ extension BenchmarkCLI {
         func append(_ v: Double) { lock.lock(); items.append(v); lock.unlock() }
         func snapshot() -> [Double] { lock.lock(); let out = items; lock.unlock(); return out }
     }
+    
+    /// 🚀 OPTIMIZATION: Helper per raccogliere latenze individuali nei benchmark
+    static func measureLatencies<T>(
+        iterations: Int,
+        operation: () throws -> T
+    ) throws -> (results: [T], latencies: [Double], totalElapsed: Duration) {
+        let clock = ContinuousClock()
+        let start = clock.now
+        
+        var results: [T] = []
+        var latencies: [Double] = []
+        results.reserveCapacity(iterations)
+        latencies.reserveCapacity(iterations)
+        
+        for _ in 0..<iterations {
+            let t0 = clock.now
+            let result = try operation()
+            let t1 = clock.now
+            
+            results.append(result)
+            latencies.append(msDelta(t0, t1))
+        }
+        
+        let totalElapsed = clock.now - start
+        return (results: results, latencies: latencies, totalElapsed: totalElapsed)
+    }
+    
+    /// 🚀 OPTIMIZATION: Helper per benchmark senza valore di ritorno
+    static func measureLatenciesVoid(
+        iterations: Int,
+        operation: () throws -> Void
+    ) throws -> (latencies: [Double], totalElapsed: Duration) {
+        let clock = ContinuousClock()
+        let start = clock.now
+        
+        var latencies: [Double] = []
+        latencies.reserveCapacity(iterations)
+        
+        for _ in 0..<iterations {
+            let t0 = clock.now
+            try operation()
+            let t1 = clock.now
+            
+            latencies.append(msDelta(t0, t1))
+        }
+        
+        let totalElapsed = clock.now - start
+        return (latencies: latencies, totalElapsed: totalElapsed)
+    }
 }
 
 

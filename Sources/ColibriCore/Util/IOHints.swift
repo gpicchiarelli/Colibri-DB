@@ -109,6 +109,20 @@ enum IOHints {
         return Int64(length)
     }
 
+    /// 🚀 OPTIMIZATION: Prefetch a single page for B+Tree lookups
+    static func prefetchPage(fd: Int32, offset: Int64, length: Int) {
+#if os(macOS)
+        // Use F_RDADVISE on macOS for better prefetch control
+        var radvisory = radvisory()
+        radvisory.ra_offset = offset
+        radvisory.ra_count = Int32(length)
+        _ = fcntl(fd, F_RDADVISE, &radvisory)
+#elseif canImport(Glibc)
+        // Use posix_fadvise on Linux
+        posix_fadvise(fd, offset, length, POSIX_FADV_WILLNEED)
+#endif
+    }
+
     /// Naively prefetches the first few chunks using `preadv2` (or `preadv`).
     private static func prefetch(handle: FileHandle, offset: UInt64, length: UInt64) {
 #if canImport(Glibc)

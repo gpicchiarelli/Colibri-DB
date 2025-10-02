@@ -267,41 +267,64 @@ public struct Page {
     // Returns reclaimed free space delta (after - before).
     /// Compacts the page, preserving slot ids; returns gained free bytes.
     mutating func compact() -> Int {
-        var gained = 0
-        var tuples: [(slot: UInt16, data: Data)] = []
+        let originalFree = availableSpaceForInsert()
+        
+        // Collect all live tuples with their slot IDs
+        var tuples: [(slotId: UInt16, data: Data)] = []
         for sid in 1...header.slotCount {
-        let slotPos = pageSize - Int(sid) * Page.slotSize
-        let slot: PageSlot = data.withUnsafeBytes { ptr in
-            ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
-        }
+            let slotPos = pageSize - Int(sid) * Page.slotSize
+            let slot: PageSlot = data.withUnsafeBytes { ptr in
+                ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
+            }
             if slot.length == 0 || slot.isTombstone { continue }
             let start = Int(slot.offset)
             let end = start + Int(slot.length)
             guard end <= pageSize else { continue }
             let payload = data.subdata(in: start..<end)
-            tuples.append((slot: UInt16(sid), data: payload))
+            tuples.append((slotId: UInt16(sid), data: payload))
         }
+        
+        // Create new data buffer and copy header
         var newData = Data(repeating: 0, count: pageSize)
-        let originalFree = availableSpaceForInsert()
+        newData.replaceSubrange(0..<Page.headerSize, with: data[0..<Page.headerSize])
+        
+        // Reset free space pointers
         header.freeStart = UInt16(Page.headerSize)
         header.freeEnd = UInt16(pageSize)
-        for (_, payload) in tuples {
+        
+        // Place tuples contiguously starting after header
+        var currentOffset = Page.headerSize
+        var slotUpdates: [(slotId: UInt16, newOffset: UInt16, length: UInt16)] = []
+        
+        for (slotId, payload) in tuples {
             let need = payload.count
-            let slotOffset = Int(header.freeEnd) - Page.slotSize
-            let offset = header.freeStart
-            newData.replaceSubrange(Int(offset)..<Int(offset)+need, with: payload)
-            let slot = PageSlot(offset: offset, length: UInt16(need), tombstone: false)
-            withUnsafeBytes(of: slot) { src in
-                newData.replaceSubrange(slotOffset..<slotOffset+Page.slotSize, with: src)
-            }
-            header.freeStart = UInt16(Int(header.freeStart) + need)
-            header.freeEnd = UInt16(slotOffset)
+            guard currentOffset + need <= pageSize else { continue }
+            
+            // Copy tuple data
+            newData.replaceSubrange(currentOffset..<currentOffset + need, with: payload)
+            slotUpdates.append((slotId: slotId, newOffset: UInt16(currentOffset), length: UInt16(need)))
+            currentOffset += need
         }
-        newData.replaceSubrange(0..<Int(header.freeStart), with: data[0..<Int(header.freeStart)])
+        
+        // Update header free space pointers
+        header.freeStart = UInt16(currentOffset)
+        header.freeEnd = UInt16(pageSize - Int(header.slotCount) * Page.slotSize)
+        
+        // Update slot directory with new offsets
+        for (slotId, newOffset, length) in slotUpdates {
+            let slotPos = pageSize - Int(slotId) * Page.slotSize
+            let slot = PageSlot(offset: newOffset, length: length, tombstone: false)
+            withUnsafeBytes(of: slot) { src in
+                newData.replaceSubrange(slotPos..<slotPos + Page.slotSize, with: src)
+            }
+        }
+        
+        // Replace data and update header
         data = newData
         writeHeader()
+        
         let newFree = availableSpaceForInsert()
-        gained = newFree - originalFree
+        let gained = newFree - originalFree
         return max(0, gained)
     }
 }

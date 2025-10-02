@@ -147,10 +147,18 @@ extension FileBPlusTreeIndex {
             if page.type == 1 {
                 let inpg = try parseInternal(page.data)
                 let idx = upperBound(keys: inpg.keys, key: k)
-                pid = inpg.children[idx]
+                let nextPid = inpg.children[idx]
+                
+                // 🚀 OPTIMIZATION: Prefetch del figlio selezionato
+                if let fd = fileDescriptor {
+                    let offset = Int64(pageSize) * Int64(nextPid)
+                    IOHints.prefetchPage(fd: fd, offset: offset, length: pageSize)
+                }
+                
+                pid = nextPid
             } else {
                 let leaf = try parseLeaf(page.data)
-                if let i = binarySearch(keys: leaf.keys, key: k) {
+                if let i = binarySearchBranchless(keys: leaf.keys, key: k) {
                     return leaf.ridLists[i]
                 }
                 return []
@@ -167,7 +175,15 @@ extension FileBPlusTreeIndex {
             if page.type == 1 {
                 let inpg = try parseInternal(page.data)
                 let idx = upperBoundOptimized(keys: inpg.keys, key: key)
-                pid = inpg.children[idx]
+                let nextPid = inpg.children[idx]
+                
+                // 🚀 OPTIMIZATION: Prefetch del figlio selezionato
+                if let fd = fileDescriptor {
+                    let offset = Int64(pageSize) * Int64(nextPid)
+                    IOHints.prefetchPage(fd: fd, offset: offset, length: pageSize)
+                }
+                
+                pid = nextPid
             } else {
                 let leaf = try parseLeaf(page.data)
                 if let i = binarySearchOptimized(keys: leaf.keys, key: key) {

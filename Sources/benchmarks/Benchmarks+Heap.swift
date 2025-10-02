@@ -8,13 +8,13 @@ extension BenchmarkCLI {
         config.autoCompactionEnabled = false
         let db = Database(config: config)
         try db.createTable("bench")
-        let clock = ContinuousClock()
-        let start = clock.now
-        for i in 0..<iterations {
+        
+        let (latencies, elapsed) = try measureLatenciesVoid(iterations: iterations) {
+            let i = Int.random(in: 0..<iterations) // Randomize to avoid cache effects
             _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
         }
-        let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.heapInsert.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["storage":"InMemory"]) 
+        
+        return BenchmarkResult(name: Scenario.heapInsert.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory"]) 
     }
 
     static func runHeapScan(iterations: Int) throws -> BenchmarkResult {
@@ -25,12 +25,16 @@ extension BenchmarkCLI {
         for i in 0..<iterations {
             _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
         }
-        let clock = ContinuousClock()
-        let start = clock.now
-        let rows = try db.scan("bench")
-        precondition(rows.count == iterations)
-        let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.heapScan.rawValue, iterations: rows.count, elapsed: elapsed, metadata: ["storage":"InMemory"]) 
+        
+        // Per scan, misuriamo multiple scansioni per avere latenze significative
+        let scanIterations = max(1, iterations / 100) // Scan multipli per avere dati significativi
+        let (results, latencies, elapsed) = try measureLatencies(iterations: scanIterations) {
+            return try db.scan("bench")
+        }
+        
+        let totalRows = results.reduce(0) { $0 + $1.count }
+        precondition(totalRows > 0)
+        return BenchmarkResult(name: Scenario.heapScan.rawValue, iterations: scanIterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory", "total_rows":"\(totalRows)"]) 
     }
 
     // MARK: - Heap (estesi)

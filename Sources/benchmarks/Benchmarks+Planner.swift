@@ -29,11 +29,15 @@ extension BenchmarkCLI {
         let join = QueryJoinSpec(table: orders, leftColumns: ["users.id"], rightColumns: ["o.user_id"])
         let request = QueryRequest(root: users, joins: [join], orderBy: [SortKey(column: "o.total", ascending: false)], parallelism: 2)
 
-        let clock = ContinuousClock(); let start = clock.now
-        let rows = try db.executeQuery(request)
-        precondition(!rows.isEmpty)
-        let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.plannerJoin.rawValue, iterations: rows.count, elapsed: elapsed)
+        // Eseguiamo multiple query per avere latenze significative
+        let queryIterations = max(1, iterations / 100) // Multiple query per avere dati significativi
+        let (results, latencies, elapsed) = try measureLatencies(iterations: queryIterations) {
+            return try db.executeQuery(request)
+        }
+        
+        let totalRows = results.reduce(0) { $0 + $1.count }
+        precondition(totalRows > 0)
+        return BenchmarkResult(name: Scenario.plannerJoin.rawValue, iterations: queryIterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["total_rows":"\(totalRows)", "warmup_done":"false"])
     }
 
     // MARK: - Planner estesi

@@ -24,12 +24,21 @@ extension BenchmarkCLI {
         for i in 0..<min(1_000, iterations) { _ = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(i))) }
 
         let clock = ContinuousClock(); let start = clock.now
+        var latencies: [Double] = []
+        latencies.reserveCapacity(iterations)
+        
         for i in 0..<iterations {
+            let t0 = clock.now
             let hits = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(i)))
+            let t1 = clock.now
             precondition(!hits.isEmpty)
+            
+            // Calcola latenza in millisecondi
+            let latencyMs = Double((t1 - t0).components.attoseconds) / 1_000_000_000_000_000.0
+            latencies.append(latencyMs)
         }
         let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done":"true"]) 
+        return BenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done":"true"]) 
     }
     
     static func runBTreeLookupOptimized(iterations: Int) throws -> BenchmarkResult {
@@ -56,13 +65,72 @@ extension BenchmarkCLI {
             _ = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(i)))
         }
 
-        let clock = ContinuousClock(); let start = clock.now
-        for i in 0..<iterations {
-            let hits = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(i)))
-            precondition(!hits.isEmpty)
+        var lookupIndex = 0
+        let (latencies, elapsed) = try measureLatenciesVoid(iterations: iterations) {
+            let currentIndex = lookupIndex
+            let hits = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(currentIndex)))
+            lookupIndex = (lookupIndex + 1) % iterations // Cicla attraverso tutti gli indici
+            if hits.isEmpty {
+                throw DBError.notFound("No hits for key \(currentIndex)")
+            }
         }
-        let elapsed = clock.now - start
-        return BenchmarkResult(name: "btree-lookup-optimized", iterations: iterations, elapsed: elapsed, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done":"true", "optimized":"true"]) 
+        
+        return BenchmarkResult(name: "btree-lookup-optimized", iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done":"true", "optimized":"true"]) 
+    }
+    
+    /// 🚀 OPTIMIZATION: Benchmark per testare diverse page size
+    static func runBTreeLookupPageSizes(iterations: Int) throws -> [BenchmarkResult] {
+        let pageSizes = [4096, 8192, 16384] // 4KB, 8KB, 16KB
+        var results: [BenchmarkResult] = []
+        
+        for pageSize in pageSizes {
+            let fm = FileManager.default
+            let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+            try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            defer { try? fm.removeItem(at: tempDir) }
+
+            var config = DBConfig(dataDir: tempDir.path)
+            config.autoCompactionEnabled = false
+            config.pageSizeBytes = pageSize
+            let db = Database(config: config)
+            try db.createTable("bench")
+            
+            for i in 0..<iterations {
+                _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
+            }
+            try db.createIndex(name: "idx_bench_id", on: "bench", columns: ["id"], using: "BTree")
+            try db.rebuildIndexBulk(table: "bench", index: "idx_bench_id")
+            
+            // Warm-up
+            for i in 0..<min(1_000, iterations) { 
+                _ = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(i)))
+            }
+
+            var lookupIndex = 0
+            let (latencies, elapsed) = try measureLatenciesVoid(iterations: iterations) {
+                let hits = try db.indexSearchEqualsTyped(table: "bench", index: "idx_bench_id", value: .int(Int64(lookupIndex)))
+                lookupIndex = (lookupIndex + 1) % iterations
+                if hits.isEmpty {
+                    throw DBError.notFound("No hits for key \(lookupIndex)")
+                }
+            }
+            
+            let result = BenchmarkResult(
+                name: "btree-lookup-page\(pageSize/1024)k", 
+                iterations: iterations, 
+                elapsed: elapsed, 
+                latenciesMs: latencies, 
+                metadata: [
+                    "page_size": "\(pageSize)", 
+                    "page_size_kb": "\(pageSize/1024)", 
+                    "warmup_done": "true", 
+                    "optimized": "true"
+                ]
+            )
+            results.append(result)
+        }
+        
+        return results
     }
 
     // MARK: - B+Tree estesi
