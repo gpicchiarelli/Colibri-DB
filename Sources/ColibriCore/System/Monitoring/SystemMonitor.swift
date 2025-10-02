@@ -28,7 +28,8 @@ public final class SystemMonitor: @unchecked Sendable {
     // Monitoring state
     private var isMonitoring = false
     private var monitoringInterval: TimeInterval = 1.0
-    private var monitoringTimer: Timer?
+    private var monitoringTimer: DispatchSourceTimer?
+    private let monitoringQueue = DispatchQueue(label: "com.colibridb.monitor", qos: .utility)
     
     public init(database: Database) {
         self.database = database
@@ -48,9 +49,12 @@ public final class SystemMonitor: @unchecked Sendable {
         isMonitoring = true
         monitoringInterval = interval
         
-        monitoringTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { @Sendable [weak self] _ in
+        monitoringTimer = DispatchSource.makeTimerSource(queue: monitoringQueue)
+        monitoringTimer?.schedule(deadline: .now(), repeating: .seconds(Int(interval)))
+        monitoringTimer?.setEventHandler { [weak self] in
             self?.collectMetrics()
         }
+        monitoringTimer?.resume()
         
         logger.info("System monitoring started with interval: \(interval)s")
     }
@@ -60,7 +64,7 @@ public final class SystemMonitor: @unchecked Sendable {
         guard isMonitoring else { return }
         
         isMonitoring = false
-        monitoringTimer?.invalidate()
+        monitoringTimer?.cancel()
         monitoringTimer = nil
         
         logger.info("System monitoring stopped")

@@ -22,26 +22,37 @@ struct BenchmarkResult {
     }
 
     var opsPerSecond: Double {
-        guard elapsed > .zero else { return 0 }
+        guard elapsed > .zero && iterations > 0 else { return 0 }
         let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000_000.0
-        return Double(max(1, iterations)) / seconds
+        return Double(iterations) / seconds
     }
 
     private var sorted: [Double] { latenciesMs.sorted() }
     private func percentile(_ p: Double) -> Double {
         guard !latenciesMs.isEmpty else { return 0 }
         let s = sorted
-        let rank = max(0, min(s.count - 1, Int(round((p/100.0) * Double(s.count - 1)))))
-        return s[rank]
+        let n = s.count
+        
+        // Use linear interpolation method (R-6) for more accurate percentiles
+        let index = (p / 100.0) * Double(n - 1)
+        let lowerIndex = Int(index)
+        let upperIndex = min(lowerIndex + 1, n - 1)
+        
+        if lowerIndex == upperIndex {
+            return s[lowerIndex]
+        }
+        
+        let weight = index - Double(lowerIndex)
+        return s[lowerIndex] * (1.0 - weight) + s[upperIndex] * weight
     }
     private var mean: Double {
         guard !latenciesMs.isEmpty else { return 0 }
         return latenciesMs.reduce(0, +) / Double(latenciesMs.count)
     }
     private var stddev: Double {
-        guard !latenciesMs.isEmpty else { return 0 }
+        guard latenciesMs.count > 1 else { return 0 }
         let m = mean
-        let v = latenciesMs.reduce(0.0) { $0 + ($1 - m) * ($1 - m) } / Double(latenciesMs.count)
+        let v = latenciesMs.reduce(0.0) { $0 + ($1 - m) * ($1 - m) } / Double(latenciesMs.count - 1)
         return v.squareRoot()
     }
     private var minMs: Double { sorted.first ?? 0 }
@@ -50,8 +61,8 @@ struct BenchmarkResult {
     // Aggiunge metriche di sistema per analisi completa
     var cpuUsage: Double { systemMetrics?.cpu.usage ?? 0 }
     var memoryUsage: Double { systemMetrics?.memory.usage ?? 0 }
-    var ioReadBytes: UInt64 { systemMetrics?.io.readCount ?? 0 }
-    var ioWriteBytes: UInt64 { systemMetrics?.io.writeCount ?? 0 }
+    var ioReadCount: UInt64 { systemMetrics?.io.readCount ?? 0 }
+    var ioWriteCount: UInt64 { systemMetrics?.io.writeCount ?? 0 }
 
     func printSummary() {
         let formattedOps = String(format: "%.2f", opsPerSecond)
@@ -63,7 +74,7 @@ struct BenchmarkResult {
     func printReport(format: OutputFormat) {
         switch format {
         case .text:
-            let ts = ISO8601DateFormatter().string(from: Date())
+            let ts = BenchmarkCLI.iso8601Formatter.string(from: Date())
             print("--- Report: \(name) ---")
             print("quando=\(ts)")
             print("operazioni=\(latenciesMs.count) totale_ms=\(String(format: "%.3f", totalMs)) ops_al_sec=\(String(format: "%.2f", opsPerSecond))")
@@ -80,7 +91,7 @@ struct BenchmarkResult {
         case .json:
             struct Payload: Codable {
                 struct Lat: Codable { let count:Int; let total_ms:Double; let mean_ms:Double; let p50_ms:Double; let p90_ms:Double; let p95_ms:Double; let p99_ms:Double; let min_ms:Double; let max_ms:Double; let stddev_ms:Double }
-                struct Sys: Codable { let cpu_percent:Double; let memory_percent:Double; let io_read_bytes:UInt64; let io_write_bytes:UInt64 }
+                struct Sys: Codable { let cpu_percent:Double; let memory_percent:Double; let io_read_count:UInt64; let io_write_count:UInt64 }
                 let scenario: String
                 let iterations: Int
                 let throughput_ops_s: Double
@@ -89,7 +100,7 @@ struct BenchmarkResult {
                 let system_metrics: Sys?
                 let metadata: [String:String]
             }
-            let ts = ISO8601DateFormatter().string(from: Date())
+            let ts = BenchmarkCLI.iso8601Formatter.string(from: Date())
             let lat = Payload.Lat(count: latenciesMs.count,
                                    total_ms: totalMs,
                                    mean_ms: mean,
@@ -100,7 +111,7 @@ struct BenchmarkResult {
                                    min_ms: minMs,
                                    max_ms: maxMs,
                                    stddev_ms: stddev)
-            let sys = systemMetrics.map { Payload.Sys(cpu_percent: $0.cpu.usage, memory_percent: $0.memory.usage, io_read_bytes: $0.io.readCount, io_write_bytes: $0.io.writeCount) }
+            let sys = systemMetrics.map { Payload.Sys(cpu_percent: $0.cpu.usage, memory_percent: $0.memory.usage, io_read_count: $0.io.readCount, io_write_count: $0.io.writeCount) }
             let p = Payload(scenario: name, iterations: iterations, throughput_ops_s: opsPerSecond, when: ts, latency_ms: lat, system_metrics: sys, metadata: metadata)
             let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try? enc.encode(p)
@@ -207,6 +218,9 @@ enum Scenario: String, CaseIterable {
 
 @main
 struct BenchmarkCLI {
+    // Static ISO8601 formatter for performance optimization
+    static let iso8601Formatter = ISO8601DateFormatter()
+    
     static func main() throws {
         let args = Array(CommandLine.arguments.dropFirst())
         if args.contains("--help") || args.contains("-h") {
@@ -220,6 +234,7 @@ struct BenchmarkCLI {
         var userSetWorkers = false
         var granular = false
         var formatJSON = false
+        var enableSysMetrics = false
 
         for a in args {
             if let n = Int(a) { iterations = n; continue }
@@ -230,105 +245,136 @@ struct BenchmarkCLI {
             }
             if a == "--granular" { granular = true }
             if a == "--json" || a == "--format=json" { formatJSON = true }
+            if a == "--sysmetrics" { enableSysMetrics = true }
         }
 
         let scenarios = selected.map { [$0] } ?? Scenario.allCases
         for scenario in scenarios {
-            let result: BenchmarkResult
-            switch scenario {
+            do {
+                // Collect system metrics if enabled
+                let systemMetrics: SystemMetrics? = enableSysMetrics ? {
+                    // Create a dummy database for system monitoring
+                    let tempDir = try? FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+                    guard let tempDir = tempDir else { return nil }
+                    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                    defer { try? FileManager.default.removeItem(at: tempDir) }
+                    
+                    let config = DBConfig(dataDir: tempDir.path)
+                    let db = Database(config: config)
+                    let monitor = SystemMonitor(database: db)
+                    return monitor.getCurrentMetrics()
+                }() : nil
+                
+                let baseResult: BenchmarkResult
+                switch scenario {
             case .heapInsert:
-                result = try runHeapInsert(iterations: iterations)
+                baseResult = try runHeapInsert(iterations: iterations)
             case .heapScan:
-                result = try runHeapScan(iterations: iterations)
+                baseResult = try runHeapScan(iterations: iterations)
             case .btreeLookup:
-                result = try runBTreeLookup(iterations: iterations)
+                baseResult = try runBTreeLookup(iterations: iterations)
             case .btreeLookupOptimized:
-                result = try runBTreeLookupOptimized(iterations: iterations)
+                baseResult = try runBTreeLookupOptimized(iterations: iterations)
             case .plannerJoin:
-                result = try runPlannerJoin(iterations: iterations)
+                baseResult = try runPlannerJoin(iterations: iterations)
             case .heapDelete:
-                result = try runHeapDelete(iterations: iterations, granular: granular)
+                baseResult = try runHeapDelete(iterations: iterations, granular: granular)
             case .heapReadRID:
-                result = try runHeapReadRID(iterations: iterations, granular: granular)
+                baseResult = try runHeapReadRID(iterations: iterations, granular: granular)
             case .fileHeapInsertWalOff:
-                result = try runFileHeapInsert(iterations: iterations, wal: false, fullSync: false, granular: granular)
+                baseResult = try runFileHeapInsert(iterations: iterations, wal: false, fullSync: false, granular: granular)
             case .fileHeapInsertWalFSync:
-                result = try runFileHeapInsert(iterations: iterations, wal: true, fullSync: true, granular: granular)
+                baseResult = try runFileHeapInsert(iterations: iterations, wal: true, fullSync: true, granular: granular)
             case .walAppendNone:
-                result = try runWALAppend(iterations: iterations, algorithm: .none, granular: granular)
+                baseResult = try runWALAppend(iterations: iterations, algorithm: .none, granular: granular)
             case .walAppendLZFSE:
-                result = try runWALAppend(iterations: iterations, algorithm: .lzfse, granular: granular)
+                baseResult = try runWALAppend(iterations: iterations, algorithm: .lzfse, granular: granular)
             case .walAppendZlib:
-                result = try runWALAppend(iterations: iterations, algorithm: .zlib, granular: granular)
+                baseResult = try runWALAppend(iterations: iterations, algorithm: .zlib, granular: granular)
             case .btreeInsert:
-                result = try runBTreeInsert(iterations: iterations, granular: granular)
+                baseResult = try runBTreeInsert(iterations: iterations, granular: granular)
             case .btreeRange:
-                result = try runBTreeRange(iterations: iterations, granular: granular)
+                baseResult = try runBTreeRange(iterations: iterations, granular: granular)
             case .btreeBulkBuild:
-                result = try runBTreeBulkBuild(iterations: iterations)
+                baseResult = try runBTreeBulkBuild(iterations: iterations)
             case .idxHashLookup:
-                result = try runInMemoryIndexLookup(iterations: iterations, kind: "Hash", granular: granular)
+                baseResult = try runInMemoryIndexLookup(iterations: iterations, kind: "Hash", granular: granular)
             case .idxARTLookup:
-                result = try runInMemoryIndexLookup(iterations: iterations, kind: "ART", granular: granular)
+                baseResult = try runInMemoryIndexLookup(iterations: iterations, kind: "ART", granular: granular)
             case .idxARTRange:
                 // Temporarily disabled due to LRUBufferPool crash
                 throw DBError.notImplemented("idx-art-range temporarily disabled")
             case .idxSkiplistLookup:
-                result = try runInMemoryIndexLookup(iterations: iterations, kind: "SkipList", granular: granular)
+                baseResult = try runInMemoryIndexLookup(iterations: iterations, kind: "SkipList", granular: granular)
             case .idxSkiplistRange:
-                result = try runInMemoryIndexRange(iterations: iterations, kind: "SkipList", granular: granular)
+                baseResult = try runInMemoryIndexRange(iterations: iterations, kind: "SkipList", granular: granular)
             case .idxFractalLookup:
-                result = try runInMemoryIndexLookup(iterations: iterations, kind: "Fractal", granular: granular)
+                baseResult = try runInMemoryIndexLookup(iterations: iterations, kind: "Fractal", granular: granular)
             case .idxFractalRange:
-                result = try runInMemoryIndexRange(iterations: iterations, kind: "Fractal", granular: granular)
+                baseResult = try runInMemoryIndexRange(iterations: iterations, kind: "Fractal", granular: granular)
             case .idxBTreeLookup:
-                result = try runInMemoryIndexLookup(iterations: iterations, kind: "BTree", granular: granular)
+                baseResult = try runInMemoryIndexLookup(iterations: iterations, kind: "BTree", granular: granular)
             case .idxBTreeRange:
-                result = try runInMemoryIndexRange(iterations: iterations, kind: "BTree", granular: granular)
+                baseResult = try runInMemoryIndexRange(iterations: iterations, kind: "BTree", granular: granular)
             case .idxLSMLookup:
-                result = try runInMemoryIndexLookup(iterations: iterations, kind: "LSM", granular: granular)
+                baseResult = try runInMemoryIndexLookup(iterations: iterations, kind: "LSM", granular: granular)
             case .idxLSMRange:
-                result = try runInMemoryIndexRange(iterations: iterations, kind: "LSM", granular: granular)
+                baseResult = try runInMemoryIndexRange(iterations: iterations, kind: "LSM", granular: granular)
             case .idxTombstone:
-                result = try runIndexTombstone(iterations: iterations, kind: "Hash", granular: granular)
+                baseResult = try runIndexTombstone(iterations: iterations, kind: "Hash", granular: granular)
             case .txCommit:
-                result = try runTxCommit(iterations: iterations, granular: granular)
+                baseResult = try runTxCommit(iterations: iterations, granular: granular)
             case .txCommitGrouped:
-                result = try runTxCommitGrouped(iterations: iterations, granular: granular)
+                baseResult = try runTxCommitGrouped(iterations: iterations, granular: granular)
             case .txRollback:
-                result = try runTxRollback(iterations: iterations, granular: granular)
+                baseResult = try runTxRollback(iterations: iterations, granular: granular)
             case .txContention:
                 let effWorkers = userSetWorkers ? workers : 1
-                result = try runTxContention(iterations: iterations, workers: effWorkers, granular: granular)
+                baseResult = try runTxContention(iterations: iterations, workers: effWorkers, granular: granular)
             case .mvccSnapshotRead:
-                result = try runMVCCSnapshotRead(iterations: iterations)
+                baseResult = try runMVCCSnapshotRead(iterations: iterations)
             case .plannerIndexScan:
-                result = try runPlannerIndexScan(iterations: iterations, granular: granular)
+                baseResult = try runPlannerIndexScan(iterations: iterations, granular: granular)
             case .plannerSortLimit:
-                result = try runPlannerSortLimit(iterations: iterations, granular: granular)
+                baseResult = try runPlannerSortLimit(iterations: iterations, granular: granular)
             case .checkpoint:
-                result = try runCheckpoint(iterations: iterations)
+                baseResult = try runCheckpoint(iterations: iterations)
             case .vacuumCompact:
-                result = try runVacuumCompact(iterations: iterations)
+                baseResult = try runVacuumCompact(iterations: iterations)
             case .walRecovery:
-                result = try runWALRecovery(iterations: iterations)
+                baseResult = try runWALRecovery(iterations: iterations)
             case .walStress:
-                result = try runWALStress(iterations: iterations, granular: granular)
+                baseResult = try runWALStress(iterations: iterations, granular: granular)
             case .systemLoad:
-                result = try runSystemLoad(iterations: iterations, granular: granular)
+                baseResult = try runSystemLoad(iterations: iterations, granular: granular)
             case .memoryPressure:
-                result = try runMemoryPressure(iterations: iterations)
+                baseResult = try runMemoryPressure(iterations: iterations)
             case .concurrentLoad:
                 let effWorkers = userSetWorkers ? workers : max(2, ProcessInfo.processInfo.activeProcessorCount / 2)
-                result = try runConcurrentLoad(iterations: iterations, workers: effWorkers, granular: granular)
+                baseResult = try runConcurrentLoad(iterations: iterations, workers: effWorkers, granular: granular)
             case .insertVariability:
-                result = try runInsertVariability(iterations: iterations, granular: granular)
+                baseResult = try runInsertVariability(iterations: iterations, granular: granular)
             case .queryLatency:
-                result = try runQueryLatency(iterations: iterations, granular: granular)
+                baseResult = try runQueryLatency(iterations: iterations, granular: granular)
+                }
+                
+                // Create result with system metrics if enabled
+                let result = BenchmarkResult(
+                    name: baseResult.name,
+                    iterations: baseResult.iterations,
+                    elapsed: baseResult.elapsed,
+                    latenciesMs: baseResult.latenciesMs,
+                    metadata: baseResult.metadata,
+                    systemMetrics: systemMetrics
+                )
+                
+                let enriched = attachConfigMetadata(result: result)
+                enriched.printSummary()
+                enriched.printReport(format: formatJSON ? .json : .text)
+            } catch {
+                print("⚠️  Scenario '\(scenario.rawValue)' failed: \(error)")
+                print("Continuing with remaining scenarios...")
             }
-            let enriched = attachConfigMetadata(result: result)
-            enriched.printSummary()
-            enriched.printReport(format: formatJSON ? .json : .text)
         }
     }
 
@@ -338,15 +384,16 @@ struct BenchmarkCLI {
     // Keep this file focused on the CLI harness only.
 
     private static func printUsage() {
-        print("Uso: benchmarks [iterations] [scenario] [--workers=N] [--granular] [--json]")
+        print("Uso: benchmarks [iterations] [scenario] [--workers=N] [--granular] [--json] [--sysmetrics]")
         print("  iterations: numero di iterazioni (default 10000; alcuni scenari sono limitati)")
         print("  scenario:   uno tra \(Scenario.allCases.map { $0.rawValue }.joined(separator: ", ")) oppure omesso per eseguire tutti")
         print("  --workers:  per scenari concorrenti (es. tx-contention), default = logical cores")
         print("  --granular: misura la latenza per singola operazione dove applicabile")
         print("  --json:     stampa report in formato JSON (oltre al summary)")
+        print("  --sysmetrics: abilita raccolta metriche di sistema (CPU, memoria, I/O)")
         print("Esempi:")
         print("  benchmarks 5000 btree-bulk-build")
-        print("  benchmarks 20000 tx-contention --workers=8 --granular --json")
+        print("  benchmarks 20000 tx-contention --workers=8 --granular --json --sysmetrics")
     }
 
     // MARK: - Metadata enrichment

@@ -45,8 +45,8 @@ extension BenchmarkCLI {
                 throw DBError.notFound("No hits for key \(i)")
             }
             
-            // Calcola latenza in millisecondi
-            let latencyMs = Double((t1 - t0).components.attoseconds) / 1_000_000_000_000_000.0
+            // Calcola latenza in millisecondi usando helper consistente
+            let latencyMs = msDelta(t0, t1)
             latencies.append(latencyMs)
         }
         let elapsed = clock.now - start
@@ -92,8 +92,8 @@ extension BenchmarkCLI {
                 throw DBError.notFound("No hits for key \(i)")
             }
             
-            // Calcola latenza in millisecondi
-            let latencyMs = Double((t1 - t0).components.attoseconds) / 1_000_000_000_000_000.0
+            // Calcola latenza in millisecondi usando helper consistente
+            let latencyMs = msDelta(t0, t1)
             latencies.append(latencyMs)
         }
         let elapsed = clock.now - start
