@@ -79,7 +79,7 @@ public struct PathValidator {
     
     // MARK: - Validation Methods
     
-    private static func validateBasicSafety(_ path: String) throws {
+    public static func validateBasicSafety(_ path: String) throws {
         // Check for null bytes
         if path.contains("\0") {
             throw DBError.invalidArgument("Path contains null bytes")
@@ -186,7 +186,7 @@ public struct PathValidator {
         return sanitized
     }
     
-    private static func canonicalizePath(_ path: String) -> String {
+    public static func canonicalizePath(_ path: String) -> String {
         let url = URL(fileURLWithPath: path)
         return url.standardized.path
     }
@@ -265,9 +265,17 @@ public struct PathValidator {
 extension DBConfig {
     /// 🔧 FIX: Validate all paths in configuration
     public func validatePaths() throws {
-        // Configure safe bases
-        let dataDir = try PathValidator.validateDataDir(self.dataDir)
-        PathValidator.configure(safeBases: [dataDir])
+        // First, do basic validation without safe base checking
+        try PathValidator.validateBasicSafety(self.dataDir)
+        
+        // Canonicalize the path
+        let canonicalDataDir = PathValidator.canonicalizePath(self.dataDir)
+        
+        // Configure safe bases with the canonical path
+        PathValidator.configure(safeBases: [canonicalDataDir])
+        
+        // Now validate the data directory properly
+        let _ = try PathValidator.validateDataDir(canonicalDataDir)
         
         print("✅ DBConfig paths validated successfully")
     }

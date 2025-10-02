@@ -16,15 +16,15 @@ jobs:
     - name: Setup Jekyll
       uses: helaili/jekyll-action@v2
       with:
-        jekyll_src: '.'
-        jekyll_cfg: '_config.yml'
+        token: ${{ secrets.GITHUB_TOKEN }}
+        jekyll_src: 'docs'
         jekyll_build_options: '--safe'
       
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: github-pages
-        path: ./_site
+        path: ./docs/_site
 
   deploy:
     if: github.ref == 'refs/heads/main' && github.repository == 'gpicchiarelli/Colibri-DB'
