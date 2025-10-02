@@ -184,7 +184,7 @@ struct BenchmarkResult {
     // Precomputed statistics for O(1) access
     private let stats: LatencyStats
 
-    private var totalMs: Double {
+    var totalMs: Double {
         BenchmarkCLI.durationToMs(elapsed)
     }
 
@@ -219,7 +219,7 @@ struct BenchmarkResult {
         print("[\(name)] iterations=\(iterations) elapsed_ms=\(String(format: "%.3f", totalMs)) throughput_ops_s=\(formattedOps)")
     }
 
-    enum OutputFormat { case text, json }
+    enum OutputFormat { case text, json, csv }
 
     func printReport(format: OutputFormat) {
         switch format {
@@ -269,6 +269,10 @@ struct BenchmarkResult {
             let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try? enc.encode(p)
             if let data = data, let s = String(data: data, encoding: .utf8) { print(s) }
+        case .csv:
+            // CSV format: scenario,iterations,throughput_ops_s,mean_ms,p50_ms,p90_ms,p95_ms,p99_ms,p999_ms,min_ms,max_ms,stddev_ms
+            print("scenario,iterations,throughput_ops_s,mean_ms,p50_ms,p90_ms,p95_ms,p99_ms,p999_ms,min_ms,max_ms,stddev_ms")
+            print("\(name),\(iterations),\(String(format: "%.2f", opsPerSecond)),\(String(format: "%.4f", mean)),\(String(format: "%.4f", p50)),\(String(format: "%.4f", p90)),\(String(format: "%.4f", p95)),\(String(format: "%.4f", p99)),\(String(format: "%.4f", p999)),\(String(format: "%.4f", minMs)),\(String(format: "%.4f", maxMs)),\(String(format: "%.4f", stddev))")
         }
     }
 
@@ -390,6 +394,67 @@ struct BenchmarkCLI {
         return Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1_000_000_000_000_000_000.0
     }
     
+    // Generate output string for file writing
+    static func generateOutput(result: BenchmarkResult, format: BenchmarkResult.OutputFormat) -> String {
+        var output = ""
+        
+        switch format {
+        case .text:
+            let ts = formatTimestamp(Date())
+            output += "--- Report: \(result.name) ---\n"
+            output += "quando=\(ts)\n"
+            output += "operazioni=\(result.latenciesMs.count) totale_ms=\(String(format: "%.3f", result.totalMs)) ops_al_sec=\(String(format: "%.2f", result.opsPerSecond))\n"
+            output += "latenza_ms: media=\(String(format: "%.4f", result.mean)) p50=\(String(format: "%.4f", result.p50)) p90=\(String(format: "%.4f", result.p90)) p95=\(String(format: "%.4f", result.p95)) p99=\(String(format: "%.4f", result.p99)) p99.9=\(String(format: "%.4f", result.p999)) min=\(String(format: "%.4f", result.minMs)) max=\(String(format: "%.4f", result.maxMs)) stddev=\(String(format: "%.4f", result.stddev))\n"
+            output += "distribuzione:\n"
+            output += result.latencyStats.generateHistogram() + "\n"
+            if result.systemMetrics != nil {
+                output += "sistema: cpu=\(String(format: "%.1f", result.cpuUsage))% memoria=\(String(format: "%.1f", result.memoryUsage))% io_read=\(result.ioReadCount) io_write=\(result.ioWriteCount)\n"
+            }
+            if !result.metadata.isEmpty {
+                output += "metadati:\n"
+                for (k, v) in result.metadata.sorted(by: { $0.key < $1.key }) {
+                    output += "  \(k)=\(v)\n"
+                }
+            }
+        case .json:
+            struct Payload: Codable {
+                struct Lat: Codable { let count:Int; let total_ms:Double; let mean_ms:Double; let p50_ms:Double; let p90_ms:Double; let p95_ms:Double; let p99_ms:Double; let p999_ms:Double; let min_ms:Double; let max_ms:Double; let stddev_ms:Double }
+                struct Sys: Codable { let cpu_percent:Double; let memory_percent:Double; let io_read_count:UInt64; let io_write_count:UInt64 }
+                let scenario: String
+                let iterations: Int
+                let throughput_ops_s: Double
+                let when: String
+                let latency_ms: Lat
+                let system_metrics: Sys?
+                let metadata: [String:String]
+            }
+            let ts = formatTimestamp(Date())
+            let lat = Payload.Lat(count: result.latenciesMs.count,
+                                   total_ms: result.totalMs,
+                                   mean_ms: result.mean,
+                                   p50_ms: result.p50,
+                                   p90_ms: result.p90,
+                                   p95_ms: result.p95,
+                                   p99_ms: result.p99,
+                                   p999_ms: result.p999,
+                                   min_ms: result.minMs,
+                                   max_ms: result.maxMs,
+                                   stddev_ms: result.stddev)
+            let sys = result.systemMetrics.map { Payload.Sys(cpu_percent: $0.cpu.usage, memory_percent: $0.memory.usage, io_read_count: $0.io.readCount, io_write_count: $0.io.writeCount) }
+            let p = Payload(scenario: result.name, iterations: result.iterations, throughput_ops_s: result.opsPerSecond, when: ts, latency_ms: lat, system_metrics: sys, metadata: result.metadata)
+            let enc = JSONEncoder(); enc.outputFormatting = [.prettyPrinted, .sortedKeys]
+            if let data = try? enc.encode(p), let s = String(data: data, encoding: .utf8) {
+                output = s
+            }
+        case .csv:
+            // CSV format: scenario,iterations,throughput_ops_s,mean_ms,p50_ms,p90_ms,p95_ms,p99_ms,p999_ms,min_ms,max_ms,stddev_ms
+            output += "scenario,iterations,throughput_ops_s,mean_ms,p50_ms,p90_ms,p95_ms,p99_ms,p999_ms,min_ms,max_ms,stddev_ms\n"
+            output += "\(result.name),\(result.iterations),\(String(format: "%.2f", result.opsPerSecond)),\(String(format: "%.4f", result.mean)),\(String(format: "%.4f", result.p50)),\(String(format: "%.4f", result.p90)),\(String(format: "%.4f", result.p95)),\(String(format: "%.4f", result.p99)),\(String(format: "%.4f", result.p999)),\(String(format: "%.4f", result.minMs)),\(String(format: "%.4f", result.maxMs)),\(String(format: "%.4f", result.stddev))\n"
+        }
+        
+        return output
+    }
+    
     static func main() throws {
         let args = Array(CommandLine.arguments.dropFirst())
         if args.contains("--help") || args.contains("-h") {
@@ -430,6 +495,19 @@ struct BenchmarkCLI {
                 if let last = parts.last { outputFile = String(last) }
             }
         }
+        
+        // Set random seed if provided
+        if let seed = seed {
+            srand48(Int(seed))
+        }
+        
+        // Note: warmup flag is available for future implementation
+        // Currently all scenarios perform warmup by default
+        _ = warmup  // Suppress unused variable warning
+        
+        // Note: enableSysMetrics flag is available for future implementation
+        // Currently system metrics are collected by individual scenarios if needed
+        _ = enableSysMetrics  // Suppress unused variable warning
 
         let scenarios = selected.map { [$0] } ?? Scenario.allCases
         for scenario in scenarios {
@@ -532,7 +610,16 @@ struct BenchmarkCLI {
                 
                 let enriched = attachConfigMetadata(result: result)
                 enriched.printSummary()
-                enriched.printReport(format: formatJSON ? .json : .text)
+                
+                // Handle output format and destination
+                if let outputFile = outputFile {
+                    // Write to file
+                    let output = generateOutput(result: enriched, format: formatJSON ? .json : (csvFormat ? .csv : .text))
+                    try output.write(toFile: outputFile, atomically: true, encoding: .utf8)
+                } else {
+                    // Print to stdout
+                    enriched.printReport(format: formatJSON ? .json : (csvFormat ? .csv : .text))
+                }
             } catch {
                 print("⚠️  Scenario '\(scenario.rawValue)' failed: \(error)")
                 print("Continuing with remaining scenarios...")

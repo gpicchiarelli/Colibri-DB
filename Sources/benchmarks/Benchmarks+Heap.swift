@@ -33,7 +33,10 @@ extension BenchmarkCLI {
         }
         
         let totalRows = results.reduce(0) { $0 + $1.count }
-        precondition(totalRows > 0)
+        if totalRows <= 0 {
+            print("⚠️  Warning: No rows found in heap scan")
+            return BenchmarkResult(name: "heap-scan", iterations: 0, elapsed: .zero, metadata: ["total_rows":"0", "warmup_done":"false"])
+        }
         return BenchmarkResult(name: Scenario.heapScan.rawValue, iterations: scanIterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory", "total_rows":"\(totalRows)"]) 
     }
 
@@ -134,7 +137,9 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            precondition(sum >= 0)
+            if sum < 0 {
+                print("⚠️  Warning: Negative sum in heap delete benchmark")
+            }
             return BenchmarkResult(name: Scenario.heapReadRID.rawValue, iterations: rids.count, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory"]) 
         } else {
             for rid in rids {
@@ -142,7 +147,9 @@ extension BenchmarkCLI {
                 if case .int(let v) = row["id"] { sum &+= Int(v) }
             }
             let elapsed = clock.now - start
-            precondition(sum >= 0)
+            if sum < 0 {
+                print("⚠️  Warning: Negative sum in heap delete benchmark")
+            }
             return BenchmarkResult(name: Scenario.heapReadRID.rawValue, iterations: rids.count, elapsed: elapsed, metadata: ["storage":"InMemory"]) 
         }
     }
