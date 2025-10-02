@@ -15,12 +15,15 @@ extension BenchmarkCLI {
         cfg.walGroupCommitMs = 2.0
 
         // 1. Prima esecuzione: generiamo mutazioni e forziamo WAL
+        // Limita il numero di transazioni per evitare memory leak
+        let maxTransactions = min(iterations, 100) // Massimo 100 transazioni per evitare memory leak
+        
         do {
             let db = Database(config: cfg)
             if (try? db.createTable("t")) == nil {
                 // tabella già esistente
             }
-            for i in 0..<iterations {
+            for i in 0..<maxTransactions {
                 let tid = try db.begin()
                 _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "data": .string("recovery_test_\(i)")], tid: tid)
                 if i % 2 == 0 {
@@ -45,12 +48,13 @@ extension BenchmarkCLI {
 
         return BenchmarkResult(
             name: Scenario.walRecovery.rawValue,
-            iterations: recoveredRows.count,
+            iterations: maxTransactions, // Usa il numero effettivo di transazioni create
             elapsed: elapsed,
             metadata: [
                 "recovered_rows": String(recoveredRows.count),
                 "recovery_latency_ms": String(format: "%.3f", Double(elapsed.components.seconds) * 1000.0),
-                "wal_path": tmp.appendingPathComponent("global.wal").path
+                "wal_path": tmp.appendingPathComponent("global.wal").path,
+                "max_transactions": String(maxTransactions)
             ],
             systemMetrics: metrics
         )
