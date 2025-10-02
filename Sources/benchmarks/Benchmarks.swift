@@ -9,6 +9,25 @@
 import Foundation
 import ColibriCore
 
+// MARK: - Seeded Random Number Generator
+struct SeededRandomNumberGenerator: RandomNumberGenerator {
+    private var state: UInt64
+    
+    init(seed: UInt64) {
+        self.state = seed
+    }
+    
+    mutating func next() -> UInt64 {
+        // Xoroshiro128+ algorithm
+        let s0 = state
+        state ^= state << 23
+        state ^= state >> 18
+        state ^= s0
+        state ^= s0 >> 5
+        return state &+ 0x9e3779b97f4a7c15
+    }
+}
+
 // Precomputed statistics for performance optimization
 struct LatencyStats {
     let sorted: [Double]
