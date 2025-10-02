@@ -1,10 +1,10 @@
 //
 //  SystemMonitor.swift
-//  ColibrDB
+//  ColibrìDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-26.
 //
-// ColibrDB — BSD 3-Clause License
+// ColibrìDB — BSD 3-Clause License
 // Copyright (c) 2025 Giacomo Picchiarelli
 // Licensed under the BSD 3-Clause License. See LICENSE file.
 

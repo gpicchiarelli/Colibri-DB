@@ -15,7 +15,7 @@ extension BenchmarkCLI {
         
         // Create table and index first, then insert data
         try db.createTable("bench")
-        try db.createIndex(name: "idx_bench_id", on: "bench", columns: ["id"], using: "Hash")
+        try db.createIndex(name: "idx_bench_id", on: "bench", columns: ["id"], using: "BTree")
         
         // Insert data with index already present
         for i in 0..<iterations {
@@ -65,7 +65,7 @@ extension BenchmarkCLI {
         
         // Create table and index first, then insert data
         try db.createTable("bench")
-        try db.createIndex(name: "idx_bench_id", on: "bench", columns: ["id"], using: "Hash")
+        try db.createIndex(name: "idx_bench_id", on: "bench", columns: ["id"], using: "BTree")
         
         // Insert data with index already present
         for i in 0..<iterations {

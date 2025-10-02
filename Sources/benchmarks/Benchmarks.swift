@@ -1,6 +1,6 @@
 //
 //  Benchmarks.swift
-//  ColibrDB
+//  ColibrìDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
@@ -82,6 +82,95 @@ struct LatencyStats {
             self.p999 = p999
         }
     }
+    
+    // Generate a compact log2 histogram for latency distribution analysis
+    public func generateHistogram(buckets: Int = 8) -> String {
+        guard !sorted.isEmpty else { return "No data" }
+        
+        let minVal = minMs
+        let maxVal = maxMs
+        
+        // Use log2 scale for better distribution visualization
+        let logMin = minVal > 0 ? log2(minVal) : -10.0
+        let logMax = maxVal > 0 ? log2(maxVal) : 10.0
+        let bucketSize = (logMax - logMin) / Double(buckets)
+        
+        // Handle case where all values are very small or identical
+        if logMax - logMin < 1.0 || minVal == maxVal {
+            // Use linear scale for very small ranges
+            let linearMin = minVal
+            let linearMax = maxVal == minVal ? minVal + max(minVal * 0.1, 0.001) : maxVal  // Ensure meaningful range
+            let linearBucketSize = (linearMax - linearMin) / Double(buckets)
+            
+            var bucketCounts = Array(repeating: 0, count: buckets)
+            var bucketLabels: [String] = []
+            
+            for i in 0..<buckets {
+                let start = linearMin + Double(i) * linearBucketSize
+                let end = linearMin + Double(i + 1) * linearBucketSize
+                if i == buckets - 1 {
+                    bucketLabels.append(String(format: "[%.4f,+∞)", start))
+                } else {
+                    bucketLabels.append(String(format: "[%.4f,%.4f)", start, end))
+                }
+            }
+            
+            for value in sorted {
+                let bucketIndex = min(buckets - 1, max(0, Int((value - linearMin) / linearBucketSize)))
+                bucketCounts[bucketIndex] += 1
+            }
+            
+            var result = ""
+            let maxCount = bucketCounts.max() ?? 1
+            
+            for i in 0..<buckets {
+                let count = bucketCounts[i]
+                let percentage = Double(count) / Double(sorted.count) * 100.0
+                let barLength = max(1, (count * 20) / maxCount)
+                let bar = String(repeating: "█", count: barLength)
+                
+                result += "\(bucketLabels[i]): \(bar) \(String(format: "%.0f", percentage))%\n"
+            }
+            
+            return result.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        var bucketCounts = Array(repeating: 0, count: buckets)
+        var bucketLabels: [String] = []
+        
+        // Create bucket labels
+        for i in 0..<buckets {
+            let start = pow(2.0, logMin + Double(i) * bucketSize)
+            let end = pow(2.0, logMin + Double(i + 1) * bucketSize)
+            if i == buckets - 1 {
+                bucketLabels.append(String(format: "[%.1f,+∞)", start))
+            } else {
+                bucketLabels.append(String(format: "[%.1f,%.1f)", start, end))
+            }
+        }
+        
+        // Count values in each bucket
+        for value in sorted {
+            let logVal = value > 0 ? log2(value) : -10.0
+            let bucketIndex = min(buckets - 1, max(0, Int((logVal - logMin) / bucketSize)))
+            bucketCounts[bucketIndex] += 1
+        }
+        
+        // Generate histogram string
+        var result = ""
+        let maxCount = bucketCounts.max() ?? 1
+        
+        for i in 0..<buckets {
+            let count = bucketCounts[i]
+            let percentage = Double(count) / Double(sorted.count) * 100.0
+            let barLength = max(1, (count * 20) / maxCount)
+            let bar = String(repeating: "█", count: barLength)
+            
+            result += "\(bucketLabels[i]): \(bar) \(String(format: "%.0f", percentage))%\n"
+        }
+        
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 struct BenchmarkResult {
@@ -105,16 +194,19 @@ struct BenchmarkResult {
         return Double(iterations) / seconds
     }
     
-    // O(1) access to precomputed statistics
-    private var mean: Double { stats.mean }
-    private var stddev: Double { stats.stddev }
-    private var minMs: Double { stats.minMs }
-    private var maxMs: Double { stats.maxMs }
-    private var p50: Double { stats.p50 }
-    private var p90: Double { stats.p90 }
-    private var p95: Double { stats.p95 }
-    private var p99: Double { stats.p99 }
-    private var p999: Double { stats.p999 }
+    // O(1) access to precomputed statistics - exposed publicly for reuse
+    public var mean: Double { stats.mean }
+    public var stddev: Double { stats.stddev }
+    public var minMs: Double { stats.minMs }
+    public var maxMs: Double { stats.maxMs }
+    public var p50: Double { stats.p50 }
+    public var p90: Double { stats.p90 }
+    public var p95: Double { stats.p95 }
+    public var p99: Double { stats.p99 }
+    public var p999: Double { stats.p999 }
+    
+    // Access to the underlying stats for advanced analysis
+    public var latencyStats: LatencyStats { stats }
 
     // Aggiunge metriche di sistema per analisi completa
     var cpuUsage: Double { systemMetrics?.cpu.usage ?? 0 }
@@ -137,6 +229,8 @@ struct BenchmarkResult {
             print("quando=\(ts)")
             print("operazioni=\(latenciesMs.count) totale_ms=\(String(format: "%.3f", totalMs)) ops_al_sec=\(String(format: "%.2f", opsPerSecond))")
             print("latenza_ms: media=\(String(format: "%.4f", mean)) p50=\(String(format: "%.4f", p50)) p90=\(String(format: "%.4f", p90)) p95=\(String(format: "%.4f", p95)) p99=\(String(format: "%.4f", p99)) p99.9=\(String(format: "%.4f", p999)) min=\(String(format: "%.4f", minMs)) max=\(String(format: "%.4f", maxMs)) stddev=\(String(format: "%.4f", stddev))")
+            print("distribuzione:")
+            print(stats.generateHistogram())
             if systemMetrics != nil {
                 print("sistema: cpu=\(String(format: "%.1f", cpuUsage))% memoria=\(String(format: "%.1f", memoryUsage))% io_read=\(ioReadCount) io_write=\(ioWriteCount)")
             }
@@ -310,6 +404,10 @@ struct BenchmarkCLI {
         var granular = false
         var formatJSON = false
         var enableSysMetrics = false
+        var warmup = true
+        var seed: UInt64? = nil
+        var outputFile: String? = nil
+        var csvFormat = false
 
         for a in args {
             if let n = Int(a) { iterations = n; continue }
@@ -321,23 +419,21 @@ struct BenchmarkCLI {
             if a == "--granular" { granular = true }
             if a == "--json" || a == "--format=json" { formatJSON = true }
             if a == "--sysmetrics" { enableSysMetrics = true }
+            if a == "--no-warmup" { warmup = false }
+            if a == "--csv" { csvFormat = true }
+            if a.hasPrefix("--seed=") {
+                let parts = a.split(separator: "=")
+                if let last = parts.last, let s = UInt64(last) { seed = s }
+            }
+            if a.hasPrefix("--out=") {
+                let parts = a.split(separator: "=")
+                if let last = parts.last { outputFile = String(last) }
+            }
         }
 
         let scenarios = selected.map { [$0] } ?? Scenario.allCases
         for scenario in scenarios {
             do {
-                // Collect system metrics if enabled (before benchmark)
-                let systemMetricsBefore: SystemMetrics? = enableSysMetrics ? {
-                    let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-                    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-                    defer { try? FileManager.default.removeItem(at: tempDir) }
-                    
-                    let config = DBConfig(dataDir: tempDir.path)
-                    let db = Database(config: config)
-                    let monitor = SystemMonitor(database: db)
-                    return monitor.getCurrentMetrics()
-                }() : nil
-                
                 let baseResult: BenchmarkResult
                 switch scenario {
             case .heapInsert:
@@ -431,75 +527,8 @@ struct BenchmarkCLI {
                 baseResult = try runQueryLatency(iterations: iterations, granular: granular)
                 }
                 
-                // Collect system metrics after benchmark if enabled
-                let systemMetricsAfter: SystemMetrics? = enableSysMetrics ? {
-                    let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-                    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-                    defer { try? FileManager.default.removeItem(at: tempDir) }
-                    
-                    let config = DBConfig(dataDir: tempDir.path)
-                    let db = Database(config: config)
-                    let monitor = SystemMonitor(database: db)
-                    return monitor.getCurrentMetrics()
-                }() : nil
-                
-                // Create combined system metrics with before/after data
-                let combinedSystemMetrics: SystemMetrics? = {
-                    guard let before = systemMetricsBefore, let after = systemMetricsAfter else {
-                        return systemMetricsBefore ?? systemMetricsAfter
-                    }
-                    
-                    // Create a combined metrics showing the delta
-                    return SystemMetrics(
-                        timestamp: after.timestamp,
-                        cpu: CPUMetrics(
-                            usage: after.cpu.usage - before.cpu.usage,
-                            userTime: after.cpu.userTime - before.cpu.userTime,
-                            systemTime: after.cpu.systemTime - before.cpu.systemTime,
-                            idleTime: after.cpu.idleTime - before.cpu.idleTime,
-                            coreCount: after.cpu.coreCount
-                        ),
-                        memory: MemoryMetrics(
-                            usage: after.memory.usage - before.memory.usage,
-                            totalBytes: after.memory.totalBytes,
-                            usedBytes: after.memory.usedBytes - before.memory.usedBytes,
-                            freeBytes: after.memory.freeBytes - before.memory.freeBytes,
-                            cachedBytes: after.memory.cachedBytes - before.memory.cachedBytes
-                        ),
-                        io: IOMetrics(
-                            readLatency: after.io.readLatency - before.io.readLatency,
-                            writeLatency: after.io.writeLatency - before.io.writeLatency,
-                            readThroughput: after.io.readThroughput - before.io.readThroughput,
-                            writeThroughput: after.io.writeThroughput - before.io.writeThroughput,
-                            readCount: after.io.readCount - before.io.readCount,
-                            writeCount: after.io.writeCount - before.io.writeCount
-                        ),
-                        queries: QueryMetrics(
-                            activeQueries: after.queries.activeQueries - before.queries.activeQueries,
-                            totalQueries: after.queries.totalQueries - before.queries.totalQueries,
-                            averageExecutionTime: after.queries.averageExecutionTime - before.queries.averageExecutionTime,
-                            slowQueries: after.queries.slowQueries - before.queries.slowQueries,
-                            failedQueries: after.queries.failedQueries - before.queries.failedQueries
-                        ),
-                        transactions: TransactionMetrics(
-                            activeCount: after.transactions.activeCount - before.transactions.activeCount,
-                            totalCount: after.transactions.totalCount - before.transactions.totalCount,
-                            averageDuration: after.transactions.averageDuration - before.transactions.averageDuration,
-                            committedCount: after.transactions.committedCount - before.transactions.committedCount,
-                            abortedCount: after.transactions.abortedCount - before.transactions.abortedCount
-                        )
-                    )
-                }()
-                
-                // Create result with system metrics if enabled
-                let result = BenchmarkResult(
-                    name: baseResult.name,
-                    iterations: baseResult.iterations,
-                    elapsed: baseResult.elapsed,
-                    latenciesMs: baseResult.latenciesMs,
-                    metadata: baseResult.metadata,
-                    systemMetrics: combinedSystemMetrics
-                )
+                // Use system metrics from the scenario result (if any)
+                let result = baseResult
                 
                 let enriched = attachConfigMetadata(result: result)
                 enriched.printSummary()
@@ -517,16 +546,25 @@ struct BenchmarkCLI {
     // Keep this file focused on the CLI harness only.
 
     private static func printUsage() {
-        print("Uso: benchmarks [iterations] [scenario] [--workers=N] [--granular] [--json] [--sysmetrics]")
+        print("Uso: benchmarks [iterations] [scenario] [opzioni]")
         print("  iterations: numero di iterazioni (default 10000; alcuni scenari sono limitati)")
         print("  scenario:   uno tra \(Scenario.allCases.map { $0.rawValue }.joined(separator: ", ")) oppure omesso per eseguire tutti")
-        print("  --workers:  per scenari concorrenti (es. tx-contention), default = logical cores")
-        print("  --granular: misura la latenza per singola operazione dove applicabile")
-        print("  --json:     stampa report in formato JSON (oltre al summary)")
-        print("  --sysmetrics: abilita raccolta metriche di sistema (CPU, memoria, I/O)")
+        print("")
+        print("Opzioni:")
+        print("  --workers=N     per scenari concorrenti (es. tx-contention), default = logical cores")
+        print("  --granular      misura la latenza per singola operazione dove applicabile")
+        print("  --json          stampa report in formato JSON (oltre al summary)")
+        print("  --csv           stampa report in formato CSV")
+        print("  --sysmetrics    abilita raccolta metriche di sistema (CPU, memoria, I/O)")
+        print("  --no-warmup     disabilita warm-up pre-benchmark")
+        print("  --seed=N        imposta seed per randomizzazione (per riproducibilità)")
+        print("  --out=file      scrivi output su file invece che su stdout")
+        print("")
         print("Esempi:")
         print("  benchmarks 5000 btree-bulk-build")
         print("  benchmarks 20000 tx-contention --workers=8 --granular --json --sysmetrics")
+        print("  benchmarks 1000 heap-insert --csv --out=results.csv")
+        print("  benchmarks 5000 btree-lookup --seed=42 --no-warmup")
     }
 
     // MARK: - Metadata enrichment
