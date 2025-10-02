@@ -5,10 +5,10 @@
 //  Entrypoint for the production `coldb` CLI.
 //
 import Foundation
-import ColibriCLI
+import ColibrìCLI
 
 do {
-    try runColdBCLI(arguments: CommandLine.arguments)
+    try CLIEntryPoint.launch(mode: .production)
 } catch {
     fputs("fatal: \(error)\n", stderr)
     exit(1)

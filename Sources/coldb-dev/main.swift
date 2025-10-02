@@ -5,10 +5,11 @@
 //  Thin executable wrapper around the ColibriDevTools module.
 //
 import Foundation
-import ColibriDevTools
+import ColibrìCLI
 
 do {
-    try runColdBDevCLI(arguments: CommandLine.arguments)
+    let configPath = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : nil
+    try CLIEntryPoint.launch(mode: .development, configPath: configPath)
 } catch {
     fputs("fatal: \(error)\n", stderr)
     exit(1)

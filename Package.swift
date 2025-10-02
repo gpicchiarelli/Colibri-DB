@@ -17,9 +17,8 @@ let package = Package(
     ],
     products: [
         .library(name: "ColibriCore", targets: ["ColibriCore"]),
-        .library(name: "ColibriCLI", targets: ["ColibriCLI"]),
+        .library(name: "ColibrìCLI", targets: ["ColibrìCLI"]),
         .library(name: "ColibriServer", targets: ["ColibriServer"]),
-        .library(name: "ColibriDevTools", targets: ["ColibriDevTools"]),
         .executable(name: "coldb", targets: ["coldb"]),
         .executable(name: "coldb-server", targets: ["coldb-server"]),
         .executable(name: "coldb-dev", targets: ["coldb-dev"]),
@@ -42,9 +41,8 @@ let package = Package(
             exclude: ["README.md"]
         ),
         .target(
-            name: "ColibriCLI",
-            dependencies: ["ColibriCore"],
-            exclude: ["README.md"]
+            name: "ColibrìCLI",
+            dependencies: ["ColibriCore"]
         ),
         .target(
             name: "ColibriServer",
@@ -56,13 +54,9 @@ let package = Package(
             ],
             exclude: ["README.md"]
         ),
-        .target(
-            name: "ColibriDevTools",
-            dependencies: ["ColibriCore"]
-        ),
         .executableTarget(
             name: "coldb",
-            dependencies: ["ColibriCLI"]
+            dependencies: ["ColibrìCLI"]
         ),
         .executableTarget(
             name: "coldb-server",
@@ -70,7 +64,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "coldb-dev",
-            dependencies: ["ColibriDevTools"]
+            dependencies: ["ColibrìCLI"]
         ),
         .executableTarget(
             name: "benchmarks",
@@ -85,10 +79,6 @@ let package = Package(
                 "ColibriCore",
                 .product(name: "Testing", package: "swift-testing")
             ]
-        ),
-        .testTarget(
-            name: "ColibriDevToolsTests",
-            dependencies: ["ColibriDevTools", "ColibriCore"]
         )
     ]
 )
