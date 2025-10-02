@@ -59,6 +59,11 @@ data/
 *.log
 *.wal
 
+## Temporary files and directories
+/var/folders/*/colibridb-*
+*.tmp
+*.temp
+
 ## Local configs
 colibridb.local*.json
 
