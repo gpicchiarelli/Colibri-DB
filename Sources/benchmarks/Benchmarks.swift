@@ -9,6 +9,70 @@
 import Foundation
 import ColibriCore
 
+// Precomputed statistics for performance optimization
+struct LatencyStats {
+    let sorted: [Double]
+    let mean: Double
+    let stddev: Double
+    let minMs: Double
+    let maxMs: Double
+    let p50: Double
+    let p90: Double
+    let p95: Double
+    let p99: Double
+    let p999: Double
+    
+    init(latenciesMs: [Double]) {
+        guard !latenciesMs.isEmpty else {
+            self.sorted = []
+            self.mean = 0
+            self.stddev = 0
+            self.minMs = 0
+            self.maxMs = 0
+            self.p50 = 0
+            self.p90 = 0
+            self.p95 = 0
+            self.p99 = 0
+            self.p999 = 0
+            return
+        }
+        
+        self.sorted = latenciesMs.sorted()
+        self.mean = latenciesMs.reduce(0, +) / Double(latenciesMs.count)
+        
+        if latenciesMs.count > 1 {
+            let variance = latenciesMs.reduce(0.0) { $0 + ($1 - self.mean) * ($1 - self.mean) } / Double(latenciesMs.count - 1)
+            self.stddev = variance.squareRoot()
+        } else {
+            self.stddev = 0
+        }
+        
+        self.minMs = self.sorted.first ?? 0
+        self.maxMs = self.sorted.last ?? 0
+        
+        // Precompute percentiles using linear interpolation
+        func percentile(_ p: Double) -> Double {
+            let n = self.sorted.count
+            let index = (p / 100.0) * Double(n - 1)
+            let lowerIndex = Int(index)
+            let upperIndex = min(lowerIndex + 1, n - 1)
+            
+            if lowerIndex == upperIndex {
+                return self.sorted[lowerIndex]
+            }
+            
+            let weight = index - Double(lowerIndex)
+            return self.sorted[lowerIndex] * (1.0 - weight) + self.sorted[upperIndex] * weight
+        }
+        
+        self.p50 = percentile(50)
+        self.p90 = percentile(90)
+        self.p95 = percentile(95)
+        self.p99 = percentile(99)
+        self.p999 = percentile(99.9)
+    }
+}
+
 struct BenchmarkResult {
     let name: String
     let iterations: Int
@@ -16,6 +80,9 @@ struct BenchmarkResult {
     let latenciesMs: [Double]
     let metadata: [String: String]
     let systemMetrics: SystemMetrics?
+    
+    // Precomputed statistics for O(1) access
+    private let stats: LatencyStats
 
     private var totalMs: Double {
         Double(elapsed.components.seconds) * 1_000 + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000.0
@@ -26,37 +93,17 @@ struct BenchmarkResult {
         let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1_000_000_000_000_000_000.0
         return Double(iterations) / seconds
     }
-
-    private var sorted: [Double] { latenciesMs.sorted() }
-    private func percentile(_ p: Double) -> Double {
-        guard !latenciesMs.isEmpty else { return 0 }
-        let s = sorted
-        let n = s.count
-        
-        // Use linear interpolation method (R-6) for more accurate percentiles
-        let index = (p / 100.0) * Double(n - 1)
-        let lowerIndex = Int(index)
-        let upperIndex = min(lowerIndex + 1, n - 1)
-        
-        if lowerIndex == upperIndex {
-            return s[lowerIndex]
-        }
-        
-        let weight = index - Double(lowerIndex)
-        return s[lowerIndex] * (1.0 - weight) + s[upperIndex] * weight
-    }
-    private var mean: Double {
-        guard !latenciesMs.isEmpty else { return 0 }
-        return latenciesMs.reduce(0, +) / Double(latenciesMs.count)
-    }
-    private var stddev: Double {
-        guard latenciesMs.count > 1 else { return 0 }
-        let m = mean
-        let v = latenciesMs.reduce(0.0) { $0 + ($1 - m) * ($1 - m) } / Double(latenciesMs.count - 1)
-        return v.squareRoot()
-    }
-    private var minMs: Double { sorted.first ?? 0 }
-    private var maxMs: Double { sorted.last ?? 0 }
+    
+    // O(1) access to precomputed statistics
+    private var mean: Double { stats.mean }
+    private var stddev: Double { stats.stddev }
+    private var minMs: Double { stats.minMs }
+    private var maxMs: Double { stats.maxMs }
+    private var p50: Double { stats.p50 }
+    private var p90: Double { stats.p90 }
+    private var p95: Double { stats.p95 }
+    private var p99: Double { stats.p99 }
+    private var p999: Double { stats.p999 }
 
     // Aggiunge metriche di sistema per analisi completa
     var cpuUsage: Double { systemMetrics?.cpu.usage ?? 0 }
@@ -74,13 +121,13 @@ struct BenchmarkResult {
     func printReport(format: OutputFormat) {
         switch format {
         case .text:
-            let ts = BenchmarkCLI.iso8601Formatter.string(from: Date())
+            let ts = BenchmarkCLI.formatTimestamp(Date())
             print("--- Report: \(name) ---")
             print("quando=\(ts)")
             print("operazioni=\(latenciesMs.count) totale_ms=\(String(format: "%.3f", totalMs)) ops_al_sec=\(String(format: "%.2f", opsPerSecond))")
-            print("latenza_ms: media=\(String(format: "%.4f", mean)) p50=\(String(format: "%.4f", percentile(50))) p90=\(String(format: "%.4f", percentile(90))) p95=\(String(format: "%.4f", percentile(95))) p99=\(String(format: "%.4f", percentile(99))) min=\(String(format: "%.4f", minMs)) max=\(String(format: "%.4f", maxMs)) stddev=\(String(format: "%.4f", stddev))")
+            print("latenza_ms: media=\(String(format: "%.4f", mean)) p50=\(String(format: "%.4f", p50)) p90=\(String(format: "%.4f", p90)) p95=\(String(format: "%.4f", p95)) p99=\(String(format: "%.4f", p99)) p99.9=\(String(format: "%.4f", p999)) min=\(String(format: "%.4f", minMs)) max=\(String(format: "%.4f", maxMs)) stddev=\(String(format: "%.4f", stddev))")
             if systemMetrics != nil {
-                print("sistema: cpu=\(String(format: "%.1f", cpuUsage))% memoria=\(String(format: "%.1f", memoryUsage))% io_read=\(ioReadBytes) io_write=\(ioWriteBytes)")
+                print("sistema: cpu=\(String(format: "%.1f", cpuUsage))% memoria=\(String(format: "%.1f", memoryUsage))% io_read=\(ioReadCount) io_write=\(ioWriteCount)")
             }
             if !metadata.isEmpty {
                 print("metadati:")
@@ -90,7 +137,7 @@ struct BenchmarkResult {
             }
         case .json:
             struct Payload: Codable {
-                struct Lat: Codable { let count:Int; let total_ms:Double; let mean_ms:Double; let p50_ms:Double; let p90_ms:Double; let p95_ms:Double; let p99_ms:Double; let min_ms:Double; let max_ms:Double; let stddev_ms:Double }
+                struct Lat: Codable { let count:Int; let total_ms:Double; let mean_ms:Double; let p50_ms:Double; let p90_ms:Double; let p95_ms:Double; let p99_ms:Double; let p999_ms:Double; let min_ms:Double; let max_ms:Double; let stddev_ms:Double }
                 struct Sys: Codable { let cpu_percent:Double; let memory_percent:Double; let io_read_count:UInt64; let io_write_count:UInt64 }
                 let scenario: String
                 let iterations: Int
@@ -100,7 +147,7 @@ struct BenchmarkResult {
                 let system_metrics: Sys?
                 let metadata: [String:String]
             }
-            let ts = BenchmarkCLI.iso8601Formatter.string(from: Date())
+            let ts = BenchmarkCLI.formatTimestamp(Date())
             let lat = Payload.Lat(count: latenciesMs.count,
                                    total_ms: totalMs,
                                    mean_ms: mean,
@@ -218,8 +265,11 @@ enum Scenario: String, CaseIterable {
 
 @main
 struct BenchmarkCLI {
-    // Static ISO8601 formatter for performance optimization
-    static let iso8601Formatter = ISO8601DateFormatter()
+    // Helper for ISO8601 formatting
+    static func formatTimestamp(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        return formatter.string(from: date)
+    }
     
     static func main() throws {
         let args = Array(CommandLine.arguments.dropFirst())
@@ -254,8 +304,7 @@ struct BenchmarkCLI {
                 // Collect system metrics if enabled
                 let systemMetrics: SystemMetrics? = enableSysMetrics ? {
                     // Create a dummy database for system monitoring
-                    let tempDir = try? FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-                    guard let tempDir = tempDir else { return nil }
+                    let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
                     try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
                     defer { try? FileManager.default.removeItem(at: tempDir) }
                     
