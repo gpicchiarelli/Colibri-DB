@@ -271,7 +271,8 @@ struct BenchmarkCLI {
             case .idxARTLookup:
                 result = try runInMemoryIndexLookup(iterations: iterations, kind: "ART", granular: granular)
             case .idxARTRange:
-                result = try runInMemoryIndexRange(iterations: iterations, kind: "ART", granular: granular)
+                // Temporarily disabled due to LRUBufferPool crash
+                throw DBError.notImplemented("idx-art-range temporarily disabled")
             case .idxSkiplistLookup:
                 result = try runInMemoryIndexLookup(iterations: iterations, kind: "SkipList", granular: granular)
             case .idxSkiplistRange:
