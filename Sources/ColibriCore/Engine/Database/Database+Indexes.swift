@@ -66,6 +66,7 @@ extension Database {
             systemCatalog?.registerStructurePreference(table: table, columns: columns, structure: "btree")
         } else {
             guard columns.count == 1 else { throw DBError.invalidArgument("In-memory indexes support one column only") }
+            print("Debug createIndex: Creating in-memory \(kind) index \(name) on table \(table)")
             map[name] = (columns: columns, backend: .anyString(AnyStringIndex(kind: kind)))
             try indexCatalog?.add(IndexDef(name: name, table: table, column: columns.first, columns: columns, kind: kind))
             systemCatalog?.registerIndex(name: name,
@@ -130,6 +131,7 @@ extension Database {
             case .anyString(var idx):
                 guard let c = cols.first, let v = row[c] else { continue }
                 let s = stringFromValue(v)
+                print("Debug updateIndexes: Inserting key '\(s)' with RID \(rid) into index \(name)")
                 idx.insert(key: s, ref: rid)
                 if config.walEnabled && config.walUseGlobalIndexLogging {
                     let kb = Data(s.utf8)
@@ -226,9 +228,12 @@ extension Database {
         try assertTableRegistered(table)
         try assertIndexRegistered(index, table: table)
         guard let map = indexes[table], let pair = map[index] else { throw DBError.notFound("Index \(index)") }
+        print("Debug indexSearchEqualsTyped: Searching index \(index) for value \(value)")
         switch pair.backend {
         case .anyString(let idx):
-            return idx.searchEquals(stringFromValue(value))
+            let result = idx.searchEquals(stringFromValue(value))
+            print("Debug indexSearchEqualsTyped: AnyString index returned \(result.count) results")
+            return result
         case .persistentBTree(let f):
             if pair.columns.count == 1 { return try f.searchEquals(value) }
             else { return try f.searchEquals(composite: [value]) }

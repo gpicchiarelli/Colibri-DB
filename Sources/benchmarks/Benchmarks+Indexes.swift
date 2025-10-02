@@ -10,9 +10,11 @@ extension BenchmarkCLI {
         try db.createTable("t")
         let idxName = "ix_\(UUID().uuidString.prefix(8))"
         try db.createIndex(name: idxName, on: "t", columns: ["k"], using: kind)
+        // Insert data AFTER index creation so it gets indexed
         for i in 0..<iterations {
             _ = try db.insert(into: "t", row: ["k": .string("k\(i)"), "v": .int(Int64(i))])
         }
+        
         // Warm-up: 1k lookups
         let warm = min(iterations, 1_000)
         for i in 0..<warm { _ = try db.indexSearchEqualsTyped(table: "t", index: idxName, value: .string("k\(i)")) }
@@ -52,6 +54,7 @@ extension BenchmarkCLI {
         try db.createTable("t")
         let idxName = "ix_\(UUID().uuidString.prefix(8))"
         try db.createIndex(name: idxName, on: "t", columns: ["k"], using: kind)
+        // Insert data AFTER index creation so it gets indexed
         for i in 0..<iterations {
             _ = try db.insert(into: "t", row: ["k": .string(String(format: "k%08d", i)), "v": .int(Int64(i))])
         }
@@ -96,6 +99,7 @@ extension BenchmarkCLI {
         let indexName = "ix_tomb_\(UUID().uuidString.prefix(6))"
         try db.createIndex(name: indexName, on: "docs", columns: ["title"], using: kind)
 
+        // Insert data AFTER index creation so it gets indexed
         for i in 0..<iterations {
             _ = try db.insert(into: "docs", row: ["title": .string("doc-\(i)"), "body": .string("draft")])
         }

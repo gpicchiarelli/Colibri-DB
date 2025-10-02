@@ -39,19 +39,24 @@ public enum AnyStringIndex {
         case .hash(var h):
             try? h.insert(key, ref)
             self = .hash(h)
-        case .art(let a):
+        case .art(var a):
             try? a.insert(key, ref)
             self = .art(a)
-        case .btree(let b):
-            try? b.insert(key, ref)
+        case .btree(var b):
+            do {
+                try b.insert(key, ref)
+                print("Debug AnyStringIndex: Successfully inserted key '\(key)' into BTree")
+            } catch {
+                print("Debug AnyStringIndex: Failed to insert key '\(key)' into BTree: \(error)")
+            }
             self = .btree(b)
-        case .skiplist(let s):
+        case .skiplist(var s):
             try? s.insert(key, ref)
             self = .skiplist(s)
-        case .fractal(let f):
+        case .fractal(var f):
             try? f.insert(key, ref)
             self = .fractal(f)
-        case .lsm(let l):
+        case .lsm(var l):
             try? l.insert(key, ref)
             self = .lsm(l)
         }
@@ -62,7 +67,15 @@ public enum AnyStringIndex {
         switch self {
         case .hash(let h): return (try? h.searchEquals(key)) ?? []
         case .art(let a): return (try? a.searchEquals(key)) ?? []
-        case .btree(let b): return (try? b.searchEquals(key)) ?? []
+        case .btree(let b): 
+            do {
+                let result = try b.searchEquals(key)
+                print("Debug AnyStringIndex: BTree search for '\(key)' returned \(result.count) results")
+                return result
+            } catch {
+                print("Debug AnyStringIndex: BTree search for '\(key)' failed: \(error)")
+                return []
+            }
         case .skiplist(let s): return (try? s.searchEquals(key)) ?? []
         case .fractal(let f): return (try? f.searchEquals(key)) ?? []
         case .lsm(let l): return (try? l.searchEquals(key)) ?? []
@@ -87,19 +100,19 @@ public enum AnyStringIndex {
         case .hash(var h):
             try? h.remove(key, ref)
             self = .hash(h)
-        case .art(let a):
+        case .art(var a):
             try? a.remove(key, ref)
             self = .art(a)
-        case .btree(let b):
+        case .btree(var b):
             try? b.remove(key, ref)
             self = .btree(b)
-        case .skiplist(let s):
+        case .skiplist(var s):
             try? s.remove(key, ref)
             self = .skiplist(s)
-        case .fractal(let f):
+        case .fractal(var f):
             try? f.remove(key, ref)
             self = .fractal(f)
-        case .lsm(let l):
+        case .lsm(var l):
             try? l.remove(key, ref)
             self = .lsm(l)
         }
