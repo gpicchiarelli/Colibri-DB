@@ -398,6 +398,32 @@ enum Scenario: String, CaseIterable {
     case concurrentLoad = "concurrent-load"
     case insertVariability = "insert-variability"
     case queryLatency = "query-latency"
+    
+    // Test di concorrenza e thread-safety
+    case concurrentStress = "concurrent-stress"
+    case lockContention = "lock-contention"
+    case indexRaceConditions = "index-race-conditions"
+    case concurrentTransactions = "concurrent-transactions"
+    
+    // Test di crash-recovery
+    case crashInjection = "crash-injection"
+    case walCrashRecovery = "wal-crash-recovery"
+    case compactionCrashRecovery = "compaction-crash-recovery"
+    case dataIntegrityRecovery = "data-integrity-recovery"
+    
+    // Test MVCC e isolamento
+    case phantomReads = "phantom-reads"
+    case readSkew = "read-skew"
+    case writeSkew = "write-skew"
+    case predicateLocks = "predicate-locks"
+    case snapshotIsolation = "snapshot-isolation"
+    
+    // Test consistenza indici
+    case indexConsistency = "index-consistency"
+    case indexRebuildConsistency = "index-rebuild-consistency"
+    case indexDeletionConsistency = "index-deletion-consistency"
+    case indexUpdateConsistency = "index-update-consistency"
+    case crossIndexVerification = "cross-index-verification"
 
     static func from(_ string: String) -> Scenario? { Scenario(rawValue: string.lowercased()) }
 }
@@ -650,6 +676,50 @@ struct BenchmarkCLI {
                 baseResult = try runInsertVariability(iterations: iterations, granular: granular)
             case .queryLatency:
                 baseResult = try runQueryLatency(iterations: iterations, granular: granular)
+                
+            // Test di concorrenza e thread-safety (semplificati)
+            case .concurrentStress:
+                baseResult = try runConcurrentStress(iterations: iterations, threads: 8, duration: 60.0)
+            case .lockContention:
+                baseResult = try runLockContention(iterations: iterations, contentionLevel: 10)
+            case .indexRaceConditions:
+                baseResult = try runIndexRaceConditions(iterations: iterations)
+            case .concurrentTransactions:
+                baseResult = try runConcurrentTransactions(iterations: iterations, transactionSize: 10)
+                
+            // Test di crash-recovery (semplificati)
+            case .crashInjection:
+                baseResult = try runCrashInjectionTest(iterations: iterations, crashProbability: 0.1)
+            case .walCrashRecovery:
+                baseResult = try runWALCrashRecovery(iterations: iterations)
+            case .compactionCrashRecovery:
+                baseResult = try runCompactionCrashRecovery(iterations: iterations)
+            case .dataIntegrityRecovery:
+                baseResult = try runDataIntegrityRecovery(iterations: iterations)
+                
+            // Test MVCC e isolamento (semplificati)
+            case .phantomReads:
+                baseResult = try runPhantomReadsTest(iterations: iterations)
+            case .readSkew:
+                baseResult = try runReadSkewTest(iterations: iterations)
+            case .writeSkew:
+                baseResult = try runWriteSkewTest(iterations: iterations)
+            case .predicateLocks:
+                baseResult = try runPredicateLocksTest(iterations: iterations)
+            case .snapshotIsolation:
+                baseResult = try runSnapshotIsolationTest(iterations: iterations)
+                
+            // Test consistenza indici (semplificati)
+            case .indexConsistency:
+                baseResult = try runIndexConsistencyTest(iterations: iterations)
+            case .indexRebuildConsistency:
+                baseResult = try runIndexRebuildConsistency(iterations: iterations)
+            case .indexDeletionConsistency:
+                baseResult = try runIndexDeletionConsistency(iterations: iterations)
+            case .indexUpdateConsistency:
+                baseResult = try runIndexUpdateConsistency(iterations: iterations)
+            case .crossIndexVerification:
+                baseResult = try runCrossIndexVerification(iterations: iterations)
                 }
                 
                 // Use system metrics from the scenario result (if any)
