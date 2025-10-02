@@ -233,12 +233,18 @@ extension Database {
         if let table = tablesMem[tableName] {
             let rows = try? table.scan()
             let count = rows?.reduce(0) { count, _ in count + 1 } ?? 0
+            let now = Date()
             return CatalogTableStatistics(
                 tableId: UUID(),
+                database: "default",
+                table: tableName,
                 rowCount: UInt64(count),
-                avgRowSize: 100, // Default estimate
-                totalSize: UInt64(count * 100),
-                lastAnalyzed: Date()
+                sizeBytes: UInt64(count * 100),
+                pageCount: UInt32(max(1, count / 100)),
+                averageRowSize: 100.0,
+                lastAnalyzed: now,
+                lastModified: now,
+                created: now
             )
         }
         
@@ -246,12 +252,18 @@ extension Database {
         if let table = tablesFile[tableName] {
             let rows = try? table.scan()
             let count = rows?.reduce(0) { count, _ in count + 1 } ?? 0
+            let now = Date()
             return CatalogTableStatistics(
                 tableId: UUID(),
+                database: "default",
+                table: tableName,
                 rowCount: UInt64(count),
-                avgRowSize: 100, // Default estimate
-                totalSize: UInt64(count * 100),
-                lastAnalyzed: Date()
+                sizeBytes: UInt64(count * 100),
+                pageCount: UInt32(max(1, count / 100)),
+                averageRowSize: 100.0,
+                lastAnalyzed: now,
+                lastModified: now,
+                created: now
             )
         }
         

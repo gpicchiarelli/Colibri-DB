@@ -246,7 +246,8 @@ extension QueryPlanner {
 
 /// 🚀 OPTIMIZATION: Query performance monitor
 public final class QueryPerformanceMonitor {
-    private static var queryStats: [String: (count: Int, totalTime: TimeInterval, avgTime: TimeInterval)] = [:]
+    // Disable concurrency warning as we use explicit locking
+    nonisolated(unsafe) private static var queryStats: [String: (count: Int, totalTime: TimeInterval, avgTime: TimeInterval)] = [:]
     private static let statsLock = NSLock()
     
     /// Record query execution time
