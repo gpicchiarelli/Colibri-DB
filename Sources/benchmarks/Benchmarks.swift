@@ -151,10 +151,11 @@ struct BenchmarkResult {
             let lat = Payload.Lat(count: latenciesMs.count,
                                    total_ms: totalMs,
                                    mean_ms: mean,
-                                   p50_ms: percentile(50),
-                                   p90_ms: percentile(90),
-                                   p95_ms: percentile(95),
-                                   p99_ms: percentile(99),
+                                   p50_ms: p50,
+                                   p90_ms: p90,
+                                   p95_ms: p95,
+                                   p99_ms: p99,
+                                   p999_ms: p999,
                                    min_ms: minMs,
                                    max_ms: maxMs,
                                    stddev_ms: stddev)
@@ -176,6 +177,7 @@ struct BenchmarkResult {
         self.latenciesMs = Array(repeating: ms / Double(count), count: count)
         self.metadata = [:]
         self.systemMetrics = systemMetrics
+        self.stats = LatencyStats(latenciesMs: self.latenciesMs)
     }
 
     init(name: String, iterations: Int, elapsed: Duration, metadata: [String:String], systemMetrics: SystemMetrics? = nil) {
@@ -187,6 +189,7 @@ struct BenchmarkResult {
         self.latenciesMs = Array(repeating: ms / Double(count), count: count)
         self.metadata = metadata
         self.systemMetrics = systemMetrics
+        self.stats = LatencyStats(latenciesMs: self.latenciesMs)
     }
 
     init(name: String, iterations: Int, elapsed: Duration, latenciesMs: [Double], systemMetrics: SystemMetrics? = nil) {
