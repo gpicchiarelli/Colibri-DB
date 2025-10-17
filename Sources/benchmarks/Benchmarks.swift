@@ -467,6 +467,20 @@ enum Scenario: String, CaseIterable {
     case transactionAbortRecovery = "transaction-abort-recovery"
     case indexCorruptionRecovery = "index-corruption-recovery"
     case walCorruptionRecovery = "wal-corruption-recovery"
+    
+    // Stress tests (600k ops each) - DISABLED: too slow for normal benchmark runs
+    // Available in StressTests.swift for separate execution
+    // case stressHeapInsert = "stress-heap-insert"
+    // case stressBTreeLookup = "stress-btree-lookup"
+    // case stressTransactionCommit = "stress-tx-commit"
+    // case stressMixedWorkload = "stress-mixed-workload"
+    // case stressIndexOperations = "stress-index-ops"
+    // case stressConcurrentOperations = "stress-concurrent-ops"
+    // case stressWALAppend = "stress-wal-append"
+    // case stressScanGrowing = "stress-scan-growing"
+    // case stressMultipleIndexes = "stress-multi-index"
+    // case stressMemoryPressure = "stress-memory-pressure"
+    // case stressRangeQueries = "stress-range-queries"
 
     static func from(_ string: String) -> Scenario? { Scenario(rawValue: string.lowercased()) }
 }
@@ -869,13 +883,17 @@ struct BenchmarkCLI {
 
     private static func printUsage() {
         print("Uso: benchmarks [iterations] [scenario] [opzioni]")
-        print("  iterations: numero di iterazioni (default 10000; alcuni scenari sono limitati)")
-        print("  scenario:   uno tra \(Scenario.allCases.map { $0.rawValue }.joined(separator: ", ")) oppure omesso per eseguire tutti")
+        print("")
+        print("SCENARI STANDARD (usa parametro iterations):")
+        print("  heap-insert, heap-scan, btree-lookup, tx-commit, idx-hash-lookup, etc.")
+        print("")
+        print("NOTA: Gli stress test (600k ops) sono disponibili in StressTests.swift")
+        print("      ma non inclusi nei benchmark normali. Usa run_stress_tests.sh per eseguirli.")
         print("")
         print("Opzioni:")
-        print("  --workers=N     per scenari concorrenti (es. tx-contention), default = logical cores")
+        print("  --workers=N     per scenari concorrenti, default = 8 (stress) o logical cores")
         print("  --granular      misura la latenza per singola operazione dove applicabile")
-        print("  --json          stampa report in formato JSON (oltre al summary)")
+        print("  --json          stampa report in formato JSON")
         print("  --csv           stampa report in formato CSV")
         print("  --sysmetrics    abilita raccolta metriche di sistema (CPU, memoria, I/O)")
         print("  --no-warmup     disabilita warm-up pre-benchmark")
@@ -887,6 +905,8 @@ struct BenchmarkCLI {
         print("  benchmarks 20000 tx-contention --workers=8 --granular --json --sysmetrics")
         print("  benchmarks 1000 heap-insert --csv --out=results.csv")
         print("  benchmarks 5000 btree-lookup --seed=42 --no-warmup")
+        print("")
+        print("Per stress test (600k ops): ./run_stress_tests.sh")
     }
 
     // MARK: - Metadata enrichment

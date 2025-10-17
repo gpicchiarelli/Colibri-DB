@@ -1,0 +1,28 @@
+[heap-insert] iterations=10000 elapsed_ms=1183.228 throughput_ops_s=8451.46
+latenza_ms: media=0.1178 p50=0.1152 p90=0.2020 p95=0.2144 p99=0.3008 p99.9=0.6369 min=0.0047 max=1.2655 stddev=0.0740
+[heap-scan] iterations=10 elapsed_ms=59.421 throughput_ops_s=168.29
+latenza_ms: media=5.9357 p50=4.6305 p90=10.7873 p95=11.1027 p99=11.3551 p99.9=11.4119 min=4.0963 max=11.4182 stddev=2.7360
+[heap-delete] iterations=5000 elapsed_ms=52365.569 throughput_ops_s=95.48
+latenza_ms: media=10.4731 p50=10.4731 p90=10.4731 p95=10.4731 p99=10.4731 p99.9=10.4731 min=10.4731 max=10.4731 stddev=0.0000
+[btree-lookup] iterations=5000 elapsed_ms=767.154 throughput_ops_s=6517.60
+latenza_ms: media=0.1531 p50=0.1395 p90=0.2191 p95=0.2301 p99=0.3140 p99.9=0.4327 min=0.1316 max=0.8780 stddev=0.0386
+[idx-hash-lookup] iterations=10000 elapsed_ms=62.788 throughput_ops_s=159265.36
+latenza_ms: media=0.0063 p50=0.0063 p90=0.0063 p95=0.0063 p99=0.0063 p99.9=0.0063 min=0.0063 max=0.0063 stddev=0.0000
+[idx-skiplist-lookup] iterations=10000 elapsed_ms=112.962 throughput_ops_s=88525.25
+latenza_ms: media=0.0113 p50=0.0113 p90=0.0113 p95=0.0113 p99=0.0113 p99.9=0.0113 min=0.0113 max=0.0113 stddev=0.0000
+[idx-btree-lookup] iterations=10000 elapsed_ms=1766.521 throughput_ops_s=5660.85
+latenza_ms: media=0.1767 p50=0.1767 p90=0.1767 p95=0.1767 p99=0.1767 p99.9=0.1767 min=0.1767 max=0.1767 stddev=0.0000
+[tx-commit] iterations=2000 elapsed_ms=1641.079 throughput_ops_s=1218.71
+latenza_ms: media=0.8205 p50=0.8205 p90=0.8205 p95=0.8205 p99=0.8205 p99.9=0.8205 min=0.8205 max=0.8205 stddev=0.0000
+[tx-rollback] iterations=1000 elapsed_ms=446.147 throughput_ops_s=2241.41
+latenza_ms: media=0.4461 p50=0.4461 p90=0.4461 p95=0.4461 p99=0.4461 p99.9=0.4461 min=0.4461 max=0.4461 stddev=0.0000
+[tx-contention-w1] iterations=5000 elapsed_ms=6509.455 throughput_ops_s=768.11
+latenza_ms: media=1.3019 p50=1.3019 p90=1.3019 p95=1.3019 p99=1.3019 p99.9=1.3019 min=1.3019 max=1.3019 stddev=0.0000
+[wal-append-none] iterations=5000 elapsed_ms=141.232 throughput_ops_s=35402.86
+latenza_ms: media=0.0282 p50=0.0282 p90=0.0282 p95=0.0282 p99=0.0282 p99.9=0.0282 min=0.0282 max=0.0282 stddev=0.0000
+[fileheap-insert-wal-off] iterations=200 elapsed_ms=30.933 throughput_ops_s=6465.61
+latenza_ms: media=0.1547 p50=0.1547 p90=0.1547 p95=0.1547 p99=0.1547 p99.9=0.1547 min=0.1547 max=0.1547 stddev=0.0000
+[planner-join] iterations=1 elapsed_ms=2.058 throughput_ops_s=485.90
+latenza_ms: media=2.0407 p50=2.0407 p90=2.0407 p95=2.0407 p99=2.0407 p99.9=2.0407 min=2.0407 max=2.0407 stddev=0.0000
+[planner-index-scan] iterations=1 elapsed_ms=3.144 throughput_ops_s=318.11
+latenza_ms: media=3.1435 p50=3.1435 p90=3.1435 p95=3.1435 p99=3.1435 p99.9=3.1435 min=3.1435 max=3.1435 stddev=0.0000

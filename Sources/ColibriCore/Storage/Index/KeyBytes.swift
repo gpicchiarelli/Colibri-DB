@@ -35,11 +35,16 @@ public struct KeyBytes: Hashable, Comparable {
         case .bool(let b):
             return KeyBytes(Data([0x01, b ? 0x01 : 0x00]))
         case .int(let i):
+            // 🚀 OPTIMIZATION: Pre-allocate with type tag to avoid insert() shifting
             let u = UInt64(bitPattern: i &+ Int64(bitPattern: 0x8000_0000_0000_0000))
-            var be = withUnsafeBytes(of: u.bigEndian) { Data($0) }
-            be.insert(0x02, at: 0)
+            var be = Data(count: 9) // 1 byte tag + 8 bytes UInt64
+            be[0] = 0x02
+            withUnsafeBytes(of: u.bigEndian) { bytes in
+                be.replaceSubrange(1..<9, with: bytes)
+            }
             return KeyBytes(be)
         case .double(let d):
+            // 🚀 OPTIMIZATION: Pre-allocate with type tag to avoid insert() shifting
             var bits = d.bitPattern
             // Transform to lex-order-preserving
             if (bits & (1 << 63)) != 0 { // negative
@@ -47,8 +52,11 @@ public struct KeyBytes: Hashable, Comparable {
             } else {
                 bits ^= (1 << 63)
             }
-            var be = withUnsafeBytes(of: bits.bigEndian) { Data($0) }
-            be.insert(0x03, at: 0)
+            var be = Data(count: 9) // 1 byte tag + 8 bytes UInt64
+            be[0] = 0x03
+            withUnsafeBytes(of: bits.bigEndian) { bytes in
+                be.replaceSubrange(1..<9, with: bytes)
+            }
             return KeyBytes(be)
         case .string(let s):
             var d = Data([0x04])
