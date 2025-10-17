@@ -13,6 +13,7 @@ public enum SQLToken: Equatable, Hashable {
     case keyword(String)
     case identifier(String)
     case literal(SQLLiteral)
+    case parameter(String)  // 🔒 NEW: Parameter placeholder ($1, :name, ?)
     case operator_(String)
     case punctuation(String)
     case eof
@@ -86,6 +87,27 @@ public struct SQLLexer {
             // Numeric literals
             if char.isNumber {
                 let token = try scanNumericLiteral()
+                tokens.append(token)
+                continue
+            }
+            
+            // 🔒 NEW: Parameter placeholders ($1, $2, ...)
+            if char == "$" {
+                let token = try scanPositionalParameter()
+                tokens.append(token)
+                continue
+            }
+            
+            // 🔒 NEW: Named parameters (:name, :email, ...)
+            if char == ":" && peek()?.isLetter == true {
+                let token = scanNamedParameter()
+                tokens.append(token)
+                continue
+            }
+            
+            // 🔒 NEW: Question mark parameters (?, ?, ...)
+            if char == "?" {
+                let token = scanQuestionParameter()
                 tokens.append(token)
                 continue
             }
@@ -238,6 +260,44 @@ public struct SQLLexer {
         }
         
         return nil
+    }
+    
+    // MARK: - 🔒 Parameter Scanning
+    
+    /// Scan positional parameter: $1, $2, $3, ...
+    private mutating func scanPositionalParameter() throws -> SQLToken {
+        advance() // Skip $
+        
+        guard let char = currentChar, char.isNumber else {
+            throw SQLParseError.invalidSyntax("Expected digit after $")
+        }
+        
+        var digits = ""
+        while let char = currentChar, char.isNumber {
+            digits.append(char)
+            advance()
+        }
+        
+        return .parameter("$\(digits)")
+    }
+    
+    /// Scan named parameter: :name, :email, :age, ...
+    private mutating func scanNamedParameter() -> SQLToken {
+        advance() // Skip :
+        
+        var name = ""
+        while let char = currentChar, (char.isLetter || char.isNumber || char == "_") {
+            name.append(char)
+            advance()
+        }
+        
+        return .parameter(":\(name)")
+    }
+    
+    /// Scan question mark parameter: ?
+    private mutating func scanQuestionParameter() -> SQLToken {
+        advance() // Skip ?
+        return .parameter("?")
     }
     
     // MARK: - Comment Handling

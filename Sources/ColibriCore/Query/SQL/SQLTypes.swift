@@ -67,6 +67,7 @@ public struct SQLColumnDefinition: Equatable, Hashable {
 public indirect enum SQLExpression: Equatable, Hashable {
     case literal(SQLLiteral)
     case column(String)
+    case parameter(String, Int)  // 🔒 NEW: Parameter placeholder (name, position)
     case binary(SQLExpression, SQLBinaryOperator, SQLExpression)
     case unary(SQLUnaryOperator, SQLExpression)
     case function(String, [SQLExpression])
