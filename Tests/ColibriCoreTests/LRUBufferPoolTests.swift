@@ -14,7 +14,8 @@ import Foundation
 @Suite(.serialized)
 struct LRUBufferPoolTests {
     @Test func clockEvictsUnpinnedPagesBeforePinnedOnes() throws {
-        BufferNamespaceManager.shared.setQuota(group: "table", pages: 100)
+        let testGroup = "test-buffer-\(UUID().uuidString)"
+        BufferNamespaceManager.shared.setQuota(group: testGroup, pages: 100)
 
         var store: [PageID: Data] = [
             1: Data(repeating: 1, count: 8),
@@ -32,7 +33,7 @@ struct LRUBufferPoolTests {
                                   flush: { pid, data in
                                       store[pid] = data
                                   },
-                                  namespace: "table:test",
+                                  namespace: "\(testGroup):pool",
                                   deferredWrite: false,
                                   maxDirty: 2)
         defer { pool.unpinPage(1) }
@@ -52,4 +53,3 @@ struct LRUBufferPoolTests {
         #expect(fetchCount[2] == 1)
     }
 }
-
