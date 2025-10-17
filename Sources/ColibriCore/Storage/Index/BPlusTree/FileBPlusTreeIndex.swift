@@ -114,6 +114,10 @@ public final class FileBPlusTreeIndex {
     
     /// Flush buffers to disk (placeholder - WAL functionality disabled)
     public func flushBuffers(fullSync: Bool = false) throws {
+        // 🔧 FIX: Actually flush the buffer pool!
+        // This was missing and causing lookups to fail because data wasn't written to disk
+        try buf?.flushAll()
+        
         // WAL functionality disabled - using global WAL instead
         if fullSync {
             try fh.synchronize()

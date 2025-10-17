@@ -22,9 +22,10 @@ extension BenchmarkCLI {
             _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
         }
         
-        // Force index synchronization and rebuild to ensure data is indexed
+        // Force index synchronization to ensure data is written to disk
+        // Note: Removed rebuildIndexBulk() because it's no longer necessary
+        // The index is kept up-to-date during inserts now
         db.flushAll()
-        try db.rebuildIndexBulk(table: "bench", index: "idx_bench_id")
         
         // Verify index is working by testing a few lookups
         var indexReady = false
@@ -109,9 +110,10 @@ extension BenchmarkCLI {
             _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
         }
         
-        // Force index synchronization and rebuild to ensure data is indexed
+        // Force index synchronization to ensure data is written to disk
+        // Note: Removed rebuildIndexBulk() because it's no longer necessary
+        // The index is kept up-to-date during inserts now
         db.flushAll()
-        try db.rebuildIndexBulk(table: "bench", index: "idx_bench_id")
         
         // Verify index is working by testing a few lookups
         var indexReady = false

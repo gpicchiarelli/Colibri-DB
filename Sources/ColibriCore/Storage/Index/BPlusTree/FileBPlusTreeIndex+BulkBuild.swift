@@ -77,6 +77,11 @@ extension FileBPlusTreeIndex {
 
         hdr.root = childIds.first ?? 0
         try writeHeader()
+        
+        // 🔧 FIX: Flush buffer pool and synchronize to ensure data is written to disk
+        // Without this, lookup operations may read stale/empty pages after rebuild
+        try buf?.flushAll()
+        try fh.synchronize()
         // WAL cleared - using global WAL now
     }
 }

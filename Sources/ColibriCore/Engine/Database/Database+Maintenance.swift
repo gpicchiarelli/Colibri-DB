@@ -46,11 +46,16 @@ extension Database {
             try? ft.flush(fullSync: fullSync)
             flushedTables &+= 1
         }
-        for (_, tableMap) in indexes {
-            for (_, def) in tableMap {
+        for (tableName, tableMap) in indexes {
+            for (indexName, def) in tableMap {
                 if case .persistentBTree(let f) = def.backend {
-                    try? f.flushBuffers(fullSync: fullSync)
-                    flushedIndexes &+= 1
+                    do {
+                        try f.flushBuffers(fullSync: fullSync)
+                        flushedIndexes &+= 1
+                        print("✅ Flushed index \(tableName).\(indexName)")
+                    } catch {
+                        print("❌ Failed to flush index \(tableName).\(indexName): \(error)")
+                    }
                 }
             }
         }

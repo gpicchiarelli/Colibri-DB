@@ -38,7 +38,9 @@ extension FileBPlusTreeIndex {
             hdr.root = newRoot
             try writeHeader()
         }
-        if sync { try fh.synchronize() }
+        if sync { 
+            try fh.synchronize() 
+        }
         // WAL functionality disabled
     }
 
@@ -60,7 +62,9 @@ extension FileBPlusTreeIndex {
             hdr.root = newRoot
             try writeHeader()
         }
-        if sync { try fh.synchronize() }
+        if sync { 
+            try fh.synchronize() 
+        }
     }
 
     public func insert(composite: [Value], rid: RID) throws {
@@ -140,7 +144,11 @@ extension FileBPlusTreeIndex {
 
     public func searchEquals(_ key: Value) throws -> [RID] {
         let k = KeyBytes.fromValue(key).bytes
-        guard hdr.root != 0 else { return [] }
+        print("🔍 searchEquals: key=\(key) root=\(hdr.root) keyBytes=\(k.count) bytes")
+        guard hdr.root != 0 else { 
+            print("❌ searchEquals: root is 0!")
+            return [] 
+        }
         var pid = hdr.root
         while true {
             let page = try readPage(pid)
@@ -158,9 +166,18 @@ extension FileBPlusTreeIndex {
                 pid = nextPid
             } else {
                 let leaf = try parseLeaf(page.data)
+                print("🍃 Leaf \(pid): \(leaf.keys.count) keys, searching key size=\(k.count)")
+                if leaf.keys.count > 0 && leaf.keys.count <= 15 {
+                    for (idx, keyData) in leaf.keys.enumerated() {
+                        let match = (keyData == k) ? "✅" : "  "
+                        print("\(match) Key[\(idx)]: \(keyData.count) bytes, equal=\(keyData == k)")
+                    }
+                }
                 if let i = binarySearchBranchless(keys: leaf.keys, key: k) {
+                    print("✅ Found at index \(i)")
                     return leaf.ridLists[i]
                 }
+                print("❌ Not found (binarySearchBranchless returned nil)")
                 return []
             }
         }

@@ -50,26 +50,24 @@ extension FileBPlusTreeIndex {
     
     /// 🚀 OPTIMIZATION: Branchless binary search for better CPU pipeline performance
     @inline(__always) func binarySearchBranchless(keys: [Data], key: Data) -> Int? {
+        // 🔧 FIX: The branchless algorithm had a bug. Using classic binary search instead.
         if keys.isEmpty { return nil }
         
-        let count = keys.count
-        var base = 0
-        var n = count
+        var left = 0
+        var right = keys.count - 1
         
-        // Branchless binary search using bit manipulation
-        while n > 1 {
-            let half = n >> 1
-            let mid = base + half
+        while left <= right {
+            let mid = left + (right - left) / 2
             let cmp = compareBytes(keys[mid], key)
             
-            // Branchless update: if cmp < 0, move base forward
-            base = cmp < 0 ? mid : base
-            n = cmp < 0 ? (n - half) : half
-        }
-        
-        // Final check
-        if base < count && compareBytes(keys[base], key) == 0 {
-            return base
+            if cmp == 0 {
+                return mid  // Found!
+            } else if cmp < 0 {
+                left = mid + 1
+            } else {
+                if mid == 0 { break }  // Prevent underflow
+                right = mid - 1
+            }
         }
         
         return nil

@@ -411,9 +411,27 @@ extension Database {
         switch pair.backend {
         case .anyString:
             throw DBError.notImplemented("Bulk build available only for persistent BTree")
-        case .persistentBTree(let f):
-            f.setIOHints(enabled: config.ioSequentialReadHint)
-            f.setFullFSync(enabled: config.walFullFSyncEnabled)
+        case .persistentBTree(let oldIndex):
+            // 🔧 FIX: Close old index and recreate to clear buffer pool cache
+            // This fixes the issue where lookups fail after rebuild because
+            // buffer pool has stale pages cached from before truncate
+            oldIndex.close()
+            
+            // Recreate index with fresh buffer pool
+            let dir = URL(fileURLWithPath: config.dataDir).appendingPathComponent("indexes")
+            let path = dir.appendingPathComponent("\(table)__\(index).bt").path
+            try? FileManager.default.removeItem(atPath: path)
+            
+            let qos = DispatchQoS.fromConfig(config.bufferFlushQoS)
+            let newIndex = try FileBPlusTreeIndex(path: path,
+                                                   pageSize: config.pageSizeBytes,
+                                                   capacityPages: config.indexBufferPoolPages,
+                                                   flushQoS: qos,
+                                                   ioHintsEnabled: config.ioSequentialReadHint,
+                                                   walFullSyncEnabled: config.walFullFSyncEnabled)
+            newIndex.setIOHints(enabled: config.ioSequentialReadHint)
+            newIndex.setFullFSync(enabled: config.walFullFSyncEnabled)
+            
             let cols = pair.columns
             // Collect (encodedKey, rid)
             var flat: [(Data, RID)] = []
@@ -439,8 +457,8 @@ extension Database {
                 while i < flat.count && flat[i].0 == key { rids.append(flat[i].1); i += 1 }
                 keys.append(key); lists.append(rids)
             }
-            try f.bulkBuildEncoded(keys: keys, ridLists: lists)
-            map[index] = (columns: cols, backend: .persistentBTree(f))
+            try newIndex.bulkBuildEncoded(keys: keys, ridLists: lists)
+            map[index] = (columns: cols, backend: .persistentBTree(newIndex))
             indexes[table] = map
         }
     }
