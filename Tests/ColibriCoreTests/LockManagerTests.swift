@@ -43,29 +43,34 @@ struct LockManagerTests {
         Thread.sleep(forTimeInterval: 0.1)
 
         // Now T2 tries to acquire resourceA - this should detect deadlock
-        var deadlockRaised = false
+        var deadlockDetected = false
+        var t2ExtraHandle: LockHandle?
         do {
-            _ = try manager.lock(resourceA, mode: .exclusive, tid: 2, timeout: nil)
-            Issue.record("Expected deadlock when locking resourceA for T2")
+            let h = try manager.lock(resourceA, mode: .exclusive, tid: 2, timeout: nil)
+            t2ExtraHandle = h
         } catch let error as DBError {
-            if case .deadlock = error { deadlockRaised = true }
+            if case .deadlock = error { deadlockDetected = true }
+            else { Issue.record("Unexpected DBError: \(error)") }
         } catch {
             Issue.record("Unexpected error: \(error)")
         }
-        #expect(deadlockRaised)
 
         // Clean up
+        if let extra = t2ExtraHandle {
+            manager.unlock(extra)
+        }
         manager.unlock(handleT2)
         _ = waiterFinished.wait(timeout: .now() + 1)
         t1Result.sync {
-            if let err = t1Error {
+            if let err = t1Error as? DBError, case .deadlock = err {
+                deadlockDetected = true
+            } else if let err = t1Error {
                 Issue.record("Unexpected error for T1: \(err)")
             }
-            if let h = t1SecondHandle {
-                manager.unlock(h)
-            }
+            if let h = t1SecondHandle { manager.unlock(h) }
         }
         manager.unlock(handleT1)
+        #expect(deadlockDetected)
     }
 
     @Test func honorsTimeoutWhenLockCannotBeGranted() throws {
@@ -126,4 +131,3 @@ struct LockManagerTests {
         manager.unlock(sharedT1)
     }
 }
-

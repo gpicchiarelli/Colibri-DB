@@ -277,7 +277,7 @@ extension DBConfig {
         let canonicalDataDir = PathValidator.canonicalizePath(self.dataDir)
         
         // Configure safe bases with the canonical path
-        PathValidator.configure(safeBases: [canonicalDataDir], reset: true)
+        PathValidator.configure(safeBases: [canonicalDataDir])
         
         // Now validate the data directory properly
         let _ = try PathValidator.validateDataDir(canonicalDataDir)
