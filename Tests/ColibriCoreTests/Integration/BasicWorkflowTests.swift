@@ -30,8 +30,8 @@ struct BasicWorkflowTests {
         
         // Insert
         let tid1 = try db.begin()
-        let rid1 = try db.insert(table: "users", row: ["id": .int(1), "name": .string("Alice")], tid: tid1)
-        let rid2 = try db.insert(table: "users", row: ["id": .int(2), "name": .string("Bob")], tid: tid1)
+        let rid1 = try db.insert(into: "users", row: ["id": .int(1), "name": .string("Alice")], tid: tid1)
+        let rid2 = try db.insert(into: "users", row: ["id": .int(2), "name": .string("Bob")], tid: tid1)
         try db.commit(tid1)
         
         // Read
@@ -51,7 +51,7 @@ struct BasicWorkflowTests {
         try db.delete(table: "users", rid: rid2, tid: tid3)
         try db.commit(tid3)
         
-        let remaining = try db.scan(table: "users")
+        let remaining = try db.scan( "users")
         #expect(remaining.count == 1)
     }
     
@@ -64,16 +64,16 @@ struct BasicWorkflowTests {
         
         // Insert and commit
         let tid1 = try db.begin()
-        _ = try db.insert(table: "test", row: ["id": .int(1)], tid: tid1)
+        _ = try db.insert(into: "test", row: ["id": .int(1)], tid: tid1)
         try db.commit(tid1)
         
         // Insert and rollback
         let tid2 = try db.begin()
-        _ = try db.insert(table: "test", row: ["id": .int(2)], tid: tid2)
+        _ = try db.insert(into: "test", row: ["id": .int(2)], tid: tid2)
         try db.rollback(tid2)
         
         // Only first insert should be visible
-        let results = try db.scan(table: "test")
+        let results = try db.scan( "test")
         #expect(results.count == 1)
         #expect(results[0].row["id"] == .int(1))
     }
@@ -88,13 +88,13 @@ struct BasicWorkflowTests {
         
         let tid = try db.begin()
         
-        _ = try db.insert(table: "users", row: ["id": .int(1), "name": .string("User1")], tid: tid)
-        _ = try db.insert(table: "orders", row: ["id": .int(1), "user_id": .int(1), "amount": .double(99.99)], tid: tid)
+        _ = try db.insert(into: "users", row: ["id": .int(1), "name": .string("User1")], tid: tid)
+        _ = try db.insert(into: "orders", row: ["id": .int(1), "user_id": .int(1), "amount": .double(99.99)], tid: tid)
         
         try db.commit(tid)
         
-        let users = try db.scan(table: "users")
-        let orders = try db.scan(table: "orders")
+        let users = try db.scan( "users")
+        let orders = try db.scan( "orders")
         
         #expect(users.count == 1)
         #expect(orders.count == 1)
@@ -115,12 +115,12 @@ struct BasicWorkflowTests {
                 "value": .string("data_\(i)"),
                 "score": .double(Double(i) * 1.5)
             ]
-            _ = try db.insert(table: "batch", row: row, tid: tid)
+            _ = try db.insert(into: "batch", row: row, tid: tid)
         }
         
         try db.commit(tid)
         
-        let results = try db.scan(table: "batch")
+        let results = try db.scan( "batch")
         #expect(results.count == 1000)
     }
 }

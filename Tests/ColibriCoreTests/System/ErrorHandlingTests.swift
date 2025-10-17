@@ -56,7 +56,7 @@ struct ErrorHandlingTests {
         defer { try? db.close() }
         
         #expect(throws: DBError.self) {
-            _ = try db.scan(table: "nonexistent_table")
+            _ = try db.scan( "nonexistent_table")
         }
     }
     
@@ -92,13 +92,13 @@ struct ErrorHandlingTests {
         try db.createTable("test")
         
         let tid = try db.begin()
-        _ = try db.insert(table: "test", row: ["id": .int(1)], tid: tid)
+        _ = try db.insert(into: "test", row: ["id": .int(1)], tid: tid)
         
         // Rollback
         try db.rollback(tid)
         
         // Verify nothing was inserted
-        let results = try db.scan(table: "test")
+        let results = try db.scan( "test")
         #expect(results.isEmpty)
     }
     
@@ -114,7 +114,7 @@ struct ErrorHandlingTests {
         
         // Error 1: Table doesn't exist
         #expect(throws: Error.self) {
-            _ = try db.scan(table: "missing")
+            _ = try db.scan( "missing")
         }
         
         // Create table
@@ -144,14 +144,14 @@ struct ErrorHandlingTests {
         try db.createTable("test")
         
         // Cause an error
-        _ = try? db.scan(table: "nonexistent")
+        _ = try? db.scan( "nonexistent")
         
         // Database should still work
         let tid = try db.begin()
-        _ = try db.insert(table: "test", row: ["id": .int(1)], tid: tid)
+        _ = try db.insert(into: "test", row: ["id": .int(1)], tid: tid)
         try db.commit(tid)
         
-        let results = try db.scan(table: "test")
+        let results = try db.scan( "test")
         #expect(results.count == 1)
     }
 }

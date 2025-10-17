@@ -26,21 +26,21 @@ public struct ASTSubstitutor {
         parameters: [String: Value]
     ) throws -> SQLStatement {
         
-        var mutableAST = ast
+        let mutableAST: SQLStatement
         
         // Substitute in all parts of the statement
-        switch ast.type {
-        case .select:
-            mutableAST = try substituteInSelect(ast, parameters: parameters)
-        case .insert:
-            mutableAST = try substituteInInsert(ast, parameters: parameters)
-        case .update:
-            mutableAST = try substituteInUpdate(ast, parameters: parameters)
-        case .delete:
-            mutableAST = try substituteInDelete(ast, parameters: parameters)
-        default:
+        switch ast {
+        case .select(let stmt):
+            mutableAST = .select(try substituteInSelect(stmt, parameters: parameters))
+        case .insert(let stmt):
+            mutableAST = .insert(try substituteInInsert(stmt, parameters: parameters))
+        case .update(let stmt):
+            mutableAST = .update(try substituteInUpdate(stmt, parameters: parameters))
+        case .delete(let stmt):
+            mutableAST = .delete(try substituteInDelete(stmt, parameters: parameters))
+        case .createTable, .createIndex, .dropTable, .dropIndex, .explain:
             // Other statement types don't typically have parameters
-            break
+            mutableAST = ast
         }
         
         // Verify no unbound parameters remain
@@ -52,82 +52,84 @@ public struct ASTSubstitutor {
     // MARK: - Statement-specific Substitution
     
     private static func substituteInSelect(
-        _ stmt: SQLStatement,
+        _ stmt: SelectStatement,
         parameters: [String: Value]
-    ) throws -> SQLStatement {
-        var modified = stmt
-        
+    ) throws -> SelectStatement {
         // Substitute in WHERE clause if present
-        if let whereExpr = stmt.whereClause {
-            modified.whereClause = try substituteInExpression(whereExpr, parameters: parameters)
-        }
+        let newWhereClause = try stmt.whereClause.map { try substituteInExpression($0, parameters: parameters) }
         
         // Substitute in HAVING clause if present
-        if let havingExpr = stmt.havingClause {
-            modified.havingClause = try substituteInExpression(havingExpr, parameters: parameters)
-        }
+        let newHaving = try stmt.having.map { try substituteInExpression($0, parameters: parameters) }
         
         // Substitute in select expressions if they contain parameters
-        if let selectExprs = stmt.selectExpressions {
-            modified.selectExpressions = try selectExprs.map { expr in
-                try substituteInExpression(expr, parameters: parameters)
-            }
+        let newColumns = try stmt.columns.map { col in
+            SelectColumn(
+                expression: try substituteInExpression(col.expression, parameters: parameters),
+                alias: col.alias
+            )
         }
         
-        return modified
+        return SelectStatement(
+            columns: newColumns,
+            from: stmt.from,
+            whereClause: newWhereClause,
+            groupBy: stmt.groupBy,
+            having: newHaving,
+            orderBy: stmt.orderBy,
+            limit: stmt.limit,
+            offset: stmt.offset
+        )
     }
     
     private static func substituteInInsert(
-        _ stmt: SQLStatement,
+        _ stmt: InsertStatement,
         parameters: [String: Value]
-    ) throws -> SQLStatement {
-        var modified = stmt
-        
+    ) throws -> InsertStatement {
         // Substitute in VALUES clause
-        if let values = stmt.insertValues {
-            modified.insertValues = try values.map { row in
-                try row.map { expr in
-                    try substituteInExpression(expr, parameters: parameters)
-                }
-            }
+        let newValues = try stmt.values.map { expr in
+            try substituteInExpression(expr, parameters: parameters)
         }
         
-        return modified
+        return InsertStatement(
+            tableName: stmt.tableName,
+            columns: stmt.columns,
+            values: newValues
+        )
     }
     
     private static func substituteInUpdate(
-        _ stmt: SQLStatement,
+        _ stmt: UpdateStatement,
         parameters: [String: Value]
-    ) throws -> SQLStatement {
-        var modified = stmt
-        
+    ) throws -> UpdateStatement {
         // Substitute in SET clause
-        if let setValues = stmt.setValues {
-            modified.setValues = try setValues.mapValues { expr in
-                try substituteInExpression(expr, parameters: parameters)
-            }
+        let newSetClauses = try stmt.setClauses.map { setClause in
+            SetClause(
+                column: setClause.column,
+                value: try substituteInExpression(setClause.value, parameters: parameters)
+            )
         }
         
         // Substitute in WHERE clause
-        if let whereExpr = stmt.whereClause {
-            modified.whereClause = try substituteInExpression(whereExpr, parameters: parameters)
-        }
+        let newWhereClause = try stmt.whereClause.map { try substituteInExpression($0, parameters: parameters) }
         
-        return modified
+        return UpdateStatement(
+            tableName: stmt.tableName,
+            setClauses: newSetClauses,
+            whereClause: newWhereClause
+        )
     }
     
     private static func substituteInDelete(
-        _ stmt: SQLStatement,
+        _ stmt: DeleteStatement,
         parameters: [String: Value]
-    ) throws -> SQLStatement {
-        var modified = stmt
-        
+    ) throws -> DeleteStatement {
         // Substitute in WHERE clause
-        if let whereExpr = stmt.whereClause {
-            modified.whereClause = try substituteInExpression(whereExpr, parameters: parameters)
-        }
+        let newWhereClause = try stmt.whereClause.map { try substituteInExpression($0, parameters: parameters) }
         
-        return modified
+        return DeleteStatement(
+            tableName: stmt.tableName,
+            whereClause: newWhereClause
+        )
     }
     
     // MARK: - Expression Substitution (Recursive)
@@ -219,37 +221,49 @@ public struct ASTSubstitutor {
     private static func extractUnboundParameters(from stmt: SQLStatement) -> [String] {
         var params: [String] = []
         
-        // Check WHERE clause
-        if let whereExpr = stmt.whereClause {
-            params.append(contentsOf: extractParametersFromExpression(whereExpr))
-        }
-        
-        // Check HAVING clause
-        if let havingExpr = stmt.havingClause {
-            params.append(contentsOf: extractParametersFromExpression(havingExpr))
-        }
-        
-        // Check select expressions
-        if let selectExprs = stmt.selectExpressions {
-            for expr in selectExprs {
+        switch stmt {
+        case .select(let selectStmt):
+            // Check WHERE clause
+            if let whereExpr = selectStmt.whereClause {
+                params.append(contentsOf: extractParametersFromExpression(whereExpr))
+            }
+            
+            // Check HAVING clause
+            if let havingExpr = selectStmt.having {
+                params.append(contentsOf: extractParametersFromExpression(havingExpr))
+            }
+            
+            // Check select expressions
+            for col in selectStmt.columns {
+                params.append(contentsOf: extractParametersFromExpression(col.expression))
+            }
+            
+        case .insert(let insertStmt):
+            // Check insert values
+            for expr in insertStmt.values {
                 params.append(contentsOf: extractParametersFromExpression(expr))
             }
-        }
-        
-        // Check insert values
-        if let insertValues = stmt.insertValues {
-            for row in insertValues {
-                for expr in row {
-                    params.append(contentsOf: extractParametersFromExpression(expr))
-                }
+            
+        case .update(let updateStmt):
+            // Check update SET values
+            for setClause in updateStmt.setClauses {
+                params.append(contentsOf: extractParametersFromExpression(setClause.value))
             }
-        }
-        
-        // Check update SET values
-        if let setValues = stmt.setValues {
-            for expr in setValues.values {
-                params.append(contentsOf: extractParametersFromExpression(expr))
+            
+            // Check WHERE clause
+            if let whereExpr = updateStmt.whereClause {
+                params.append(contentsOf: extractParametersFromExpression(whereExpr))
             }
+            
+        case .delete(let deleteStmt):
+            // Check WHERE clause
+            if let whereExpr = deleteStmt.whereClause {
+                params.append(contentsOf: extractParametersFromExpression(whereExpr))
+            }
+            
+        case .createTable, .createIndex, .dropTable, .dropIndex, .explain:
+            // These statements don't have parameters
+            break
         }
         
         return params

@@ -3,7 +3,7 @@ import ColibriCore
 
 extension BenchmarkCLI {
     // MARK: - Indici in‑memory
-    static func runInMemoryIndexLookup(iterations: Int, kind: String, granular: Bool) throws -> BenchmarkResult {
+    static func runInMemoryIndexLookup(iterations: Int, kind: String, granular: Bool) throws -> InternalBenchmarkResult {
         var cfg = DBConfig(storageEngine: "InMemory")
         cfg.autoCompactionEnabled = false
         let db = Database(config: cfg)
@@ -47,7 +47,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runInMemoryIndexRange(iterations: Int, kind: String, granular: Bool) throws -> BenchmarkResult {
+    static func runInMemoryIndexRange(iterations: Int, kind: String, granular: Bool) throws -> InternalBenchmarkResult {
         var cfg = DBConfig(storageEngine: "InMemory")
         cfg.autoCompactionEnabled = false
         let db = Database(config: cfg)
@@ -91,7 +91,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runIndexTombstone(iterations: Int, kind: String, granular: Bool) throws -> BenchmarkResult {
+    static func runIndexTombstone(iterations: Int, kind: String, granular: Bool) throws -> InternalBenchmarkResult {
         var cfg = DBConfig(storageEngine: "InMemory")
         cfg.autoCompactionEnabled = false
         let db = Database(config: cfg)

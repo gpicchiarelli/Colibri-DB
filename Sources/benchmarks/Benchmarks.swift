@@ -198,7 +198,7 @@ struct LatencyStats {
     }
 }
 
-struct BenchmarkResult {
+internal struct InternalBenchmarkResult {
     let name: String
     let iterations: Int
     let elapsed: Duration
@@ -502,7 +502,7 @@ struct BenchmarkCLI {
     }
     
     // Generate output string for file writing
-    static func generateOutput(result: BenchmarkResult, format: BenchmarkResult.OutputFormat) -> String {
+    static func generateOutput(result: InternalBenchmarkResult, format: InternalBenchmarkResult.OutputFormat) -> String {
         var output = ""
         
         switch format {
@@ -617,7 +617,7 @@ struct BenchmarkCLI {
         let scenarios = selected.map { [$0] } ?? Scenario.allCases
         for scenario in scenarios {
             do {
-                let baseResult: BenchmarkResult
+                let baseResult: InternalBenchmarkResult
                 switch scenario {
             case .heapInsert:
                 baseResult = try runHeapInsert(iterations: iterations, flags: scenarioFlags)
@@ -879,7 +879,7 @@ struct BenchmarkCLI {
     }
 
     // MARK: - Metadata enrichment
-    private static func attachConfigMetadata(result: BenchmarkResult) -> BenchmarkResult {
+    private static func attachConfigMetadata(result: InternalBenchmarkResult) -> InternalBenchmarkResult {
         var meta = result.metadata
         // In assenza di un DB dedicato per scenario, logghiamo i default globali
         let cfg = DBConfig()
@@ -890,6 +890,6 @@ struct BenchmarkCLI {
         meta["split_ratio"] = meta["split_ratio"] ?? "0.60/0.40"
         meta["metrics_sampling"] = meta["metrics_sampling"] ?? String(cfg.optimizerStatsSampleRows)
         if meta["warmup_done"] == nil { meta["warmup_done"] = "false" }
-        return BenchmarkResult(name: result.name, iterations: result.iterations, elapsed: result.elapsed, latenciesMs: result.latenciesMs, metadata: meta, systemMetrics: result.systemMetrics)
+        return InternalBenchmarkResult(name: result.name, iterations: result.iterations, elapsed: result.elapsed, latenciesMs: result.latenciesMs, metadata: meta, systemMetrics: result.systemMetrics)
     }
 }

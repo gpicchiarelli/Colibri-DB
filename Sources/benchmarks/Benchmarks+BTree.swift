@@ -3,7 +3,7 @@ import ColibriCore
 
 extension BenchmarkCLI {
     // MARK: - B+Tree base
-    static func runBTreeLookup(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
+    static func runBTreeLookup(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -90,7 +90,7 @@ extension BenchmarkCLI {
         return BenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done": flags.noWarmup ? "false" : "true"]) 
     }
     
-    static func runBTreeLookupOptimized(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
+    static func runBTreeLookupOptimized(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -237,7 +237,7 @@ extension BenchmarkCLI {
     }
 
     // MARK: - B+Tree estesi
-    static func runBTreeInsert(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runBTreeInsert(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir(); defer { try? fm.removeItem(at: tmp) }
         var cfg = DBConfig(dataDir: tmp.path)
@@ -266,7 +266,7 @@ extension BenchmarkCLI {
         }
     }
     
-    static func runBTreeInsertOptimized(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runBTreeInsertOptimized(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir(); defer { try? fm.removeItem(at: tmp) }
         var cfg = DBConfig(dataDir: tmp.path)
@@ -310,7 +310,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runBTreeRange(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runBTreeRange(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir(); defer { try? fm.removeItem(at: tmp) }
         var cfg = DBConfig(dataDir: tmp.path)
@@ -360,7 +360,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runBTreeInsertBatch(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runBTreeInsertBatch(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir(); defer { try? fm.removeItem(at: tmp) }
         var cfg = DBConfig(dataDir: tmp.path)
@@ -416,7 +416,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runBTreeBulkBuild(iterations: Int) throws -> BenchmarkResult {
+    static func runBTreeBulkBuild(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir(); defer { try? fm.removeItem(at: tmp) }
         var cfg = DBConfig(dataDir: tmp.path)

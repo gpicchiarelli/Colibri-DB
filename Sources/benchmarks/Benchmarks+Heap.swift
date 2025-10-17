@@ -3,7 +3,7 @@ import ColibriCore
 
 extension BenchmarkCLI {
     // MARK: - Heap (base)
-    static func runHeapInsert(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
+    static func runHeapInsert(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> InternalBenchmarkResult {
         var config = DBConfig(storageEngine: "InMemory")
         config.autoCompactionEnabled = false
         let db = Database(config: config)
@@ -19,7 +19,7 @@ extension BenchmarkCLI {
         return BenchmarkResult(name: Scenario.heapInsert.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory", "warmup_done": flags.noWarmup ? "false" : "true"]) 
     }
 
-    static func runHeapScan(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
+    static func runHeapScan(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> InternalBenchmarkResult {
         var config = DBConfig(storageEngine: "InMemory")
         config.autoCompactionEnabled = false
         let db = Database(config: config)
@@ -48,7 +48,7 @@ extension BenchmarkCLI {
     }
 
     // MARK: - Heap (estesi)
-    static func runHeapDelete(iterations: Int, granular: Bool, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
+    static func runHeapDelete(iterations: Int, granular: Bool, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = fm.temporaryDirectory.appendingPathComponent("colibridb-bench-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: tmp, withIntermediateDirectories: true)
@@ -78,7 +78,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runHeapDeleteBatch(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runHeapDeleteBatch(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = fm.temporaryDirectory.appendingPathComponent("colibridb-bench-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: tmp, withIntermediateDirectories: true)
@@ -118,7 +118,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runHeapReadRID(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runHeapReadRID(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = fm.temporaryDirectory.appendingPathComponent("colibridb-bench-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: tmp, withIntermediateDirectories: true)

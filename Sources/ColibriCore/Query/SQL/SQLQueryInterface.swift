@@ -274,6 +274,9 @@ public final class SQLQueryInterface {
         case .column(let name):
             if let row = row { return row[name] ?? .null }
             return .null
+        case .parameter(let name, _):
+            // Parameters should have been substituted before execution
+            throw DBError.invalidArgument("Unbound parameter: \(name)")
         case .binary(let left, let op, let right):
             let leftValue = try evaluateExpression(left, inRow: row)
             let rightValue = try evaluateExpression(right, inRow: row)

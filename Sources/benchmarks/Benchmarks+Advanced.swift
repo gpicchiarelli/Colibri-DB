@@ -4,7 +4,7 @@ import ColibriCore
 extension BenchmarkCLI {
     // MARK: - Benchmark avanzati
 
-    static func runWALRecovery(iterations: Int) throws -> BenchmarkResult {
+    static func runWALRecovery(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
 
@@ -60,7 +60,7 @@ extension BenchmarkCLI {
         )
     }
 
-    static func runWALStress(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runWALStress(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
 
@@ -105,7 +105,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runSystemLoad(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runSystemLoad(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
 
@@ -152,7 +152,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runMemoryPressure(iterations: Int) throws -> BenchmarkResult {
+    static func runMemoryPressure(iterations: Int) throws -> InternalBenchmarkResult {
         var cfg = DBConfig(storageEngine: "InMemory")
         cfg.walEnabled = false  // No WAL per focus su memoria
 
@@ -186,7 +186,7 @@ extension BenchmarkCLI {
         )
     }
 
-    static func runConcurrentLoad(iterations: Int, workers: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runConcurrentLoad(iterations: Int, workers: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
 
@@ -240,7 +240,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runInsertVariability(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runInsertVariability(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
 
@@ -294,7 +294,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runQueryLatency(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runQueryLatency(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
 

@@ -36,7 +36,7 @@ struct ConcurrencyStressTests {
             do {
                 let tid = try db.begin()
                 let row: Row = ["id": .int(Int64(i)), "data": .string("concurrent_\(i)")]
-                _ = try db.insert(table: "stress_test", row: row, tid: tid)
+                _ = try db.insert(into: "stress_test", row: row, tid: tid)
                 try db.commit(tid)
             } catch {
                 errorLock.lock()
@@ -47,7 +47,7 @@ struct ConcurrencyStressTests {
         
         #expect(errors.isEmpty, "Found \(errors.count) errors")
         
-        let results = try db.scan(table: "stress_test")
+        let results = try db.scan( "stress_test")
         #expect(results.count == iterations)
     }
     
@@ -60,7 +60,7 @@ struct ConcurrencyStressTests {
         let setupTid = try db.begin()
         for i in 0..<10 {
             let row: Row = ["id": .int(Int64(i)), "value": .int(Int64(i * 100))]
-            _ = try db.insert(table: "stress_test", row: row, tid: setupTid)
+            _ = try db.insert(into: "stress_test", row: row, tid: setupTid)
         }
         try db.commit(setupTid)
         
@@ -72,12 +72,12 @@ struct ConcurrencyStressTests {
             do {
                 if i % 2 == 0 {
                     // Read
-                    _ = try db.scan(table: "stress_test")
+                    _ = try db.scan( "stress_test")
                 } else {
                     // Write
                     let tid = try db.begin()
                     let row: Row = ["id": .int(Int64(100 + i)), "value": .int(Int64(i))]
-                    _ = try db.insert(table: "stress_test", row: row, tid: tid)
+                    _ = try db.insert(into: "stress_test", row: row, tid: tid)
                     try db.commit(tid)
                 }
             } catch {
@@ -103,7 +103,7 @@ struct ConcurrencyStressTests {
             do {
                 let tid = try db.begin()
                 let row: Row = ["id": .int(Int64(i))]
-                _ = try db.insert(table: "stress_test", row: row, tid: tid)
+                _ = try db.insert(into: "stress_test", row: row, tid: tid)
                 
                 if i % 3 == 0 {
                     try db.rollback(tid)
@@ -118,7 +118,7 @@ struct ConcurrencyStressTests {
             }
         }
         
-        let finalRows = try db.scan(table: "stress_test")
+        let finalRows = try db.scan( "stress_test")
         #expect(finalRows.count == successCount)
     }
 }

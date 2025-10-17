@@ -3,7 +3,7 @@ import ColibriCore
 
 extension BenchmarkCLI {
     // MARK: - Planner base
-    static func runPlannerJoin(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> BenchmarkResult {
+    static func runPlannerJoin(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -49,7 +49,7 @@ extension BenchmarkCLI {
     }
 
     // MARK: - Planner estesi
-    static func runPlannerIndexScan(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runPlannerIndexScan(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let tmp = try makeTempDir()
         var cfg = DBConfig(dataDir: tmp.path)
         cfg.storageEngine = "FileHeap"
@@ -91,7 +91,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runPlannerSortLimit(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runPlannerSortLimit(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         var cfg = DBConfig(storageEngine: "InMemory")
         cfg.autoCompactionEnabled = false
         let db = Database(config: cfg)

@@ -5,7 +5,7 @@ extension BenchmarkCLI {
     // MARK: - Suite di Test Avanzati Semplificata
     
     /// 🔥 Test di stress concorrente semplificato
-    static func runConcurrentStress(iterations: Int, threads: Int = 8, duration: TimeInterval = 60.0) throws -> BenchmarkResult {
+    static func runConcurrentStress(iterations: Int, threads: Int = 8, duration: TimeInterval = 60.0) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -111,7 +111,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔒 Test di contesa su risorse specifiche
-    static func runLockContention(iterations: Int, contentionLevel: Int = 10) throws -> BenchmarkResult {
+    static func runLockContention(iterations: Int, contentionLevel: Int = 10) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -207,7 +207,7 @@ extension BenchmarkCLI {
     }
     
     /// 🎯 Test di race conditions su indici
-    static func runIndexRaceConditions(iterations: Int) throws -> BenchmarkResult {
+    static func runIndexRaceConditions(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -300,7 +300,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔄 Test di transazioni concorrenti
-    static func runConcurrentTransactions(iterations: Int, transactionSize: Int = 10) throws -> BenchmarkResult {
+    static func runConcurrentTransactions(iterations: Int, transactionSize: Int = 10) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -391,7 +391,7 @@ extension BenchmarkCLI {
     }
     
     /// 💥 Test di crash injection semplificato
-    static func runCrashInjectionTest(iterations: Int, crashProbability: Double = 0.1) throws -> BenchmarkResult {
+    static func runCrashInjectionTest(iterations: Int, crashProbability: Double = 0.1) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -471,7 +471,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔍 Test di consistenza tra indici diversi
-    static func runIndexConsistencyTest(iterations: Int) throws -> BenchmarkResult {
+    static func runIndexConsistencyTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -559,7 +559,7 @@ extension BenchmarkCLI {
     // MARK: - Funzioni Stub per Test Non Implementati
     
     /// 🔄 Test di recovery dopo crash durante WAL flush (stub)
-    static func runWALCrashRecovery(iterations: Int) throws -> BenchmarkResult {
+    static func runWALCrashRecovery(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "wal-crash-recovery",
             iterations: iterations,
@@ -573,7 +573,7 @@ extension BenchmarkCLI {
     }
     
     /// 🗂️ Test di recovery dopo crash durante compaction (stub)
-    static func runCompactionCrashRecovery(iterations: Int) throws -> BenchmarkResult {
+    static func runCompactionCrashRecovery(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "compaction-crash-recovery",
             iterations: iterations,
@@ -587,7 +587,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔍 Test di integrità dei dati dopo recovery (stub)
-    static func runDataIntegrityRecovery(iterations: Int) throws -> BenchmarkResult {
+    static func runDataIntegrityRecovery(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "data-integrity-recovery",
             iterations: iterations,
@@ -601,7 +601,7 @@ extension BenchmarkCLI {
     }
     
     /// 👁️ Test di phantom reads (stub)
-    static func runPhantomReadsTest(iterations: Int) throws -> BenchmarkResult {
+    static func runPhantomReadsTest(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "phantom-reads",
             iterations: iterations,
@@ -615,7 +615,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔄 Test di read skew (stub)
-    static func runReadSkewTest(iterations: Int) throws -> BenchmarkResult {
+    static func runReadSkewTest(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "read-skew",
             iterations: iterations,
@@ -629,7 +629,7 @@ extension BenchmarkCLI {
     }
     
     /// ✍️ Test di write skew (stub)
-    static func runWriteSkewTest(iterations: Int) throws -> BenchmarkResult {
+    static func runWriteSkewTest(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "write-skew",
             iterations: iterations,
@@ -643,7 +643,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔒 Test di predicate locks (stub)
-    static func runPredicateLocksTest(iterations: Int) throws -> BenchmarkResult {
+    static func runPredicateLocksTest(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "predicate-locks",
             iterations: iterations,
@@ -657,7 +657,7 @@ extension BenchmarkCLI {
     }
     
     /// 📊 Test di snapshot isolation (stub)
-    static func runSnapshotIsolationTest(iterations: Int) throws -> BenchmarkResult {
+    static func runSnapshotIsolationTest(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "snapshot-isolation",
             iterations: iterations,
@@ -671,7 +671,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔄 Test di consistenza durante rebuild degli indici (stub)
-    static func runIndexRebuildConsistency(iterations: Int) throws -> BenchmarkResult {
+    static func runIndexRebuildConsistency(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "index-rebuild-consistency",
             iterations: iterations,
@@ -685,7 +685,7 @@ extension BenchmarkCLI {
     }
     
     /// 🗑️ Test di consistenza durante cancellazioni (stub)
-    static func runIndexDeletionConsistency(iterations: Int) throws -> BenchmarkResult {
+    static func runIndexDeletionConsistency(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "index-deletion-consistency",
             iterations: iterations,
@@ -699,7 +699,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔄 Test di consistenza durante aggiornamenti (stub)
-    static func runIndexUpdateConsistency(iterations: Int) throws -> BenchmarkResult {
+    static func runIndexUpdateConsistency(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "index-update-consistency",
             iterations: iterations,
@@ -713,7 +713,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔍 Test di verifica incrociata tra indici (stub)
-    static func runCrossIndexVerification(iterations: Int) throws -> BenchmarkResult {
+    static func runCrossIndexVerification(iterations: Int) throws -> InternalBenchmarkResult {
         return BenchmarkResult(
             name: "cross-index-verification",
             iterations: iterations,
@@ -729,7 +729,7 @@ extension BenchmarkCLI {
     // MARK: - Test LSM e Compaction
     
     /// 🗂️ Test di LSM write performance
-    static func runLSMWritePerformance(iterations: Int) throws -> BenchmarkResult {
+    static func runLSMWritePerformance(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -780,7 +780,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔄 Test di LSM compaction
-    static func runLSMCompaction(iterations: Int) throws -> BenchmarkResult {
+    static func runLSMCompaction(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -840,7 +840,7 @@ extension BenchmarkCLI {
     }
     
     /// 🗑️ Test di LSM tombstone handling
-    static func runLSMTombstoneHandling(iterations: Int) throws -> BenchmarkResult {
+    static func runLSMTombstoneHandling(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -901,7 +901,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔍 Test di LSM range queries
-    static func runLSMRangeQueries(iterations: Int) throws -> BenchmarkResult {
+    static func runLSMRangeQueries(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -969,7 +969,7 @@ extension BenchmarkCLI {
     // MARK: - Test Memory Backpressure
     
     /// 🧠 Test di memory pressure con buffer pool saturato
-    static func runMemoryPressureTest(iterations: Int) throws -> BenchmarkResult {
+    static func runMemoryPressureTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1039,7 +1039,7 @@ extension BenchmarkCLI {
     }
     
     /// 🔄 Test di backpressure con operazioni concorrenti
-    static func runBackpressureTest(iterations: Int, concurrentWorkers: Int = 4) throws -> BenchmarkResult {
+    static func runBackpressureTest(iterations: Int, concurrentWorkers: Int = 4) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1121,7 +1121,7 @@ extension BenchmarkCLI {
     }
     
     /// 📊 Test di memory leak detection
-    static func runMemoryLeakTest(iterations: Int) throws -> BenchmarkResult {
+    static func runMemoryLeakTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1192,7 +1192,7 @@ extension BenchmarkCLI {
     }
     
     /// 🚀 Test di sustained write performance
-    static func runSustainedWriteTest(iterations: Int, duration: TimeInterval = 30.0) throws -> BenchmarkResult {
+    static func runSustainedWriteTest(iterations: Int, duration: TimeInterval = 30.0) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1283,7 +1283,7 @@ extension BenchmarkCLI {
     // MARK: - Test Planner/Optimizer Avanzati
     
     /// Test delle statistiche del catalogo
-    static func runCatalogStatisticsTest(iterations: Int) throws -> BenchmarkResult {
+    static func runCatalogStatisticsTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1358,7 +1358,7 @@ extension BenchmarkCLI {
     }
     
     /// Test della stima della cardinalità
-    static func runCardinalityEstimationTest(iterations: Int) throws -> BenchmarkResult {
+    static func runCardinalityEstimationTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1445,7 +1445,7 @@ extension BenchmarkCLI {
     }
     
     /// Test della stima dei costi
-    static func runCostEstimationTest(iterations: Int) throws -> BenchmarkResult {
+    static func runCostEstimationTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1516,7 +1516,7 @@ extension BenchmarkCLI {
     }
     
     /// Test dei piani di esecuzione (EXPLAIN)
-    static func runExplainPlansTest(iterations: Int) throws -> BenchmarkResult {
+    static func runExplainPlansTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1597,7 +1597,7 @@ extension BenchmarkCLI {
     }
     
     /// Test dell'ottimizzazione delle query
-    static func runQueryOptimizationTest(iterations: Int) throws -> BenchmarkResult {
+    static func runQueryOptimizationTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1682,7 +1682,7 @@ extension BenchmarkCLI {
     }
     
     /// Test della selezione degli indici
-    static func runIndexSelectionTest(iterations: Int) throws -> BenchmarkResult {
+    static func runIndexSelectionTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1770,7 +1770,7 @@ extension BenchmarkCLI {
     }
     
     /// Test dell'ottimizzazione dell'ordine dei join
-    static func runJoinOrderOptimizationTest(iterations: Int) throws -> BenchmarkResult {
+    static func runJoinOrderOptimizationTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1866,7 +1866,7 @@ extension BenchmarkCLI {
     }
     
     /// Test del predicate pushdown
-    static func runPredicatePushdownTest(iterations: Int) throws -> BenchmarkResult {
+    static func runPredicatePushdownTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -1953,7 +1953,7 @@ extension BenchmarkCLI {
     // MARK: - Test Errori e Recovery Interni
     
     /// Test del recovery da fallimenti I/O
-    static func runIOFailureRecoveryTest(iterations: Int) throws -> BenchmarkResult {
+    static func runIOFailureRecoveryTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -2038,7 +2038,7 @@ extension BenchmarkCLI {
     }
     
     /// Test del recovery da corruzione delle pagine
-    static func runPageCorruptionRecoveryTest(iterations: Int) throws -> BenchmarkResult {
+    static func runPageCorruptionRecoveryTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -2122,7 +2122,7 @@ extension BenchmarkCLI {
     }
     
     /// Test del recovery da fallimenti di checksum
-    static func runChecksumFailureRecoveryTest(iterations: Int) throws -> BenchmarkResult {
+    static func runChecksumFailureRecoveryTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -2202,7 +2202,7 @@ extension BenchmarkCLI {
     }
     
     /// Test del recovery da deadlock
-    static func runDeadlockRecoveryTest(iterations: Int) throws -> BenchmarkResult {
+    static func runDeadlockRecoveryTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -2288,7 +2288,7 @@ extension BenchmarkCLI {
     }
     
     /// Test del recovery da timeout
-    static func runTimeoutRecoveryTest(iterations: Int) throws -> BenchmarkResult {
+    static func runTimeoutRecoveryTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -2387,7 +2387,7 @@ extension BenchmarkCLI {
     }
     
     /// Test del recovery da abort di transazione
-    static func runTransactionAbortRecoveryTest(iterations: Int) throws -> BenchmarkResult {
+    static func runTransactionAbortRecoveryTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -2496,7 +2496,7 @@ extension BenchmarkCLI {
     }
     
     /// Test del recovery da corruzione degli indici
-    static func runIndexCorruptionRecoveryTest(iterations: Int) throws -> BenchmarkResult {
+    static func runIndexCorruptionRecoveryTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         
@@ -2602,7 +2602,7 @@ extension BenchmarkCLI {
     }
     
     /// Test del recovery da corruzione WAL
-    static func runWALCorruptionRecoveryTest(iterations: Int) throws -> BenchmarkResult {
+    static func runWALCorruptionRecoveryTest(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         

@@ -31,7 +31,7 @@ struct PreparedStatementIntegrationTests {
                 "age": .int(Int64(20 + i)),
                 "email": .string("user\(i)@test.com")
             ]
-            _ = try db.insert(table: "users", row: row, tid: tid)
+            _ = try db.insert(into: "users", row: row, tid: tid)
         }
         try db.commit(tid)
         
@@ -105,7 +105,7 @@ struct PreparedStatementIntegrationTests {
         #expect(results.isEmpty)
         
         // Verify database integrity
-        let allUsers = try db.scan(table: "users")
+        let allUsers = try db.scan( "users")
         #expect(allUsers.count == 10)  // All data intact
     }
     

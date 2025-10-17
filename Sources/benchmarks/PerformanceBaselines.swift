@@ -110,7 +110,7 @@ public struct PerformanceBaselines {
                 "data": .string("benchmark_\(i)"),
                 "value": .double(Double(i) * 1.5)
             ]
-            _ = try db.insert(table: "benchmark", row: row, tid: tid)
+            _ = try db.insert(into: "benchmark", row: row, tid: tid)
         }
         try db.commit(tid)
         
@@ -145,7 +145,7 @@ public struct PerformanceBaselines {
             let tid = try db.begin()
             
             let row: Row = ["id": .int(Int64(txCount)), "data": .string("tx_\(txCount)")]
-            _ = try db.insert(table: "benchmark", row: row, tid: tid)
+            _ = try db.insert(into: "benchmark", row: row, tid: tid)
             
             try db.commit(tid)
             txCount += 1

@@ -66,13 +66,13 @@ struct AdvancedWorkflowTests {
         // Insert data
         for i in 1...10 {
             let row: Row = ["id": .int(Int64(i)), "name": .string("Product\(i)")]
-            _ = try db.insert(table: "products", row: row, tid: tid)
+            _ = try db.insert(into: "products", row: row, tid: tid)
         }
         
         try db.commit(tid)
         
         // Verify via table scan
-        let scanResults = try db.scan(table: "products")
+        let scanResults = try db.scan( "products")
         #expect(scanResults.count == 10)
         
         // Verify via index
@@ -121,8 +121,8 @@ struct AdvancedWorkflowTests {
         try db.commit(deleteTid)
         
         // Verify all deleted
-        let parents = try db.scan(table: "parent")
-        let children = try db.scan(table: "child")
+        let parents = try db.scan( "parent")
+        let children = try db.scan( "child")
         
         #expect(parents.isEmpty)
         #expect(children.isEmpty)
@@ -144,12 +144,12 @@ struct AdvancedWorkflowTests {
                 "data": .string("bulk_\(i)"),
                 "value": .double(Double(i) * 1.5)
             ]
-            _ = try db.insert(table: "bulk", row: row, tid: tid)
+            _ = try db.insert(into: "bulk", row: row, tid: tid)
         }
         
         try db.commit(tid)
         
-        let results = try db.scan(table: "bulk")
+        let results = try db.scan( "bulk")
         #expect(results.count == 500)
     }
     
@@ -163,15 +163,15 @@ struct AdvancedWorkflowTests {
         let tid = try db.begin()
         
         // Insert first batch
-        _ = try db.insert(table: "test", row: ["id": .int(1)], tid: tid)
-        _ = try db.insert(table: "test", row: ["id": .int(2)], tid: tid)
+        _ = try db.insert(into: "test", row: ["id": .int(1)], tid: tid)
+        _ = try db.insert(into: "test", row: ["id": .int(2)], tid: tid)
         
         // Savepoint
         try db.setSavepoint(tid: tid, name: "sp1")
         
         // Insert more
-        _ = try db.insert(table: "test", row: ["id": .int(3)], tid: tid)
-        _ = try db.insert(table: "test", row: ["id": .int(4)], tid: tid)
+        _ = try db.insert(into: "test", row: ["id": .int(3)], tid: tid)
+        _ = try db.insert(into: "test", row: ["id": .int(4)], tid: tid)
         
         // Rollback to savepoint
         try db.rollbackToSavepoint(tid: tid, name: "sp1")
@@ -180,7 +180,7 @@ struct AdvancedWorkflowTests {
         try db.commit(tid)
         
         // Should only have first 2 rows
-        let results = try db.scan(table: "test")
+        let results = try db.scan( "test")
         #expect(results.count == 2)
     }
     
@@ -198,7 +198,7 @@ struct AdvancedWorkflowTests {
         
         // T1: Lock a row
         let tid1 = try db.begin()
-        let rid = try db.insert(table: "test", row: ["id": .int(1)], tid: tid1)
+        let rid = try db.insert(into: "test", row: ["id": .int(1)], tid: tid1)
         
         // T2: Try to update same row - should timeout
         let tid2 = try db.begin()
@@ -223,7 +223,7 @@ struct AdvancedWorkflowTests {
         // Insert over time
         for i in 0..<50 {
             let row: Row = ["id": .int(Int64(i))]
-            _ = try db.insert(table: "test", row: row, tid: tid)
+            _ = try db.insert(into: "test", row: row, tid: tid)
             
             if i % 10 == 0 {
                 Thread.sleep(forTimeInterval: 0.01) // Simulate work
@@ -232,7 +232,7 @@ struct AdvancedWorkflowTests {
         
         try db.commit(tid)
         
-        let results = try db.scan(table: "test")
+        let results = try db.scan( "test")
         #expect(results.count == 50)
     }
     
@@ -245,11 +245,11 @@ struct AdvancedWorkflowTests {
         
         // Outer transaction
         let outerTid = try db.begin()
-        _ = try db.insert(table: "test", row: ["id": .int(1), "level": .string("outer")], tid: outerTid)
+        _ = try db.insert(into: "test", row: ["id": .int(1), "level": .string("outer")], tid: outerTid)
         
         // Savepoint simulates inner transaction
         try db.setSavepoint(tid: outerTid, name: "inner")
-        _ = try db.insert(table: "test", row: ["id": .int(2), "level": .string("inner")], tid: outerTid)
+        _ = try db.insert(into: "test", row: ["id": .int(2), "level": .string("inner")], tid: outerTid)
         
         // Rollback inner
         try db.rollbackToSavepoint(tid: outerTid, name: "inner")
@@ -257,7 +257,7 @@ struct AdvancedWorkflowTests {
         // Commit outer
         try db.commit(outerTid)
         
-        let results = try db.scan(table: "test")
+        let results = try db.scan( "test")
         #expect(results.count == 1)
         #expect(results[0].row["level"] == .string("outer"))
     }

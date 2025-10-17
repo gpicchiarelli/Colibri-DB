@@ -27,7 +27,7 @@ struct QueryPlannerTests {
                 "name": .string("User\(i)"),
                 "age": .int(Int64(20 + i))
             ]
-            _ = try db.insert(table: "users", row: row, tid: tid)
+            _ = try db.insert(into: "users", row: row, tid: tid)
         }
         try db.commit(tid)
         

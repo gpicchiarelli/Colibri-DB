@@ -4,7 +4,7 @@ import ColibriCore
 
 extension BenchmarkCLI {
     // MARK: - Transazioni
-    static func runTxCommit(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runTxCommit(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
 
@@ -48,7 +48,7 @@ extension BenchmarkCLI {
         }
     }
     
-    static func runTxCommitGrouped(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runTxCommitGrouped(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
 
@@ -93,7 +93,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runTxRollback(iterations: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runTxRollback(iterations: Int, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
 
@@ -136,7 +136,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runTxContention(iterations: Int, workers: Int, granular: Bool) throws -> BenchmarkResult {
+    static func runTxContention(iterations: Int, workers: Int, granular: Bool) throws -> InternalBenchmarkResult {
         var cfg = DBConfig(storageEngine: "InMemory")
         cfg.autoCompactionEnabled = false
         cfg.walEnabled = false
@@ -178,7 +178,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runMVCCSnapshotRead(iterations: Int) throws -> BenchmarkResult {
+    static func runMVCCSnapshotRead(iterations: Int) throws -> InternalBenchmarkResult {
         var cfg = DBConfig(storageEngine: "InMemory")
         cfg.autoCompactionEnabled = false
         cfg.walEnabled = false

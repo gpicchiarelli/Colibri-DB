@@ -78,11 +78,11 @@ struct TransactionManagerTests {
         
         // T1: Insert but don't commit
         let tid1 = try db.begin()
-        _ = try db.insert(table: "test", row: ["id": .int(1)], tid: tid1)
+        _ = try db.insert(into: "test", row: ["id": .int(1)], tid: tid1)
         
         // T2: Should not see uncommitted data
         let tid2 = try db.begin()
-        let results = try db.scan(table: "test", tid: tid2)
+        let results = try db.scan( "test", tid: tid2)
         #expect(results.isEmpty)
         
         // Commit T1
@@ -91,7 +91,7 @@ struct TransactionManagerTests {
         // T2 in new snapshot should see committed data
         try db.rollback(tid2)
         let tid3 = try db.begin()
-        let results2 = try db.scan(table: "test", tid: tid3)
+        let results2 = try db.scan( "test", tid: tid3)
         #expect(results2.count == 1)
         
         try db.commit(tid3)
@@ -111,21 +111,21 @@ struct TransactionManagerTests {
         
         // Insert initial data
         let setupTid = try db.begin()
-        _ = try db.insert(table: "test", row: ["id": .int(1)], tid: setupTid)
+        _ = try db.insert(into: "test", row: ["id": .int(1)], tid: setupTid)
         try db.commit(setupTid)
         
         // T1: Read
         let tid1 = try db.begin(isolation: .repeatableRead)
-        let read1 = try db.scan(table: "test", tid: tid1)
+        let read1 = try db.scan( "test", tid: tid1)
         #expect(read1.count == 1)
         
         // T2: Insert more data and commit
         let tid2 = try db.begin()
-        _ = try db.insert(table: "test", row: ["id": .int(2)], tid: tid2)
+        _ = try db.insert(into: "test", row: ["id": .int(2)], tid: tid2)
         try db.commit(tid2)
         
         // T1: Read again - should still see same data (repeatable read)
-        let read2 = try db.scan(table: "test", tid: tid1)
+        let read2 = try db.scan( "test", tid: tid1)
         #expect(read2.count == 1) // Phantom protection
         
         try db.commit(tid1)
@@ -139,15 +139,15 @@ struct TransactionManagerTests {
         try db.createTable("test")
         
         let tid = try db.begin()
-        _ = try db.insert(table: "test", row: ["id": .int(1)], tid: tid)
-        _ = try db.insert(table: "test", row: ["id": .int(2)], tid: tid)
-        _ = try db.insert(table: "test", row: ["id": .int(3)], tid: tid)
+        _ = try db.insert(into: "test", row: ["id": .int(1)], tid: tid)
+        _ = try db.insert(into: "test", row: ["id": .int(2)], tid: tid)
+        _ = try db.insert(into: "test", row: ["id": .int(3)], tid: tid)
         
         // Rollback
         try db.rollback(tid)
         
         // Nothing should be committed
-        let results = try db.scan(table: "test")
+        let results = try db.scan( "test")
         #expect(results.isEmpty)
     }
     
@@ -165,7 +165,7 @@ struct TransactionManagerTests {
             do {
                 let tid = try db.begin()
                 let row: Row = ["id": .int(Int64(i)), "data": .string("tx_\(i)")]
-                _ = try db.insert(table: "test", row: row, tid: tid)
+                _ = try db.insert(into: "test", row: row, tid: tid)
                 try db.commit(tid)
             } catch {
                 errorLock.lock()
@@ -176,7 +176,7 @@ struct TransactionManagerTests {
         
         #expect(errors.isEmpty)
         
-        let results = try db.scan(table: "test")
+        let results = try db.scan( "test")
         #expect(results.count == 20)
     }
     
@@ -194,7 +194,7 @@ struct TransactionManagerTests {
             try db.createTable("test")
             
             let tid = try db.begin()
-            _ = try db.insert(table: "test", row: ["id": .int(42)], tid: tid)
+            _ = try db.insert(into: "test", row: ["id": .int(42)], tid: tid)
             try db.commit(tid)
             
             try db.close()
@@ -203,7 +203,7 @@ struct TransactionManagerTests {
         // Reopen and verify
         do {
             let db = try Database(config: config)
-            let results = try db.scan(table: "test")
+            let results = try db.scan( "test")
             
             #expect(results.count == 1)
             #expect(results[0].row["id"] == .int(42))

@@ -3,7 +3,7 @@ import ColibriCore
 
 extension BenchmarkCLI {
     // MARK: - File heap e WAL
-    static func runFileHeapInsert(iterations: Int, wal: Bool, fullSync: Bool, granular: Bool) throws -> BenchmarkResult {
+    static func runFileHeapInsert(iterations: Int, wal: Bool, fullSync: Bool, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         var cfg = DBConfig(dataDir: tmp.path)
@@ -44,7 +44,7 @@ extension BenchmarkCLI {
         }
     }
 
-    static func runWALAppend(iterations: Int, algorithm: CompressionAlgorithm, granular: Bool) throws -> BenchmarkResult {
+    static func runWALAppend(iterations: Int, algorithm: CompressionAlgorithm, granular: Bool) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir()
         _ = tmp.appendingPathComponent("wal.log").path

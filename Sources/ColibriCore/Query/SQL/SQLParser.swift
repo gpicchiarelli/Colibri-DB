@@ -921,6 +921,7 @@ public struct SQLParser {
         case .literal(let lit): return "literal(\(lit))"
         case .operator_(let op): return op
         case .punctuation(let punct): return punct
+        case .parameter(let name): return "parameter(\(name))"
         case .eof: return "EOF"
         }
     }

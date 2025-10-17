@@ -3,7 +3,7 @@ import ColibriCore
 
 extension BenchmarkCLI {
     // MARK: - Manutenzione
-    static func runCheckpoint(iterations: Int) throws -> BenchmarkResult {
+    static func runCheckpoint(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir(); defer { try? fm.removeItem(at: tmp) }
         var cfg = DBConfig(dataDir: tmp.path)
@@ -20,7 +20,7 @@ extension BenchmarkCLI {
         return BenchmarkResult(name: Scenario.checkpoint.rawValue, iterations: 1, elapsed: elapsed)
     }
 
-    static func runVacuumCompact(iterations: Int) throws -> BenchmarkResult {
+    static func runVacuumCompact(iterations: Int) throws -> InternalBenchmarkResult {
         let fm = FileManager.default
         let tmp = try makeTempDir(); defer { try? fm.removeItem(at: tmp) }
         var cfg = DBConfig(dataDir: tmp.path)
