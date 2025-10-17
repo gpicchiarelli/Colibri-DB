@@ -49,6 +49,9 @@ public final class Database: @unchecked Sendable {
     let mvcc = MVCCManager()
     let lockManager: LockManager
     let serialClock = SerializableClock()
+    
+    // MARK: - Group Commit
+    var groupCommitCoordinator: GroupCommitCoordinator?
 
     struct TransactionContext {
         let isolation: IsolationLevel
@@ -127,6 +130,19 @@ public final class Database: @unchecked Sendable {
                 groupCommitTimeoutMs: config.walGroupCommitMs,
                 compressionAlgorithm: config.walCompression
             )
+            
+            // Initialize group commit coordinator
+            let groupCommitConfig = GroupCommitCoordinator.Configuration(
+                maxBatchSize: 64,
+                maxWaitTimeMs: config.walGroupCommitMs,
+                minBatchSize: 4,
+                enabled: true
+            )
+            
+            self.groupCommitCoordinator = GroupCommitCoordinator(configuration: groupCommitConfig) { [weak self] targetLSN in
+                guard let self = self else { return }
+                try self.flushWAL(upTo: targetLSN)
+            }
         }
         // Load index catalog
         let idxDir = URL(fileURLWithPath: config.dataDir).appendingPathComponent("indexes").path
@@ -189,6 +205,11 @@ extension Database {
     public func walRecentFlushMetrics() -> (lastBatch: Int, lastSyncNs: UInt64, flushes: Int, totalBatch: Int, totalSyncNs: UInt64)? {
         // TODO: Adapt to FileWALManager metrics
         return nil
+    }
+    
+    /// Returns group commit metrics if group commit is enabled
+    public func groupCommitMetrics() -> TransactionGroupCommitMetrics? {
+        return groupCommitCoordinator?.getMetrics()
     }
 }
 
@@ -275,6 +296,10 @@ extension Database {
     public func close() throws {
         stopVacuum()
         stopPeriodicCleanup()
+        
+        // Stop group commit coordinator and flush pending commits
+        groupCommitCoordinator?.stop()
+        
         flushAll(fullSync: config.walFullFSyncEnabled)
         for (_, table) in tablesFile {
             try table.close()

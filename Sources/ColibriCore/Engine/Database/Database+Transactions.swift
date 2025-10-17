@@ -99,7 +99,14 @@ extension Database {
         guard activeTIDs.contains(tid) else { throw DBError.notFound("Transaction \(tid) not active") }
         if globalWAL != nil {
             let targetLSN = txLastLSN[tid] ?? lastDBLSN
-            try flushWAL(upTo: targetLSN)
+            
+            // Use group commit if available for batched WAL flush
+            if let groupCommit = groupCommitCoordinator {
+                try groupCommit.commitSync(tid: tid, targetLSN: targetLSN)
+            } else {
+                // Fallback to immediate flush
+                try flushWAL(upTo: targetLSN)
+            }
         }
         flushAll()
         preparedTransactions.insert(tid)
