@@ -35,6 +35,7 @@ public final class LRUBufferPool: BufferPoolProtocol {
     private var deferredWrite: Bool
     private var maxDirty: Int
     private var flusher: DispatchSourceTimer?
+    private var cleanupTimer: DispatchSourceTimer?
     private let q: DispatchQueue
     private var policy: EvictionPolicy = .lru
     // Clock policy state
@@ -81,7 +82,11 @@ public final class LRUBufferPool: BufferPoolProtocol {
         startPeriodicCleanup()
     }
 
-    deinit { BufferNamespaceManager.shared.unregister(self) }
+    deinit {
+        stopBackgroundFlush()
+        stopPeriodicCleanup()
+        BufferNamespaceManager.shared.unregister(self)
+    }
 
     /// Reads a page without pinning it.
     public func getPage(_ id: PageID) throws -> Data {
@@ -416,16 +421,21 @@ public final class LRUBufferPool: BufferPoolProtocol {
     
     /// Start automatic periodic cleanup
     public func startPeriodicCleanup(intervalSeconds: TimeInterval = 300) { // 5 minutes default
-        let cleanupTimer = DispatchSource.makeTimerSource(queue: q)
-        cleanupTimer.schedule(deadline: .now() + intervalSeconds, repeating: intervalSeconds)
-        cleanupTimer.setEventHandler { [weak self] in
+        stopPeriodicCleanup()
+        let timer = DispatchSource.makeTimerSource(queue: q)
+        timer.schedule(deadline: .now() + intervalSeconds, repeating: intervalSeconds)
+        timer.setEventHandler { [weak self] in
             self?.performPeriodicCleanup()
         }
-        cleanupTimer.resume()
-        
-        // Note: In a real implementation, we'd want to store this timer reference
-        // and properly cancel it when the buffer pool is deallocated
+        timer.resume()
+        cleanupTimer = timer
         print("🧹 BufferPool[\(namespace)] periodic cleanup started (every \(intervalSeconds)s)")
+    }
+    
+    /// Stop automatic periodic cleanup.
+    public func stopPeriodicCleanup() {
+        cleanupTimer?.cancel()
+        cleanupTimer = nil
     }
     
     /// Manual cleanup trigger for testing or maintenance

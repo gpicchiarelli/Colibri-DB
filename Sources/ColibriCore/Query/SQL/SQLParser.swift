@@ -57,9 +57,6 @@ public struct SQLParser {
             "\\bor\\s+1\\s*=\\s*1\\b",
             "\\band\\s+1\\s*=\\s*1\\b",
             "\\bor\\s+'.*'\\s*=\\s*'.*'\\b",
-            "\\bdrop\\s+table\\b",
-            "\\btruncate\\s+table\\b",
-            "\\bdelete\\s+from\\s+\\w+\\s*;\\s*drop\\b",
             // Command injection patterns
             "\\bexec\\s*\\(",
             "\\beval\\s*\\(",

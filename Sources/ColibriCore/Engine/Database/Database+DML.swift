@@ -395,11 +395,40 @@ extension Database {
                 try removeFromIndexes(table: table, row: row, rid: rid, skipIndexName: skipIndexName, tid: tid)
                 deleted += 1
             }
+            return deleted
         }
 
-        // PERFORMANCE FIX: Remove expensive full table scan fallback
-        // If no indexes were available, return 0 instead of scanning entire table
-        // Full scan should be explicit opt-in for safety
+        // Fallback: no index matched, perform full table scan
+        let rows = try scan(table, tid: tid)
+        for (rid, row) in rows {
+            var matches = true
+            for (column, value) in predicates {
+                if row[column] != value { matches = false; break }
+            }
+            guard matches else { continue }
+            if var t = tablesMem[table] {
+                t.remove(rid)
+                tablesMem[table] = t
+                mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
+            } else if let ft = tablesFile[table] {
+                var lsn: UInt64 = 0
+                if let tid = tid {
+                    lsn = logHeapDelete(tid: tid, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                    try ft.remove(rid)
+                    var state = txStates[tid] ?? TxState()
+                    state.ops.append(TxOp(kind: .delete, table: table, rid: rid, row: row))
+                    txStates[tid] = state
+                    mvcc.registerDelete(table: table, rid: rid, row: row, tid: tid)
+                } else {
+                    lsn = logHeapDelete(tid: 0, table: table, pageId: rid.pageId, slotId: rid.slotId, row: row)
+                    lastDBLSN = max(lastDBLSN, lsn)
+                    if lsn != 0 { try ft.remove(rid, pageLSN: lsn) } else { try ft.remove(rid) }
+                    mvcc.registerDelete(table: table, rid: rid, row: row, tid: nil)
+                }
+            }
+            try removeFromIndexes(table: table, row: row, rid: rid, tid: tid)
+            deleted += 1
+        }
         return deleted
     }
     

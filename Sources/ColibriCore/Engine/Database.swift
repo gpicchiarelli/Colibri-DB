@@ -91,6 +91,7 @@ public final class Database: @unchecked Sendable {
 
     // MARK: - Vacuum background job state & metrics
     var vacuumTimer: DispatchSourceTimer?
+    var cleanupTimer: DispatchSourceTimer?
     let vacuumQueue = DispatchQueue(label: "ColibriDB.Vacuum")
     var vacuumPositions: [String: UInt64] = [:]
     var vacuumPagesPerRun: Int = 32
@@ -272,6 +273,21 @@ extension Database {
     
     /// Close the database and release resources
     public func close() throws {
+        stopVacuum()
+        stopPeriodicCleanup()
+        flushAll(fullSync: config.walFullFSyncEnabled)
+        for (_, table) in tablesFile {
+            try table.close()
+        }
+        tablesFile.removeAll()
+        for (_, tableMap) in indexes {
+            for (_, def) in tableMap {
+                if case .persistentBTree(let idx) = def.backend {
+                    idx.close()
+                }
+            }
+        }
+        indexes.removeAll()
         try globalWAL?.close()
     }
     
@@ -301,15 +317,19 @@ extension Database {
     
     /// 🔧 FIX: Start background cleanup timer
     public func startPeriodicCleanup(intervalSeconds: TimeInterval = 300) { // 5 minutes default
+        stopPeriodicCleanup()
         let timer = DispatchSource.makeTimerSource(queue: vacuumQueue)
         timer.schedule(deadline: .now() + intervalSeconds, repeating: intervalSeconds)
         timer.setEventHandler { [weak self] in
             self?.performPeriodicCleanup()
         }
         timer.resume()
-        
-        // Store timer reference to prevent deallocation
-        // Note: In a real implementation, we'd want to store this timer reference
-        // and properly cancel it in close()
+        cleanupTimer = timer
+    }
+    
+    /// Cancels the background cleanup timer if running.
+    public func stopPeriodicCleanup() {
+        cleanupTimer?.cancel()
+        cleanupTimer = nil
     }
 }

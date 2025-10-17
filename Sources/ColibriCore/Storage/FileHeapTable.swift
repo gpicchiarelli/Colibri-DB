@@ -272,6 +272,7 @@ public final class FileHeapTable: TableStorageProtocol {
     }
 
     private func readPage(_ pageId: UInt64) throws -> Page {
+        try ensureOpen()
         let lock = lockForPage(pageId)
         lock.lock(); defer { lock.unlock() }
         let d: Data
@@ -286,6 +287,7 @@ public final class FileHeapTable: TableStorageProtocol {
     }
 
     private func write(page: inout Page, pageLSN: UInt64 = 0) throws {
+        try ensureOpen()
         if pageLSN != 0 { page.setPageLSN(pageLSN) }
         page.writeHeader()
         let lock = lockForPage(page.header.pageId)
@@ -301,6 +303,7 @@ public final class FileHeapTable: TableStorageProtocol {
 
     /// Predicts the next RID that would be assigned (for WAL-before-data).
     public func predictNextRID(for row: Row) throws -> RID {
+        try ensureOpen()
         // 🚀 OPTIMIZATION: Use binary serialization for 3-5x performance improvement
         let data = try row.toBinaryData()
         // Try existing pages using FSM
@@ -319,6 +322,7 @@ public final class FileHeapTable: TableStorageProtocol {
     /// Inserts a row using FSM first-fit and returns its RID.
     @discardableResult
     public func insert(_ row: Row) throws -> RID {
+        try ensureOpen()
         // 🚀 OPTIMIZATION: Use binary serialization for 3-5x performance improvement
         let data = try row.toBinaryData()
         // choose page using FSM (first-fit), fallback to append
@@ -348,6 +352,7 @@ public final class FileHeapTable: TableStorageProtocol {
 
     /// Inserts a row with an explicit pageLSN (used during WAL redo).
     public func insert(_ row: Row, pageLSN: UInt64) throws -> RID {
+        try ensureOpen()
         // 🚀 OPTIMIZATION: Use binary serialization for 3-5x performance improvement
         let data = try row.toBinaryData()
         if let pid = selectPage(forNeed: data.count) {
@@ -375,6 +380,7 @@ public final class FileHeapTable: TableStorageProtocol {
 
     /// Scans the entire table returning (RID, Row?, isTombstone) tuples.
     public func scan(includeTombstones: Bool = false) throws -> AnySequence<(RID, Row?, Bool)> {
+        try ensureOpen()
         let count = lastPageId
         if sequentialReadHint && count > 0 {
             IOHints.hintSequential(fd: fh.fileDescriptor, offset: 0, length: Int(count) * pageSize)
@@ -417,6 +423,7 @@ public final class FileHeapTable: TableStorageProtocol {
     }
 
     public func scan() throws -> AnySequence<(RID, Row)> {
+        try ensureOpen()
         var iterator = try scan(includeTombstones: false).makeIterator()
         return AnySequence(AnyIterator {
             while let next = iterator.next() {
@@ -431,21 +438,27 @@ public final class FileHeapTable: TableStorageProtocol {
 
     /// Returns buffer pool stats associated with this table.
     public func statsString() -> String {
+        guard isOpen else { return "closed" }
         if let b = buf { return b.statsString() } else { return "nobuf" }
     }
 
     /// Returns buffer pool metrics if a pool is attached.
-    public func poolMetrics() -> LRUBufferPool.Metrics? { buf?.metrics() }
+    public func poolMetrics() -> LRUBufferPool.Metrics? {
+        guard isOpen else { return nil }
+        return buf?.metrics()
+    }
 
     // Expose pageLSN for recovery checks (ARIES-style redo guard)
     /// Reads pageLSN for a given page (used for recovery safety checks).
     public func getPageLSN(_ pageId: UInt64) -> UInt64? {
+        guard isOpen else { return nil }
         if let p = try? readPage(pageId) { return p.header.pageLSN }
         return nil
     }
 
     /// Reads a row by RID.
     public func read(_ rid: RID) throws -> Row {
+        try ensureOpen()
         let p = try readPage(rid.pageId)
         guard let bytes = p.read(slotId: rid.slotId) else { throw DBError.notFound("RID \(rid)") }
         return try JSONDecoder().decode(Row.self, from: bytes)
@@ -453,12 +466,14 @@ public final class FileHeapTable: TableStorageProtocol {
 
     /// Appends a new version of the row (MVP append-only update).
     public func update(_ rid: RID, _ newRow: Row) throws {
+        try ensureOpen()
         // For MVP: append-only update (insert new row and ignore old).
         _ = try insert(newRow)
     }
 
     /// Logically deletes a row by zeroing its slot length.
     public func remove(_ rid: RID) throws {
+        try ensureOpen()
         var page = try readPage(rid.pageId)
         page.markTombstone(slotId: rid.slotId)
         try write(page: &page)
@@ -466,6 +481,7 @@ public final class FileHeapTable: TableStorageProtocol {
 
     /// Restores a logically deleted row into its original slot (used by rollback/CLR).
     public func restore(_ rid: RID, row: Row, pageLSN: UInt64? = nil) throws {
+        try ensureOpen()
         var page = try readPage(rid.pageId)
         let bytes = try JSONEncoder().encode(row)
         let slotPos = pageSize - Int(rid.slotId) * 4
@@ -487,12 +503,14 @@ public final class FileHeapTable: TableStorageProtocol {
 
     /// Removes a row and sets the pageLSN (used during WAL redo).
     public func remove(_ rid: RID, pageLSN: UInt64) throws {
+        try ensureOpen()
         var page = try readPage(rid.pageId)
         page.markTombstone(slotId: rid.slotId)
         try write(page: &page, pageLSN: pageLSN)
     }
 
     public func clearTombstone(_ rid: RID, pageLSN: UInt64? = nil) throws {
+        try ensureOpen()
         var page = try readPage(rid.pageId)
         page.clearTombstone(slotId: rid.slotId)
         if let lsn = pageLSN, lsn != 0 {
@@ -508,6 +526,7 @@ public final class FileHeapTable: TableStorageProtocol {
     // Flush any dirty pages from buffer to disk
     /// Flushes dirty pages in the buffer to disk and fsyncs the file.
     public func flush(fullSync: Bool = false) throws {
+        try ensureOpen()
         let span = Signpost.begin(.flush, name: "HeapFlush", message: fileURL.lastPathComponent)
         defer { Signpost.end(span, message: fullSync ? "fullsync" : "fsync") }
         try buf?.flushAll()
@@ -517,6 +536,7 @@ public final class FileHeapTable: TableStorageProtocol {
     
     /// Flushes dirty pages with WAL consistency check (WAL-ahead-of-page rule).
     public func flush(fullSync: Bool = false, wal: FileWAL?) throws {
+        try ensureOpen()
         let span = Signpost.begin(.flush, name: "HeapFlush", message: fileURL.lastPathComponent)
         defer { Signpost.end(span, message: fullSync ? "fullsync" : "fsync") }
         
@@ -549,6 +569,7 @@ public final class FileHeapTable: TableStorageProtocol {
     // Compact a single page: returns additional free space obtained
     /// Compacts a single page, returning the additional free bytes obtained.
     public func compactPage(_ pageId: UInt64) throws -> Int {
+        try ensureOpen()
         var p = try readPage(pageId)
         let gained = p.compact()
         try write(page: &p)
@@ -562,6 +583,7 @@ public final class FileHeapTable: TableStorageProtocol {
     // Compact all pages; returns total gained bytes and number of pages touched
     /// Compacts all pages; returns number of pages touched and total free bytes gained.
     public func compactAllPages() throws -> (pages: Int, gained: Int) {
+        try ensureOpen()
         var touched = 0
         var total = 0
         for pid in 1...lastPageId {
@@ -580,6 +602,7 @@ public final class FileHeapTable: TableStorageProtocol {
 
     /// Estimates fragmentation by sampling data pages.
     public func fragmentationStats(samplePages: Int? = nil) throws -> HeapFragmentationStats {
+        try ensureOpen()
         let total = Int(lastPageId)
         guard total > 0 else { return HeapFragmentationStats.empty(pageSize: pageSize) }
         let requestedSample = samplePages ?? total
@@ -635,15 +658,17 @@ public final class FileHeapTable: TableStorageProtocol {
         
         // Check if already closed
         guard !isClosed else { return }
-        
+
         // Stop background flush first
-        buf?.stopBackgroundFlush()
-        
-        // Flush any remaining dirty pages
-        try buf?.flushAll()
-        
+        if let pool = buf {
+            pool.stopBackgroundFlush()
+            pool.stopPeriodicCleanup()
+            try pool.flushAll()
+        }
+        buf = nil
+
         // Note: FSM state is managed automatically, no explicit save needed
-        
+
         // Close file handle with proper error handling
         try fh.close()
         
