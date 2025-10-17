@@ -17,6 +17,7 @@ struct FileWALTests {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
+        PathValidator.configure(safeBases: [tempDir.path], reset: true)
 
         let walPath = tempDir.appendingPathComponent("wal.log").path
         var wal: FileWAL? = try FileWAL(path: walPath)
@@ -43,6 +44,7 @@ struct FileWALTests {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
+        PathValidator.configure(safeBases: [tempDir.path], reset: true)
 
         var config = DBConfig(dataDir: tempDir.path)
         config.autoCompactionEnabled = false
@@ -80,6 +82,7 @@ struct FileHeapTableTests {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
+        PathValidator.configure(safeBases: [tempDir.path], reset: true)
 
         let tablePath = tempDir.appendingPathComponent("heap.dat").path
         var table: FileHeapTable? = try FileHeapTable(path: tablePath, pageSize: 512, capacityPages: 4)
@@ -100,4 +103,3 @@ struct FileHeapTableTests {
         #expect(ridC != nil)
     }
 }
-

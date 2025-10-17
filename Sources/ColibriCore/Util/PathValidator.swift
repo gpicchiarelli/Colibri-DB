@@ -32,11 +32,16 @@ public struct PathValidator {
     // MARK: - Public API
     
     /// Initialize the validator with safe base directories
-    public static func configure(safeBases: [String]) {
+    public static func configure(safeBases: [String], reset: Bool = false) {
         safeBasesLock.lock()
         defer { safeBasesLock.unlock() }
-        _safeBases = Set(safeBases.map { canonicalizePath($0) })
-        print("🛡️ PathValidator configured with \(safeBases.count) safe base directories")
+        if reset {
+            _safeBases.removeAll()
+        }
+        for base in safeBases {
+            _safeBases.insert(canonicalizePath(base))
+        }
+        print("🛡️ PathValidator configured with \(_safeBases.count) safe base directories")
     }
     
     /// Validate and sanitize a file path
@@ -272,7 +277,7 @@ extension DBConfig {
         let canonicalDataDir = PathValidator.canonicalizePath(self.dataDir)
         
         // Configure safe bases with the canonical path
-        PathValidator.configure(safeBases: [canonicalDataDir])
+        PathValidator.configure(safeBases: [canonicalDataDir], reset: true)
         
         // Now validate the data directory properly
         let _ = try PathValidator.validateDataDir(canonicalDataDir)
