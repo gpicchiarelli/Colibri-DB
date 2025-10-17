@@ -16,7 +16,7 @@ extension BenchmarkCLI {
             _ = try db.insert(into: "bench", row: ["id": .int(Int64(i)), "payload": .string("value-\(i)")])
         }
         
-        return BenchmarkResult(name: Scenario.heapInsert.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory", "warmup_done": flags.noWarmup ? "false" : "true"]) 
+        return InternalBenchmarkResult(name: Scenario.heapInsert.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory", "warmup_done": flags.noWarmup ? "false" : "true"]) 
     }
 
     static func runHeapScan(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> InternalBenchmarkResult {
@@ -42,9 +42,9 @@ extension BenchmarkCLI {
         let totalRows = results.reduce(0) { $0 + $1.count }
         if totalRows <= 0 {
             print("⚠️  Warning: No rows found in heap scan")
-            return BenchmarkResult(name: "heap-scan", iterations: 0, elapsed: .zero, metadata: ["total_rows":"0", "warmup_done": flags.noWarmup ? "false" : "true"])
+            return InternalBenchmarkResult(name: "heap-scan", iterations: 0, elapsed: .zero, metadata: ["total_rows":"0", "warmup_done": flags.noWarmup ? "false" : "true"])
         }
-        return BenchmarkResult(name: Scenario.heapScan.rawValue, iterations: scanIterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory", "total_rows":"\(totalRows)", "warmup_done": flags.noWarmup ? "false" : "true"]) 
+        return InternalBenchmarkResult(name: Scenario.heapScan.rawValue, iterations: scanIterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["storage":"InMemory", "total_rows":"\(totalRows)", "warmup_done": flags.noWarmup ? "false" : "true"]) 
     }
 
     // MARK: - Heap (estesi)
@@ -70,11 +70,11 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory", "warmup_done": flags.noWarmup ? "false" : "true"]) 
+            return InternalBenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory", "warmup_done": flags.noWarmup ? "false" : "true"]) 
         } else {
             for i in 0..<iterations { total &+= try db.deleteEquals(table: "t", column: "id", value: .int(Int64(i))) }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed, metadata: ["storage":"InMemory", "warmup_done": flags.noWarmup ? "false" : "true"]) 
+            return InternalBenchmarkResult(name: Scenario.heapDelete.rawValue, iterations: total, elapsed: elapsed, metadata: ["storage":"InMemory", "warmup_done": flags.noWarmup ? "false" : "true"]) 
         }
     }
 
@@ -109,12 +109,12 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: "heap-delete-batch", iterations: total, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory", "batch_size":"100"]) 
+            return InternalBenchmarkResult(name: "heap-delete-batch", iterations: total, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory", "batch_size":"100"]) 
         } else {
             // Single batch delete
             total = try db.deleteBatch(table: "t", rids: rids)
             let elapsed = clock.now - start
-            return BenchmarkResult(name: "heap-delete-batch", iterations: total, elapsed: elapsed, metadata: ["storage":"InMemory", "batch_size":"all"]) 
+            return InternalBenchmarkResult(name: "heap-delete-batch", iterations: total, elapsed: elapsed, metadata: ["storage":"InMemory", "batch_size":"all"]) 
         }
     }
 
@@ -148,7 +148,7 @@ extension BenchmarkCLI {
             if sum < 0 {
                 print("⚠️  Warning: Negative sum in heap delete benchmark")
             }
-            return BenchmarkResult(name: Scenario.heapReadRID.rawValue, iterations: rids.count, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory"]) 
+            return InternalBenchmarkResult(name: Scenario.heapReadRID.rawValue, iterations: rids.count, elapsed: elapsed, latenciesMs: lat, metadata: ["storage":"InMemory"]) 
         } else {
             for rid in rids {
                 let row = try db.readRow(table: "t", rid: rid)
@@ -158,7 +158,7 @@ extension BenchmarkCLI {
             if sum < 0 {
                 print("⚠️  Warning: Negative sum in heap delete benchmark")
             }
-            return BenchmarkResult(name: Scenario.heapReadRID.rawValue, iterations: rids.count, elapsed: elapsed, metadata: ["storage":"InMemory"]) 
+            return InternalBenchmarkResult(name: Scenario.heapReadRID.rawValue, iterations: rids.count, elapsed: elapsed, metadata: ["storage":"InMemory"]) 
         }
     }
 }

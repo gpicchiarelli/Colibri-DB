@@ -121,11 +121,22 @@ struct LatencyStats {
         let bucketSize = (logMax - logMin) / Double(buckets)
         
         // Handle case where all values are very small or identical
-        if logMax - logMin < 1.0 || minVal == maxVal {
+        // Use linear scale if values are very small (< 1.0ms) or range is tiny
+        if maxVal < 1.0 || logMax - logMin < 1.0 || minVal == maxVal {
             // Use linear scale for very small ranges
             let linearMin = minVal
             let linearMax = maxVal == minVal ? minVal + max(minVal * 0.1, 0.001) : maxVal  // Ensure meaningful range
             let linearBucketSize = (linearMax - linearMin) / Double(buckets)
+            
+            // Choose appropriate formatting based on value magnitude
+            let format: String
+            if linearMax < 0.01 {
+                format = "%.6f"  // Use 6 decimals for very small values (microseconds)
+            } else if linearMax < 0.1 {
+                format = "%.5f"  // Use 5 decimals for small values
+            } else {
+                format = "%.4f"  // Use 4 decimals for normal values
+            }
             
             var bucketCounts = Array(repeating: 0, count: buckets)
             var bucketLabels: [String] = []
@@ -134,9 +145,9 @@ struct LatencyStats {
                 let start = linearMin + Double(i) * linearBucketSize
                 let end = linearMin + Double(i + 1) * linearBucketSize
                 if i == buckets - 1 {
-                    bucketLabels.append(String(format: "[%.4f,+∞)", start))
+                    bucketLabels.append(String(format: "[\(format),+∞)", start))
                 } else {
-                    bucketLabels.append(String(format: "[%.4f,%.4f)", start, end))
+                    bucketLabels.append(String(format: "[\(format),\(format))", start, end))
                 }
             }
             

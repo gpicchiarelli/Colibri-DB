@@ -34,7 +34,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.txCommit.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled":"true", "storage":"FileHeap"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.txCommit.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled":"true", "storage":"FileHeap"], systemMetrics: systemMetrics)
         } else {
             for i in 0..<iterations {
                 let tid = try db.begin()
@@ -44,7 +44,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.txCommit.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["wal_enabled":"true", "storage":"FileHeap"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.txCommit.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["wal_enabled":"true", "storage":"FileHeap"], systemMetrics: systemMetrics)
         }
     }
     
@@ -79,7 +79,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: "tx-commit-grouped", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled":"true", "storage":"FileHeap", "group_commit":"optimized"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: "tx-commit-grouped", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled":"true", "storage":"FileHeap", "group_commit":"optimized"], systemMetrics: systemMetrics)
         } else {
             for i in 0..<iterations {
                 let tid = try db.begin()
@@ -89,7 +89,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: "tx-commit-grouped", iterations: iterations, elapsed: elapsed, metadata: ["wal_enabled":"true", "storage":"FileHeap", "group_commit":"optimized"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: "tx-commit-grouped", iterations: iterations, elapsed: elapsed, metadata: ["wal_enabled":"true", "storage":"FileHeap", "group_commit":"optimized"], systemMetrics: systemMetrics)
         }
     }
 
@@ -122,7 +122,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.txRollback.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled":"true", "storage":"FileHeap"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.txRollback.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled":"true", "storage":"FileHeap"], systemMetrics: systemMetrics)
         } else {
             for i in 0..<iterations {
                 let tid = try db.begin()
@@ -132,7 +132,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.txRollback.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["wal_enabled":"true", "storage":"FileHeap"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.txRollback.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["wal_enabled":"true", "storage":"FileHeap"], systemMetrics: systemMetrics)
         }
     }
 
@@ -172,9 +172,9 @@ extension BenchmarkCLI {
         group.wait()
         let elapsed = clock.now - start
         if granular {
-            return BenchmarkResult(name: "tx-contention-w\(workers)", iterations: perWorker * workers, elapsed: elapsed, latenciesMs: lat.snapshot(), metadata: ["workers":"\(workers)"])
+            return InternalBenchmarkResult(name: "tx-contention-w\(workers)", iterations: perWorker * workers, elapsed: elapsed, latenciesMs: lat.snapshot(), metadata: ["workers":"\(workers)"])
         } else {
-            return BenchmarkResult(name: "tx-contention-w\(workers)", iterations: perWorker * workers, elapsed: elapsed)
+            return InternalBenchmarkResult(name: "tx-contention-w\(workers)", iterations: perWorker * workers, elapsed: elapsed)
         }
     }
 
@@ -212,9 +212,9 @@ extension BenchmarkCLI {
         keepWriting.store(false, ordering: .relaxed)
         if rows.isEmpty {
             print("⚠️  Warning: No rows found in transaction benchmark")
-            return BenchmarkResult(name: "txn-two-phase-commit", iterations: 0, elapsed: .zero, metadata: ["warmup_done":"false"])
+            return InternalBenchmarkResult(name: "txn-two-phase-commit", iterations: 0, elapsed: .zero, metadata: ["warmup_done":"false"])
         }
-        return BenchmarkResult(name: Scenario.mvccSnapshotRead.rawValue, iterations: rows.count, elapsed: elapsed)
+        return InternalBenchmarkResult(name: Scenario.mvccSnapshotRead.rawValue, iterations: rows.count, elapsed: elapsed)
     }
 }
 

@@ -76,7 +76,7 @@ public struct CompleteBenchmarkSuite {
         defer { try? FileManager.default.removeItem(at: tempDir) }
         
         let walPath = tempDir.appendingPathComponent("bench.wal").path
-        var wal = try FileWAL(path: walPath)
+        let wal = try FileWAL(path: walPath)
         
         let duration: TimeInterval = 5.0
         var ops: UInt64 = 0
@@ -117,7 +117,7 @@ public struct CompleteBenchmarkSuite {
         config.dataDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).path
         
-        let db = try Database(config: config)
+        let db = Database(config: config)
         defer { try? db.close() }
         
         try db.createTable("bench")
@@ -129,7 +129,7 @@ public struct CompleteBenchmarkSuite {
         
         while Date() < end {
             let tid = try db.begin()
-            _ = try db.insert(table: "bench", row: ["id": .int(Int64(txCount))], tid: tid)
+            _ = try db.insert(into: "bench", row: ["id": .int(Int64(txCount))], tid: tid)
             try db.commit(tid)
             txCount += 1
         }
@@ -163,7 +163,7 @@ public struct CompleteBenchmarkSuite {
         let tid = try db.begin()
         for i in 0..<rowCount {
             let row: Row = ["id": .int(Int64(i)), "data": .string("row\(i)")]
-            _ = try db.insert(table: "bench", row: row, tid: tid)
+            _ = try db.insert(into: "bench", row: row, tid: tid)
         }
         try db.commit(tid)
         
@@ -192,7 +192,7 @@ public struct CompleteBenchmarkSuite {
         // Insert test data
         let tid = try db.begin()
         for i in 0..<1000 {
-            _ = try db.insert(table: "bench", row: ["id": .int(Int64(i))], tid: tid)
+            _ = try db.insert(into: "bench", row: ["id": .int(Int64(i))], tid: tid)
         }
         try db.commit(tid)
         
@@ -201,7 +201,7 @@ public struct CompleteBenchmarkSuite {
         
         for _ in 0..<100 {
             let start = Date()
-            _ = try db.scan(table: "bench")
+            _ = try db.scan("bench")
             let elapsed = Date().timeIntervalSince(start) * 1000 // ms
             latencies.append(elapsed)
         }

@@ -87,7 +87,7 @@ extension BenchmarkCLI {
         }
         let elapsed = clock.now - start
         
-        return BenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done": flags.noWarmup ? "false" : "true"]) 
+        return InternalBenchmarkResult(name: Scenario.btreeLookup.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done": flags.noWarmup ? "false" : "true"]) 
     }
     
     static func runBTreeLookupOptimized(iterations: Int, flags: ScenarioFlags = ScenarioFlags(enableSysMetrics: false, noWarmup: false)) throws -> InternalBenchmarkResult {
@@ -177,13 +177,13 @@ extension BenchmarkCLI {
         }
         let elapsed = clock.now - start
         
-        return BenchmarkResult(name: "btree-lookup-optimized", iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done":"true", "optimized":"true"]) 
+        return InternalBenchmarkResult(name: "btree-lookup-optimized", iterations: iterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["page_size":"\(config.pageSizeBytes)", "split_ratio":"0.60/0.40", "warmup_done":"true", "optimized":"true"]) 
     }
     
     /// 🚀 OPTIMIZATION: Benchmark per testare diverse page size
-    static func runBTreeLookupPageSizes(iterations: Int) throws -> [BenchmarkResult] {
+    static func runBTreeLookupPageSizes(iterations: Int) throws -> [InternalBenchmarkResult] {
         let pageSizes = [4096, 8192, 16384] // 4KB, 8KB, 16KB
-        var results: [BenchmarkResult] = []
+        var results: [InternalBenchmarkResult] = []
         
         for pageSize in pageSizes {
             let fm = FileManager.default
@@ -218,7 +218,7 @@ extension BenchmarkCLI {
                 }
             }
             
-            let result = BenchmarkResult(
+            let result = InternalBenchmarkResult(
                 name: "btree-lookup-page\(pageSize/1024)k", 
                 iterations: iterations, 
                 elapsed: elapsed, 
@@ -258,11 +258,11 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.btreeInsert.rawValue, iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","warmup_done":"true"]) 
+            return InternalBenchmarkResult(name: Scenario.btreeInsert.rawValue, iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","warmup_done":"true"]) 
         } else {
             for i in 0..<n { _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "p": .string("v\(i)")]) }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.btreeInsert.rawValue, iterations: n, elapsed: elapsed, metadata: ["warmup_done":"true"]) 
+            return InternalBenchmarkResult(name: Scenario.btreeInsert.rawValue, iterations: n, elapsed: elapsed, metadata: ["warmup_done":"true"]) 
         }
     }
     
@@ -299,14 +299,14 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: "btree-insert-optimized", iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","batch_size":"50","optimized":"true"]) 
+            return InternalBenchmarkResult(name: "btree-insert-optimized", iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","batch_size":"50","optimized":"true"]) 
         } else {
             // Single batch with minimal sync
             for i in 0..<n { 
                 _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "p": .string("v\(i)")]) 
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: "btree-insert-optimized", iterations: n, elapsed: elapsed, metadata: ["index":"BTree","columns":"id","optimized":"true"]) 
+            return InternalBenchmarkResult(name: "btree-insert-optimized", iterations: n, elapsed: elapsed, metadata: ["index":"BTree","columns":"id","optimized":"true"]) 
         }
     }
 
@@ -345,9 +345,9 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             if total <= 0 {
                 print("⚠️  Warning: No items found in BTree range query")
-                return BenchmarkResult(name: "btree-range", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["warmup_done":"true"])
+                return InternalBenchmarkResult(name: "btree-range", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["warmup_done":"true"])
             }
-            return BenchmarkResult(name: Scenario.btreeRange.rawValue, iterations: q, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","queries":"\(q)", "warmup_done":"true"]) 
+            return InternalBenchmarkResult(name: Scenario.btreeRange.rawValue, iterations: q, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","queries":"\(q)", "warmup_done":"true"]) 
         } else {
             let lo = Value.int(0)
             let hi = Value.int(Int64(n - 1))
@@ -356,7 +356,7 @@ extension BenchmarkCLI {
                 print("⚠️  Warning: Expected \(n) items in BTree range query, found \(hits.count)")
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: Scenario.btreeRange.rawValue, iterations: hits.count, elapsed: elapsed, metadata: ["warmup_done":"true"]) 
+            return InternalBenchmarkResult(name: Scenario.btreeRange.rawValue, iterations: hits.count, elapsed: elapsed, metadata: ["warmup_done":"true"]) 
         }
     }
 
@@ -399,7 +399,7 @@ extension BenchmarkCLI {
                 lat.append(msDelta(t0, t1))
             }
             let elapsed = clock.now - start
-            return BenchmarkResult(name: "btree-insert-batch", iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","batch_size":"100","warmup_done":"true"]) 
+            return InternalBenchmarkResult(name: "btree-insert-batch", iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["index":"BTree","columns":"id","batch_size":"100","warmup_done":"true"]) 
         } else {
             // Single batch insert
             for i in 0..<n {
@@ -412,7 +412,7 @@ extension BenchmarkCLI {
             // The database will handle index updates internally
             
             let elapsed = clock.now - start
-            return BenchmarkResult(name: "btree-insert-batch", iterations: n, elapsed: elapsed, metadata: ["index":"BTree","columns":"id","batch_size":"all","warmup_done":"true"]) 
+            return InternalBenchmarkResult(name: "btree-insert-batch", iterations: n, elapsed: elapsed, metadata: ["index":"BTree","columns":"id","batch_size":"all","warmup_done":"true"]) 
         }
     }
 
@@ -430,7 +430,7 @@ extension BenchmarkCLI {
         let clock = ContinuousClock(); let start = clock.now
         try db.rebuildIndexBulk(table: "t", index: "idx")
         let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.btreeBulkBuild.rawValue, iterations: n, elapsed: elapsed)
+        return InternalBenchmarkResult(name: Scenario.btreeBulkBuild.rawValue, iterations: n, elapsed: elapsed)
     }
 }
 

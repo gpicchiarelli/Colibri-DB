@@ -43,9 +43,9 @@ extension BenchmarkCLI {
         let totalRows = results.reduce(0) { $0 + $1.count }
         if totalRows <= 0 {
             print("⚠️  Warning: No rows found in planner benchmark")
-            return BenchmarkResult(name: "planner-join", iterations: 0, elapsed: .zero, metadata: ["total_rows":"0", "warmup_done": flags.noWarmup ? "false" : "true"])
+            return InternalBenchmarkResult(name: "planner-join", iterations: 0, elapsed: .zero, metadata: ["total_rows":"0", "warmup_done": flags.noWarmup ? "false" : "true"])
         }
-        return BenchmarkResult(name: Scenario.plannerJoin.rawValue, iterations: queryIterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["total_rows":"\(totalRows)", "warmup_done": flags.noWarmup ? "false" : "true"])
+        return InternalBenchmarkResult(name: Scenario.plannerJoin.rawValue, iterations: queryIterations, elapsed: elapsed, latenciesMs: latencies, metadata: ["total_rows":"\(totalRows)", "warmup_done": flags.noWarmup ? "false" : "true"])
     }
 
     // MARK: - Planner estesi
@@ -77,17 +77,17 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             if rowsFetched <= 0 {
                 print("⚠️  Warning: No rows fetched in planner index scan")
-                return BenchmarkResult(name: "planner-index-scan", iterations: 0, elapsed: .zero, metadata: ["warmup_done":"false"])
+                return InternalBenchmarkResult(name: "planner-index-scan", iterations: 0, elapsed: .zero, metadata: ["warmup_done":"false"])
             }
-            return BenchmarkResult(name: Scenario.plannerIndexScan.rawValue, iterations: qn, elapsed: elapsed, latenciesMs: lat, metadata: ["rows_fetched":"\(rowsFetched)"])
+            return InternalBenchmarkResult(name: Scenario.plannerIndexScan.rawValue, iterations: qn, elapsed: elapsed, latenciesMs: lat, metadata: ["rows_fetched":"\(rowsFetched)"])
         } else {
             let out = try db.executeQuery(req)
             let elapsed = clock.now - start
             if out.isEmpty {
                 print("⚠️  Warning: Empty result in planner benchmark")
-                return BenchmarkResult(name: "planner-index-scan", iterations: 0, elapsed: elapsed, metadata: ["warmup_done":"false"])
+                return InternalBenchmarkResult(name: "planner-index-scan", iterations: 0, elapsed: elapsed, metadata: ["warmup_done":"false"])
             }
-            return BenchmarkResult(name: Scenario.plannerIndexScan.rawValue, iterations: out.count, elapsed: elapsed)
+            return InternalBenchmarkResult(name: Scenario.plannerIndexScan.rawValue, iterations: out.count, elapsed: elapsed)
         }
     }
 
@@ -118,17 +118,17 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             if total <= 0 {
             print("⚠️  Warning: No results in planner benchmark")
-            return BenchmarkResult(name: "planner-query-latency", iterations: 0, elapsed: .zero, metadata: ["warmup_done":"false"])
+            return InternalBenchmarkResult(name: "planner-query-latency", iterations: 0, elapsed: .zero, metadata: ["warmup_done":"false"])
         }
-            return BenchmarkResult(name: Scenario.plannerSortLimit.rawValue, iterations: qn, elapsed: elapsed, latenciesMs: lat, metadata: ["rows_total":"\(total)"])
+            return InternalBenchmarkResult(name: Scenario.plannerSortLimit.rawValue, iterations: qn, elapsed: elapsed, latenciesMs: lat, metadata: ["rows_total":"\(total)"])
         } else {
             let out = try db.executeQuery(req)
             let elapsed = clock.now - start
             if out.isEmpty {
                 print("⚠️  Warning: Empty result in planner benchmark")
-                return BenchmarkResult(name: "planner-index-scan", iterations: 0, elapsed: elapsed, metadata: ["warmup_done":"false"])
+                return InternalBenchmarkResult(name: "planner-index-scan", iterations: 0, elapsed: elapsed, metadata: ["warmup_done":"false"])
             }
-            return BenchmarkResult(name: Scenario.plannerSortLimit.rawValue, iterations: out.count, elapsed: elapsed)
+            return InternalBenchmarkResult(name: Scenario.plannerSortLimit.rawValue, iterations: out.count, elapsed: elapsed)
         }
     }
 }

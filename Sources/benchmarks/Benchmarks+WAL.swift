@@ -31,7 +31,7 @@ extension BenchmarkCLI {
             }
             try? fm.removeItem(at: tmp)
             let scenarioName = wal ? (fullSync ? Scenario.fileHeapInsertWalFSync.rawValue : Scenario.fileHeapInsertWalOff.rawValue) : Scenario.fileHeapInsertWalOff.rawValue
-            return BenchmarkResult(name: scenarioName, iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled": String(wal), "wal_fullsync": String(fullSync), "warmup_done":"true"]) 
+            return InternalBenchmarkResult(name: scenarioName, iterations: n, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_enabled": String(wal), "wal_fullsync": String(fullSync), "warmup_done":"true"]) 
         } else {
             for i in 0..<n { _ = try db.insert(into: "t", row: ["id": .int(Int64(i)), "p": .string("v\(i)")]) }
             let elapsed = clock.now - start
@@ -40,7 +40,7 @@ extension BenchmarkCLI {
             }
             try? fm.removeItem(at: tmp)
             let scenarioName = wal ? (fullSync ? Scenario.fileHeapInsertWalFSync.rawValue : Scenario.fileHeapInsertWalOff.rawValue) : Scenario.fileHeapInsertWalOff.rawValue
-            return BenchmarkResult(name: scenarioName, iterations: n, elapsed: elapsed, metadata: ["wal_enabled": String(wal), "wal_fullsync": String(fullSync), "warmup_done":"true"]) 
+            return InternalBenchmarkResult(name: scenarioName, iterations: n, elapsed: elapsed, metadata: ["wal_enabled": String(wal), "wal_fullsync": String(fullSync), "warmup_done":"true"]) 
         }
     }
 
@@ -81,12 +81,12 @@ extension BenchmarkCLI {
             }
             let elapsed = clock.now - start
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: "wal-append-\(algorithm.rawValue)", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["compression":"\(algorithm.rawValue)", "wal_type":"global"])
+            return InternalBenchmarkResult(name: "wal-append-\(algorithm.rawValue)", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["compression":"\(algorithm.rawValue)", "wal_type":"global"])
         } else {
             for _ in 0..<iterations { _ = try globalWAL.append(testRecord) }
             let elapsed = clock.now - start
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: "wal-append-\(algorithm.rawValue)", iterations: iterations, elapsed: elapsed, metadata: ["compression":"\(algorithm.rawValue)", "wal_type":"global"])
+            return InternalBenchmarkResult(name: "wal-append-\(algorithm.rawValue)", iterations: iterations, elapsed: elapsed, metadata: ["compression":"\(algorithm.rawValue)", "wal_type":"global"])
         }
     }
 }

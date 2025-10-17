@@ -95,7 +95,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "concurrent-stress",
             iterations: totalOperations,
             elapsed: Duration.seconds(actualDuration),
@@ -192,7 +192,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "lock-contention",
             iterations: iterations,
             elapsed: elapsed,
@@ -284,7 +284,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "index-race-conditions",
             iterations: iterations,
             elapsed: elapsed,
@@ -374,7 +374,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "concurrent-transactions",
             iterations: iterations,
             elapsed: elapsed,
@@ -455,7 +455,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "crash-injection",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -542,7 +542,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "index-consistency",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -560,7 +560,7 @@ extension BenchmarkCLI {
     
     /// 🔄 Test di recovery dopo crash durante WAL flush (stub)
     static func runWALCrashRecovery(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "wal-crash-recovery",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -574,7 +574,7 @@ extension BenchmarkCLI {
     
     /// 🗂️ Test di recovery dopo crash durante compaction (stub)
     static func runCompactionCrashRecovery(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "compaction-crash-recovery",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -588,7 +588,7 @@ extension BenchmarkCLI {
     
     /// 🔍 Test di integrità dei dati dopo recovery (stub)
     static func runDataIntegrityRecovery(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "data-integrity-recovery",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -602,7 +602,7 @@ extension BenchmarkCLI {
     
     /// 👁️ Test di phantom reads (stub)
     static func runPhantomReadsTest(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "phantom-reads",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -616,7 +616,7 @@ extension BenchmarkCLI {
     
     /// 🔄 Test di read skew (stub)
     static func runReadSkewTest(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "read-skew",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -630,7 +630,7 @@ extension BenchmarkCLI {
     
     /// ✍️ Test di write skew (stub)
     static func runWriteSkewTest(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "write-skew",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -644,7 +644,7 @@ extension BenchmarkCLI {
     
     /// 🔒 Test di predicate locks (stub)
     static func runPredicateLocksTest(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "predicate-locks",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -658,7 +658,7 @@ extension BenchmarkCLI {
     
     /// 📊 Test di snapshot isolation (stub)
     static func runSnapshotIsolationTest(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "snapshot-isolation",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -672,7 +672,7 @@ extension BenchmarkCLI {
     
     /// 🔄 Test di consistenza durante rebuild degli indici (stub)
     static func runIndexRebuildConsistency(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "index-rebuild-consistency",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -686,7 +686,7 @@ extension BenchmarkCLI {
     
     /// 🗑️ Test di consistenza durante cancellazioni (stub)
     static func runIndexDeletionConsistency(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "index-deletion-consistency",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -700,7 +700,7 @@ extension BenchmarkCLI {
     
     /// 🔄 Test di consistenza durante aggiornamenti (stub)
     static func runIndexUpdateConsistency(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "index-update-consistency",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -714,7 +714,7 @@ extension BenchmarkCLI {
     
     /// 🔍 Test di verifica incrociata tra indici (stub)
     static func runCrossIndexVerification(iterations: Int) throws -> InternalBenchmarkResult {
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "cross-index-verification",
             iterations: iterations,
             elapsed: Duration.seconds(0),
@@ -766,7 +766,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "lsm-write-performance",
             iterations: iterations,
             elapsed: elapsed,
@@ -825,7 +825,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "lsm-compaction",
             iterations: iterations,
             elapsed: elapsed,
@@ -885,7 +885,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "lsm-tombstone-handling",
             iterations: iterations,
             elapsed: elapsed,
@@ -952,7 +952,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "lsm-range-queries",
             iterations: iterations,
             elapsed: elapsed,
@@ -1021,7 +1021,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "memory-pressure",
             iterations: iterations,
             elapsed: elapsed,
@@ -1103,7 +1103,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "backpressure-test",
             iterations: totalOperations,
             elapsed: elapsed,
@@ -1176,7 +1176,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "memory-leak-test",
             iterations: iterations,
             elapsed: elapsed,
@@ -1263,7 +1263,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "sustained-write-test",
             iterations: totalOperations,
             elapsed: Duration.seconds(actualDuration),
@@ -1342,7 +1342,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "catalog-statistics",
             iterations: iterations,
             elapsed: elapsed,
@@ -1430,7 +1430,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "cardinality-estimation",
             iterations: iterations,
             elapsed: elapsed,
@@ -1500,7 +1500,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "cost-estimation",
             iterations: iterations,
             elapsed: elapsed,
@@ -1582,7 +1582,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "explain-plans",
             iterations: iterations,
             elapsed: elapsed,
@@ -1666,7 +1666,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "query-optimization",
             iterations: iterations,
             elapsed: elapsed,
@@ -1753,7 +1753,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "index-selection",
             iterations: iterations,
             elapsed: elapsed,
@@ -1850,7 +1850,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "join-order-optimization",
             iterations: iterations,
             elapsed: elapsed,
@@ -1935,7 +1935,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "predicate-pushdown",
             iterations: iterations,
             elapsed: elapsed,
@@ -2022,7 +2022,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "io-failure-recovery",
             iterations: iterations,
             elapsed: elapsed,
@@ -2106,7 +2106,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "page-corruption-recovery",
             iterations: iterations,
             elapsed: elapsed,
@@ -2186,7 +2186,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "checksum-failure-recovery",
             iterations: iterations,
             elapsed: elapsed,
@@ -2272,7 +2272,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "deadlock-recovery",
             iterations: iterations,
             elapsed: elapsed,
@@ -2371,7 +2371,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "timeout-recovery",
             iterations: iterations,
             elapsed: elapsed,
@@ -2480,7 +2480,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "transaction-abort-recovery",
             iterations: iterations,
             elapsed: elapsed,
@@ -2586,7 +2586,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "index-corruption-recovery",
             iterations: iterations,
             elapsed: elapsed,
@@ -2689,7 +2689,7 @@ extension BenchmarkCLI {
         
         try? fm.removeItem(at: tmp)
         
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "wal-corruption-recovery",
             iterations: iterations,
             elapsed: elapsed,

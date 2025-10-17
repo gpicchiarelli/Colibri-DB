@@ -17,7 +17,7 @@ extension BenchmarkCLI {
         let clock = ContinuousClock(); let start = clock.now
         try db.checkpoint()
         let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.checkpoint.rawValue, iterations: 1, elapsed: elapsed)
+        return InternalBenchmarkResult(name: Scenario.checkpoint.rawValue, iterations: 1, elapsed: elapsed)
     }
 
     static func runVacuumCompact(iterations: Int) throws -> InternalBenchmarkResult {
@@ -34,7 +34,7 @@ extension BenchmarkCLI {
         let clock = ContinuousClock(); let start = clock.now
         _ = try db.compactTable(table: "t", pageId: nil)
         let elapsed = clock.now - start
-        return BenchmarkResult(name: Scenario.vacuumCompact.rawValue, iterations: n, elapsed: elapsed)
+        return InternalBenchmarkResult(name: Scenario.vacuumCompact.rawValue, iterations: n, elapsed: elapsed)
     }
 }
 

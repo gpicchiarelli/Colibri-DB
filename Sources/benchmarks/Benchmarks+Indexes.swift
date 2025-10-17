@@ -33,7 +33,7 @@ extension BenchmarkCLI {
             if found != iterations {
                 print("⚠️  Warning: Found \(found) out of \(iterations) expected items for \(kind) index")
             }
-            return BenchmarkResult(name: "idx-\(kind.lowercased())-lookup", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"])
+            return InternalBenchmarkResult(name: "idx-\(kind.lowercased())-lookup", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"])
         } else {
             for i in 0..<iterations {
                 let hits = try db.indexSearchEqualsTyped(table: "t", index: idxName, value: .string("k\(i)"))
@@ -43,7 +43,7 @@ extension BenchmarkCLI {
             if found != iterations {
                 print("⚠️  Warning: Found \(found) out of \(iterations) expected items for \(kind) index")
             }
-            return BenchmarkResult(name: "idx-\(kind.lowercased())-lookup", iterations: iterations, elapsed: elapsed, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"])
+            return InternalBenchmarkResult(name: "idx-\(kind.lowercased())-lookup", iterations: iterations, elapsed: elapsed, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"])
         }
     }
 
@@ -77,17 +77,17 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             if total <= 0 {
                 print("⚠️  Warning: No items found in range query for \(kind) index")
-                return BenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"])
+                return InternalBenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"])
             }
-            return BenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: q, elapsed: elapsed, latenciesMs: lat, metadata: ["kind":kind,"storage":"InMemory","queries":"\(q)", "warmup_done":"true"])
+            return InternalBenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: q, elapsed: elapsed, latenciesMs: lat, metadata: ["kind":kind,"storage":"InMemory","queries":"\(q)", "warmup_done":"true"])
         } else {
             let hits = try db.indexRangeTyped(table: "t", index: idxName, lo: lo, hi: hi)
             let elapsed = clock.now - start
             if hits.isEmpty {
                 print("⚠️  Warning: No items found in range query for \(kind) index")
-                return BenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: iterations, elapsed: elapsed, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"])
+                return InternalBenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: iterations, elapsed: elapsed, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"])
             }
-            return BenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: hits.count, elapsed: elapsed, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"])
+            return InternalBenchmarkResult(name: "idx-\(kind.lowercased())-range", iterations: hits.count, elapsed: elapsed, metadata: ["kind":kind, "storage":"InMemory", "warmup_done":"true"])
         }
     }
 
@@ -137,7 +137,7 @@ extension BenchmarkCLI {
         let elapsed = clock.now - start
         let averageLatency = latencies.reduce(0, +) / Double(max(latencies.count, 1))
         let latencySeries = granular ? latencies : Array(repeating: averageLatency, count: max(1, queries))
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: "idx-\(kind.lowercased())-tombstone",
             iterations: queries,
             elapsed: elapsed,

@@ -46,7 +46,7 @@ extension BenchmarkCLI {
 
         try? fm.removeItem(at: tmp)
 
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: Scenario.walRecovery.rawValue,
             iterations: maxTransactions, // Usa il numero effettivo di transazioni create
             elapsed: elapsed,
@@ -91,7 +91,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.walStress.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_stress":"high", "data_size":"1KB"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.walStress.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["wal_stress":"high", "data_size":"1KB"], systemMetrics: systemMetrics)
         } else {
             for i in 0..<iterations {
                 let tid = try db.begin()
@@ -101,7 +101,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.walStress.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["wal_stress":"high", "data_size":"1KB"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.walStress.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["wal_stress":"high", "data_size":"1KB"], systemMetrics: systemMetrics)
         }
     }
 
@@ -137,7 +137,7 @@ extension BenchmarkCLI {
             let systemMetrics = monitor.getCurrentMetrics()
             monitor.stopMonitoring()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.systemLoad.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["fsync_enabled":"true", "group_commit":"10ms"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.systemLoad.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["fsync_enabled":"true", "group_commit":"10ms"], systemMetrics: systemMetrics)
         } else {
             for i in 0..<iterations {
                 let tid = try db.begin()
@@ -148,7 +148,7 @@ extension BenchmarkCLI {
             let systemMetrics = monitor.getCurrentMetrics()
             monitor.stopMonitoring()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.systemLoad.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["fsync_enabled":"true", "group_commit":"10ms"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.systemLoad.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["fsync_enabled":"true", "group_commit":"10ms"], systemMetrics: systemMetrics)
         }
     }
 
@@ -173,7 +173,7 @@ extension BenchmarkCLI {
         let elapsed = clock.now - start
         let finalMetrics = monitor.getCurrentMetrics()
 
-        return BenchmarkResult(
+        return InternalBenchmarkResult(
             name: Scenario.memoryPressure.rawValue,
             iterations: iterations,
             elapsed: elapsed,
@@ -233,10 +233,10 @@ extension BenchmarkCLI {
 
         if granular {
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: "concurrent-load-w\(workers)", iterations: perWorker * workers, elapsed: elapsed, latenciesMs: lat.snapshot(), metadata: ["workers":"\(workers)", "concurrent":"true"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: "concurrent-load-w\(workers)", iterations: perWorker * workers, elapsed: elapsed, latenciesMs: lat.snapshot(), metadata: ["workers":"\(workers)", "concurrent":"true"], systemMetrics: systemMetrics)
         } else {
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: "concurrent-load-w\(workers)", iterations: perWorker * workers, elapsed: elapsed, metadata: ["workers":"\(workers)", "concurrent":"true"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: "concurrent-load-w\(workers)", iterations: perWorker * workers, elapsed: elapsed, metadata: ["workers":"\(workers)", "concurrent":"true"], systemMetrics: systemMetrics)
         }
     }
 
@@ -278,7 +278,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.insertVariability.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["data_variability": "true", "patterns": String(dataPatterns.count)], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.insertVariability.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["data_variability": "true", "patterns": String(dataPatterns.count)], systemMetrics: systemMetrics)
         } else {
             for i in 0..<iterations {
                 let pattern = dataPatterns.keys.randomElement()!
@@ -290,7 +290,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.insertVariability.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["data_variability": "true", "patterns": String(dataPatterns.count)], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.insertVariability.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["data_variability": "true", "patterns": String(dataPatterns.count)], systemMetrics: systemMetrics)
         }
     }
 
@@ -327,7 +327,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.queryLatency.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["query_type": "scan", "isolation": "read_committed"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.queryLatency.rawValue, iterations: iterations, elapsed: elapsed, latenciesMs: lat, metadata: ["query_type": "scan", "isolation": "read_committed"], systemMetrics: systemMetrics)
         } else {
             for _ in 0..<iterations {
                 let tid = try db.begin(isolation: .readCommitted)
@@ -337,7 +337,7 @@ extension BenchmarkCLI {
             let elapsed = clock.now - start
             let systemMetrics = SystemMonitor(database: db).getCurrentMetrics()
             try? fm.removeItem(at: tmp)
-            return BenchmarkResult(name: Scenario.queryLatency.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["query_type": "scan", "isolation": "read_committed"], systemMetrics: systemMetrics)
+            return InternalBenchmarkResult(name: Scenario.queryLatency.rawValue, iterations: iterations, elapsed: elapsed, metadata: ["query_type": "scan", "isolation": "read_committed"], systemMetrics: systemMetrics)
         }
     }
 }
