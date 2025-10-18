@@ -191,7 +191,7 @@ public final class MVCCManager {
         var result: [RID: Row] = [:]
         for (rid, chain) in map {
             guard let visible = latestVisibleVersion(chain: chain, snapshot: snapshot, readerTID: readerTID) else { continue }
-            if visible.flag == .tombstone { continue }
+            // Note: tombstone visibility is already handled by isVisible() via endTID/endStatus logic
             result[rid] = visible.row
         }
         return result
@@ -237,7 +237,7 @@ public final class MVCCManager {
     }
 
     private func isVisible(_ version: Version, snapshot: Snapshot, readerTID: UInt64?) -> Bool {
-        if version.flag == .tombstone { return false }
+        // Note: tombstone filtering is handled by endTID/endStatus logic below and in visibleRows()
         if version.beginStatus == .aborted { return false }
         if let reader = readerTID, reader == version.beginTID {
             if version.beginStatus == .inProgress {
