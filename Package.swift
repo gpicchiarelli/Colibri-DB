@@ -22,7 +22,8 @@ let package = Package(
         .executable(name: "coldb", targets: ["coldb"]),
         .executable(name: "coldb-server", targets: ["coldb-server"]),
         .executable(name: "coldb-dev", targets: ["coldb-dev"]),
-        .executable(name: "benchmarks", targets: ["benchmarks"])
+        .executable(name: "benchmarks", targets: ["benchmarks"]),
+        .executable(name: "test-gc", targets: ["test-gc"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-testing", exact: "0.10.0"),
@@ -71,6 +72,12 @@ let package = Package(
             dependencies: [
                 "ColibriCore",
                 .product(name: "Atomics", package: "swift-atomics")
+            ]
+        ),
+        .executableTarget(
+            name: "test-gc",
+            dependencies: [
+                "ColibriCore"
             ]
         ),
         .testTarget(
