@@ -342,28 +342,81 @@ public struct AdvancedExecutionContext {
 }
 
 /// Query cache for result caching
+/// LRU cache for query results with automatic eviction and background cleanup
 public final class QueryCache {
-    private var cache: [String: (result: QueryResult, timestamp: TimeInterval)] = [:]
+    // MARK: - Cache Entry
+    
+    private struct CacheEntry {
+        let result: QueryResult
+        let timestamp: TimeInterval
+        var lastAccess: TimeInterval
+        var accessCount: Int
+        
+        init(result: QueryResult) {
+            self.result = result
+            let now = Date().timeIntervalSince1970
+            self.timestamp = now
+            self.lastAccess = now
+            self.accessCount = 1
+        }
+        
+        mutating func recordAccess() {
+            lastAccess = Date().timeIntervalSince1970
+            accessCount += 1
+        }
+    }
+    
+    // MARK: - Properties
+    
+    private var cache: [String: CacheEntry] = [:]
     private let maxSize: Int
     private let timeout: TimeInterval
     private let lock = NSLock()
     
+    // Statistics
+    private var hits: UInt64 = 0
+    private var misses: UInt64 = 0
+    private var evictions: UInt64 = 0
+    
+    // Background cleanup
+    private var cleanupTimer: DispatchSourceTimer?
+    private let cleanupQueue = DispatchQueue(label: "QueryCache.cleanup", qos: .utility)
+    
+    // MARK: - Initialization
+    
     public init(maxSize: Int = 1000, timeout: TimeInterval = 300) {
-        self.maxSize = maxSize
-        self.timeout = timeout
+        self.maxSize = max(1, maxSize)  // Ensure at least size 1
+        self.timeout = max(1, timeout)   // Ensure at least 1 second
+        startBackgroundCleanup()
     }
+    
+    deinit {
+        stopBackgroundCleanup()
+    }
+    
+    // MARK: - Public API
     
     public func get(key: String) -> QueryResult? {
         lock.lock()
         defer { lock.unlock() }
         
-        guard let entry = cache[key] else { return nil }
-        
-        // Check if entry has expired
-        if Date().timeIntervalSince1970 - entry.timestamp > timeout {
-            cache.removeValue(forKey: key)
+        guard var entry = cache[key] else {
+            misses += 1
             return nil
         }
+        
+        // Check if entry has expired
+        let now = Date().timeIntervalSince1970
+        if now - entry.timestamp > timeout {
+            cache.removeValue(forKey: key)
+            misses += 1
+            return nil
+        }
+        
+        // Update LRU metadata
+        entry.recordAccess()
+        cache[key] = entry
+        hits += 1
         
         return entry.result
     }
@@ -372,27 +425,99 @@ public final class QueryCache {
         lock.lock()
         defer { lock.unlock() }
         
-        // Remove oldest entries if cache is full
-        if cache.count >= maxSize {
-            let oldestKey = cache.min { $0.value.timestamp < $1.value.timestamp }?.key
-            if let key = oldestKey {
-                cache.removeValue(forKey: key)
-            }
-        }
+        // Evict if necessary BEFORE adding
+        evictIfNeeded()
         
-        cache[key] = (result: result, timestamp: Date().timeIntervalSince1970)
+        cache[key] = CacheEntry(result: result)
     }
     
     public func clear() {
         lock.lock()
         defer { lock.unlock() }
         cache.removeAll()
+        hits = 0
+        misses = 0
+        evictions = 0
     }
     
     public func remove(key: String) {
         lock.lock()
         defer { lock.unlock() }
         cache.removeValue(forKey: key)
+    }
+    
+    /// Get cache statistics
+    public func statistics() -> (hits: UInt64, misses: UInt64, evictions: UInt64, size: Int, hitRate: Double) {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        let total = hits + misses
+        let hitRate = total > 0 ? Double(hits) / Double(total) : 0.0
+        
+        return (hits, misses, evictions, cache.count, hitRate)
+    }
+    
+    /// Reset statistics
+    public func resetStatistics() {
+        lock.lock()
+        defer { lock.unlock() }
+        hits = 0
+        misses = 0
+        evictions = 0
+    }
+    
+    // MARK: - Private Methods
+    
+    /// Evict entries using LRU strategy when cache is full
+    /// This removes up to 10% of entries to avoid frequent evictions
+    private func evictIfNeeded() {
+        guard cache.count >= maxSize else { return }
+        
+        // Evict 10% of cache or at least 1 entry
+        let evictCount = max(1, maxSize / 10)
+        
+        // Sort by last access time (LRU)
+        let sortedEntries = cache.sorted { $0.value.lastAccess < $1.value.lastAccess }
+        
+        // Remove the least recently used entries
+        for i in 0..<min(evictCount, sortedEntries.count) {
+            cache.removeValue(forKey: sortedEntries[i].key)
+            evictions += 1
+        }
+    }
+    
+    /// Remove expired entries (called by background cleanup)
+    private func removeExpiredEntries() {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        let now = Date().timeIntervalSince1970
+        let keysToRemove = cache.filter { now - $0.value.timestamp > timeout }.map { $0.key }
+        
+        for key in keysToRemove {
+            cache.removeValue(forKey: key)
+        }
+    }
+    
+    // MARK: - Background Cleanup
+    
+    private func startBackgroundCleanup() {
+        let timer = DispatchSource.makeTimerSource(queue: cleanupQueue)
+        
+        // Run cleanup every minute
+        timer.schedule(deadline: .now() + 60.0, repeating: 60.0)
+        
+        timer.setEventHandler { [weak self] in
+            self?.removeExpiredEntries()
+        }
+        
+        timer.resume()
+        cleanupTimer = timer
+    }
+    
+    private func stopBackgroundCleanup() {
+        cleanupTimer?.cancel()
+        cleanupTimer = nil
     }
 }
 
