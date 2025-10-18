@@ -55,7 +55,8 @@ public final class MVCCManager {
     // MARK: - Transaction lifecycle
 
     func begin(tid: UInt64) {
-        transactionStateLock.lock(); defer { transactionStateLock.unlock() }
+        // Use globalLock for consistency with commit/rollback/snapshot
+        globalLock.lock(); defer { globalLock.unlock() }
         activeTIDs.insert(tid)
     }
 
@@ -177,7 +178,8 @@ public final class MVCCManager {
     // MARK: - Snapshot & visibility
 
     func snapshot(for tid: UInt64?, isolationCutoff: UInt64? = nil) -> Snapshot {
-        transactionStateLock.lock(); defer { transactionStateLock.unlock() }
+        // Use globalLock to ensure consistent view with commit/rollback operations
+        globalLock.lock(); defer { globalLock.unlock() }
         let cutoff = isolationCutoff ?? tid ?? UInt64.max
         return Snapshot(tid: tid,
                         activeTIDs: activeTIDs,
@@ -198,7 +200,8 @@ public final class MVCCManager {
     }
 
     func minimumActiveTID() -> UInt64? {
-        transactionStateLock.lock(); defer { transactionStateLock.unlock() }
+        // Use globalLock for consistency with commit/rollback
+        globalLock.lock(); defer { globalLock.unlock() }
         return activeTIDs.min()
     }
 
