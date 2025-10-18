@@ -51,7 +51,7 @@ struct QueryPlannerTests {
         
         let planner = QueryPlanner(database: db)
         let request = QueryRequest(root: QueryTableRef(name: "users"))
-        let context = ExecutionContext(tid: nil, database: db)
+        let context = ExecutionContext(database: db, transactionId: nil)
         
         let plan = try planner.plan(request: request, context: context)
         
@@ -75,7 +75,7 @@ struct QueryPlannerTests {
             root: QueryTableRef(name: "users", predicates: [predicate])
         )
         
-        let context = ExecutionContext(tid: nil, database: db)
+        let context = ExecutionContext(database: db, transactionId: nil)
         let plan = try planner.plan(request: request, context: context)
         
         #expect(plan != nil)
@@ -95,7 +95,7 @@ struct QueryPlannerTests {
             )
         )
         
-        let context = ExecutionContext(tid: nil, database: db)
+        let context = ExecutionContext(database: db, transactionId: nil)
         let plan = try planner.plan(request: request, context: context)
         
         #expect(plan != nil)
@@ -113,7 +113,7 @@ struct QueryPlannerTests {
             limit: 5
         )
         
-        let context = ExecutionContext(tid: nil, database: db)
+        let context = ExecutionContext(database: db, transactionId: nil)
         let plan = try planner.plan(request: request, context: context)
         
         #expect(plan != nil)
@@ -126,10 +126,10 @@ struct QueryPlannerTests {
         
         let planner = QueryPlanner(database: db)
         let request = QueryRequest(root: QueryTableRef(name: "users"))
-        let context = ExecutionContext(tid: nil, database: db)
+        let context = ExecutionContext(database: db, transactionId: nil)
         
         let plan = try planner.plan(request: request, context: context)
-        let results = try QueryExecutor.execute(plan: plan, context: context)
+        let results = try plan.materialize(context: context)
         
         #expect(results.count == 10)
     }
@@ -151,15 +151,15 @@ struct QueryPlannerTests {
             root: QueryTableRef(name: "users", predicates: [predicate])
         )
         
-        let context = ExecutionContext(tid: nil, database: db)
-        let plan = try planner.plan(request: request, context: context)
-        let results = try QueryExecutor.execute(plan: plan, context: context)
+        let context = ExecutionContext(database: db, transactionId: nil)
+        let executor = QueryExecutor(database: db)
+        let result = try executor.execute(request: request, context: context)
         
         // Should have filtered results
-        #expect(results.count < 10)
+        #expect(result.rows.count < 10)
         
         // All results should match predicate
-        for row in results {
+        for row in result.rows {
             if case .int(let age) = row["users.age"] ?? .null {
                 #expect(age >= 25)
             }
@@ -177,11 +177,11 @@ struct QueryPlannerTests {
             limit: 3
         )
         
-        let context = ExecutionContext(tid: nil, database: db)
-        let plan = try planner.plan(request: request, context: context)
-        let results = try QueryExecutor.execute(plan: plan, context: context)
+        let context = ExecutionContext(database: db, transactionId: nil)
+        let executor = QueryExecutor(database: db)
+        let result = try executor.execute(request: request, context: context)
         
-        #expect(results.count == 3)
+        #expect(result.rows.count == 3)
     }
 }
 

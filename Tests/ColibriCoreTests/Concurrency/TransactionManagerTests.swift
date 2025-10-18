@@ -206,7 +206,7 @@ struct TransactionManagerTests {
             let results = try db.scan( "test")
             
             #expect(results.count == 1)
-            #expect(results[0].row["id"] == .int(42))
+            #expect(results[0].1["id"] == .int(42))
             
             try db.close()
         }

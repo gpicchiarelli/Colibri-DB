@@ -73,7 +73,7 @@ public final class TelemetryManager {
             metrics.memoryUsageMB = ProcessInfo.processInfo.physicalMemory / (1024 * 1024)
         }
         
-        logger.debug("Collected telemetry data: \(metrics.collectionCount) collections")
+        logger.debug("Collected telemetry data: \(self.metrics.collectionCount) collections")
     }
     
     /// Exports telemetry data in Prometheus format

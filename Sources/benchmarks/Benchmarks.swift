@@ -9,6 +9,11 @@
 import Foundation
 import ColibriCore
 
+// MARK: - Main Benchmarks Structure
+public struct Benchmarks {
+    // Extensions will add benchmark methods to this struct
+}
+
 // MARK: - Seeded Random Number Generator
 struct SeededRandomNumberGenerator: RandomNumberGenerator {
     private var state: UInt64

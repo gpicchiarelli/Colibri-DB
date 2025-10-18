@@ -8,6 +8,30 @@
 
 import Foundation
 
+// MARK: - Log Level
+
+public enum LogLevel: Int, Comparable, Codable {
+    case debug = 0
+    case info = 1
+    case warning = 2
+    case error = 3
+    
+    public var priority: Int { rawValue }
+    
+    public var stringValue: String {
+        switch self {
+        case .debug: return "DEBUG"
+        case .info: return "INFO"
+        case .warning: return "WARNING"
+        case .error: return "ERROR"
+        }
+    }
+    
+    public static func < (lhs: LogLevel, rhs: LogLevel) -> Bool {
+        return lhs.rawValue < rhs.rawValue
+    }
+}
+
 // MARK: - Logger
 
 public final class Logger {
@@ -91,7 +115,7 @@ public struct DefaultLogFormatter: LogFormatter {
     public func format(entry: LogEntry) -> String {
         let timestamp = dateFormatter.string(from: entry.timestamp)
         let filename = URL(fileURLWithPath: entry.file).lastPathComponent
-        let level = entry.level.rawValue.padding(toLength: 7, withPad: " ", startingAt: 0)
+        let level = entry.level.stringValue.padding(toLength: 7, withPad: " ", startingAt: 0)
         
         return "[\(timestamp)] \(level) [\(filename):\(entry.line)] \(entry.function) - \(entry.message)"
     }
@@ -108,7 +132,7 @@ public struct JSONLogFormatter: LogFormatter {
     public func format(entry: LogEntry) -> String {
         let logData = LogData(
             timestamp: entry.timestamp,
-            level: entry.level.rawValue,
+            level: entry.level.stringValue,
             message: entry.message,
             file: entry.file,
             function: entry.function,

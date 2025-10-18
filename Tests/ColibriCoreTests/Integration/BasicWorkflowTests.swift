@@ -35,20 +35,23 @@ struct BasicWorkflowTests {
         try db.commit(tid1)
         
         // Read
-        let row1 = try db.read(table: "users", rid: rid1)
-        #expect(row1["name"] == .string("Alice"))
+        let allRows = try db.scan("users")
+        #expect(allRows.count == 2)
+        let row1 = allRows.first(where: { $0.0 == rid1 })?.1
+        #expect(row1?["name"] == .string("Alice"))
         
         // Update
         let tid2 = try db.begin()
-        try db.update(table: "users", rid: rid1, newRow: ["id": .int(1), "name": .string("Alice Updated")], tid: tid2)
+        try db.update(table: "users", matchColumn: "id", matchValue: .int(1), updateColumn: "name", updateValue: .string("Alice Updated"), tid: tid2)
         try db.commit(tid2)
         
-        let updated = try db.read(table: "users", rid: rid1)
-        #expect(updated["name"] == .string("Alice Updated"))
+        let updatedRows = try db.scan("users")
+        let updated = updatedRows.first(where: { $0.1["id"] == .int(1) })?.1
+        #expect(updated?["name"] == .string("Alice Updated"))
         
         // Delete
         let tid3 = try db.begin()
-        try db.delete(table: "users", rid: rid2, tid: tid3)
+        try db.deleteRows(table: "users", matchColumn: "id", matchValue: .int(2), tid: tid3)
         try db.commit(tid3)
         
         let remaining = try db.scan( "users")
@@ -75,7 +78,7 @@ struct BasicWorkflowTests {
         // Only first insert should be visible
         let results = try db.scan( "test")
         #expect(results.count == 1)
-        #expect(results[0].row["id"] == .int(1))
+        #expect(results[0].1["id"] == .int(1))
     }
     
     @Test("Multiple tables workflow")

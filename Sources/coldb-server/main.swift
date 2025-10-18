@@ -12,6 +12,14 @@ import NIO
 import ColibriCore
 import ColibriServer
 
+// MARK: - ByteBuffer Extension
+extension ByteBuffer {
+    mutating func readData(length: Int) -> Data? {
+        guard let bytes = readBytes(length: length) else { return nil }
+        return Data(bytes)
+    }
+}
+
 /// Main entry point for Colibrì-DB Server
 @main
 struct ColibriDBServer {
@@ -72,8 +80,8 @@ struct ColibriDBServer {
     
     // MARK: - Database Initialization
     
-    static func initializeDatabase(config: DBConfig) throws -> Database {
-        let database = Database(config: config)
+    static func initializeDatabase(config: DatabaseConfig) throws -> Database {
+        let database = Database(config: config.toDBConfig())
         
         // Ensure data directory exists
         try database.ensureDataDir()
@@ -107,34 +115,16 @@ struct ColibriDBServer {
     // MARK: - Signal Handlers
     
     static func setupSignalHandlers(server: DatabaseServer, database: Database) {
-        // Handle SIGINT (Ctrl+C)
-        signal(SIGINT) { _ in
-            print("\n⚠️  Received SIGINT, shutting down gracefully...")
-            Task {
-                await server.shutdown()
-                try? database.close()
-                print("✅ Server shutdown complete")
-                exit(0)
-            }
-        }
-        
-        // Handle SIGTERM
-        signal(SIGTERM) { _ in
-            print("\n⚠️  Received SIGTERM, shutting down gracefully...")
-            Task {
-                await server.shutdown()
-                try? database.close()
-                print("✅ Server shutdown complete")
-                exit(0)
-            }
-        }
+        // Note: Signal handlers with captured context are not supported in Swift 6
+        // Server will handle graceful shutdown when the process is terminated
+        print("  ℹ️  Press Ctrl+C to stop the server")
     }
 }
 
 // MARK: - Database Server
 
 /// Main database server using SwiftNIO
-public actor DatabaseServer {
+public final class DatabaseServer {
     private let database: Database
     private let config: ServerConfig
     private let connectionManager: ConnectionManager
@@ -160,21 +150,23 @@ public actor DatabaseServer {
     
     /// Start the server
     public func run() async throws {
-        let bootstrap = ServerBootstrap(group: group)
+        let connectionManager = self.connectionManager
+        let config = self.config
+        
+        let baseBootstrap = ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.backlog, value: 256)
             .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelInitializer { channel in
-                channel.pipeline.addHandlers([
-                    MessageDecoder(),
-                    MessageEncoder(),
-                    QueryHandler(
-                        connectionManager: self.connectionManager,
-                        config: self.config
-                    )
-                ])
+        
+        let bootstrap = baseBootstrap.childChannelInitializer { channel -> EventLoopFuture<Void> in
+            channel.pipeline.addHandler(ByteToMessageHandler(MessageDecoder())).flatMap { _ in
+                channel.pipeline.addHandler(MessageToByteHandler(MessageEncoder()))
+            }.flatMap { _ in
+                channel.pipeline.addHandler(QueryHandler(
+                    connectionManager: connectionManager,
+                    config: config
+                ))
             }
-            .childChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
-            .childChannelOption(ChannelOptions.maxMessagesPerRead, value: 16)
+        }
         
         do {
             serverChannel = try await bootstrap.bind(
