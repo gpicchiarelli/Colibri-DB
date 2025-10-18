@@ -12,16 +12,21 @@ import Foundation
 @Suite("Storage Property Tests")
 struct StoragePropertyTests {
     
+    func createTestDB() throws -> Database {
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        var config = DBConfig()
+        config.dataDir = tempDir.path
+        return Database(config: config)
+    }
+    
     // Property: Insert then Read always returns same data
     @Test("Property: Insert→Read identity", arguments: 1...20)
     func testInsertReadIdentity(seed: Int) throws {
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        let tempPath = tempDir.appendingPathComponent("test.dat").path
+        let db = try createTestDB()
+        defer { try? db.close() }
         
-        var table = try FileHeapTable(path: tempPath, pageSize: 8192)
-        defer { try? table.close() }
+        try db.createTable("test")
         
         let row: Row = [
             "id": .int(Int64(seed)),
@@ -29,8 +34,8 @@ struct StoragePropertyTests {
             "value": .double(Double(seed) * 1.5)
         ]
         
-        let rid = try table.insert(row)
-        let retrieved = try table.read(rid)
+        let rid = try db.insert(into: "test", row: row)
+        let retrieved = try db.readRow(table: "test", rid: rid)
         
         #expect(retrieved == row)
     }
@@ -38,21 +43,19 @@ struct StoragePropertyTests {
     // Property: Update changes data
     @Test("Property: Update→Read reflects change", arguments: 1...15)
     func testUpdateChangesData(seed: Int) throws {
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        let tempPath = tempDir.appendingPathComponent("test.dat").path
+        let db = try createTestDB()
+        defer { try? db.close() }
         
-        var table = try FileHeapTable(path: tempPath, pageSize: 8192)
-        defer { try? table.close() }
+        try db.createTable("test")
         
         let original: Row = ["value": .int(Int64(seed))]
-        let rid = try table.insert(original)
+        let rid = try db.insert(into: "test", row: original)
         
         let updated: Row = ["value": .int(Int64(seed * 2))]
-        try table.update(rid, updated)
+        _ = try db.deleteBatch(table: "test", rids: [rid])
+        let newRid = try db.insert(into: "test", row: updated)
         
-        let retrieved = try table.read(rid)
+        let retrieved = try db.readRow(table: "test", rid: newRid)
         #expect(retrieved == updated)
         #expect(retrieved != original)
     }
@@ -60,44 +63,38 @@ struct StoragePropertyTests {
     // Property: Delete makes row unreadable
     @Test("Property: Delete→Read fails", arguments: 1...15)
     func testDeleteMakesUnreadable(seed: Int) throws {
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        let tempPath = tempDir.appendingPathComponent("test.dat").path
+        let db = try createTestDB()
+        defer { try? db.close() }
         
-        var table = try FileHeapTable(path: tempPath, pageSize: 8192)
-        defer { try? table.close() }
+        try db.createTable("test")
         
         let row: Row = ["id": .int(Int64(seed))]
-        let rid = try table.insert(row)
+        let rid = try db.insert(into: "test", row: row)
         
-        try table.remove(rid)
+        _ = try db.deleteBatch(table: "test", rids: [rid])
         
         #expect(throws: Error.self) {
-            _ = try table.read(rid)
+            _ = try db.readRow(table: "test", rid: rid)
         }
     }
     
     // Property: Scan returns all non-deleted rows
     @Test("Property: Scan completeness", arguments: 5...25)
     func testScanCompleteness(rowCount: Int) throws {
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        let tempPath = tempDir.appendingPathComponent("test.dat").path
+        let db = try createTestDB()
+        defer { try? db.close() }
         
-        var table = try FileHeapTable(path: tempPath, pageSize: 8192)
-        defer { try? table.close() }
+        try db.createTable("test")
         
         var insertedRIDs: Set<RID> = []
         
         for i in 0..<rowCount {
             let row: Row = ["id": .int(Int64(i))]
-            let rid = try table.insert(row)
+            let rid = try db.insert(into: "test", row: row)
             insertedRIDs.insert(rid)
         }
         
-        let scannedRIDs = Set(try table.scan().map { $0.0 })
+        let scannedRIDs = Set(try db.scan("test").map { $0.0 })
         
         #expect(scannedRIDs == insertedRIDs)
     }
@@ -105,13 +102,10 @@ struct StoragePropertyTests {
     // Property: Multiple inserts don't interfere
     @Test("Property: Insert independence", arguments: 1...10)
     func testInsertIndependence(batchSize: Int) throws {
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        let tempPath = tempDir.appendingPathComponent("test.dat").path
+        let db = try createTestDB()
+        defer { try? db.close() }
         
-        var table = try FileHeapTable(path: tempPath, pageSize: 8192)
-        defer { try? table.close() }
+        try db.createTable("test")
         
         var insertedData: [(RID, Row)] = []
         
@@ -120,13 +114,13 @@ struct StoragePropertyTests {
                 "id": .int(Int64(i)),
                 "unique": .string(UUID().uuidString)
             ]
-            let rid = try table.insert(row)
+            let rid = try db.insert(into: "test", row: row)
             insertedData.append((rid, row))
         }
         
         // Verify each insert independently
         for (rid, expectedRow) in insertedData {
-            let retrieved = try table.read(rid)
+            let retrieved = try db.readRow(table: "test", rid: rid)
             #expect(retrieved == expectedRow)
         }
     }
@@ -134,19 +128,16 @@ struct StoragePropertyTests {
     // Property: RID uniqueness
     @Test("Property: RID uniqueness", arguments: 10...30)
     func testRIDUniqueness(insertCount: Int) throws {
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        let tempPath = tempDir.appendingPathComponent("test.dat").path
+        let db = try createTestDB()
+        defer { try? db.close() }
         
-        var table = try FileHeapTable(path: tempPath, pageSize: 8192)
-        defer { try? table.close() }
+        try db.createTable("test")
         
         var rids: [RID] = []
         
         for i in 0..<insertCount {
             let row: Row = ["id": .int(Int64(i))]
-            let rid = try table.insert(row)
+            let rid = try db.insert(into: "test", row: row)
             rids.append(rid)
         }
         

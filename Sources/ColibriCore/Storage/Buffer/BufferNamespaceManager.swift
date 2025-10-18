@@ -44,17 +44,17 @@ final class BufferNamespaceManager: @unchecked Sendable {
     func enforceQuota(for group: String) {
         lock.lock(); defer { lock.unlock() }
         guard let q = quota[group], q > 0 else { return }
-        var pools = (groups[group] ?? []).compactMap { $0.pool }
+        let pools = (groups[group] ?? []).compactMap { $0.pool }
         groups[group] = pools.map { WeakPool(pool: $0) }
         var total = pools.reduce(0) { $0 + $1.pageCount() }
         if total <= q { return }
-        pools.sort { $0.pageCount() > $1.pageCount() }
+        let sortedPools = pools.sorted { $0.pageCount() > $1.pageCount() }
         var i = 0
-        while total > q && !pools.isEmpty {
-            let p = pools[i % pools.count]
-            if p.tryEvictOne() { total -= 1 } else { i += 1 }
+        while total > q && !sortedPools.isEmpty {
+            let p = sortedPools[i % sortedPools.count]
+            if p.tryEvictOne() { total -= 1 }
             i += 1
-            if i > pools.count * 4 { break }
+            if i > sortedPools.count * 4 { break }
         }
     }
 }

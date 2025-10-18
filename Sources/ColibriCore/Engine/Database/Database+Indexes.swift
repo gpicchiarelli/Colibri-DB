@@ -102,7 +102,10 @@ extension Database {
             try index.closeAll()
             let fm = FileManager.default
             try fm.removeItem(atPath: index.path)
-            try fm.removeItem(atPath: index.path + ".wal")
+            let walPath = index.path + ".wal"
+            if fm.fileExists(atPath: walPath) {
+                try fm.removeItem(atPath: walPath)
+            }
         }
         map.removeValue(forKey: name)
         if map.isEmpty {
