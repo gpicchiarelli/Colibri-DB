@@ -51,7 +51,7 @@ struct BasicWorkflowTests {
         
         // Delete
         let tid3 = try db.begin()
-        try db.deleteRows(table: "users", matchColumn: "id", matchValue: .int(2), tid: tid3)
+        _ = try db.deleteEquals(table: "users", column: "id", value: .int(2), tid: tid3)
         try db.commit(tid3)
         
         let remaining = try db.scan( "users")

@@ -28,54 +28,54 @@ struct IndexCatalogTests {
     
     @Test("Register index definition")
     func testRegisterIndex() throws {
-        var catalog = try createTestCatalog()
+        let catalog = try createTestCatalog()
         
-        let def = IndexDefinition(
+        let def = IndexDef(
             name: "idx_users_name",
             table: "users",
+            column: nil,
             columns: ["name"],
-            indexType: "BTree",
-            path: "/tmp/test.idx"
+            kind: "BTree"
         )
         
-        try catalog.register(def)
+        try catalog.add(def)
         
         let indices = catalog.list()
         #expect(indices.count == 1)
         #expect(indices[0].name == "idx_users_name")
     }
     
-    @Test("Lookup index by name")
+    @Test("Lookup index by filtering")
     func testLookupIndex() throws {
-        var catalog = try createTestCatalog()
+        let catalog = try createTestCatalog()
         
-        let def = IndexDefinition(
+        let def = IndexDef(
             name: "idx_test",
             table: "test",
+            column: nil,
             columns: ["col1"],
-            indexType: "Hash",
-            path: "/tmp/test.idx"
+            kind: "Hash"
         )
         
-        try catalog.register(def)
+        try catalog.add(def)
         
-        let found = catalog.lookup(name: "idx_test", table: "test")
+        let found = catalog.list().first(where: { $0.name == "idx_test" && $0.table == "test" })
         #expect(found != nil)
         #expect(found?.name == "idx_test")
     }
     
     @Test("List all indices")
     func testListIndices() throws {
-        var catalog = try createTestCatalog()
+        let catalog = try createTestCatalog()
         
-        try catalog.register(IndexDefinition(
-            name: "idx1", table: "table1", columns: ["col1"], indexType: "BTree", path: "/tmp/idx1.idx"
+        try catalog.add(IndexDef(
+            name: "idx1", table: "table1", column: nil, columns: ["col1"], kind: "BTree"
         ))
-        try catalog.register(IndexDefinition(
-            name: "idx2", table: "table1", columns: ["col2"], indexType: "Hash", path: "/tmp/idx2.idx"
+        try catalog.add(IndexDef(
+            name: "idx2", table: "table1", column: nil, columns: ["col2"], kind: "Hash"
         ))
-        try catalog.register(IndexDefinition(
-            name: "idx3", table: "table2", columns: ["col1"], indexType: "BTree", path: "/tmp/idx3.idx"
+        try catalog.add(IndexDef(
+            name: "idx3", table: "table2", column: nil, columns: ["col1"], kind: "BTree"
         ))
         
         let all = catalog.list()
@@ -84,13 +84,13 @@ struct IndexCatalogTests {
     
     @Test("List indices for specific table")
     func testListIndicesForTable() throws {
-        var catalog = try createTestCatalog()
+        let catalog = try createTestCatalog()
         
-        try catalog.register(IndexDefinition(
-            name: "idx1", table: "users", columns: ["name"], indexType: "BTree", path: "/tmp/idx1.idx"
+        try catalog.add(IndexDef(
+            name: "idx1", table: "users", column: nil, columns: ["name"], kind: "BTree"
         ))
-        try catalog.register(IndexDefinition(
-            name: "idx2", table: "orders", columns: ["date"], indexType: "BTree", path: "/tmp/idx2.idx"
+        try catalog.add(IndexDef(
+            name: "idx2", table: "orders", column: nil, columns: ["date"], kind: "BTree"
         ))
         
         let userIndices = catalog.list().filter { $0.table == "users" }
@@ -99,36 +99,36 @@ struct IndexCatalogTests {
     
     @Test("Remove index from catalog")
     func testRemoveIndex() throws {
-        var catalog = try createTestCatalog()
+        let catalog = try createTestCatalog()
         
-        let def = IndexDefinition(
-            name: "idx_temp", table: "temp", columns: ["col1"], indexType: "BTree", path: "/tmp/temp.idx"
+        let def = IndexDef(
+            name: "idx_temp", table: "temp", column: nil, columns: ["col1"], kind: "BTree"
         )
         
-        try catalog.register(def)
+        try catalog.add(def)
         #expect(catalog.list().count == 1)
         
         try catalog.remove(name: "idx_temp", table: "temp")
         #expect(catalog.list().isEmpty)
     }
     
-    @Test("Catalog persists after save/load")
+    @Test("Catalog persists after reload")
     func testPersistence() throws {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         
-        // Register and save
+        // Register
         do {
-            var catalog = try IndexCatalog(dir: tempDir.path)
-            try catalog.register(IndexDefinition(
+            let catalog = try IndexCatalog(dir: tempDir.path)
+            try catalog.add(IndexDef(
                 name: "persistent_idx", 
                 table: "test", 
+                column: nil,
                 columns: ["col1"], 
-                indexType: "BTree", 
-                path: "/tmp/persistent.idx"
+                kind: "BTree"
             ))
-            try catalog.save()
+            // save() is called automatically by add()
         }
         
         // Reload and verify

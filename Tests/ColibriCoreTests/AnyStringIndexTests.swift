@@ -136,18 +136,18 @@ final class AnyStringIndexTests: XCTestCase {
         // Search equals
         let appleResults = index.searchEquals("apple")
         XCTAssertEqual(appleResults.count, 1, "Failed for \(kind)")
-        XCTAssertEqual(appleResults.first?.slot, 1, "Failed for \(kind)")
+        XCTAssertEqual(appleResults.first?.slotId, 1, "Failed for \(kind)")
         
         let bananaResults = index.searchEquals("banana")
         XCTAssertEqual(bananaResults.count, 1, "Failed for \(kind)")
-        XCTAssertEqual(bananaResults.first?.slot, 2, "Failed for \(kind)")
+        XCTAssertEqual(bananaResults.first?.slotId, 2, "Failed for \(kind)")
         
         // Search non-existent
         let notFound = index.searchEquals("nonexistent")
         XCTAssertTrue(notFound.isEmpty, "Failed for \(kind)")
         
         // Remove
-        index.remove(key: "banana", ref: RID(page: 0, slot: 2))
+        index.remove(key: "banana", ref: RID(pageId: 0, slotId: 2))
         let afterRemove = index.searchEquals("banana")
         XCTAssertTrue(afterRemove.isEmpty, "Failed for \(kind)")
     }
@@ -184,7 +184,7 @@ final class AnyStringIndexTests: XCTestCase {
         // Insert range of keys
         for i in 0..<10 {
             let key = String(format: "key%02d", i)
-            index.insert(key: key, ref: RID(page: 0, slot: UInt16(i)))
+            index.insert(key: key, ref: RID(pageId: 0, slotId: UInt16(i)))
         }
         
         // Range query
@@ -203,9 +203,9 @@ final class AnyStringIndexTests: XCTestCase {
             var index = AnyStringIndex(kind: kind)
             
             // Insert same key multiple times with different RIDs
-            index.insert(key: "duplicate", ref: RID(page: 0, slot: 1))
-            index.insert(key: "duplicate", ref: RID(page: 0, slot: 2))
-            index.insert(key: "duplicate", ref: RID(page: 0, slot: 3))
+            index.insert(key: "duplicate", ref: RID(pageId: 0, slotId: 1))
+            index.insert(key: "duplicate", ref: RID(pageId: 0, slotId: 2))
+            index.insert(key: "duplicate", ref: RID(pageId: 0, slotId: 3))
             
             let results = index.searchEquals("duplicate")
             
@@ -233,7 +233,7 @@ final class AnyStringIndexTests: XCTestCase {
         
         // Insert 1000 keys
         for i in 0..<1000 {
-            index.insert(key: "key\(i)", ref: RID(page: 0, slot: UInt16(i % 1000)))
+            index.insert(key: "key\(i)", ref: RID(pageId: 0, slotId: UInt16(i % 1000)))
         }
         
         // Verify random samples
@@ -262,7 +262,7 @@ final class AnyStringIndexTests: XCTestCase {
             var index = AnyStringIndex(kind: kind)
             
             for (i, key) in specialKeys.enumerated() {
-                index.insert(key: key, ref: RID(page: 0, slot: UInt16(i)))
+                index.insert(key: key, ref: RID(pageId: 0, slotId: UInt16(i)))
             }
             
             // Verify all can be retrieved
@@ -281,7 +281,7 @@ final class AnyStringIndexTests: XCTestCase {
         for kind in kinds {
             var index = AnyStringIndex(kind: kind)
             
-            index.insert(key: "", ref: RID(page: 0, slot: 1))
+            index.insert(key: "", ref: RID(pageId: 0, slotId: 1))
             
             let results = index.searchEquals("")
             // Implementation-dependent whether empty strings are supported
@@ -298,10 +298,10 @@ final class AnyStringIndexTests: XCTestCase {
             var index = AnyStringIndex(kind: kind)
             
             // Insert initial value
-            index.insert(key: "update_test", ref: RID(page: 0, slot: 1))
+            index.insert(key: "update_test", ref: RID(pageId: 0, slotId: 1))
             
             // Update with new RID
-            index.insert(key: "update_test", ref: RID(page: 0, slot: 2))
+            index.insert(key: "update_test", ref: RID(pageId: 0, slotId: 2))
             
             let results = index.searchEquals("update_test")
             XCTAssertGreaterThan(results.count, 0, "Failed for \(kind)")
@@ -323,7 +323,7 @@ final class AnyStringIndexTests: XCTestCase {
                 DispatchQueue.global().async {
                     for i in 0..<10 {
                         let key = "thread\(threadId)_key\(i)"
-                        let ref = RID(page: UInt32(threadId), slot: UInt16(i))
+                        let ref = RID(pageId: UInt64(threadId), slotId: UInt16(i))
                         index.insert(key: key, ref: ref)
                     }
                     expectation.fulfill()
@@ -347,7 +347,7 @@ final class AnyStringIndexTests: XCTestCase {
             var index = AnyStringIndex(kind: kind)
             
             // Remove from empty index
-            index.remove(key: "nonexistent", ref: RID(page: 0, slot: 1))
+            index.remove(key: "nonexistent", ref: RID(pageId: 0, slotId: 1))
             
             // Should not crash
             XCTAssert(true, "Should handle removing non-existent key for \(kind)")
@@ -361,7 +361,7 @@ final class AnyStringIndexTests: XCTestCase {
             var index = AnyStringIndex(kind: kind)
             
             let key = "test"
-            let ref = RID(page: 0, slot: 1)
+            let ref = RID(pageId: 0, slotId: 1)
             
             index.insert(key: key, ref: ref)
             
@@ -385,7 +385,7 @@ final class AnyStringIndexTests: XCTestCase {
                 var index = AnyStringIndex(kind: kind)
                 
                 for i in 0..<1000 {
-                    index.insert(key: "key\(i)", ref: RID(page: 0, slot: UInt16(i % 1000)))
+                    index.insert(key: "key\(i)", ref: RID(pageId: 0, slotId: UInt16(i % 1000)))
                 }
             }
         }
@@ -399,7 +399,7 @@ final class AnyStringIndexTests: XCTestCase {
             
             // Pre-populate
             for i in 0..<1000 {
-                index.insert(key: "key\(i)", ref: RID(page: 0, slot: UInt16(i % 1000)))
+                index.insert(key: "key\(i)", ref: RID(pageId: 0, slotId: UInt16(i % 1000)))
             }
             
             measure(metrics: [XCTClockMetric()]) {
@@ -439,7 +439,7 @@ final class AnyStringIndexTests: XCTestCase {
             
             // Insert
             for i in 0..<100 {
-                index.insert(key: "key\(i)", ref: RID(page: 0, slot: UInt16(i)))
+                index.insert(key: "key\(i)", ref: RID(pageId: 0, slotId: UInt16(i)))
             }
             
             // Search some
@@ -450,7 +450,7 @@ final class AnyStringIndexTests: XCTestCase {
             
             // Remove some
             for i in [10, 30, 50] {
-                index.remove(key: "key\(i)", ref: RID(page: 0, slot: UInt16(i)))
+                index.remove(key: "key\(i)", ref: RID(pageId: 0, slotId: UInt16(i)))
             }
             
             // Verify removals
@@ -461,7 +461,7 @@ final class AnyStringIndexTests: XCTestCase {
             
             // Insert new
             for i in 100..<110 {
-                index.insert(key: "key\(i)", ref: RID(page: 0, slot: UInt16(i)))
+                index.insert(key: "key\(i)", ref: RID(pageId: 0, slotId: UInt16(i)))
             }
             
             // Verify new inserts
@@ -482,17 +482,17 @@ final class AnyStringIndexTests: XCTestCase {
             for cycle in 0..<10 {
                 // Insert
                 for i in 0..<100 {
-                    index.insert(key: "cycle\(cycle)_key\(i)", ref: RID(page: 0, slot: UInt16(i)))
+                    index.insert(key: "cycle\(cycle)_key\(i)", ref: RID(pageId: 0, slotId: UInt16(i)))
                 }
                 
                 // Remove half
                 for i in 0..<50 {
-                    index.remove(key: "cycle\(cycle)_key\(i)", ref: RID(page: 0, slot: UInt16(i)))
+                    index.remove(key: "cycle\(cycle)_key\(i)", ref: RID(pageId: 0, slotId: UInt16(i)))
                 }
             }
             
             // Should still be functional
-            index.insert(key: "final_test", ref: RID(page: 0, slot: 999))
+            index.insert(key: "final_test", ref: RID(pageId: 0, slotId: 999))
             let results = index.searchEquals("final_test")
             XCTAssertGreaterThan(results.count, 0, "Stress test failed for \(kind)")
         }

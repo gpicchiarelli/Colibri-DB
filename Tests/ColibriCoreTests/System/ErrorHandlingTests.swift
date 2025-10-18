@@ -75,7 +75,7 @@ struct ErrorHandlingTests {
         let invalidRID = RID(pageId: 9999, slotId: 9999)
         
         #expect(throws: Error.self) {
-            _ = try db.read(table: "test", rid: invalidRID)
+            _ = try db.readRow(table: "test", rid: invalidRID)
         }
     }
     

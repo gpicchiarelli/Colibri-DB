@@ -31,13 +31,13 @@ struct AdvancedWorkflowTests {
         
         // Insert into both tables
         let userRID = try db.insert(
-            table: "users",
+            into: "users",
             row: ["id": .int(1), "name": .string("Alice")],
             tid: tid
         )
         
         let orderRID = try db.insert(
-            table: "orders",
+            into: "orders",
             row: ["id": .int(1), "user_id": .int(1), "amount": .double(99.99)],
             tid: tid
         )
@@ -46,8 +46,8 @@ struct AdvancedWorkflowTests {
         try db.commit(tid)
         
         // Verify both
-        let user = try db.read(table: "users", rid: userRID)
-        let order = try db.read(table: "orders", rid: orderRID)
+        let user = try db.readRow(table: "users", rid: userRID)
+        let order = try db.readRow(table: "orders", rid: orderRID)
         
         #expect(user["name"] == .string("Alice"))
         #expect(order["amount"] == .double(99.99))
@@ -59,7 +59,7 @@ struct AdvancedWorkflowTests {
         defer { try? db.close() }
         
         try db.createTable("products")
-        try db.createIndex(table: "products", name: "idx_id", columns: ["id"], indexType: "BTree")
+        try db.createIndex(name: "idx_id", on: "products", columns: ["id"], using: "BTree")
         
         let tid = try db.begin()
         
@@ -76,7 +76,7 @@ struct AdvancedWorkflowTests {
         #expect(scanResults.count == 10)
         
         // Verify via index
-        let indexResults = try db.indexSearch(table: "products", index: "idx_id", key: "5")
+        let indexResults = try db.indexSearchEqualsTyped(table: "products", index: "idx_id", value: .int(5))
         #expect(indexResults.count == 1)
     }
     
@@ -91,19 +91,19 @@ struct AdvancedWorkflowTests {
         let tid = try db.begin()
         
         let parentRID = try db.insert(
-            table: "parent",
+            into: "parent",
             row: ["id": .int(1), "name": .string("Parent")],
             tid: tid
         )
         
         let childRID1 = try db.insert(
-            table: "child",
+            into: "child",
             row: ["id": .int(1), "parent_id": .int(1)],
             tid: tid
         )
         
         let childRID2 = try db.insert(
-            table: "child",
+            into: "child",
             row: ["id": .int(2), "parent_id": .int(1)],
             tid: tid
         )
@@ -112,11 +112,10 @@ struct AdvancedWorkflowTests {
         
         // Delete parent
         let deleteTid = try db.begin()
-        try db.delete(table: "parent", rid: parentRID, tid: deleteTid)
+        _ = try db.deleteBatch(table: "parent", rids: [parentRID], tid: deleteTid)
         
         // Manually delete children (cascade logic)
-        try db.delete(table: "child", rid: childRID1, tid: deleteTid)
-        try db.delete(table: "child", rid: childRID2, tid: deleteTid)
+        _ = try db.deleteBatch(table: "child", rids: [childRID1, childRID2], tid: deleteTid)
         
         try db.commit(deleteTid)
         
@@ -167,14 +166,14 @@ struct AdvancedWorkflowTests {
         _ = try db.insert(into: "test", row: ["id": .int(2)], tid: tid)
         
         // Savepoint
-        try db.setSavepoint(tid: tid, name: "sp1")
+        try db.savepoint("sp1", tid: tid)
         
         // Insert more
         _ = try db.insert(into: "test", row: ["id": .int(3)], tid: tid)
         _ = try db.insert(into: "test", row: ["id": .int(4)], tid: tid)
         
         // Rollback to savepoint
-        try db.rollbackToSavepoint(tid: tid, name: "sp1")
+        try db.rollback(toSavepoint: "sp1", tid: tid)
         
         // Commit
         try db.commit(tid)
@@ -204,7 +203,7 @@ struct AdvancedWorkflowTests {
         let tid2 = try db.begin()
         
         #expect(throws: DBError.self) {
-            try db.update(table: "test", rid: rid, newRow: ["id": .int(1), "updated": .bool(true)], tid: tid2)
+            _ = try db.update(table: "test", matchColumn: "id", matchValue: .int(1), updateColumn: "id", updateValue: .int(2), tid: tid2)
         }
         
         try db.rollback(tid2)
@@ -248,18 +247,18 @@ struct AdvancedWorkflowTests {
         _ = try db.insert(into: "test", row: ["id": .int(1), "level": .string("outer")], tid: outerTid)
         
         // Savepoint simulates inner transaction
-        try db.setSavepoint(tid: outerTid, name: "inner")
+        try db.savepoint("inner", tid: outerTid)
         _ = try db.insert(into: "test", row: ["id": .int(2), "level": .string("inner")], tid: outerTid)
         
         // Rollback inner
-        try db.rollbackToSavepoint(tid: outerTid, name: "inner")
+        try db.rollback(toSavepoint: "inner", tid: outerTid)
         
         // Commit outer
         try db.commit(outerTid)
         
         let results = try db.scan( "test")
         #expect(results.count == 1)
-        #expect(results[0].row["level"] == .string("outer"))
+        #expect(results[0].1["level"] == .string("outer"))
     }
 }
 
