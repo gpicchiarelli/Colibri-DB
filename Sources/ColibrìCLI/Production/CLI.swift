@@ -10,11 +10,14 @@ import ColibriCore
 
 /// Professional command-line interface for ColibrDB production use
 public class ProductionCLI {
-    internal let database: Database
+    // 🚀 OPTIMIZATION #25: Lazy database initialization
+    internal private(set) var database: Database?
     internal let formatter = CLIFormatter()
     internal var isRunning = true
+    internal var config: DBConfig
     
     public init() throws {
+        // 🚀 OPTIMIZATION #25: Don't initialize database immediately
         // Initialize with production-ready configuration
         var config = DBConfig()
         config.pageSizeBytes = 8192
@@ -23,14 +26,26 @@ public class ProductionCLI {
         config.walFullFSyncEnabled = true
         config.lockTimeoutSeconds = 30.0
         
-        self.database = Database(config: config)
-        
         // Apply Apple Silicon optimizations if available
         #if os(macOS) && arch(arm64)
         if #available(macOS 13.0, *) {
             AppleSiliconIntegration.applyOptimizations(to: &config)
         }
         #endif
+        
+        self.config = config
+        // Database will be initialized on first actual query (not meta-commands)
+    }
+    
+    /// 🚀 OPTIMIZATION #25: Lazy database initialization
+    private func ensureDatabase() throws -> Database {
+        if let db = database {
+            return db
+        }
+        // Initialize on first access
+        let db = Database(config: config)
+        database = db
+        return db
     }
     
     public func run() throws {
@@ -69,15 +84,26 @@ public class ProductionCLI {
     internal func handleMetaCommand(_ command: String) throws {
         let cmd = command.lowercased()
         
+        // 🚀 OPTIMIZATION #25: Fast path for commands that don't need database
         switch cmd {
         case "\\help", "\\h", "\\?":
             formatter.printHelp()
+            return  // No database needed
         case "\\quit", "\\q", "\\exit":
             isRunning = false
+            return  // No database needed
+        default:
+            break  // May need database
+        }
+        
+        // Commands that need database - initialize if needed
+        _ = try ensureDatabase()
+        
+        switch cmd {
         case "\\status":
-            formatter.printInfo("Database status: Running")
+            formatter.printInfo("Database status: \(database != nil ? "Running" : "Not initialized")")
         case "\\tables":
-            formatter.printInfo("Tables: (not implemented)")
+            formatter.printInfo("Tables: (not implemented - needs DB integration)")
         default:
             formatter.printError("Unknown meta command: \(command)")
             formatter.printInfo("Type \\help for available commands")
@@ -85,6 +111,9 @@ public class ProductionCLI {
     }
     
     internal func handleSQLQuery(_ query: String) throws {
+        // 🚀 OPTIMIZATION #25: Ensure database is initialized for SQL queries
+        let db = try ensureDatabase()
+        
         // Basic SQL execution using Database methods
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         
@@ -93,7 +122,7 @@ public class ProductionCLI {
             let parts = trimmed.split(separator: " ")
             if parts.count >= 3 {
                 let tableName = String(parts[2]).trimmingCharacters(in: CharacterSet(charactersIn: ";()"))
-                try database.createTable(tableName)
+                try db.createTable(tableName)
                 formatter.printSuccess("Table '\(tableName)' created successfully")
             } else {
                 throw CLIError.invalidSyntax("Usage: CREATE TABLE <name>")

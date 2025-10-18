@@ -79,7 +79,9 @@ public final class MVCCManager {
     // MARK: - Version registration
 
     func registerInsert(table: String, rid: RID, row: Row, tid: UInt64?) {
-        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
+        // 🔧 FIX #2: Use globalLock to prevent lock ordering deadlock
+        globalLock.lock(); defer { globalLock.unlock() }
+        
         var map = tableVersions[table] ?? [:]
         var chain = map[rid] ?? []
         let beginTid = tid ?? 0
@@ -103,16 +105,17 @@ public final class MVCCManager {
         }
         map[rid] = chain
         tableVersions[table] = map
-        // 🔧 FIX: Need to update committed TIDs with proper locking
+        
+        // Update committed TIDs (already holding globalLock)
         if beginStatus == .committed { 
-            transactionStateLock.lock()
             committedTIDs.insert(beginTid)
-            transactionStateLock.unlock()
         }
     }
 
     func registerDelete(table: String, rid: RID, row: Row, tid: UInt64?) {
-        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
+        // 🔧 FIX #2: Use globalLock for consistency with registerInsert
+        globalLock.lock(); defer { globalLock.unlock() }
+        
         var map = tableVersions[table] ?? [:]
         var chain = map[rid] ?? []
         if chain.isEmpty {
@@ -140,12 +143,14 @@ public final class MVCCManager {
     }
 
     func forceRemove(table: String, rid: RID) {
-        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
+        // 🔧 FIX #2: Use globalLock for consistency
+        globalLock.lock(); defer { globalLock.unlock() }
         tableVersions[table]?.removeValue(forKey: rid)
     }
 
     func undoInsert(table: String, rid: RID, tid: UInt64) {
-        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
+        // 🔧 FIX #2: Use globalLock for consistency
+        globalLock.lock(); defer { globalLock.unlock() }
         guard var map = tableVersions[table] else { return }
         guard var chain = map[rid] else { return }
         chain.removeAll { $0.beginTID == tid && $0.beginStatus != .committed }
@@ -158,7 +163,8 @@ public final class MVCCManager {
     }
 
     func undoDelete(table: String, rid: RID, tid: UInt64) {
-        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
+        // 🔧 FIX #2: Use globalLock for consistency
+        globalLock.lock(); defer { globalLock.unlock() }
         guard var map = tableVersions[table], var chain = map[rid], let lastIndex = chain.indices.last else { return }
         if chain[lastIndex].endTID == tid {
             chain[lastIndex].endTID = nil
@@ -197,7 +203,8 @@ public final class MVCCManager {
     }
 
     func vacuum(table: String? = nil, cutoff: UInt64?) {
-        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
+        // 🔧 FIX #2: Use globalLock for consistency
+        globalLock.lock(); defer { globalLock.unlock() }
         let candidates = table.map { [$0] } ?? Array(tableVersions.keys)
         for name in candidates {
             guard var map = tableVersions[name] else { continue }
@@ -319,7 +326,8 @@ public final class MVCCManager {
 
 extension MVCCManager {
     func allVersions(for table: String) -> [RID: [Version]] {
-        tableVersionsLock.lock(); defer { tableVersionsLock.unlock() }
+        // 🔧 FIX #2: Use globalLock for consistency
+        globalLock.lock(); defer { globalLock.unlock() }
         return tableVersions[table] ?? [:]
     }
 }

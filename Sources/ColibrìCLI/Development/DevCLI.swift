@@ -69,6 +69,14 @@ class DevCLI: @unchecked Sendable {
         \\begin               - Begin transaction
         \\commit              - Commit transaction
         \\rollback            - Rollback transaction
+        
+        🚀 Debug Commands (Issue #28):
+        \\debug show-locks         - Show active locks
+        \\debug show-transactions  - Show active transactions
+        \\debug show-buffers       - Show buffer pool stats
+        \\debug stats cache        - Show cache statistics
+        \\debug stats memory       - Show memory usage
+        \\debug telemetry          - Show telemetry metrics
         """)
     }
     
@@ -140,11 +148,81 @@ class DevCLI: @unchecked Sendable {
             } else {
                 print("No active transaction.")
             }
+        
+        // 🚀 FIX #28: Debug Commands
+        case "\\debug show-locks":
+            handleDebugShowLocks()
+        
+        case "\\debug show-transactions":
+            handleDebugShowTransactions()
+        
+        case "\\debug show-buffers":
+            handleDebugShowBuffers()
+        
+        case "\\debug stats cache":
+            handleDebugStatsCache()
+        
+        case "\\debug stats memory":
+            handleDebugStatsMemory()
+        
+        case "\\debug telemetry":
+            handleDebugTelemetry()
             
         default:
             print("Unknown command: \(command)")
             print("Type \\help for available commands.")
         }
+    }
+    
+    // MARK: - 🚀 FIX #28: Debug Command Handlers
+    
+    private func handleDebugShowLocks() {
+        print("\n📊 Active Locks:")
+        print("Lock manager integration not yet available")
+        print("(LockManager is internal - would need public API)\n")
+    }
+    
+    private func handleDebugShowTransactions() {
+        print("\n📊 Active Transactions:")
+        if let tid = currentTID {
+            print("  TID \(tid) - Active")
+        } else {
+            print("  No active transactions in this CLI session")
+        }
+        print()
+    }
+    
+    private func handleDebugShowBuffers() {
+        print("\n📊 Buffer Pool Statistics:")
+        print("Buffer pool stats integration not yet available")
+        print("(BufferPool is internal - would need public stats API)\n")
+    }
+    
+    private func handleDebugStatsCache() {
+        print("\n📊 Cache Statistics:")
+        
+        // SQL Parser cache stats
+        let stats = SQLParser.getCacheStats()
+        print("SQL Parser Cache:")
+        print("  Hits: \(stats.hits)")
+        print("  Misses: \(stats.misses)")
+        print("  Hit Rate: \(String(format: "%.2f%%", stats.hitRate * 100))")
+        print("  Size: \(stats.size) entries")
+        print()
+    }
+    
+    private func handleDebugStatsMemory() {
+        print("\n📊 Memory Usage:")
+        let memory = ProcessInfo.processInfo.physicalMemory / (1024 * 1024)
+        print("  System Memory: \(memory) MB")
+        print("  Process Info: available via Activity Monitor")
+        print()
+    }
+    
+    private func handleDebugTelemetry() {
+        print("\n📊 Telemetry Metrics:")
+        print("Telemetry system available but not integrated in DevCLI yet")
+        print("(Would need TelemetryManager instance)\n")
     }
     
     private func handleSQL(_ sql: String) throws {

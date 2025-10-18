@@ -8,17 +8,94 @@
 
 import Foundation
 
-// MARK: - SQL Parser
+// MARK: - SQL Parser with AST Cache
+
+/// 🚀 OPTIMIZATION #16: LRU Cache for parsed AST
+private final class ASTCache: @unchecked Sendable {
+    fileprivate struct CacheEntry {
+        let statement: SQLStatement
+        let timestamp: Date
+    }
+    
+    fileprivate var cache: [String: CacheEntry] = [:]
+    private var accessOrder: [String] = []
+    private let capacity: Int
+    private let lock = NSLock()
+    
+    // Statistics
+    fileprivate var hits: Int = 0
+    fileprivate var misses: Int = 0
+    
+    init(capacity: Int = 1000) {
+        self.capacity = capacity
+    }
+    
+    func get(_ key: String) -> SQLStatement? {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        if let entry = cache[key] {
+            // Update access order (LRU)
+            accessOrder.removeAll(where: { $0 == key })
+            accessOrder.append(key)
+            hits += 1
+            return entry.statement
+        }
+        misses += 1
+        return nil
+    }
+    
+    func put(_ key: String, _ statement: SQLStatement) {
+        lock.lock()
+        defer { lock.unlock() }
+        
+        cache[key] = CacheEntry(statement: statement, timestamp: Date())
+        accessOrder.append(key)
+        
+        // Evict least recently used if over capacity
+        while cache.count > capacity {
+            if let oldest = accessOrder.first {
+                accessOrder.removeFirst()
+                cache.removeValue(forKey: oldest)
+            }
+        }
+    }
+    
+    func clear() {
+        lock.lock()
+        defer { lock.unlock() }
+        cache.removeAll()
+        accessOrder.removeAll()
+        hits = 0
+        misses = 0
+    }
+    
+    var hitRate: Double {
+        let total = hits + misses
+        return total > 0 ? Double(hits) / Double(total) : 0.0
+    }
+}
+
 public struct SQLParser {
     private var tokens: [SQLToken]
     private var position: Int = 0
+    
+    // 🚀 OPTIMIZATION #16: Shared AST cache
+    private static let astCache = ASTCache(capacity: 1000)
     
     public init(tokens: [SQLToken]) {
         self.tokens = tokens
     }
     
     // 🔧 FIX: SQL Injection Prevention with input validation and sanitization
+    // 🚀 OPTIMIZATION #16: AST caching for common queries
     public static func parse(_ sql: String) throws -> SQLStatement {
+        // Check cache first (before validation to maximize perf)
+        let cacheKey = sql.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let cached = astCache.get(cacheKey) {
+            return cached
+        }
+        
         // Input validation
         try validateSQLInput(sql)
         
@@ -32,7 +109,22 @@ public struct SQLParser {
         try validateTokens(tokens)
         
         var parser = SQLParser(tokens: tokens)
-        return try parser.parseStatement()
+        let statement = try parser.parseStatement()
+        
+        // Cache the result
+        astCache.put(cacheKey, statement)
+        
+        return statement
+    }
+    
+    /// 🚀 OPTIMIZATION #16: Get cache statistics
+    public static func getCacheStats() -> (hits: Int, misses: Int, hitRate: Double, size: Int) {
+        return (astCache.hits, astCache.misses, astCache.hitRate, astCache.cache.count)
+    }
+    
+    /// Clear the AST cache (useful for testing)
+    public static func clearCache() {
+        astCache.clear()
     }
     
     // MARK: - Security & Validation
