@@ -204,6 +204,99 @@ public struct DBConfig: Codable {
     }
 }
 
+// MARK: - Configuration Validation
+
+extension DBConfig {
+    /// Validates the configuration and throws if any values are invalid.
+    /// This prevents runtime errors from misconfigured systems.
+    public func validate() throws {
+        // Data directory validation
+        if dataDir.isEmpty {
+            throw DBError.config("dataDir cannot be empty")
+        }
+        
+        // Connection limits
+        if maxConnectionsLogical < 1 {
+            throw DBError.config("maxConnectionsLogical must be >= 1, got \(maxConnectionsLogical)")
+        }
+        if maxConnectionsPhysical < 1 {
+            throw DBError.config("maxConnectionsPhysical must be >= 1, got \(maxConnectionsPhysical)")
+        }
+        if maxConnectionsPhysical > maxConnectionsLogical {
+            throw DBError.config("maxConnectionsPhysical (\(maxConnectionsPhysical)) cannot exceed maxConnectionsLogical (\(maxConnectionsLogical))")
+        }
+        
+        // Buffer pool validation
+        if bufferPoolSizeBytes < 1024 * 1024 {  // Minimum 1MB
+            throw DBError.config("bufferPoolSizeBytes must be >= 1MB, got \(bufferPoolSizeBytes)")
+        }
+        if dataBufferPoolPages < 1 {
+            throw DBError.config("dataBufferPoolPages must be >= 1, got \(dataBufferPoolPages)")
+        }
+        if indexBufferPoolPages < 1 {
+            throw DBError.config("indexBufferPoolPages must be >= 1, got \(indexBufferPoolPages)")
+        }
+        
+        // Page size validation
+        if pageSizeBytes < 512 || pageSizeBytes > 65536 {
+            throw DBError.config("pageSizeBytes must be between 512 and 65536, got \(pageSizeBytes)")
+        }
+        if !pageSizeBytes.isPowerOfTwo {
+            throw DBError.config("pageSizeBytes must be a power of 2, got \(pageSizeBytes)")
+        }
+        
+        // Compaction thresholds
+        if heapFragmentationThreshold < 0.0 || heapFragmentationThreshold > 1.0 {
+            throw DBError.config("heapFragmentationThreshold must be between 0.0 and 1.0, got \(heapFragmentationThreshold)")
+        }
+        if heapFragmentationMinPages < 1 {
+            throw DBError.config("heapFragmentationMinPages must be >= 1, got \(heapFragmentationMinPages)")
+        }
+        if indexLeafOccupancyThreshold < 0.0 || indexLeafOccupancyThreshold > 1.0 {
+            throw DBError.config("indexLeafOccupancyThreshold must be between 0.0 and 1.0, got \(indexLeafOccupancyThreshold)")
+        }
+        
+        // Interval validation
+        if autoCompactionIntervalSeconds < 0.0 {
+            throw DBError.config("autoCompactionIntervalSeconds must be >= 0, got \(autoCompactionIntervalSeconds)")
+        }
+        if indexCompactionCooldownSeconds < 0.0 {
+            throw DBError.config("indexCompactionCooldownSeconds must be >= 0, got \(indexCompactionCooldownSeconds)")
+        }
+        if lockTimeoutSeconds <= 0.0 {
+            throw DBError.config("lockTimeoutSeconds must be > 0, got \(lockTimeoutSeconds)")
+        }
+        
+        // WAL validation
+        if walGroupCommitMs < 0.0 {
+            throw DBError.config("walGroupCommitMs must be >= 0, got \(walGroupCommitMs)")
+        }
+        
+        // Storage engine validation
+        let validEngines = ["FileHeap", "InMemory"]
+        if !validEngines.contains(storageEngine) {
+            throw DBError.config("storageEngine must be one of \(validEngines), got '\(storageEngine)'")
+        }
+        
+        // Index implementation validation  
+        let validIndexes = ["Hash", "BTree", "ART"]
+        if !validIndexes.contains(indexImplementation) {
+            throw DBError.config("indexImplementation must be one of \(validIndexes), got '\(indexImplementation)'")
+        }
+        
+        // Optimizer validation
+        if optimizerStatsSampleRows < 1 {
+            throw DBError.config("optimizerStatsSampleRows must be >= 1, got \(optimizerStatsSampleRows)")
+        }
+    }
+}
+
+private extension Int {
+    var isPowerOfTwo: Bool {
+        return self > 0 && (self & (self - 1)) == 0
+    }
+}
+
 /// Helpers to load/save DBConfig from/to JSON files.
 public enum ConfigIO {
     /// Loads configuration from a JSON file, returning defaults if file is missing.
@@ -219,7 +312,12 @@ public enum ConfigIO {
         let url = URL(fileURLWithPath: resolved)
         let data = try Data(contentsOf: url)
         do {
-            return try JSONDecoder().decode(DBConfig.self, from: data)
+            let config = try JSONDecoder().decode(DBConfig.self, from: data)
+            // Validate configuration after loading
+            try config.validate()
+            return config
+        } catch let error as DBError {
+            throw error
         } catch {
             throw DBError.config("Failed to parse config JSON at \(resolved): \(error)")
         }
@@ -230,6 +328,9 @@ public enum ConfigIO {
     ///   - cfg: Configuration object.
     ///   - path: Optional path (defaults to `colibridb.conf.json`).
     public static func save(_ cfg: DBConfig, to path: String? = nil) throws {
+        // Validate before saving
+        try cfg.validate()
+        
         let resolved = path ?? "colibridb.conf.json"
         let url = URL(fileURLWithPath: resolved)
         let data = try JSONEncoder().encode(cfg)
