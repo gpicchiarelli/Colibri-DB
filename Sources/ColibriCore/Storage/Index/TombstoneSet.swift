@@ -2,7 +2,6 @@
 //  TombstoneSet.swift
 //  ColibrDB
 //
-//  Created by GPT-5 Codex on 2025-09-28.
 //
 // ColibrDB — BSD 3-Clause License
 

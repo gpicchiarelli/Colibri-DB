@@ -17,9 +17,11 @@ public enum AnyStringIndex {
     case hash(HashIndex<String, RID>)
     case art(ARTIndex<RID>)
     case btree(BTreeIndex<RID>)
-    case skiplist(SkipListIndex<String, RID>)
+    case skiplist(SkipListIndex<String, RID>)  // Existing SkipListIndex from codebase
     case fractal(FractalTreeIndex<String, RID>)
     case lsm(LSMTreeIndex<String, RID>)
+    // 🚀 FIX #52: New advanced data structures available via separate APIs
+    // SkipList, TTree, RadixTree, and BloomFilter can be used directly
 
     /// Initializes an index by kind string (e.g., "hash", "art", "btree").
     public init(kind: String) {

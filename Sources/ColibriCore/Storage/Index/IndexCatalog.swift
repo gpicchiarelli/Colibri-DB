@@ -18,7 +18,17 @@ public struct IndexDef: Codable, Equatable {
     public let table: String
     public let column: String? // legacy single-column
     public let columns: [String]? // preferred multi-column
-    public let kind: String // Hash | ART | BTree
+    public let kind: String // Hash | ART | BTree | SkipList | TTree | Radix | LSM | Fractal
+    
+    // 🚀 FIX #52: Support for advanced data structures
+    public static let supportedTypes = [
+        "Hash", "ART", "BTree", 
+        "SkipList",  // High concurrency, simple implementation
+        "TTree",     // Cache-friendly in-memory
+        "Radix",     // String keys with prefix compression
+        "LSM",       // Write-heavy workloads
+        "Fractal"    // Balanced read/write
+    ]
 }
 
 public final class IndexCatalog {

@@ -60,6 +60,11 @@ public struct CompleteBenchmarkSuite {
         print(results.indexScanThroughput.summary)
         print("")
         
+        // 8. Advanced Data Structures
+        print("8️⃣  Advanced Data Structures Benchmarks...")
+        Benchmarks.runAdvancedDataStructuresBenchmarks()
+        print("")
+        
         // Summary
         print("=" + String(repeating: "=", count: 70))
         print(results.overallSummary)
