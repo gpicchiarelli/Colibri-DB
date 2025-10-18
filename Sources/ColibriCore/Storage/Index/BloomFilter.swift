@@ -176,7 +176,11 @@ public final class BloomFilter: @unchecked Sendable {
     public func estimatedFalsePositiveRate() -> Double {
         lock.lock()
         defer { lock.unlock() }
-        
+        return _estimatedFalsePositiveRate()
+    }
+    
+    /// Internal version without lock (must be called with lock held)
+    private func _estimatedFalsePositiveRate() -> Double {
         guard elementCount > 0 else { return 0.0 }
         
         // Formula: (1 - e^(-kn/m))^k
@@ -204,7 +208,7 @@ public final class BloomFilter: @unchecked Sendable {
             elementCount: elementCount,
             bitsSet: bitsSet,
             fillRatio: Double(bitsSet) / Double(bitCount),
-            estimatedFalsePositiveRate: estimatedFalsePositiveRate()
+            estimatedFalsePositiveRate: _estimatedFalsePositiveRate()
         )
     }
     
