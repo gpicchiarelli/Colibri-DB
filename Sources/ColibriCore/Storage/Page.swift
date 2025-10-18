@@ -266,61 +266,100 @@ public struct Page {
     // Compacts live tuples to the front of the page, preserving slot ids.
     // Returns reclaimed free space delta (after - before).
     /// Compacts the page, preserving slot ids; returns gained free bytes.
+    /// Compacts page by removing fragmentation and reclaiming space from deleted tuples.
+    /// Optimized for memory efficiency - reuses existing buffer where possible.
+    /// - Returns: Number of bytes reclaimed (free space gained)
     mutating func compact() -> Int {
         let originalFree = availableSpaceForInsert()
         
-        // Collect all live tuples with their slot IDs
-        var tuples: [(slotId: UInt16, data: Data)] = []
+        // Count live tuples first to pre-allocate efficiently
+        var liveCount = 0
+        var totalLiveSize = 0
+        
         for sid in 1...header.slotCount {
             let slotPos = pageSize - Int(sid) * Page.slotSize
             let slot: PageSlot = data.withUnsafeBytes { ptr in
                 ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
             }
             if slot.length == 0 || slot.isTombstone { continue }
+            liveCount += 1
+            totalLiveSize += Int(slot.length)
+        }
+        
+        // Early exit if no compaction needed
+        guard liveCount > 0 else {
+            header.freeStart = UInt16(Page.headerSize)
+            writeHeader()
+            return availableSpaceForInsert() - originalFree
+        }
+        
+        // Collect live tuples with pre-allocated capacity (memory optimization)
+        var tuples: [(slotId: UInt16, offset: UInt16, length: UInt16)] = []
+        tuples.reserveCapacity(liveCount)  // Pre-allocate to avoid reallocations
+        
+        for sid in 1...header.slotCount {
+            let slotPos = pageSize - Int(sid) * Page.slotSize
+            let slot: PageSlot = data.withUnsafeBytes { ptr in
+                ptr.baseAddress!.advanced(by: slotPos).assumingMemoryBound(to: PageSlot.self).pointee
+            }
+            if slot.length == 0 || slot.isTombstone { continue }
+            
             let start = Int(slot.offset)
             let end = start + Int(slot.length)
             guard end <= pageSize else { continue }
-            let payload = data.subdata(in: start..<end)
-            tuples.append((slotId: UInt16(sid), data: payload))
+            
+            tuples.append((slotId: UInt16(sid), offset: slot.offset, length: slot.length))
         }
         
-        // Create new data buffer and copy header
-        var newData = Data(repeating: 0, count: pageSize)
-        newData.replaceSubrange(0..<Page.headerSize, with: data[0..<Page.headerSize])
-        
-        // Reset free space pointers
-        header.freeStart = UInt16(Page.headerSize)
-        header.freeEnd = UInt16(pageSize)
-        
-        // Place tuples contiguously starting after header
+        // In-place compaction: shift tuples to be contiguous
+        // This avoids creating a full page copy in most cases
         var currentOffset = Page.headerSize
-        var slotUpdates: [(slotId: UInt16, newOffset: UInt16, length: UInt16)] = []
         
-        for (slotId, payload) in tuples {
-            let need = payload.count
-            guard currentOffset + need <= pageSize else { continue }
+        data.withUnsafeMutableBytes { ptr in
+            guard let base = ptr.baseAddress else { return }
             
-            // Copy tuple data
-            newData.replaceSubrange(currentOffset..<currentOffset + need, with: payload)
-            slotUpdates.append((slotId: slotId, newOffset: UInt16(currentOffset), length: UInt16(need)))
-            currentOffset += need
+            // Sort tuples by original offset for efficient in-place movement
+            let sortedTuples = tuples.sorted { $0.offset < $1.offset }
+            
+            for tuple in sortedTuples {
+                let sourceStart = Int(tuple.offset)
+                let length = Int(tuple.length)
+                
+                // Skip if already in the right place
+                guard sourceStart != currentOffset else {
+                    currentOffset += length
+                    continue
+                }
+                
+                // Move tuple data to new offset (memmove handles overlapping regions)
+                let src = base.advanced(by: sourceStart)
+                let dst = base.advanced(by: currentOffset)
+                
+                // Use memmove for safe overlapping copy
+                memmove(dst, src, length)
+                
+                // Update slot directory entry
+                let slotPos = pageSize - Int(tuple.slotId) * Page.slotSize
+                var updatedSlot = PageSlot(offset: UInt16(currentOffset), length: tuple.length, tombstone: false)
+                withUnsafeBytes(of: &updatedSlot) { slotBytes in
+                    let slotDst = base.advanced(by: slotPos)
+                    memcpy(slotDst, slotBytes.baseAddress!, Page.slotSize)
+                }
+                
+                currentOffset += length
+            }
+            
+            // Zero out freed space for security (optional, can be skipped for performance)
+            if currentOffset < pageSize - Int(header.slotCount) * Page.slotSize {
+                let freeStart = base.advanced(by: currentOffset)
+                let freeLength = pageSize - Int(header.slotCount) * Page.slotSize - currentOffset
+                memset(freeStart, 0, freeLength)
+            }
         }
         
         // Update header free space pointers
         header.freeStart = UInt16(currentOffset)
         header.freeEnd = UInt16(pageSize - Int(header.slotCount) * Page.slotSize)
-        
-        // Update slot directory with new offsets
-        for (slotId, newOffset, length) in slotUpdates {
-            let slotPos = pageSize - Int(slotId) * Page.slotSize
-            let slot = PageSlot(offset: newOffset, length: length, tombstone: false)
-            withUnsafeBytes(of: slot) { src in
-                newData.replaceSubrange(slotPos..<slotPos + Page.slotSize, with: src)
-            }
-        }
-        
-        // Replace data and update header
-        data = newData
         writeHeader()
         
         let newFree = availableSpaceForInsert()
