@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "description": "Performance baselines for ColibrìDB critical operations (microseconds)",
+  "version": "1.0.0",
+  "last_updated": "2025-10-18",
+  "tolerance": {
+    "description": "Maximum allowed performance degradation",
+    "p50": 0.05,
+    "p95": 0.10,
+    "p99": 0.15,
+    "comment": "5% for p50, 10% for p95, 15% for p99"
+  },
+  "operations": {
+    "WAL": {
+      "append_single": {
+        "p50": 100,
+        "p95": 250,
+        "p99": 500,
+        "unit": "us",
+        "description": "Single record append to WAL"
+      },
+      "append_batch": {
+        "p50": 500,
+        "p95": 1200,
+        "p99": 2500,
+        "unit": "us",
+        "description": "Batch append (100 records)"
+      },
+      "flush": {
+        "p50": 2000,
+        "p95": 5000,
+        "p99": 10000,
+        "unit": "us",
+        "description": "Force WAL flush to disk"
+      },
+      "recovery": {
+        "p50": 50000,
+        "p95": 120000,
+        "p99": 250000,
+        "unit": "us",
+        "description": "WAL recovery (1000 records)"
+      }
+    },
+    "BTree": {
+      "search": {
+        "p50": 50,
+        "p95": 150,
+        "p99": 300,
+        "unit": "us",
+        "description": "Single key search"
+      },
+      "insert": {
+        "p50": 80,
+        "p95": 200,
+        "p99": 450,
+        "unit": "us",
+        "description": "Single key insert"
+      },
+      "delete": {
+        "p50": 70,
+        "p95": 180,
+        "p99": 400,
+        "unit": "us",
+        "description": "Single key delete"
+      },
+      "range_scan": {
+        "p50": 500,
+        "p95": 1500,
+        "p99": 3000,
+        "unit": "us",
+        "description": "Range scan (100 keys)"
+      }
+    },
+    "MVCC": {
+      "begin_transaction": {
+        "p50": 20,
+        "p95": 50,
+        "p99": 100,
+        "unit": "us",
+        "description": "Begin new transaction"
+      },
+      "commit_transaction": {
+        "p50": 150,
+        "p95": 400,
+        "p99": 800,
+        "unit": "us",
+        "description": "Commit transaction (single write)"
+      },
+      "abort_transaction": {
+        "p50": 100,
+        "p95": 250,
+        "p99": 500,
+        "unit": "us",
+        "description": "Abort and rollback transaction"
+      },
+      "snapshot_isolation": {
+        "p50": 30,
+        "p95": 80,
+        "p99": 150,
+        "unit": "us",
+        "description": "Read with snapshot isolation"
+      }
+    },
+    "BufferPool": {
+      "get_page_cached": {
+        "p50": 5,
+        "p95": 15,
+        "p99": 30,
+        "unit": "us",
+        "description": "Get page from cache (hit)"
+      },
+      "get_page_miss": {
+        "p50": 1000,
+        "p95": 2500,
+        "p99": 5000,
+        "unit": "us",
+        "description": "Get page with cache miss (disk read)"
+      },
+      "eviction": {
+        "p50": 800,
+        "p95": 2000,
+        "p99": 4000,
+        "unit": "us",
+        "description": "LRU eviction with dirty page flush"
+      }
+    },
+    "HeapStorage": {
+      "insert_tuple": {
+        "p50": 120,
+        "p95": 300,
+        "p99": 600,
+        "unit": "us",
+        "description": "Insert tuple into heap file"
+      },
+      "update_tuple": {
+        "p50": 150,
+        "p95": 350,
+        "p99": 700,
+        "unit": "us",
+        "description": "Update existing tuple"
+      },
+      "delete_tuple": {
+        "p50": 100,
+        "p95": 250,
+        "p99": 500,
+        "unit": "us",
+        "description": "Delete tuple (mark as deleted)"
+      },
+      "sequential_scan": {
+        "p50": 5000,
+        "p95": 12000,
+        "p99": 25000,
+        "unit": "us",
+        "description": "Sequential scan (1000 tuples)"
+      }
+    },
+    "Query": {
+      "simple_select": {
+        "p50": 500,
+        "p95": 1500,
+        "p99": 3000,
+        "unit": "us",
+        "description": "SELECT * FROM table WHERE id = ?"
+      },
+      "join_two_tables": {
+        "p50": 5000,
+        "p95": 15000,
+        "p99": 30000,
+        "unit": "us",
+        "description": "Two-table join (100 rows each)"
+      },
+      "aggregate": {
+        "p50": 3000,
+        "p95": 8000,
+        "p99": 15000,
+        "unit": "us",
+        "description": "COUNT/SUM/AVG on 1000 rows"
+      },
+      "create_index": {
+        "p50": 50000,
+        "p95": 120000,
+        "p99": 250000,
+        "unit": "us",
+        "description": "Create B-Tree index (1000 keys)"
+      }
+    }
+  },
+  "system": {
+    "startup_time": {
+      "p50": 100000,
+      "p95": 250000,
+      "p99": 500000,
+      "unit": "us",
+      "description": "Database startup and initialization"
+    },
+    "checkpoint": {
+      "p50": 500000,
+      "p95": 1200000,
+      "p99": 2500000,
+      "unit": "us",
+      "description": "Full checkpoint with 10k dirty pages"
+    }
+  },
+  "notes": [
+    "Baselines measured on macOS Apple Silicon (M1/M2)",
+    "Tolerance allows temporary degradation during optimization phases",
+    "Critical operations (WAL, MVCC) have stricter tolerance",
+    "Benchmarks should run with cold cache for consistency",
+    "Update baselines when intentional optimizations improve performance"
+  ]
+}
+

@@ -1,0 +1,333 @@
+name: Formal Verification - TLA+ Specs
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'specs/**'
+      - 'Sources/ColibriCore/Concurrency/**'
+      - 'Sources/ColibriCore/Storage/WAL/**'
+      - 'Sources/ColibriCore/Storage/Index/BTree*'
+      - '.github/workflows/spec.yml'
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 'TLA+ module to check (WAL, MVCC, LockManager, BTree, TransactionManager, BufferPool, or ALL)'
+        required: false
+        default: 'ALL'
+
+permissions:
+  contents: read
+  checks: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # TLA+ Specification Checking
+  # ============================================================================
+  tlaplus-check:
+    name: TLA+ Model Checking
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        module: 
+          - WAL
+          - MVCC
+          - LockManager
+          - BTree
+          - TransactionManager
+          - BufferPool
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java (for TLC)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Cache TLA+ Tools
+        id: cache-tla
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/tla2tools.jar
+          key: tla-tools-v1.8.0
+      
+      - name: Download TLA+ Tools
+        if: steps.cache-tla.outputs.cache-hit != 'true'
+        run: |
+          wget https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar -O ~/tla2tools.jar
+      
+      - name: Verify TLA+ Tools
+        run: |
+          java -cp ~/tla2tools.jar tlc2.TLC -h
+          echo "TLC version:"
+          java -cp ~/tla2tools.jar tlc2.TLC -version || true
+      
+      - name: Check if Spec Exists
+        id: check-spec
+        run: |
+          MODULE="${{ matrix.module }}"
+          SPEC_FILE="specs/${MODULE}.tla"
+          
+          if [ -f "$SPEC_FILE" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✓ Found spec: $SPEC_FILE"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠ Spec not found: $SPEC_FILE (skipping)"
+          fi
+      
+      - name: Run TLC Model Checker
+        if: steps.check-spec.outputs.exists == 'true'
+        run: |
+          MODULE="${{ matrix.module }}"
+          SPEC_FILE="specs/${MODULE}.tla"
+          CONFIG_FILE="specs/${MODULE}.cfg"
+          
+          echo "Running TLC on $MODULE..."
+          echo "================================"
+          
+          cd specs
+          
+          # Run TLC with appropriate settings
+          java -XX:+UseParallelGC -cp ~/tla2tools.jar tlc2.TLC \
+            -workers auto \
+            -coverage 1 \
+            -deadlock \
+            -config "${MODULE}.cfg" \
+            "${MODULE}.tla" \
+            2>&1 | tee "../tlc-${MODULE}.log"
+          
+          # Check exit code
+          if [ ${PIPESTATUS[0]} -eq 0 ]; then
+            echo "✓ TLC check passed for $MODULE"
+            exit 0
+          else
+            echo "✗ TLC check failed for $MODULE"
+            exit 1
+          fi
+      
+      - name: Upload TLC Results
+        if: always() && steps.check-spec.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tlc-results-${{ matrix.module }}
+          path: |
+            tlc-${{ matrix.module }}.log
+            specs/states/
+          retention-days: 30
+      
+      - name: Check for Invariant Violations
+        if: always() && steps.check-spec.outputs.exists == 'true'
+        run: |
+          MODULE="${{ matrix.module }}"
+          LOG_FILE="tlc-${MODULE}.log"
+          
+          if grep -q "Invariant.*violated" "$LOG_FILE"; then
+            echo "❌ INVARIANT VIOLATION DETECTED in $MODULE"
+            echo "See attached logs for counterexample"
+            exit 1
+          fi
+          
+          if grep -q "Deadlock reached" "$LOG_FILE"; then
+            echo "❌ DEADLOCK DETECTED in $MODULE"
+            exit 1
+          fi
+          
+          echo "✓ No violations found"
+
+  # ============================================================================
+  # Trace Validation from Tests
+  # ============================================================================
+  trace-validation:
+    name: Trace Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: tlaplus-check
+    if: always()
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Cache TLA+ Tools
+        uses: actions/cache@v4
+        with:
+          path: ~/tla2tools.jar
+          key: tla-tools-v1.8.0
+      
+      - name: Check for Test Traces
+        id: check-traces
+        run: |
+          if [ -d "tests/traces" ] && [ "$(ls -A tests/traces/*.json 2>/dev/null)" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✓ Found test traces"
+            ls -la tests/traces/
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠ No test traces found (skipping validation)"
+          fi
+      
+      - name: Validate Traces Against Specs
+        if: steps.check-traces.outputs.exists == 'true'
+        run: |
+          chmod +x tools/scripts/tla_trace_check.py
+          
+          # Validate each trace file
+          for trace_file in tests/traces/*.json; do
+            echo "Validating: $trace_file"
+            
+            # Extract module name from filename (e.g., mvcc_test.json -> MVCC)
+            module=$(basename "$trace_file" | sed 's/_test.json//' | tr '[:lower:]' '[:upper:]')
+            
+            python3 tools/scripts/tla_trace_check.py "$trace_file" "$module" || {
+              echo "❌ Trace validation failed for $trace_file"
+              exit 1
+            }
+          done
+          
+          echo "✓ All traces validated successfully"
+
+  # ============================================================================
+  # Specification Coverage Report
+  # ============================================================================
+  spec-coverage:
+    name: Specification Coverage
+    runs-on: ubuntu-latest
+    needs: tlaplus-check
+    if: always()
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Download All TLC Results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: tlc-results-*
+          path: tlc-results/
+      
+      - name: Generate Coverage Report
+        run: |
+          echo "# TLA+ Specification Coverage Report" > spec-coverage.md
+          echo "" >> spec-coverage.md
+          echo "Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> spec-coverage.md
+          echo "" >> spec-coverage.md
+          
+          # Read modules from config
+          python3 << 'EOF'
+          import json
+          import os
+          from pathlib import Path
+          
+          with open('rules/tla_modules.json', 'r') as f:
+              config = json.load(f)
+          
+          modules = config.get('modules', {})
+          
+          print("| Module | Spec File | Status | Coverage |")
+          print("|--------|-----------|--------|----------|")
+          
+          for module_name, module_info in modules.items():
+              spec_file = module_info.get('spec_file', 'N/A')
+              spec_path = Path('specs') / Path(spec_file).name
+              
+              if spec_path.exists():
+                  status = "✅ Exists"
+                  # Try to find coverage info from TLC logs
+                  log_file = Path(f'tlc-results/tlc-results-{module_name}/tlc-{module_name}.log')
+                  coverage = "N/A"
+                  if log_file.exists():
+                      with open(log_file, 'r') as lf:
+                          for line in lf:
+                              if 'states generated' in line:
+                                  coverage = line.strip()
+                                  break
+                  print(f"| {module_name} | {spec_file} | {status} | {coverage} |")
+              else:
+                  status = "⚠️ Missing"
+                  print(f"| {module_name} | {spec_file} | {status} | - |")
+          EOF
+      
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: spec-coverage-report
+          path: spec-coverage.md
+          retention-days: 30
+
+  # ============================================================================
+  # Final Status
+  # ============================================================================
+  spec-check-status:
+    name: Formal Verification Status
+    runs-on: ubuntu-latest
+    needs: 
+      - tlaplus-check
+      - trace-validation
+      - spec-coverage
+    if: always()
+    
+    steps:
+      - name: Check Status
+        run: |
+          if [[ "${{ needs.tlaplus-check.result }}" == "failure" ]]; then
+            echo "❌ TLA+ model checking failed"
+            echo "One or more invariants were violated"
+            echo "Review the TLC logs for counterexamples"
+            exit 1
+          fi
+          
+          if [[ "${{ needs.trace-validation.result }}" == "failure" ]]; then
+            echo "❌ Trace validation failed"
+            echo "Test execution traces violated formal specifications"
+            exit 1
+          fi
+          
+          echo "✅ All formal verification checks passed!"
+          echo ""
+          echo "Summary:"
+          echo "  - TLA+ Model Checking: ${{ needs.tlaplus-check.result }}"
+          echo "  - Trace Validation: ${{ needs.trace-validation.result }}"
+          echo "  - Coverage Report: ${{ needs.spec-coverage.result }}"
+

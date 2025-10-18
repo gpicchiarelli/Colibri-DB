@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "description": "TLA+ formal specification modules for ColibrìDB critical components",
+  "version": "1.0.0",
+  "last_updated": "2025-10-18",
+  "enforcement": {
+    "mode": "strict",
+    "block_pr_on_violation": true,
+    "require_trace_validation": true,
+    "comment": "Invariants must hold for all executions"
+  },
+  "modules": {
+    "WAL": {
+      "spec_file": "specs/WAL.tla",
+      "config_file": "specs/WAL.cfg",
+      "description": "Write-Ahead Logging protocol",
+      "invariants": [
+        {
+          "name": "DurabilityInvariant",
+          "description": "Committed transactions must survive crashes",
+          "critical": true
+        },
+        {
+          "name": "LogOrderInvariant",
+          "description": "Log records maintain total order",
+          "critical": true
+        },
+        {
+          "name": "CheckpointConsistency",
+          "description": "Checkpoints represent consistent database state",
+          "critical": true
+        },
+        {
+          "name": "RecoveryCompleteness",
+          "description": "Recovery restores all committed transactions",
+          "critical": true
+        }
+      ],
+      "temporal_properties": [
+        {
+          "name": "EventualFlush",
+          "formula": "[]<>(LogFlushed)",
+          "description": "Log must eventually be flushed to disk"
+        }
+      ],
+      "model_config": {
+        "constants": {
+          "MAX_LOG_ENTRIES": 10,
+          "MAX_TRANSACTIONS": 5,
+          "MAX_CRASHES": 3
+        },
+        "symmetry": ["TransactionID"]
+      }
+    },
+    "MVCC": {
+      "spec_file": "specs/MVCC.tla",
+      "config_file": "specs/MVCC.cfg",
+      "description": "Multi-Version Concurrency Control",
+      "invariants": [
+        {
+          "name": "SnapshotIsolation",
+          "description": "Transactions see consistent snapshots",
+          "critical": true
+        },
+        {
+          "name": "NoWriteWriteConflict",
+          "description": "Concurrent updates to same data must conflict",
+          "critical": true
+        },
+        {
+          "name": "ReadCommitted",
+          "description": "Reads only see committed data",
+          "critical": true
+        },
+        {
+          "name": "SerializableHistory",
+          "description": "Transaction history is serializable",
+          "critical": true
+        },
+        {
+          "name": "VersionChainConsistency",
+          "description": "Version chains maintain proper ordering",
+          "critical": true
+        }
+      ],
+      "temporal_properties": [
+        {
+          "name": "EventualCommitOrAbort",
+          "formula": "[](TxnStarted ~> (TxnCommitted \\/ TxnAborted))",
+          "description": "Every transaction eventually commits or aborts"
+        }
+      ],
+      "model_config": {
+        "constants": {
+          "MAX_TRANSACTIONS": 5,
+          "MAX_VERSIONS": 10,
+          "MAX_DATA_ITEMS": 3
+        },
+        "symmetry": ["TransactionID", "DataItemID"]
+      }
+    },
+    "LockManager": {
+      "spec_file": "specs/LockManager.tla",
+      "config_file": "specs/LockManager.cfg",
+      "description": "Lock manager with deadlock detection",
+      "invariants": [
+        {
+          "name": "NoDeadlock",
+          "description": "System must detect and prevent deadlocks",
+          "critical": true
+        },
+        {
+          "name": "LockCompatibility",
+          "description": "Incompatible locks cannot be held simultaneously",
+          "critical": true
+        },
+        {
+          "name": "FairLockGrant",
+          "description": "Lock requests granted in fair order",
+          "critical": false
+        },
+        {
+          "name": "LockReleaseCompleteness",
+          "description": "All locks released on transaction end",
+          "critical": true
+        }
+      ],
+      "temporal_properties": [
+        {
+          "name": "EventualLockGrant",
+          "formula": "[](LockRequested ~> (LockGranted \\/ TxnAborted))",
+          "description": "Lock requests eventually granted or transaction aborted"
+        }
+      ],
+      "model_config": {
+        "constants": {
+          "MAX_TRANSACTIONS": 5,
+          "MAX_RESOURCES": 4,
+          "ENABLE_DEADLOCK_DETECTION": true
+        },
+        "symmetry": ["TransactionID", "ResourceID"]
+      }
+    },
+    "BTree": {
+      "spec_file": "specs/BTree.tla",
+      "config_file": "specs/BTree.cfg",
+      "description": "B-Tree index structure",
+      "invariants": [
+        {
+          "name": "BTreeStructureInvariant",
+          "description": "All nodes satisfy B-Tree properties",
+          "critical": true
+        },
+        {
+          "name": "KeyOrderInvariant",
+          "description": "Keys maintain sorted order",
+          "critical": true
+        },
+        {
+          "name": "BalancedHeight",
+          "description": "All leaf nodes at same height",
+          "critical": true
+        },
+        {
+          "name": "SearchCorrectnessInvariant",
+          "description": "Search finds key if present",
+          "critical": true
+        }
+      ],
+      "temporal_properties": [],
+      "model_config": {
+        "constants": {
+          "MIN_DEGREE": 2,
+          "MAX_KEYS": 10,
+          "MAX_OPERATIONS": 8
+        },
+        "symmetry": []
+      }
+    },
+    "TransactionManager": {
+      "spec_file": "specs/TransactionManager.tla",
+      "config_file": "specs/TransactionManager.cfg",
+      "description": "ACID transaction management",
+      "invariants": [
+        {
+          "name": "Atomicity",
+          "description": "Transactions complete fully or not at all",
+          "critical": true
+        },
+        {
+          "name": "Consistency",
+          "description": "Database constraints maintained",
+          "critical": true
+        },
+        {
+          "name": "Isolation",
+          "description": "Concurrent transactions properly isolated",
+          "critical": true
+        },
+        {
+          "name": "Durability",
+          "description": "Committed changes persist",
+          "critical": true
+        }
+      ],
+      "temporal_properties": [
+        {
+          "name": "TwoPhaseCommit",
+          "formula": "[](PreparePhase ~> (CommitPhase \\/ AbortPhase))",
+          "description": "2PC protocol completes correctly"
+        }
+      ],
+      "model_config": {
+        "constants": {
+          "MAX_TRANSACTIONS": 4,
+          "MAX_PARTICIPANTS": 3,
+          "ENABLE_COORDINATOR_CRASH": true
+        },
+        "symmetry": ["TransactionID"]
+      }
+    },
+    "BufferPool": {
+      "spec_file": "specs/BufferPool.tla",
+      "config_file": "specs/BufferPool.cfg",
+      "description": "Buffer pool management with LRU eviction",
+      "invariants": [
+        {
+          "name": "CacheConsistency",
+          "description": "Cached pages match disk content",
+          "critical": true
+        },
+        {
+          "name": "NoDuplicatePages",
+          "description": "Each page appears at most once in buffer pool",
+          "critical": true
+        },
+        {
+          "name": "DirtyPageTracking",
+          "description": "Dirty pages tracked correctly for flush",
+          "critical": true
+        },
+        {
+          "name": "LRUOrdering",
+          "description": "LRU eviction order maintained",
+          "critical": false
+        }
+      ],
+      "temporal_properties": [
+        {
+          "name": "EventualEviction",
+          "formula": "[](PoolFull ~> PageEvicted)",
+          "description": "Full buffer pool eventually evicts page"
+        }
+      ],
+      "model_config": {
+        "constants": {
+          "POOL_SIZE": 4,
+          "MAX_PAGES": 8,
+          "MAX_OPERATIONS": 10
+        },
+        "symmetry": []
+      }
+    }
+  },
+  "trace_validation": {
+    "enabled": true,
+    "trace_directory": "tests/traces/",
+    "trace_format": "tla_trace",
+    "validation_timeout_seconds": 300,
+    "comment": "Test execution traces validated against TLA+ specs"
+  },
+  "tlc_config": {
+    "workers": 4,
+    "max_set_size": 10000000,
+    "simulation_mode": false,
+    "coverage_reporting": true,
+    "deadlock_checking": true
+  },
+  "ci_integration": {
+    "run_on_pr": true,
+    "run_on_push_to_main": true,
+    "fail_on_violation": true,
+    "generate_counterexample": true,
+    "max_runtime_minutes": 30
+  },
+  "notes": [
+    "TLA+ specifications located in specs/ directory",
+    "Critical invariants must never be violated",
+    "Non-critical invariants are best-effort properties",
+    "Trace validation connects runtime tests to formal specs",
+    "Model checking parameters tuned for CI performance",
+    "Update specs when making algorithmic changes to critical components"
+  ],
+  "future_modules": [
+    {
+      "name": "QueryOptimizer",
+      "description": "Query optimization correctness",
+      "priority": "medium"
+    },
+    {
+      "name": "RecoveryManager",
+      "description": "Crash recovery protocol",
+      "priority": "high"
+    },
+    {
+      "name": "GroupCommit",
+      "description": "Group commit optimization",
+      "priority": "medium"
+    }
+  ]
+}
+

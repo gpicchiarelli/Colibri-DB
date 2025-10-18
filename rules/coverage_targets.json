@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "description": "Code coverage targets for ColibrìDB modules",
+  "version": "1.0.0",
+  "last_updated": "2025-10-18",
+  "enforcement": {
+    "mode": "strict",
+    "block_pr_on_failure": true,
+    "allow_temporary_exemption": false,
+    "comment": "Coverage must meet targets before PR merge"
+  },
+  "global": {
+    "minimum": 75,
+    "target": 85,
+    "excellent": 95,
+    "description": "Default coverage for non-critical modules"
+  },
+  "modules": {
+    "Storage/WAL": {
+      "minimum": 95,
+      "target": 98,
+      "rationale": "Critical for durability and crash recovery",
+      "files": [
+        "Sources/ColibriCore/Storage/WAL/FileWAL.swift",
+        "Sources/ColibriCore/Storage/WAL/WALManager.swift",
+        "Sources/ColibriCore/Storage/WAL/WALRecord.swift",
+        "Sources/ColibriCore/Storage/WAL/GroupCommit.swift"
+      ]
+    },
+    "Concurrency/MVCC": {
+      "minimum": 90,
+      "target": 95,
+      "rationale": "Critical for transaction correctness and isolation",
+      "files": [
+        "Sources/ColibriCore/Concurrency/Transactions/MVCC.swift",
+        "Sources/ColibriCore/Concurrency/Transactions/TransactionManager.swift",
+        "Sources/ColibriCore/Concurrency/Transactions/VersionStore.swift"
+      ]
+    },
+    "Concurrency/LockManager": {
+      "minimum": 90,
+      "target": 95,
+      "rationale": "Critical for deadlock prevention and concurrency",
+      "files": [
+        "Sources/ColibriCore/Concurrency/Transactions/LockManager.swift",
+        "Sources/ColibriCore/Concurrency/Transactions/DeadlockDetector.swift"
+      ]
+    },
+    "Storage/BTree": {
+      "minimum": 90,
+      "target": 95,
+      "rationale": "Critical index structure for performance",
+      "files": [
+        "Sources/ColibriCore/Storage/Index/BTree.swift",
+        "Sources/ColibriCore/Storage/Index/BTreeNode.swift",
+        "Sources/ColibriCore/Storage/Index/BTreeIterator.swift"
+      ]
+    },
+    "Storage/Pager": {
+      "minimum": 85,
+      "target": 90,
+      "rationale": "Core storage abstraction layer",
+      "files": [
+        "Sources/ColibriCore/Storage/Pager/Pager.swift",
+        "Sources/ColibriCore/Storage/Pager/Page.swift",
+        "Sources/ColibriCore/Storage/Pager/PageCache.swift"
+      ]
+    },
+    "Storage/BufferPool": {
+      "minimum": 85,
+      "target": 90,
+      "rationale": "Memory management and caching",
+      "files": [
+        "Sources/ColibriCore/Storage/Buffer/LRUBufferPool.swift",
+        "Sources/ColibriCore/Storage/Buffer/BufferFrame.swift"
+      ]
+    },
+    "Storage/Heap": {
+      "minimum": 85,
+      "target": 90,
+      "rationale": "Primary storage for tuples",
+      "files": [
+        "Sources/ColibriCore/Storage/Heap/HeapFile.swift",
+        "Sources/ColibriCore/Storage/Heap/HeapPage.swift",
+        "Sources/ColibriCore/Storage/Heap/TupleStorage.swift"
+      ]
+    },
+    "Query/Parser": {
+      "minimum": 80,
+      "target": 85,
+      "rationale": "SQL parsing correctness",
+      "files": [
+        "Sources/ColibriCore/Query/Parser/SQLParser.swift",
+        "Sources/ColibriCore/Query/Parser/Lexer.swift",
+        "Sources/ColibriCore/Query/Parser/AST.swift"
+      ]
+    },
+    "Query/Planner": {
+      "minimum": 80,
+      "target": 85,
+      "rationale": "Query optimization and execution plans",
+      "files": [
+        "Sources/ColibriCore/Query/Planner/LogicalPlanner.swift",
+        "Sources/ColibriCore/Query/Planner/PhysicalPlanner.swift",
+        "Sources/ColibriCore/Query/Planner/CostModel.swift"
+      ]
+    },
+    "Query/Executor": {
+      "minimum": 80,
+      "target": 85,
+      "rationale": "Query execution engine",
+      "files": [
+        "Sources/ColibriCore/Query/Executor/ExecutionEngine.swift",
+        "Sources/ColibriCore/Query/Executor/Operators.swift"
+      ]
+    },
+    "System/Catalog": {
+      "minimum": 85,
+      "target": 90,
+      "rationale": "Metadata management",
+      "files": [
+        "Sources/ColibriCore/System/Catalog/SystemCatalog.swift",
+        "Sources/ColibriCore/System/Catalog/TableMetadata.swift",
+        "Sources/ColibriCore/System/Catalog/IndexCatalog.swift"
+      ]
+    },
+    "Storage/FractalTree": {
+      "minimum": 80,
+      "target": 85,
+      "rationale": "Advanced index structure",
+      "files": [
+        "Sources/ColibriCore/Storage/Index/FractalTreeIndex.swift"
+      ]
+    },
+    "Util": {
+      "minimum": 70,
+      "target": 80,
+      "rationale": "Utility functions, lower priority",
+      "files": [
+        "Sources/ColibriCore/Util/*.swift"
+      ]
+    }
+  },
+  "exclusions": {
+    "files": [
+      "Sources/*/main.swift",
+      "Sources/benchmarks/*.swift",
+      "Tests/**/*.swift"
+    ],
+    "patterns": [
+      "**/Protocols.swift",
+      "**/Types.swift"
+    ],
+    "rationale": "Entry points, benchmarks, and protocol definitions excluded"
+  },
+  "reporting": {
+    "format": "lcov",
+    "html_report": true,
+    "fail_under_global": true,
+    "fail_under_module": true,
+    "show_missing_lines": true
+  },
+  "notes": [
+    "Critical modules (WAL, MVCC, BTree, LockManager) require 90%+ coverage",
+    "Core modules (Pager, BufferPool, Heap) require 85%+ coverage",
+    "Query engine modules require 80%+ coverage",
+    "Utilities and non-critical code require 70%+ coverage",
+    "Update targets as codebase matures and tests improve",
+    "New critical features must maintain 90%+ coverage from day one"
+  ]
+}
+

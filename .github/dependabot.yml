@@ -1,0 +1,144 @@
+# Dependabot configuration for ColibrìDB
+# Automatically creates PRs to update dependencies
+#
+# Learn more: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+
+updates:
+  # ===========================================================================
+  # Swift Package Manager (SPM) Dependencies
+  # ===========================================================================
+  - package-ecosystem: "swift"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Rome"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "gpicchiarelli"
+    labels:
+      - "dependencies"
+      - "swift"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # Group minor and patch updates together
+    groups:
+      swift-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Allow only specific dependency updates (uncomment if needed)
+    # allow:
+    #   - dependency-type: "direct"
+    # ignore:
+    #   - dependency-name: "some-package"
+    #     versions: ["1.x"]
+
+  # ===========================================================================
+  # GitHub Actions Workflows
+  # ===========================================================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Rome"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "gpicchiarelli"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "CI/CD"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    # Group all GitHub Actions updates together
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # ===========================================================================
+  # Docker (if/when Docker support is added)
+  # ===========================================================================
+  # - package-ecosystem: "docker"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"
+  #     time: "09:00"
+  #   open-pull-requests-limit: 3
+  #   reviewers:
+  #     - "gpicchiarelli"
+  #   labels:
+  #     - "dependencies"
+  #     - "docker"
+
+# ===========================================================================
+# Dependabot Configuration Notes
+# ===========================================================================
+#
+# Update Frequency:
+# - Weekly updates on Monday mornings
+# - Avoids disrupting Friday deployments
+# - Gives time to review and merge during the week
+#
+# Pull Request Limits:
+# - Swift dependencies: Max 5 PRs to avoid overwhelming maintainers
+# - GitHub Actions: Max 3 PRs (less frequent updates needed)
+#
+# Grouping Strategy:
+# - Minor and patch updates grouped together
+# - Major updates create separate PRs (require careful review)
+# - GitHub Actions updates grouped together
+#
+# Review Process:
+# 1. Dependabot creates PR automatically
+# 2. CI runs all tests and quality gates
+# 3. Reviewer checks changelog and compatibility
+# 4. Merge if CI passes and changes are safe
+#
+# Security Updates:
+# - Security updates always create separate PRs
+# - No grouping for security updates
+# - Higher priority for review
+#
+# Custom Labels:
+# - All dependency PRs labeled with "dependencies"
+# - Additional labels by ecosystem (swift, github-actions)
+# - Makes filtering and review easier
+#
+# Commit Messages:
+# - Conventional commit format
+# - "deps:" prefix for Swift dependencies
+# - "ci:" prefix for GitHub Actions
+# - Includes scope for better changelog
+#
+# Ignoring Dependencies:
+# To ignore specific dependencies or versions:
+# 1. Uncomment the "ignore" section above
+# 2. Add dependency name and version pattern
+# 3. Useful for pinning specific versions
+#
+# Allowing Only Specific Updates:
+# To allow only direct dependencies:
+# 1. Uncomment the "allow" section
+# 2. Set dependency-type to "direct"
+# 3. Prevents transitive dependency updates
+#
+# Version Strategy:
+# - Auto: Let Dependabot decide (recommended)
+# - Widen: Widen version ranges if possible
+# - Increase: Only bump to newer versions
+# - Increase-if-necessary: Minimal version bump
+#
+# ===========================================================================
+
