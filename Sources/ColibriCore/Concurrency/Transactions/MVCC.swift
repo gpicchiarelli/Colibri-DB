@@ -250,6 +250,13 @@ public final class MVCCManager {
         if version.beginStatus != .committed {
             return false
         }
+        // Snapshot isolation: only see versions that were committed at snapshot time
+        // (unless it's the reader's own version)
+        if readerTID == nil || readerTID != version.beginTID {
+            if !snapshot.committedTIDs.contains(version.beginTID) {
+                return false
+            }
+        }
         if version.beginTID > snapshot.cutoffTID && readerTID != version.beginTID {
             return false
         }

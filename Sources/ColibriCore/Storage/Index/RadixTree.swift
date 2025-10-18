@@ -154,12 +154,37 @@ public final class RadixTree<Value: Sendable>: @unchecked Sendable {
         defer { lock.unlock() }
         
         var results: [(String, Value)] = []
+        var current = root
+        var remaining = prefix
+        var builtPath = ""
         
-        // Find the node where the prefix ends
-        if let prefixNode = findNode(prefix: prefix) {
-            // Collect all keys from this node onwards
-            collectKeys(node: prefixNode, prefix: prefix, results: &results)
+        // Navigate to the node where prefix ends, tracking the path
+        while !remaining.isEmpty {
+            guard let firstChar = remaining.first,
+                  let child = current.child(for: firstChar) else {
+                return results // Prefix not found
+            }
+            
+            let commonPrefixLength = commonPrefix(remaining, child.label)
+            
+            if commonPrefixLength < child.label.count {
+                // Prefix ends in the middle of a label
+                if commonPrefixLength == remaining.count {
+                    // Exact prefix match at this node - collect from here
+                    // builtPath contains path to parent, child.label contains full label
+                    // We want to collect keys that start with the matched prefix
+                    collectKeys(node: child, prefix: builtPath, results: &results)
+                }
+                return results
+            }
+            
+            remaining = String(remaining.dropFirst(commonPrefixLength))
+            builtPath += String(child.label.prefix(commonPrefixLength))
+            current = child
         }
+        
+        // Collect all keys from current node
+        collectKeys(node: current, prefix: String(builtPath.dropLast(current.label.count)), results: &results)
         
         return results
     }
