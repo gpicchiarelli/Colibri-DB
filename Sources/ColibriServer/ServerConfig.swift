@@ -290,16 +290,26 @@ public struct ConfigurationParser {
 
 public struct ConfigurationValidator {
     public static func validate(_ config: ServerConfiguration) throws {
-        // Validate port
+        // Validate host format
+        try validateHost(config.host)
+        
+        // Validate port range
         guard config.port > 0 && config.port <= 65535 else {
             throw ConfigurationError.invalidPort(config.port)
         }
         
-        // Validate data directory
-        let dataDir = URL(fileURLWithPath: config.dataDirectory)
-        if !FileManager.default.fileExists(atPath: config.dataDirectory) {
-            try FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
+        // Warn about privileged ports
+        if config.port < 1024 && config.port != 0 {
+            print("⚠️  Warning: Port \(config.port) is a privileged port. May require root access.")
         }
+        
+        // Validate max connections
+        guard config.maxConnections > 0 && config.maxConnections <= 100000 else {
+            throw ConfigurationError.invalidMaxConnections(config.maxConnections)
+        }
+        
+        // Validate data directory with security checks
+        try validateDataDirectory(config.dataDirectory)
         
         // Validate SSL configuration
         if config.sslEnabled {
@@ -308,22 +318,160 @@ public struct ConfigurationValidator {
                 throw ConfigurationError.sslConfigurationIncomplete
             }
             
-            guard FileManager.default.fileExists(atPath: certPath) else {
-                throw ConfigurationError.sslCertificateNotFound(certPath)
-            }
+            // Validate SSL certificate path
+            try validateSSLFile(certPath, type: "certificate")
             
-            guard FileManager.default.fileExists(atPath: keyPath) else {
-                throw ConfigurationError.sslPrivateKeyNotFound(keyPath)
-            }
+            // Validate SSL private key path
+            try validateSSLFile(keyPath, type: "private key")
+            
+            // Warn about file permissions
+            checkSSLFilePermissions(certPath, keyPath)
         }
         
-        // Validate timeouts
-        guard config.connectionTimeout > 0 else {
+        // Validate timeouts with reasonable bounds
+        guard config.connectionTimeout > 0 && config.connectionTimeout <= 3600 else {
             throw ConfigurationError.invalidConnectionTimeout(config.connectionTimeout)
         }
         
-        guard config.queryTimeout > 0 else {
+        guard config.queryTimeout > 0 && config.queryTimeout <= 3600 else {
             throw ConfigurationError.invalidQueryTimeout(config.queryTimeout)
+        }
+        
+        // Warn if timeouts are very long
+        if config.connectionTimeout > 300 {
+            print("⚠️  Warning: Connection timeout is very long (\(config.connectionTimeout)s)")
+        }
+        if config.queryTimeout > 300 {
+            print("⚠️  Warning: Query timeout is very long (\(config.queryTimeout)s)")
+        }
+    }
+    
+    // MARK: - Private Validation Methods
+    
+    private static func validateHost(_ host: String) throws {
+        guard !host.isEmpty else {
+            throw ConfigurationError.invalidHost("Host cannot be empty")
+        }
+        
+        // Check for valid format (IPv4, IPv6, hostname, or wildcard)
+        if host == "0.0.0.0" || host == "::" || host == "*" {
+            // Valid wildcard bindings
+            return
+        }
+        
+        // Validate IPv4
+        if isValidIPv4(host) {
+            return
+        }
+        
+        // Validate IPv6 (with or without brackets)
+        if isValidIPv6(host) {
+            return
+        }
+        
+        // Validate hostname/domain
+        if isValidHostname(host) {
+            return
+        }
+        
+        throw ConfigurationError.invalidHost("Invalid host format: '\(host)'")
+    }
+    
+    private static func isValidIPv4(_ string: String) -> Bool {
+        let parts = string.split(separator: ".")
+        guard parts.count == 4 else { return false }
+        
+        return parts.allSatisfy { part in
+            guard let num = Int(part), num >= 0, num <= 255 else {
+                return false
+            }
+            return true
+        }
+    }
+    
+    private static func isValidIPv6(_ string: String) -> Bool {
+        let cleaned = string.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
+        let parts = cleaned.split(separator: ":", omittingEmptySubsequences: false)
+        
+        // IPv6 has 8 groups (or less with :: compression)
+        guard parts.count <= 8 else { return false }
+        
+        return parts.allSatisfy { part in
+            if part.isEmpty { return true } // Allow :: compression
+            guard part.count <= 4 else { return false }
+            return part.allSatisfy { $0.isHexDigit }
+        }
+    }
+    
+    private static func isValidHostname(_ string: String) -> Bool {
+        // Hostname can be alphanumeric, hyphens, and dots
+        // Must not start/end with hyphen or dot
+        let pattern = "^[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?)*$"
+        let regex = try? NSRegularExpression(pattern: pattern)
+        let range = NSRange(string.startIndex..., in: string)
+        return regex?.firstMatch(in: string, range: range) != nil
+    }
+    
+    private static func validateDataDirectory(_ path: String) throws {
+        // Check for path traversal attempts
+        let normalized = (path as NSString).standardizingPath
+        if normalized.contains("..") {
+            throw ConfigurationError.invalidDataDirectory("Path contains '..' which is not allowed")
+        }
+        
+        // Create directory if it doesn't exist
+        let dataDir = URL(fileURLWithPath: normalized)
+        if !FileManager.default.fileExists(atPath: normalized) {
+            do {
+                try FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
+                print("✅ Created data directory: \(normalized)")
+            } catch {
+                throw ConfigurationError.invalidDataDirectory("Cannot create directory: \(error.localizedDescription)")
+            }
+        }
+        
+        // Check if directory is writable
+        guard FileManager.default.isWritableFile(atPath: normalized) else {
+            throw ConfigurationError.invalidDataDirectory("Directory is not writable: \(normalized)")
+        }
+    }
+    
+    private static func validateSSLFile(_ path: String, type: String) throws {
+        // Check path traversal
+        let normalized = (path as NSString).standardizingPath
+        if normalized.contains("..") {
+            throw ConfigurationError.invalidSSLPath("SSL \(type) path contains '..'")
+        }
+        
+        // Check file exists
+        guard FileManager.default.fileExists(atPath: normalized) else {
+            if type == "certificate" {
+                throw ConfigurationError.sslCertificateNotFound(normalized)
+            } else {
+                throw ConfigurationError.sslPrivateKeyNotFound(normalized)
+            }
+        }
+        
+        // Check file is readable
+        guard FileManager.default.isReadableFile(atPath: normalized) else {
+            throw ConfigurationError.invalidSSLPath("SSL \(type) file is not readable: \(normalized)")
+        }
+    }
+    
+    private static func checkSSLFilePermissions(_ certPath: String, _ keyPath: String) {
+        // Check private key permissions (should be restrictive)
+        do {
+            let attrs = try FileManager.default.attributesOfItem(atPath: keyPath)
+            if let posixPerms = attrs[.posixPermissions] as? NSNumber {
+                let perms = posixPerms.uint16Value
+                // Check if world-readable or group-readable
+                if (perms & 0o044) != 0 {
+                    print("⚠️  Security Warning: SSL private key has overly permissive file permissions")
+                    print("   Recommended: chmod 600 \(keyPath)")
+                }
+            }
+        } catch {
+            // Can't check permissions, skip warning
         }
     }
 }
@@ -331,27 +479,39 @@ public struct ConfigurationValidator {
 // MARK: - Configuration Errors
 
 public enum ConfigurationError: Error, LocalizedError {
+    case invalidHost(String)
     case invalidPort(Int)
+    case invalidMaxConnections(Int)
+    case invalidDataDirectory(String)
     case sslConfigurationIncomplete
     case sslCertificateNotFound(String)
     case sslPrivateKeyNotFound(String)
+    case invalidSSLPath(String)
     case invalidConnectionTimeout(TimeInterval)
     case invalidQueryTimeout(TimeInterval)
     
     public var errorDescription: String? {
         switch self {
+        case .invalidHost(let message):
+            return "Invalid host configuration: \(message)"
         case .invalidPort(let port):
             return "Invalid port number: \(port). Port must be between 1 and 65535."
+        case .invalidMaxConnections(let max):
+            return "Invalid max connections: \(max). Must be between 1 and 100000."
+        case .invalidDataDirectory(let message):
+            return "Invalid data directory: \(message)"
         case .sslConfigurationIncomplete:
             return "SSL is enabled but certificate or private key path is missing."
         case .sslCertificateNotFound(let path):
             return "SSL certificate file not found: \(path)"
         case .sslPrivateKeyNotFound(let path):
             return "SSL private key file not found: \(path)"
+        case .invalidSSLPath(let message):
+            return "Invalid SSL file path: \(message)"
         case .invalidConnectionTimeout(let timeout):
-            return "Invalid connection timeout: \(timeout). Timeout must be greater than 0."
+            return "Invalid connection timeout: \(timeout). Timeout must be between 0 and 3600 seconds."
         case .invalidQueryTimeout(let timeout):
-            return "Invalid query timeout: \(timeout). Timeout must be greater than 0."
+            return "Invalid query timeout: \(timeout). Timeout must be between 0 and 3600 seconds."
         }
     }
 }
