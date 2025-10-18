@@ -72,9 +72,12 @@ public final class BTreeIndex<Ref: Hashable>: IndexProtocol {
         }
     }
 
-    /// Removes a reference for `key` (not implemented in MVP).
+    /// Removes a reference for `key` using tombstone marking.
     public func remove(_ key: String, _ ref: Ref) throws {
-        // Not implemented in MVP
+        let leaf = findLeaf(for: key)
+        if let idx = leaf.keys.binarySearch(key) {
+            leaf.values[idx].remove(ref)
+        }
     }
 
     // MARK: - Internals
