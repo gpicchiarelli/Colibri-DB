@@ -104,7 +104,11 @@ struct IndexSQLTests {
 
     // MARK: - Persistent B+Tree
     @Test func persistentBTreeEqualityAndRange() throws {
-        let (db, sql, dir) = try newDB(); defer { try? FileManager.default.removeItem(at: dir) }
+        let (db, sql, dir) = try newDB()
+        defer { 
+            try? db.close()
+            try? FileManager.default.removeItem(at: dir) 
+        }
         try bootstrapTable(sql)
         _ = try sql.execute("CREATE INDEX idx_t_k_btree ON t (k) USING BTree")
         try seedRows(sql)

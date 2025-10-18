@@ -15,9 +15,10 @@ struct StoragePropertyTests {
     // Property: Insert then Read always returns same data
     @Test("Property: Insert→Read identity", arguments: 1...20)
     func testInsertReadIdentity(seed: Int) throws {
-        let tempPath = FileManager.default.temporaryDirectory
+        let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
-            .appendingPathComponent("test.dat").path
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let tempPath = tempDir.appendingPathComponent("test.dat").path
         
         var table = try FileHeapTable(path: tempPath, pageSize: 8192)
         defer { try? table.close() }
@@ -37,9 +38,10 @@ struct StoragePropertyTests {
     // Property: Update changes data
     @Test("Property: Update→Read reflects change", arguments: 1...15)
     func testUpdateChangesData(seed: Int) throws {
-        let tempPath = FileManager.default.temporaryDirectory
+        let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
-            .appendingPathComponent("test.dat").path
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let tempPath = tempDir.appendingPathComponent("test.dat").path
         
         var table = try FileHeapTable(path: tempPath, pageSize: 8192)
         defer { try? table.close() }
@@ -58,9 +60,10 @@ struct StoragePropertyTests {
     // Property: Delete makes row unreadable
     @Test("Property: Delete→Read fails", arguments: 1...15)
     func testDeleteMakesUnreadable(seed: Int) throws {
-        let tempPath = FileManager.default.temporaryDirectory
+        let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
-            .appendingPathComponent("test.dat").path
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let tempPath = tempDir.appendingPathComponent("test.dat").path
         
         var table = try FileHeapTable(path: tempPath, pageSize: 8192)
         defer { try? table.close() }
@@ -78,9 +81,10 @@ struct StoragePropertyTests {
     // Property: Scan returns all non-deleted rows
     @Test("Property: Scan completeness", arguments: 5...25)
     func testScanCompleteness(rowCount: Int) throws {
-        let tempPath = FileManager.default.temporaryDirectory
+        let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
-            .appendingPathComponent("test.dat").path
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let tempPath = tempDir.appendingPathComponent("test.dat").path
         
         var table = try FileHeapTable(path: tempPath, pageSize: 8192)
         defer { try? table.close() }
@@ -101,9 +105,10 @@ struct StoragePropertyTests {
     // Property: Multiple inserts don't interfere
     @Test("Property: Insert independence", arguments: 1...10)
     func testInsertIndependence(batchSize: Int) throws {
-        let tempPath = FileManager.default.temporaryDirectory
+        let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
-            .appendingPathComponent("test.dat").path
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let tempPath = tempDir.appendingPathComponent("test.dat").path
         
         var table = try FileHeapTable(path: tempPath, pageSize: 8192)
         defer { try? table.close() }
@@ -129,9 +134,10 @@ struct StoragePropertyTests {
     // Property: RID uniqueness
     @Test("Property: RID uniqueness", arguments: 10...30)
     func testRIDUniqueness(insertCount: Int) throws {
-        let tempPath = FileManager.default.temporaryDirectory
+        let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
-            .appendingPathComponent("test.dat").path
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        let tempPath = tempDir.appendingPathComponent("test.dat").path
         
         var table = try FileHeapTable(path: tempPath, pageSize: 8192)
         defer { try? table.close() }

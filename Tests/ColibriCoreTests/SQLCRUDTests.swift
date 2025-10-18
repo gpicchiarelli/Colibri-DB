@@ -14,12 +14,15 @@ struct SQLCRUDTests {
     @Test func crudCycleOnUsersAndOrders() throws {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: tempDir) }
 
         var config = DBConfig(dataDir: tempDir.path)
         config.autoCompactionEnabled = false
 
         let db = Database(config: config)
+        defer { 
+            try? db.close()
+            try? FileManager.default.removeItem(at: tempDir) 
+        }
         let sql = SQLQueryInterface(database: db)
 
         // CREATE

@@ -125,9 +125,10 @@ struct ErrorHandlingTests {
             try db.createTable("test")
         }
         
-        // Error 3: Invalid transaction
+        // Error 3: Invalid RID read
+        let invalidRID = RID(pageId: 999999, slotId: 999)
         #expect(throws: Error.self) {
-            try db.commit(999999)
+            _ = try db.readRow(table: "test", rid: invalidRID)
         }
     }
     

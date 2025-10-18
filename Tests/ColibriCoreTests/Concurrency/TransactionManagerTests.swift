@@ -197,6 +197,9 @@ struct TransactionManagerTests {
             _ = try db.insert(into: "test", row: ["id": .int(42)], tid: tid)
             try db.commit(tid)
             
+            // Force a checkpoint to ensure data is written
+            try db.checkpoint()
+            
             try db.close()
         }
         
@@ -206,7 +209,9 @@ struct TransactionManagerTests {
             let results = try db.scan( "test")
             
             #expect(results.count == 1)
-            #expect(results[0].1["id"] == .int(42))
+            if !results.isEmpty {
+                #expect(results[0].1["id"] == .int(42))
+            }
             
             try db.close()
         }
