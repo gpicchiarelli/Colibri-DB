@@ -1,6 +1,6 @@
 # GitHub Actions CI/CD for ColibrìDB
 
-This directory contains the complete CI/CD infrastructure for ColibrìDB, implementing a "military-grade" quality assurance system with multiple quality gates.
+This directory contains the complete CI/CD infrastructure for ColibrìDB, implementing a quality assurance system with multiple quality gates.
 
 ## 📁 Directory Structure
 
