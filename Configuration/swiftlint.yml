@@ -1,0 +1,41 @@
+# SwiftLint configuration for ColibriDB
+opt_in_rules:
+  - closure_spacing
+  - empty_count
+  - explicit_self
+  - fatal_error_message
+  - force_unwrapping
+
+disabled_rules:
+  - todo
+  - trailing_whitespace
+
+line_length:
+  warning: 120
+  error: 140
+
+trailing_whitespace:
+  ignores_empty_lines: true
+
+identifier_name:
+  excluded:
+    - id
+    - db
+    - tx
+
+function_body_length:
+  warning: 80
+  error: 120
+
+type_body_length:
+  warning: 300
+  error: 400
+
+file_length:
+  warning: 600
+  error: 800
+
+force_cast:
+  severity: warning
+
+reporter: "xcode"

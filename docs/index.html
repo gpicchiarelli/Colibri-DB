@@ -1,0 +1,773 @@
+---
+layout: default
+title: Colibrì DB - RDBMS Sperimentale in Swift
+description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon con WAL, MVCC, B+Tree e architettura modulare
+---
+
+<style>
+/* Modern Apple-inspired Design System */
+:root {
+    /* Color Palette */
+    --primary: #000000;
+    --primary-light: #333333;
+    --secondary: #007AFF;
+    --success: #34C759;
+    --warning: #FF9500;
+    --error: #FF3B30;
+    
+    /* Grays */
+    --gray-50: #FAFAFA;
+    --gray-100: #F5F5F5;
+    --gray-200: #E5E5E5;
+    --gray-300: #D1D1D6;
+    --gray-400: #C7C7CC;
+    --gray-500: #AEAEB2;
+    --gray-600: #8E8E93;
+    --gray-700: #636366;
+    --gray-800: #48484A;
+    --gray-900: #1C1C1E;
+    --white: #FFFFFF;
+    
+    /* Typography */
+    --font-system: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    
+    /* Spacing */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    --space-3xl: 4rem;
+    --space-4xl: 6rem;
+    
+    /* Border Radius */
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.15);
+    --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.2);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-system);
+    line-height: 1.6;
+    color: var(--gray-900);
+    background: var(--white);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+}
+
+/* Hero Section */
+.hero {
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
+    padding: var(--space-4xl) 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 30% 20%, rgba(0, 122, 255, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 1;
+}
+
+.hero h1 {
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    font-weight: 300;
+    color: var(--primary);
+    margin-bottom: var(--space-lg);
+    letter-spacing: -0.02em;
+}
+
+.hero-subtitle {
+    font-size: clamp(1.25rem, 4vw, 1.75rem);
+    color: var(--gray-700);
+    margin-bottom: var(--space-xl);
+    font-weight: 400;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.hero-description {
+    font-size: clamp(1rem, 2.5vw, 1.125rem);
+    color: var(--gray-600);
+    margin-bottom: var(--space-2xl);
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.7;
+}
+
+.hero-badges {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-2xl);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--white);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-full);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.badge:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.badge.swift { background: var(--primary); color: var(--white); border-color: var(--primary); }
+.badge.macos { background: var(--gray-800); color: var(--white); border-color: var(--gray-800); }
+.badge.performance { background: var(--success); color: var(--white); border-color: var(--success); }
+
+.hero-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md) var(--space-xl);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    min-width: 160px;
+    height: 48px;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: var(--white);
+    border-color: var(--primary);
+}
+
+.btn-primary:hover {
+    background: var(--primary-light);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+    background: var(--white);
+    color: var(--primary);
+    border-color: var(--gray-300);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+    transform: translateY(-1px);
+}
+
+/* Features Section */
+.features {
+    padding: var(--space-4xl) 0;
+    background: var(--white);
+}
+
+.section-title {
+    text-align: center;
+    font-size: clamp(2rem, 5vw, 2.5rem);
+    font-weight: 300;
+    color: var(--primary);
+    margin-bottom: var(--space-xl);
+    letter-spacing: -0.02em;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: var(--space-xl);
+    margin-top: var(--space-2xl);
+}
+
+.feature-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--secondary), var(--success));
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--gray-300);
+}
+
+.feature-card:hover::before {
+    transform: scaleX(1);
+}
+
+.feature-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-md);
+    display: block;
+}
+
+.feature-card h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: var(--space-md);
+}
+
+.feature-card p {
+    color: var(--gray-600);
+    margin-bottom: var(--space-md);
+    line-height: 1.6;
+}
+
+.feature-list {
+    list-style: none;
+    padding: 0;
+}
+
+.feature-list li {
+    padding: var(--space-xs) 0;
+    color: var(--gray-700);
+    position: relative;
+    padding-left: var(--space-lg);
+    font-size: 0.9rem;
+}
+
+.feature-list li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--secondary);
+    font-weight: 600;
+}
+
+/* Quick Start Section */
+.quick-start {
+    background: var(--gray-50);
+    padding: var(--space-4xl) 0;
+}
+
+.quick-start-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2xl);
+    align-items: center;
+}
+
+.quick-start-content h2 {
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    font-weight: 400;
+    color: var(--primary);
+    margin-bottom: var(--space-lg);
+}
+
+.quick-start-content p {
+    color: var(--gray-600);
+    margin-bottom: var(--space-lg);
+    font-size: 1.1rem;
+    line-height: 1.7;
+}
+
+.code-block {
+    background: var(--gray-900);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--gray-100);
+    overflow-x: auto;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+}
+
+.code-block::before {
+    content: '';
+    position: absolute;
+    top: var(--space-md);
+    left: var(--space-md);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--error);
+    box-shadow: 20px 0 0 var(--warning), 40px 0 0 var(--success);
+}
+
+.code-block pre {
+    margin: 0;
+    padding-top: var(--space-lg);
+}
+
+.code-comment {
+    color: var(--gray-500);
+}
+
+.code-keyword {
+    color: #FF79C6;
+}
+
+.code-string {
+    color: #F1FA8C;
+}
+
+.code-function {
+    color: #50FA7B;
+}
+
+/* Architecture Section */
+.architecture {
+    padding: var(--space-4xl) 0;
+    background: var(--white);
+}
+
+.architecture-diagram {
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
+    border-radius: var(--radius-xl);
+    padding: var(--space-2xl);
+    margin: var(--space-xl) 0;
+    border: 1px solid var(--gray-200);
+    text-align: center;
+}
+
+.arch-layer {
+    background: var(--white);
+    border: 2px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    margin: var(--space-md) 0;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.arch-layer:hover {
+    border-color: var(--secondary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.arch-layer h4 {
+    color: var(--primary);
+    margin-bottom: var(--space-sm);
+    font-weight: 600;
+}
+
+.arch-layer p {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+}
+
+/* Performance Section */
+.performance {
+    background: var(--gray-900);
+    color: var(--white);
+    padding: var(--space-4xl) 0;
+}
+
+.performance .section-title {
+    color: var(--white);
+}
+
+.performance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-xl);
+    margin-top: var(--space-2xl);
+}
+
+.performance-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    text-align: center;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.performance-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-4px);
+}
+
+.performance-number {
+    font-size: 2.5rem;
+    font-weight: 300;
+    color: var(--success);
+    display: block;
+    margin-bottom: var(--space-sm);
+}
+
+.performance-label {
+    color: var(--gray-300);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* CTA Section */
+.cta {
+    background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+    color: var(--white);
+    padding: var(--space-4xl) 0;
+    text-align: center;
+}
+
+.cta h2 {
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    font-weight: 400;
+    margin-bottom: var(--space-lg);
+}
+
+.cta p {
+    font-size: 1.1rem;
+    margin-bottom: var(--space-xl);
+    opacity: 0.9;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.cta .btn {
+    background: var(--white);
+    color: var(--primary);
+    border-color: var(--white);
+}
+
+.cta .btn:hover {
+    background: var(--gray-100);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .hero {
+        padding: var(--space-2xl) 0;
+    }
+    
+    .hero-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn {
+        width: 100%;
+        max-width: 280px;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-lg);
+    }
+    
+    .quick-start-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-xl);
+    }
+    
+    .performance-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-lg);
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 0 var(--space-md);
+    }
+    
+    .hero-badges {
+        gap: var(--space-xs);
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+        padding: var(--space-xs) var(--space-sm);
+    }
+    
+    .performance-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container">
+        <div class="hero-content">
+            <h1>🐦 Colibrì DB</h1>
+            <p class="hero-subtitle">RDBMS sperimentale ad alte prestazioni per macOS</p>
+            <p class="hero-description">
+                Un database relazionale moderno scritto in Swift 6.2, progettato per gestire milioni di connessioni 
+                logiche con architettura modulare: WAL, MVCC, B+Tree e CLI amministrativa completa.
+            </p>
+            
+            <div class="hero-badges">
+                <span class="badge swift">Swift 6.2</span>
+                <span class="badge macos">macOS 13+</span>
+                <span class="badge performance">Apple Silicon</span>
+                <span class="badge">WAL • MVCC • B+Tree</span>
+            </div>
+            
+            <div class="hero-actions">
+                <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-primary" target="_blank">
+                    ⭐ Star su GitHub
+                </a>
+                <a href="{{ site.baseurl }}/wiki/Quick-Start" class="btn btn-secondary">
+                    🚀 Quick Start
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features">
+    <div class="container">
+        <h2 class="section-title">✨ Caratteristiche Principali</h2>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <span class="feature-icon">🗄️</span>
+                <h3>Storage Enterprise</h3>
+                <p>Sistema di storage avanzato con heap file paginati, buffer pool LRU/Clock e compattazione online senza downtime.</p>
+                <ul class="feature-list">
+                    <li>Heap file storage con slot directory</li>
+                    <li>Buffer pool intelligente con eviction LRU</li>
+                    <li>Compattazione online in tempo reale</li>
+                    <li>Ottimizzazioni Apple Silicon native</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <span class="feature-icon">🔒</span>
+                <h3>Durabilità Garantita</h3>
+                <p>Write-Ahead Logging v2 con checksum CRC32, recovery ARIES-like e sistema di checkpoint efficiente.</p>
+                <ul class="feature-list">
+                    <li>WAL v2 con record tipizzati</li>
+                    <li>Checksum CRC32 per integrità</li>
+                    <li>Recovery ARIES-compliant</li>
+                    <li>Gestione Dirty Page Table</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <span class="feature-icon">🚀</span>
+                <h3>Indicizzazione Avanzata</h3>
+                <p>B+Tree persistenti su disco con supporto per indici pluggabili e operazioni bulk ad alte prestazioni.</p>
+                <ul class="feature-list">
+                    <li>B+Tree persistenti con checkpoint</li>
+                    <li>Indici pluggabili (Hash, ART, LSM)</li>
+                    <li>Validazione e manutenzione online</li>
+                    <li>Caching intelligente per dataset grandi</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <span class="feature-icon">⚡</span>
+                <h3>Controllo Concorrenza</h3>
+                <p>MVCC con livelli di isolamento configurabili, lock manager avanzato e supporto Two-Phase Commit.</p>
+                <ul class="feature-list">
+                    <li>MVCC con snapshot isolation</li>
+                    <li>Lock manager con deadlock detection</li>
+                    <li>Supporto 2PC per transazioni distribuite</li>
+                    <li>Livelli di isolamento configurabili</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <span class="feature-icon">🧠</span>
+                <h3>Query Processing</h3>
+                <p>Volcano iterator con planner cost-based, predicate pushdown e supporto SQL completo con sintassi moderna.</p>
+                <ul class="feature-list">
+                    <li>Planner cost-based intelligente</li>
+                    <li>Operatori Volcano ottimizzati</li>
+                    <li>Viste materializzate</li>
+                    <li>Query plan cache</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <span class="feature-icon">🛠️</span>
+                <h3>Operazioni Complete</h3>
+                <p>CLI amministrativa completa, import/export CSV, metriche Prometheus e policy engine per manutenzione automatica.</p>
+                <ul class="feature-list">
+                    <li>CLI amministrativa `coldb`</li>
+                    <li>Import/export CSV con validazione</li>
+                    <li>Metriche Prometheus integrate</li>
+                    <li>Policy engine per ottimizzazione</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Quick Start Section -->
+<section class="quick-start">
+    <div class="container">
+        <div class="quick-start-grid">
+            <div class="quick-start-content">
+                <h2>🚀 Inizia in 30 Secondi</h2>
+                <p>
+                    Colibrì DB è progettato per essere semplice da installare e utilizzare. 
+                    Con pochi comandi puoi avere un database completo in esecuzione sul tuo Mac.
+                </p>
+                <div class="hero-actions">
+                    <a href="{{ site.baseurl }}/wiki/Quick-Start" class="btn btn-primary">
+                        📖 Guida Completa
+                    </a>
+                    <a href="{{ site.baseurl }}/wiki/API-Reference" class="btn btn-secondary">
+                        📚 API Reference
+                    </a>
+                </div>
+            </div>
+            
+            <div class="code-block">
+                <pre><code><span class="code-comment"># Clona e compila</span>
+<span class="code-keyword">git</span> <span class="code-function">clone</span> <span class="code-string">https://github.com/gpicchiarelli/Colibri-DB.git</span>
+<span class="code-keyword">cd</span> Colibri-DB
+<span class="code-keyword">swift</span> <span class="code-function">build</span>
+
+<span class="code-comment"># Avvia la CLI</span>
+<span class="code-function">.build/debug/coldb</span>
+
+<span class="code-comment"># Crea una tabella e inserisci dati</span>
+<span class="code-keyword">\create</span> <span class="code-function">table</span> <span class="code-string">users</span>
+<span class="code-keyword">\insert</span> <span class="code-string">users id=1,name=Alice,age=25</span>
+<span class="code-keyword">\select</span> <span class="code-string">* FROM users WHERE name = 'Alice'</span></code></pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Architecture Section -->
+<section class="architecture">
+    <div class="container">
+        <h2 class="section-title">🏗️ Architettura Modulare</h2>
+        
+        <div class="architecture-diagram">
+            <div class="arch-layer">
+                <h4>🎯 SQL Interface & CLI</h4>
+                <p>Parser SQL completo, CLI amministrativa e interfacce programmatiche</p>
+            </div>
+            <div class="arch-layer">
+                <h4>🧠 Query Processor</h4>
+                <p>Planner cost-based, operatori Volcano e ottimizzazione query</p>
+            </div>
+            <div class="arch-layer">
+                <h4>⚡ Transaction Manager</h4>
+                <p>MVCC, lock manager, 2PC e livelli di isolamento</p>
+            </div>
+            <div class="arch-layer">
+                <h4>🚀 Index Manager</h4>
+                <p>B+Tree, Hash, ART e indici pluggabili</p>
+            </div>
+            <div class="arch-layer">
+                <h4>🗄️ Storage Engine</h4>
+                <p>Heap storage, buffer pool e WAL con recovery</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Performance Section -->
+<section class="performance">
+    <div class="container">
+        <h2 class="section-title">📊 Performance Target</h2>
+        
+        <div class="performance-grid">
+            <div class="performance-card">
+                <span class="performance-number">10K+</span>
+                <span class="performance-label">Operazioni WAL/sec</span>
+            </div>
+            <div class="performance-card">
+                <span class="performance-number">1M+</span>
+                <span class="performance-label">B+Tree Lookups/sec</span>
+            </div>
+            <div class="performance-card">
+                <span class="performance-number">1K+</span>
+                <span class="performance-label">Transazioni/sec</span>
+            </div>
+            <div class="performance-card">
+                <span class="performance-number">95%+</span>
+                <span class="performance-label">Buffer Hit Rate</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta">
+    <div class="container">
+        <h2>Pronto a Esplorare Colibrì DB?</h2>
+        <p>
+            Unisciti alla community di sviluppatori che stanno costruendo il futuro dei database su macOS. 
+            Contribuisci al progetto o inizia a sperimentare oggi stesso.
+        </p>
+        <div class="hero-actions">
+            <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn" target="_blank">
+                🌟 Contribuisci su GitHub
+            </a>
+        </div>
+    </div>
+</section>

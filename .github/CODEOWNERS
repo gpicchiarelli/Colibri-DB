@@ -1,0 +1,161 @@
+# CODEOWNERS for ColibrìDB
+# 
+# Each line represents ownership of specific files/directories.
+# When a PR touches these files, the specified owners are automatically
+# requested for review.
+#
+# Format: path/pattern @github-username @github-team
+#
+# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ==============================================================================
+# Global Ownership
+# ==============================================================================
+
+# Default owners for everything (unless overridden below)
+* @gpicchiarelli
+
+# ==============================================================================
+# Critical Components (Require Careful Review)
+# ==============================================================================
+
+# Write-Ahead Log - Critical for durability and recovery
+/Sources/ColibriCore/Storage/WAL/ @gpicchiarelli
+/specs/WAL.* @gpicchiarelli
+
+# MVCC - Critical for transaction isolation
+/Sources/ColibriCore/Concurrency/Transactions/MVCC.swift @gpicchiarelli
+/Sources/ColibriCore/Concurrency/Transactions/VersionStore.swift @gpicchiarelli
+/specs/MVCC.* @gpicchiarelli
+
+# Lock Manager - Critical for concurrency control
+/Sources/ColibriCore/Concurrency/Transactions/LockManager.swift @gpicchiarelli
+/Sources/ColibriCore/Concurrency/Transactions/DeadlockDetector.swift @gpicchiarelli
+/specs/LockManager.* @gpicchiarelli
+
+# Transaction Manager - Critical for ACID properties
+/Sources/ColibriCore/Concurrency/Transactions/TransactionManager.swift @gpicchiarelli
+/specs/TransactionManager.* @gpicchiarelli
+
+# B-Tree Index - Critical for query performance
+/Sources/ColibriCore/Storage/Index/BTree*.swift @gpicchiarelli
+/specs/BTree.* @gpicchiarelli
+
+# Buffer Pool - Critical for memory management
+/Sources/ColibriCore/Storage/Buffer/ @gpicchiarelli
+/specs/BufferPool.* @gpicchiarelli
+
+# Storage Manager - Core storage abstraction
+/Sources/ColibriCore/Storage/StorageManager.swift @gpicchiarelli
+
+# ==============================================================================
+# Core Storage Layer
+# ==============================================================================
+
+/Sources/ColibriCore/Storage/ @gpicchiarelli
+
+# ==============================================================================
+# Query Engine
+# ==============================================================================
+
+# SQL Parser
+/Sources/ColibriCore/Query/Parser/ @gpicchiarelli
+
+# Query Planner & Optimizer
+/Sources/ColibriCore/Query/Planner/ @gpicchiarelli
+
+# Execution Engine
+/Sources/ColibriCore/Query/Executor/ @gpicchiarelli
+
+# ==============================================================================
+# System Catalog
+# ==============================================================================
+
+/Sources/ColibriCore/System/Catalog/ @gpicchiarelli
+
+# ==============================================================================
+# Server & Networking
+# ==============================================================================
+
+# Wire Protocol - Changes affect compatibility
+/Sources/ColibriServer/WireProtocol.swift @gpicchiarelli
+
+# Server Core
+/Sources/ColibriServer/ @gpicchiarelli
+/Sources/coldb-server/ @gpicchiarelli
+
+# ==============================================================================
+# CLI Tools
+# ==============================================================================
+
+/Sources/ColibrìCLI/ @gpicchiarelli
+/Sources/coldb/ @gpicchiarelli
+
+# ==============================================================================
+# Tests (Important but less strict)
+# ==============================================================================
+
+/Tests/ @gpicchiarelli
+
+# ==============================================================================
+# Formal Specifications
+# ==============================================================================
+
+# TLA+ Specs - Require expertise in formal methods
+/specs/ @gpicchiarelli
+/rules/tla_modules.json @gpicchiarelli
+
+# ==============================================================================
+# Documentation
+# ==============================================================================
+
+# API Documentation - Should match code changes
+/docs/wiki/API-Reference.md @gpicchiarelli
+
+# Core architecture docs
+/docs/wiki/Part-02-Core-Engine/ @gpicchiarelli
+
+# All documentation
+/docs/ @gpicchiarelli
+/Documentation/ @gpicchiarelli
+
+# README and main docs
+/*.md @gpicchiarelli
+
+# ==============================================================================
+# Configuration & Build
+# ==============================================================================
+
+# Package manifest - Changes affect all builds
+/Package.swift @gpicchiarelli
+
+# CI/CD Workflows - Critical for quality gates
+/.github/workflows/ @gpicchiarelli
+
+# Quality baselines and rules
+/rules/ @gpicchiarelli
+
+# Linting and formatting config
+/Configuration/ @gpicchiarelli
+
+# ==============================================================================
+# Security
+# ==============================================================================
+
+/SECURITY.md @gpicchiarelli
+
+# ==============================================================================
+# Notes for Contributors
+# ==============================================================================
+#
+# 1. Changes to files with code owners require approval from at least one owner
+# 2. Critical components may require multiple approvals (configured in branch protection)
+# 3. If you're unsure about ownership, ask in the PR discussion
+# 4. For urgent fixes, tag @gpicchiarelli directly
+#
+# Owner responsibilities:
+# - Review PRs touching owned code within 48 hours
+# - Ensure changes maintain quality and architectural consistency
+# - Verify tests and documentation are updated
+# - Check that quality gates pass
+

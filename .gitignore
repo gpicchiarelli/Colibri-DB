@@ -1,0 +1,71 @@
+## SwiftPM
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+## Xcode / Derived
+DerivedData/
+xcuserdata/
+*.xcodeproj
+*.xcworkspace
+*.xcuserstate
+*.xcscmblueprint
+*.xccrashpoint
+*.xccheckout
+*.xcuserdatad/
+
+## Binaries & Objects
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.a
+*.lib
+*.dSYM
+*.dSYM.zip
+*.exe
+*.out
+
+## Coverage/Profiling/Archives
+*.profraw
+*.profdata
+*.gcda
+*.gcno
+*.lcov
+coverage/
+*.xcarchive
+*.trace
+
+## Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+## OS / macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+Icon?
+.Spotlight-V100
+.Trashes
+
+## Runtime data (database files, indexes, logs)
+data/
+*.log
+*.wal
+
+## Temporary files and directories
+/var/folders/*/colibridb-*
+*.tmp
+*.temp
+
+## Local configs
+colibridb.local*.json
+
+## Do not publish prompt materials
+prompt/

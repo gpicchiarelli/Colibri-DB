@@ -1,0 +1,25 @@
+{
+  "dataDir": "./data",
+  "maxConnectionsLogical": 1000000,
+  "maxConnectionsPhysical": 16,
+  "bufferPoolSizeBytes": 1073741824,
+  "pageSizeBytes": 8192,
+  "walEnabled": true,
+  "checksumEnabled": true,
+  "cliEnabled": true,
+  "metricsEnabled": true,
+  "serverEnabled": false,
+  "indexImplementation": "Hash",
+  "storageEngine": "FileHeap",
+  "performanceOptimizations": {
+    "lockStripingEnabled": true,
+    "lockStripeCount": 64,
+    "binarySerializationEnabled": true,
+    "btreeCachingEnabled": true,
+    "btreeCacheSize": 1000,
+    "queryPlanCacheEnabled": true,
+    "queryPlanCacheSize": 500,
+    "periodicCleanupEnabled": true,
+    "periodicCleanupIntervalSeconds": 300
+  }
+}

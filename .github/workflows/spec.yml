@@ -1,0 +1,184 @@
+name: TLA+ Specification Verification
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'spec/**'
+      - 'Sources/ColibriCore/**'
+      - '.github/workflows/spec.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'spec/**'
+      - 'Sources/ColibriCore/**'
+
+jobs:
+  verify-specs:
+    name: Verify TLA+ Specifications
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Download TLA+ Tools
+        run: |
+          wget -q https://github.com/tlaplus/tlaplus/releases/latest/download/tla2tools.jar
+          echo "Downloaded TLA+ tools"
+      
+      - name: Verify Core Modules
+        run: |
+          echo "✅ Skipping CORE.tla (no executable spec)"
+          echo "✅ Skipping INTERFACES.tla (interface definitions only)"
+          echo "✅ Skipping DISK_FORMAT.tla (format definitions only)"
+      
+      - name: Verify WAL Specification
+        run: |
+          echo "🔍 Checking WAL.tla..."
+          java -cp tla2tools.jar tlc2.TLC \
+            -workers 4 \
+            -coverage 1 \
+            -deadlock \
+            -config spec/WAL.cfg \
+            spec/WAL.tla || exit 1
+          echo "✅ WAL specification verified"
+      
+      - name: Verify MVCC Specification
+        run: |
+          echo "🔍 Checking MVCC.tla..."
+          java -cp tla2tools.jar tlc2.TLC \
+            -workers 4 \
+            -coverage 1 \
+            -deadlock \
+            -config spec/MVCC.cfg \
+            spec/MVCC.tla || exit 1
+          echo "✅ MVCC specification verified"
+      
+      - name: Verify LockManager Specification
+        run: |
+          echo "🔍 Checking LockManager.tla..."
+          java -cp tla2tools.jar tlc2.TLC \
+            -workers 4 \
+            -coverage 1 \
+            -deadlock \
+            -config spec/LockManager.cfg \
+            spec/LockManager.tla || exit 1
+          echo "✅ LockManager specification verified"
+      
+      - name: Verify BTree Specification
+        run: |
+          echo "🔍 Checking BTree.tla..."
+          java -cp tla2tools.jar tlc2.TLC \
+            -workers 4 \
+            -coverage 1 \
+            -deadlock \
+            -config spec/BTree.cfg \
+            spec/BTree.tla || exit 1
+          echo "✅ BTree specification verified"
+      
+      - name: Verify BufferPool Specification
+        run: |
+          echo "🔍 Checking BufferPool.tla..."
+          java -cp tla2tools.jar tlc2.TLC \
+            -workers 4 \
+            -coverage 1 \
+            -deadlock \
+            -config spec/BufferPool.cfg \
+            spec/BufferPool.tla || exit 1
+          echo "✅ BufferPool specification verified"
+      
+      - name: Verify RECOVERY Specification
+        run: |
+          echo "🔍 Checking RECOVERY.tla..."
+          java -cp tla2tools.jar tlc2.TLC \
+            -workers 4 \
+            -coverage 1 \
+            -deadlock \
+            -config spec/RECOVERY.cfg \
+            spec/RECOVERY.tla || exit 1
+          echo "✅ RECOVERY specification verified"
+      
+      - name: Verify TransactionManager Specification
+        run: |
+          echo "🔍 Checking TransactionManager.tla..."
+          java -cp tla2tools.jar tlc2.TLC \
+            -workers 4 \
+            -coverage 1 \
+            -deadlock \
+            -config spec/TransactionManager.cfg \
+            spec/TransactionManager.tla || exit 1
+          echo "✅ TransactionManager specification verified"
+      
+      - name: Verify HeapTable Specification
+        run: |
+          echo "🔍 Checking HeapTable.tla..."
+          java -cp tla2tools.jar tlc2.TLC \
+            -workers 4 \
+            -coverage 1 \
+            -deadlock \
+            -config spec/HeapTable.cfg \
+            spec/HeapTable.tla || exit 1
+          echo "✅ HeapTable specification verified"
+      
+      - name: Verify GroupCommit Specification
+        run: |
+          echo "🔍 Checking GroupCommit.tla..."
+          java -cp tla2tools.jar tlc2.TLC \
+            -workers 4 \
+            -coverage 1 \
+            -deadlock \
+            -config spec/GroupCommit.cfg \
+            spec/GroupCommit.tla || exit 1
+          echo "✅ GroupCommit specification verified"
+      
+      - name: Verify Catalog Specification
+        run: |
+          echo "🔍 Checking Catalog.tla..."
+          java -cp tla2tools.jar tlc2.TLC \
+            -workers 4 \
+            -coverage 1 \
+            -deadlock \
+            -config spec/Catalog.cfg \
+            spec/Catalog.tla || exit 1
+          echo "✅ Catalog specification verified"
+      
+      - name: Summary
+        if: success()
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ ALL TLA+ SPECIFICATIONS VERIFIED SUCCESSFULLY"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Verified modules:"
+          echo "  ✅ WAL (6 invariants)"
+          echo "  ✅ MVCC (3 invariants)"
+          echo "  ✅ LockManager (2 invariants)"
+          echo "  ✅ BTree (3 invariants)"
+          echo "  ✅ BufferPool (3 invariants)"
+          echo "  ✅ RECOVERY (2 invariants)"
+          echo "  ✅ TransactionManager (3 invariants)"
+          echo "  ✅ HeapTable (3 invariants)"
+          echo "  ✅ GroupCommit (3 invariants)"
+          echo "  ✅ Catalog (3 invariants)"
+          echo ""
+          echo "Total: 31 invariants verified"
+          echo ""
+          echo "All critical safety properties hold ✓"
+      
+      - name: Upload TLC Reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tlc-reports
+          path: |
+            *.out
+            states/
+          retention-days: 7

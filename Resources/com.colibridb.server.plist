@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.colibridb.server</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/colibri-server</string>
+        <string>--host</string>
+        <string>0.0.0.0</string>
+        <string>--port</string>
+        <string>8080</string>
+        <string>--data-dir</string>
+        <string>/var/lib/colibridb</string>
+    </array>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <true/>
+    
+    <key>StandardOutPath</key>
+    <string>/var/log/colibridb/server.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/var/log/colibridb/server.error.log</string>
+    
+    <key>WorkingDirectory</key>
+    <string>/var/lib/colibridb</string>
+    
+    <key>UserName</key>
+    <string>_colibridb</string>
+    
+    <key>GroupName</key>
+    <string>_colibridb</string>
+    
+    <key>ProcessType</key>
+    <string>Background</string>
+    
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    
+    <key>ExitTimeOut</key>
+    <integer>30</integer>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin</string>
+        <key>COLIBRIDB_DATA_DIR</key>
+        <string>/var/lib/colibridb</string>
+        <key>COLIBRIDB_LOG_LEVEL</key>
+        <string>INFO</string>
+    </dict>
+    
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>65536</integer>
+        <key>NumberOfProcesses</key>
+        <integer>1024</integer>
+    </dict>
+    
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>65536</integer>
+        <key>NumberOfProcesses</key>
+        <integer>1024</integer>
+    </dict>
+</dict>
+</plist>

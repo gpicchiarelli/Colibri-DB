@@ -1,0 +1,387 @@
+name: CI - Build, Test & Quality Gates
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+# Security: Limit permissions
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+# Prevent concurrent runs on same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SWIFT_VERSION: '6.0'
+  DEVELOPER_DIR: /Applications/Xcode_15.2.app/Contents/Developer
+
+jobs:
+  # ============================================================================
+  # Build & Test
+  # ============================================================================
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-latest
+    timeout-minutes: 30
+    
+    steps:
+      # Security hardening
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+          disable-file-monitoring: false
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better diffs
+      
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: ${{ env.SWIFT_VERSION }}
+      
+      - name: Print Swift Version
+        run: swift --version
+      
+      # Cache SPM dependencies
+      - name: Cache Swift PM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+      
+      - name: Resolve Dependencies
+        run: swift package resolve
+      
+      - name: Build (Debug)
+        run: |
+          swift build --configuration debug -v
+      
+      - name: Run Tests with Coverage
+        run: |
+          swift test \
+            --enable-code-coverage \
+            --parallel \
+            --xunit-output test-results.xml
+      
+      - name: Generate Coverage Report (LCOV)
+        run: |
+          xcrun llvm-cov export \
+            -format=lcov \
+            -instr-profile=.build/debug/codecov/default.profdata \
+            .build/debug/ColibriCorePackageTests.xctest/Contents/MacOS/ColibriCorePackageTests \
+            > coverage.lcov
+      
+      - name: Generate Coverage Report (JSON)
+        run: |
+          xcrun llvm-cov export \
+            -format=text \
+            -instr-profile=.build/debug/codecov/default.profdata \
+            .build/debug/ColibriCorePackageTests.xctest/Contents/MacOS/ColibriCorePackageTests \
+            > coverage.json
+      
+      - name: Generate Coverage Report (HTML)
+        run: |
+          xcrun llvm-cov show \
+            -format=html \
+            -instr-profile=.build/debug/codecov/default.profdata \
+            .build/debug/ColibriCorePackageTests.xctest/Contents/MacOS/ColibriCorePackageTests \
+            -output-dir=coverage-html
+      
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results.xml
+          retention-days: 30
+      
+      - name: Upload Coverage Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            coverage.lcov
+            coverage.json
+            coverage-html/
+          retention-days: 30
+      
+      - name: Upload Build Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            .build/**/*.log
+          retention-days: 7
+
+  # ============================================================================
+  # Quality Gates
+  # ============================================================================
+  coverage-guard:
+    name: Coverage Quality Gate
+    runs-on: macos-latest
+    needs: build-and-test
+    timeout-minutes: 5
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Download Coverage Report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-reports
+      
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: ${{ env.SWIFT_VERSION }}
+      
+      - name: Run Coverage Guard
+        run: |
+          chmod +x tools/scripts/coverage_guard.swift
+          swift tools/scripts/coverage_guard.swift \
+            coverage.json \
+            rules/coverage_targets.json
+      
+      - name: Comment PR with Coverage
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const coverage = fs.readFileSync('coverage.json', 'utf8');
+            const comment = `## 📊 Coverage Report\n\nDetailed coverage report available in artifacts.\n\n✅ Coverage quality gate passed!`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # ============================================================================
+  # Performance Guard
+  # ============================================================================
+  perf-guard:
+    name: Performance Quality Gate
+    runs-on: macos-latest
+    needs: build-and-test
+    timeout-minutes: 15
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: ${{ env.SWIFT_VERSION }}
+      
+      - name: Cache Swift PM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+      
+      - name: Build Benchmarks (Release)
+        run: |
+          swift build \
+            --configuration release \
+            --product benchmarks
+      
+      - name: Run Quick Performance Benchmarks
+        run: |
+          # Run subset of benchmarks for CI (quick validation)
+          .build/release/benchmarks --quick > benchmark-results-raw.txt
+      
+      - name: Convert Benchmark Results to JSON
+        run: |
+          chmod +x tools/scripts/bench_json.sh
+          bash tools/scripts/bench_json.sh \
+            benchmark-results-raw.txt \
+            benchmark-results.json
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Run Performance Guard
+        run: |
+          chmod +x tools/scripts/perf_guard.py
+          python3 tools/scripts/perf_guard.py \
+            benchmark-results.json \
+            rules/perf_baseline.json
+      
+      - name: Upload Benchmark Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            benchmark-results-raw.txt
+            benchmark-results.json
+          retention-days: 30
+
+  # ============================================================================
+  # Documentation Guard
+  # ============================================================================
+  docs-guard:
+    name: Documentation Quality Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Get Changed Files
+        run: |
+          git diff --name-only origin/${{ github.base_ref }}..HEAD > changed_files.txt
+          echo "Changed files:"
+          cat changed_files.txt
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Run Documentation Guard
+        run: |
+          chmod +x tools/scripts/docs_guard.py
+          python3 tools/scripts/docs_guard.py changed_files.txt
+
+  # ============================================================================
+  # Linting & Format Check
+  # ============================================================================
+  lint:
+    name: SwiftLint & Format Check
+    runs-on: macos-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Install SwiftLint
+        run: |
+          brew install swiftlint
+      
+      - name: Run SwiftLint
+        run: |
+          swiftlint lint --config Configuration/swiftlint.yml --strict
+      
+      - name: Install SwiftFormat
+        run: |
+          brew install swiftformat
+      
+      - name: Check SwiftFormat
+        run: |
+          swiftformat --config Configuration/swiftformat.yml --lint .
+
+  # ============================================================================
+  # Security Scan
+  # ============================================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      security-events: write
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Run Trivy Security Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy Results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ============================================================================
+  # Final Status Check
+  # ============================================================================
+  ci-success:
+    name: CI Status Check
+    runs-on: ubuntu-latest
+    needs: 
+      - build-and-test
+      - coverage-guard
+      - perf-guard
+      - lint
+      - security
+    if: always()
+    
+    steps:
+      - name: Check All Jobs
+        run: |
+          if [[ "${{ needs.build-and-test.result }}" != "success" ]] || \
+             [[ "${{ needs.coverage-guard.result }}" != "success" ]] || \
+             [[ "${{ needs.perf-guard.result }}" != "success" ]] || \
+             [[ "${{ needs.lint.result }}" != "success" ]] || \
+             [[ "${{ needs.security.result }}" != "success" ]]; then
+            echo "❌ CI failed - one or more quality gates did not pass"
+            exit 1
+          fi
+          echo "✅ All CI checks passed successfully!"

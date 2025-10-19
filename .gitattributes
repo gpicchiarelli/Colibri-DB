@@ -1,0 +1,4 @@
+* text=auto eol=lf
+*.swift linguist-language=Swift
+docs/* linguist-documentation
+

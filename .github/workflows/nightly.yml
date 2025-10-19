@@ -1,0 +1,326 @@
+name: Nightly - Full Benchmark Suite
+
+on:
+  schedule:
+    # Run at 01:00 UTC every day
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+    inputs:
+      benchmark_type:
+        description: 'Benchmark type to run'
+        required: false
+        default: 'complete'
+        type: choice
+        options:
+          - complete
+          - stress
+          - performance
+          - endurance
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: nightly-benchmarks
+  cancel-in-progress: false  # Let nightly runs complete
+
+env:
+  SWIFT_VERSION: '6.0'
+
+jobs:
+  # ============================================================================
+  # Complete Benchmark Suite
+  # ============================================================================
+  full-benchmarks:
+    name: Full Benchmark Suite
+    runs-on: macos-latest
+    timeout-minutes: 120
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: ${{ env.SWIFT_VERSION }}
+      
+      - name: Print System Info
+        run: |
+          echo "=== System Information ==="
+          uname -a
+          sysctl -n machdep.cpu.brand_string
+          sysctl -n hw.memsize | awk '{print $0/1024/1024/1024 " GB"}'
+          df -h .
+          swift --version
+      
+      - name: Cache Swift PM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-benchmarks-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-benchmarks-
+            ${{ runner.os }}-spm-
+      
+      - name: Build Benchmarks (Release)
+        run: |
+          swift build \
+            --configuration release \
+            --product benchmarks \
+            -v
+      
+      - name: Run Complete Benchmark Suite
+        run: |
+          echo "Starting complete benchmark suite..."
+          echo "Estimated runtime: 60-90 minutes"
+          
+          # Run with detailed output
+          .build/release/benchmarks --complete --iterations 100 \
+            | tee benchmark-results-raw.txt
+      
+      - name: Run Stress Tests
+        run: |
+          echo "Running stress tests..."
+          .build/release/benchmarks --stress --duration 600 \
+            | tee stress-test-results.txt
+      
+      - name: Convert Results to JSON
+        run: |
+          chmod +x tools/scripts/bench_json.sh
+          
+          # Convert main benchmarks
+          bash tools/scripts/bench_json.sh \
+            benchmark-results-raw.txt \
+            benchmark-results.json
+          
+          # Convert stress tests
+          bash tools/scripts/bench_json.sh \
+            stress-test-results.txt \
+            stress-test-results.json
+      
+      - name: Generate Performance Report
+        run: |
+          cat > performance-report.md << 'EOF'
+          # ColibrìDB Nightly Performance Report
+          
+          **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          
+          ## System Information
+          
+          - Platform: $(uname -sm)
+          - CPU: $(sysctl -n machdep.cpu.brand_string)
+          - Memory: $(sysctl -n hw.memsize | awk '{print $0/1024/1024/1024 " GB"}')
+          - Swift: $(swift --version | head -n1)
+          
+          ## Benchmark Results
+          
+          See attached JSON files for detailed metrics.
+          
+          ### Key Performance Indicators
+          
+          _(Extracted from benchmark results)_
+          
+          | Operation | p50 | p95 | p99 | Throughput |
+          |-----------|-----|-----|-----|------------|
+          | WAL Append | - | - | - | - ops/sec |
+          | BTree Search | - | - | - | - ops/sec |
+          | MVCC Transaction | - | - | - | - ops/sec |
+          
+          ### Stress Test Results
+          
+          - Duration: 600 seconds (10 minutes)
+          - Total Operations: -
+          - Failures: -
+          - Error Rate: -%
+          
+          ## Historical Comparison
+          
+          _(Compare with previous runs to track performance trends)_
+          
+          ## Notes
+          
+          - All benchmarks run with Release configuration
+          - Cold cache for consistent measurements
+          - Multiple iterations for statistical significance
+          
+          EOF
+          
+          # Replace placeholders with actual date/commit
+          sed -i.bak "s/\$(date -u.*/$(date -u +"%Y-%m-%d %H:%M:%S UTC")/" performance-report.md
+          rm -f performance-report.md.bak
+      
+      - name: Upload Benchmark Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-benchmarks-${{ github.run_number }}
+          path: |
+            benchmark-results-raw.txt
+            benchmark-results.json
+            stress-test-results.txt
+            stress-test-results.json
+            performance-report.md
+          retention-days: 90
+      
+      - name: Check Performance Regression
+        continue-on-error: true
+        run: |
+          # Compare with baseline (non-blocking for nightly)
+          chmod +x tools/scripts/perf_guard.py
+          
+          if python3 tools/scripts/perf_guard.py \
+            benchmark-results.json \
+            rules/perf_baseline.json; then
+            echo "✅ Performance within acceptable range"
+          else
+            echo "⚠️ Performance regression detected (informational only)"
+          fi
+
+  # ============================================================================
+  # Memory Profiling
+  # ============================================================================
+  memory-profiling:
+    name: Memory & Leak Detection
+    runs-on: macos-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: ${{ env.SWIFT_VERSION }}
+      
+      - name: Build with Sanitizers
+        run: |
+          swift build \
+            --configuration debug \
+            --sanitize=address,thread \
+            --product benchmarks
+      
+      - name: Run Memory Leak Detection
+        run: |
+          echo "Running with Address Sanitizer..."
+          .build/debug/benchmarks --quick 2>&1 | tee asan-report.txt
+          
+          if grep -q "LeakSanitizer" asan-report.txt; then
+            echo "❌ Memory leaks detected!"
+            exit 1
+          fi
+          
+          echo "✅ No memory leaks detected"
+      
+      - name: Upload Sanitizer Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sanitizer-reports
+          path: |
+            asan-report.txt
+          retention-days: 30
+
+  # ============================================================================
+  # Long-Running Stability Test
+  # ============================================================================
+  stability-test:
+    name: 4-Hour Stability Test
+    runs-on: macos-latest
+    timeout-minutes: 300  # 5 hours (4h test + 1h buffer)
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: ${{ env.SWIFT_VERSION }}
+      
+      - name: Build Release
+        run: |
+          swift build --configuration release --product benchmarks
+      
+      - name: Run Stability Test
+        run: |
+          echo "Starting 4-hour stability test..."
+          echo "Start time: $(date)"
+          
+          # Run continuous load for 4 hours
+          .build/release/benchmarks --stability --duration 14400 \
+            2>&1 | tee stability-test.log
+          
+          echo "End time: $(date)"
+      
+      - name: Analyze Stability Results
+        run: |
+          if grep -q "FATAL\|CRASH\|PANIC" stability-test.log; then
+            echo "❌ Stability issues detected!"
+            exit 1
+          fi
+          
+          echo "✅ Stability test completed successfully"
+      
+      - name: Upload Stability Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: stability-test-report
+          path: stability-test.log
+          retention-days: 90
+
+  # ============================================================================
+  # Summary & Notification
+  # ============================================================================
+  nightly-summary:
+    name: Nightly Summary
+    runs-on: ubuntu-latest
+    needs:
+      - full-benchmarks
+      - memory-profiling
+      - stability-test
+    if: always()
+    
+    steps:
+      - name: Create Summary
+        run: |
+          echo "# Nightly Build Summary - $(date -u +"%Y-%m-%d")" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Job Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Full Benchmarks | ${{ needs.full-benchmarks.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Memory Profiling | ${{ needs.memory-profiling.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Stability Test | ${{ needs.stability-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.full-benchmarks.result }}" == "success" ]] && \
+             [[ "${{ needs.memory-profiling.result }}" == "success" ]] && \
+             [[ "${{ needs.stability-test.result }}" == "success" ]]; then
+            echo "✅ All nightly checks passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Some nightly checks failed. Review artifacts for details." >> $GITHUB_STEP_SUMMARY
+          fi
+

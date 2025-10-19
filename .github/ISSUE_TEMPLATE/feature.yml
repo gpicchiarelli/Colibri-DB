@@ -1,0 +1,266 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement for ColibrìDB
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thank you for suggesting a feature!
+        
+        We appreciate your ideas to improve ColibrìDB.
+        
+        **Before submitting:**
+        - Search existing issues to avoid duplicates
+        - Check the [Roadmap](../../docs/wiki/Part-08-Future/) to see if it's planned
+        - Consider if this aligns with the project's goals
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve?
+      placeholder: |
+        Describe the problem or limitation you're facing.
+        Example: "As a database administrator, I need to monitor query performance in real-time, 
+        but currently there's no way to see active queries."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like to solve this problem?
+      placeholder: |
+        Describe your proposed solution in detail.
+        What should the feature do? How should it work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What alternative solutions have you considered?
+      placeholder: |
+        Have you considered other ways to solve this problem?
+        Why is your proposed solution better?
+    validations:
+      required: false
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: Which category does this feature belong to?
+      options:
+        - "Core Engine (WAL, MVCC, Storage)"
+        - "Query Engine (Parser, Planner, Executor)"
+        - "Indexes (B-Tree, new index types)"
+        - "Transactions & Concurrency"
+        - "Performance & Optimization"
+        - "Server & Networking"
+        - "CLI & Tools"
+        - "Monitoring & Observability"
+        - "Security & Authentication"
+        - "Documentation"
+        - "Developer Experience"
+        - "Other"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - "🔴 Critical - Blocking my use case"
+        - "🟠 High - Would significantly improve usability"
+        - "🟡 Medium - Nice to have"
+        - "🟢 Low - Minor improvement"
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe your specific use case
+      placeholder: |
+        What are you trying to accomplish?
+        How would this feature help you?
+        
+        Example: "I'm building a multi-tenant application that needs to isolate data between tenants..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example Usage
+      description: Show how you would use this feature
+      placeholder: |
+        Provide code examples, SQL queries, or API calls showing how you'd use this feature.
+        
+        Example:
+        ```sql
+        -- Enable query monitoring
+        SET query_monitoring = true;
+        
+        -- View active queries
+        SELECT * FROM system.active_queries;
+        ```
+      render: markdown
+    validations:
+      required: false
+
+  - type: textarea
+    id: api-design
+    attributes:
+      label: API Design (if applicable)
+      description: Propose an API design for this feature
+      placeholder: |
+        If this feature requires new APIs, describe them here.
+        
+        Example:
+        ```swift
+        // New API for query monitoring
+        class QueryMonitor {
+            func getActiveQueries() -> [QueryInfo]
+            func cancelQuery(id: QueryID)
+        }
+        ```
+      render: swift
+    validations:
+      required: false
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Breaking Change
+      description: Would this feature introduce breaking changes?
+      options:
+        - "No - Fully backward compatible"
+        - "Maybe - Might affect existing behavior"
+        - "Yes - Would break existing functionality"
+        - "Unsure"
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact Assessment
+      description: What impact would this feature have?
+      placeholder: |
+        Consider:
+        - Performance impact
+        - Complexity added to codebase
+        - Compatibility concerns
+        - Maintenance burden
+        - Learning curve for users
+    validations:
+      required: false
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Ideas
+      description: Do you have ideas on how to implement this?
+      placeholder: |
+        If you have technical knowledge of how this could be implemented, share it here.
+        This is optional but helpful!
+    validations:
+      required: false
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Willingness to Contribute
+      description: Are you willing to help implement this feature?
+      options:
+        - "Yes - I can submit a PR"
+        - "Maybe - With guidance"
+        - "No - Just suggesting"
+    validations:
+      required: true
+
+  - type: textarea
+    id: similar
+    attributes:
+      label: Similar Features in Other Databases
+      description: Are there similar features in other databases?
+      placeholder: |
+        If other databases (PostgreSQL, MySQL, SQLite, etc.) have similar features,
+        describe how they work and how they could inspire this implementation.
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links to relevant resources
+      placeholder: |
+        - Academic papers
+        - Blog posts
+        - Documentation from other projects
+        - Related discussions
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other information about the feature request
+      placeholder: |
+        - Diagrams
+        - Screenshots
+        - Performance considerations
+        - Security implications
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+        - label: I have provided a clear problem statement and proposed solution
+          required: true
+        - label: I have described my use case
+          required: true
+        - label: I have considered the impact of this feature
+          required: true
+        - label: This feature aligns with ColibrìDB's goals as a relational database
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## What happens next?
+        
+        1. **Triage**: Maintainers will review and label your request
+        2. **Discussion**: We may discuss scope, design, and feasibility
+        3. **Approval**: If accepted, it will be added to the roadmap
+        4. **Implementation**: Either by maintainers or community contributors
+        5. **Release**: Feature will be released in a future version
+        
+        **Note**: Not all feature requests can be accepted. We prioritize features that:
+        - Align with the project's vision
+        - Benefit a significant portion of users
+        - Are maintainable and well-scoped
+        - Don't compromise core principles (ACID, performance, reliability)
+        
+        Thank you for helping shape the future of ColibrìDB! 🚀
+

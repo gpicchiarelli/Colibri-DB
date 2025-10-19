@@ -1,0 +1,169 @@
+name: TLA+ Trace Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'tests/traces/**'
+      - 'spec/**'
+      - 'tools/scripts/tla_trace_check.py'
+      - '.github/workflows/trace-check.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'tests/traces/**'
+      - 'spec/**'
+      - 'tools/scripts/tla_trace_check.py'
+
+jobs:
+  validate-traces:
+    name: Validate Test Traces
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Set up Java (for TLC)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Download TLA+ Tools
+        run: |
+          wget -q https://github.com/tlaplus/tlaplus/releases/latest/download/tla2tools.jar
+          echo "TLA+ tools downloaded"
+      
+      - name: Check for trace files
+        id: check_traces
+        run: |
+          if [ -d "tests/traces" ] && [ "$(ls -A tests/traces/*.json 2>/dev/null)" ]; then
+            echo "has_traces=true" >> $GITHUB_OUTPUT
+            echo "Found trace files:"
+            ls -1 tests/traces/*.json || true
+          else
+            echo "has_traces=false" >> $GITHUB_OUTPUT
+            echo "⚠️  No trace files found in tests/traces/"
+          fi
+      
+      - name: Validate WAL Traces
+        if: steps.check_traces.outputs.has_traces == 'true'
+        run: |
+          echo "🔍 Validating WAL traces..."
+          for trace in tests/traces/wal_*.json; do
+            if [ -f "$trace" ]; then
+              echo "  Checking: $trace"
+              python3 tools/scripts/tla_trace_check.py "$trace" WAL || exit 1
+              echo "  ✅ Valid"
+            fi
+          done
+          echo "✅ All WAL traces validated"
+      
+      - name: Validate MVCC Traces
+        if: steps.check_traces.outputs.has_traces == 'true'
+        run: |
+          echo "🔍 Validating MVCC traces..."
+          for trace in tests/traces/mvcc_*.json; do
+            if [ -f "$trace" ]; then
+              echo "  Checking: $trace"
+              python3 tools/scripts/tla_trace_check.py "$trace" MVCC || exit 1
+              echo "  ✅ Valid"
+            fi
+          done
+          echo "✅ All MVCC traces validated"
+      
+      - name: Validate LockManager Traces
+        if: steps.check_traces.outputs.has_traces == 'true'
+        run: |
+          echo "🔍 Validating LockManager traces..."
+          for trace in tests/traces/lock_*.json; do
+            if [ -f "$trace" ]; then
+              echo "  Checking: $trace"
+              python3 tools/scripts/tla_trace_check.py "$trace" LockManager || exit 1
+              echo "  ✅ Valid"
+            fi
+          done
+          echo "✅ All LockManager traces validated"
+      
+      - name: Validate BTree Traces
+        if: steps.check_traces.outputs.has_traces == 'true'
+        run: |
+          echo "🔍 Validating BTree traces..."
+          for trace in tests/traces/btree_*.json; do
+            if [ -f "$trace" ]; then
+              echo "  Checking: $trace"
+              python3 tools/scripts/tla_trace_check.py "$trace" BTree || exit 1
+              echo "  ✅ Valid"
+            fi
+          done
+          echo "✅ All BTree traces validated"
+      
+      - name: Validate BufferPool Traces
+        if: steps.check_traces.outputs.has_traces == 'true'
+        run: |
+          echo "🔍 Validating BufferPool traces..."
+          for trace in tests/traces/buffer_*.json; do
+            if [ -f "$trace" ]; then
+              echo "  Checking: $trace"
+              python3 tools/scripts/tla_trace_check.py "$trace" BufferPool || exit 1
+              echo "  ✅ Valid"
+            fi
+          done
+          echo "✅ All BufferPool traces validated"
+      
+      - name: Validate Recovery Traces
+        if: steps.check_traces.outputs.has_traces == 'true'
+        run: |
+          echo "🔍 Validating Recovery traces..."
+          for trace in tests/traces/recovery_*.json; do
+            if [ -f "$trace" ]; then
+              echo "  Checking: $trace"
+              python3 tools/scripts/tla_trace_check.py "$trace" RECOVERY || exit 1
+              echo "  ✅ Valid"
+            fi
+          done
+          echo "✅ All Recovery traces validated"
+      
+      - name: Summary
+        if: steps.check_traces.outputs.has_traces == 'true'
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "✅ ALL TEST TRACES VALIDATED SUCCESSFULLY"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "Trace validation ensures that:"
+          echo "  • Test executions respect all TLA+ invariants"
+          echo "  • Implementation matches formal specification"
+          echo "  • No safety properties violated at runtime"
+          echo ""
+          total=$(find tests/traces -name "*.json" 2>/dev/null | wc -l)
+          echo "Total traces validated: $total"
+      
+      - name: No Traces Warning
+        if: steps.check_traces.outputs.has_traces == 'false'
+        run: |
+          echo "⚠️  WARNING: No test traces found"
+          echo ""
+          echo "To generate test traces:"
+          echo "  1. Implement TraceLogger in tests"
+          echo "  2. Call toTLA_* refinement mappings"
+          echo "  3. Save traces to tests/traces/"
+          echo ""
+          echo "This check will pass for now, but traces should be added."
+      
+      - name: Upload Failed Traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-traces
+          path: |
+            tests/traces/*.json
+          retention-days: 7
+

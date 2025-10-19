@@ -1,0 +1,10 @@
+# SwiftFormat configuration for ColibriDB
+--indent 4
+--maxwidth 120
+--wraparguments before-first
+--wrapcollections before-first
+--ifdef no-indent
+--importgrouping testable-first
+--self remove
+--stripunusedargs closure-only
+--trimwhitespace nonblank-lines

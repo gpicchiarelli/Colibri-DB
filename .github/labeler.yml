@@ -1,0 +1,283 @@
+# Labeler configuration for ColibrìDB
+# Automatically labels PRs based on changed files
+
+# ==============================================================================
+# Core Components
+# ==============================================================================
+
+'WAL':
+  - changed-files:
+    - any-glob-to-any-file: 
+      - 'Sources/ColibriCore/Storage/WAL/**'
+      - 'Tests/ColibriCoreTests/*WAL*'
+      - 'specs/WAL.*'
+
+'MVCC':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Concurrency/Transactions/MVCC.swift'
+      - 'Sources/ColibriCore/Concurrency/Transactions/VersionStore.swift'
+      - 'Tests/ColibriCoreTests/*MVCC*'
+      - 'specs/MVCC.*'
+
+'Transactions':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Concurrency/Transactions/**'
+      - 'Tests/ColibriCoreTests/*Transaction*'
+      - 'specs/TransactionManager.*'
+
+'Lock Manager':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Concurrency/Transactions/LockManager.swift'
+      - 'Sources/ColibriCore/Concurrency/Transactions/DeadlockDetector.swift'
+      - 'Tests/ColibriCoreTests/*Lock*'
+      - 'specs/LockManager.*'
+
+'BTree':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Storage/Index/BTree*'
+      - 'Tests/ColibriCoreTests/*BTree*'
+      - 'specs/BTree.*'
+
+'Indexes':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Storage/Index/**'
+      - 'Tests/ColibriCoreTests/*Index*'
+
+'Pager':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Storage/Pager/**'
+      - 'Tests/ColibriCoreTests/*Pager*'
+
+'Buffer Pool':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Storage/Buffer/**'
+      - 'Tests/ColibriCoreTests/*Buffer*'
+      - 'specs/BufferPool.*'
+
+'Heap Storage':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Storage/Heap/**'
+      - 'Tests/ColibriCoreTests/*Heap*'
+
+'Storage':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Storage/**'
+
+# ==============================================================================
+# Query Engine
+# ==============================================================================
+
+'SQL Parser':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Query/Parser/**'
+      - 'Tests/ColibriCoreTests/*Parser*'
+
+'Query Planner':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Query/Planner/**'
+      - 'Tests/ColibriCoreTests/*Planner*'
+
+'Query Executor':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Query/Executor/**'
+      - 'Tests/ColibriCoreTests/*Executor*'
+
+'Query':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Query/**'
+
+# ==============================================================================
+# System & Metadata
+# ==============================================================================
+
+'Catalog':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/System/Catalog/**'
+      - 'Tests/ColibriCoreTests/*Catalog*'
+
+'System':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/System/**'
+
+# ==============================================================================
+# Server & Networking
+# ==============================================================================
+
+'Server':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriServer/**'
+      - 'Sources/coldb-server/**'
+      - 'Prototypes/ColibriServerHTTP/**'
+
+'Wire Protocol':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriServer/WireProtocol.swift'
+
+# ==============================================================================
+# CLI & Tools
+# ==============================================================================
+
+'CLI':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibrìCLI/**'
+      - 'Sources/coldb/**'
+      - 'Sources/coldb-dev/**'
+
+# ==============================================================================
+# Testing & Quality
+# ==============================================================================
+
+'Tests':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Tests/**'
+
+'Benchmarks':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/benchmarks/**'
+      - 'benchmark*.txt'
+      - 'run_benchmark*.sh'
+
+'TLA+ Specs':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'specs/**'
+      - 'rules/tla_modules.json'
+
+'Performance':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/benchmarks/**'
+      - 'rules/perf_baseline.json'
+      - 'tools/scripts/perf_guard.py'
+
+# ==============================================================================
+# Documentation
+# ==============================================================================
+
+'Documentation':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docs/**'
+      - 'Documentation/**'
+      - '*.md'
+
+'API Docs':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docs/wiki/API-Reference.md'
+      - 'docs/api/**'
+
+'Wiki':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docs/wiki/**'
+
+# ==============================================================================
+# Configuration & Build
+# ==============================================================================
+
+'Configuration':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Configuration/**'
+      - 'colibridb.conf.json'
+      - '.swiftlint.yml'
+      - '.swiftformat'
+
+'Build System':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Package.swift'
+      - 'Package.resolved'
+      - 'Makefile'
+
+'CI/CD':
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - 'tools/scripts/**'
+
+'Quality Gates':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'rules/**'
+      - 'tools/scripts/*_guard.*'
+
+# ==============================================================================
+# Dependencies & Security
+# ==============================================================================
+
+'Dependencies':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Package.swift'
+      - 'Package.resolved'
+
+'Security':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'SECURITY.md'
+      - '.github/workflows/security*.yml'
+
+# ==============================================================================
+# Severity Labels
+# ==============================================================================
+
+'Critical':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Storage/WAL/**'
+      - 'Sources/ColibriCore/Concurrency/Transactions/MVCC.swift'
+      - 'Sources/ColibriCore/Concurrency/Transactions/LockManager.swift'
+
+'Breaking Change':
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Protocols.swift'
+      - 'Sources/ColibriCore/Types.swift'
+      - 'Sources/ColibriServer/WireProtocol.swift'
+
+# ==============================================================================
+# Special Categories
+# ==============================================================================
+
+'Refactoring':
+  - head-branch: ['refactor/*', 'refactoring/*']
+
+'Bug Fix':
+  - head-branch: ['fix/*', 'bugfix/*', 'hotfix/*']
+
+'Feature':
+  - head-branch: ['feature/*', 'feat/*']
+
+'Maintenance':
+  - head-branch: ['chore/*', 'maint/*', 'maintenance/*']
+
+'Hotfix':
+  - head-branch: ['hotfix/*']
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'Sources/ColibriCore/Storage/WAL/**'
+      - 'Sources/ColibriCore/Concurrency/**'
+

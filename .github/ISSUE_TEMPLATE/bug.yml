@@ -1,0 +1,217 @@
+name: 🐛 Bug Report
+description: Report a bug or unexpected behavior in ColibrìDB
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thank you for reporting a bug!
+        
+        Please fill out this form to help us understand and fix the issue.
+        
+        **Before submitting:**
+        - Search existing issues to avoid duplicates
+        - Make sure you're using the latest version
+        - Check the [Troubleshooting Guide](../../docs/wiki/Troubleshooting.md)
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug
+      placeholder: What happened? What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the behavior
+      placeholder: |
+        1. Start the database with '...'
+        2. Execute query '...'
+        3. Observe error '...'
+      value: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+      placeholder: Describe the expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened
+      placeholder: Describe what actually happened, including any error messages
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - "🔴 Critical - Database crash, data loss, or corruption"
+        - "🟠 High - Major functionality broken"
+        - "🟡 Medium - Functionality impaired but workaround exists"
+        - "🟢 Low - Minor issue or cosmetic problem"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which component is affected?
+      multiple: true
+      options:
+        - "WAL (Write-Ahead Log)"
+        - "MVCC (Transactions)"
+        - "Lock Manager"
+        - "B-Tree Index"
+        - "Storage Engine"
+        - "Buffer Pool"
+        - "Query Parser"
+        - "Query Planner"
+        - "Query Executor"
+        - "System Catalog"
+        - "Server"
+        - "CLI"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: version
+    attributes:
+      label: Version Information
+      description: ColibrìDB version and environment details
+      placeholder: |
+        ColibrìDB version: (e.g., v1.0.0 or git commit hash)
+        OS: (e.g., macOS 14.0, Ubuntu 22.04)
+        Swift version: (run `swift --version`)
+        Architecture: (e.g., arm64, x86_64)
+      value: |
+        - ColibrìDB version: 
+        - OS: 
+        - Swift version: 
+        - Architecture: 
+    validations:
+      required: true
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration
+      description: Relevant configuration settings (if applicable)
+      placeholder: |
+        Paste relevant parts of colibridb.conf.json or startup parameters
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Paste any relevant log output
+      placeholder: |
+        Include logs, error messages, stack traces, etc.
+        TIP: You can attach log files by dragging and dropping them here
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: data
+    attributes:
+      label: Sample Data (if applicable)
+      description: Minimal dataset or schema that reproduces the issue
+      placeholder: |
+        SQL statements to create tables and insert test data
+      render: sql
+    validations:
+      required: false
+
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: Reproducibility
+      description: How often can you reproduce this issue?
+      options:
+        - "Always (100%)"
+        - "Often (50-99%)"
+        - "Sometimes (10-49%)"
+        - "Rarely (<10%)"
+        - "Once"
+    validations:
+      required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: If you found a workaround, please share it
+      placeholder: Describe any workaround you discovered
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or information
+      placeholder: |
+        - Related issues
+        - Possible cause
+        - Debugging attempts
+        - Screenshots
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+        - label: I have provided all requested information
+          required: true
+        - label: I have included steps to reproduce the issue
+          required: true
+        - label: I am using the latest version (or have specified my version)
+          required: true
+        - label: I have checked the troubleshooting guide
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## What happens next?
+        
+        1. **Triage**: Maintainers will review and label your issue
+        2. **Investigation**: We'll investigate and may ask for more information
+        3. **Fix**: If confirmed, we'll work on a fix
+        4. **Release**: Fix will be included in the next release
+        
+        Thank you for helping improve ColibrìDB! 🙏
+

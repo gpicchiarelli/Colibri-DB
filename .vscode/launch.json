@@ -1,0 +1,94 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Debug coldb",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/debug/coldb",
+            "preLaunchTask": "swift: Build Debug coldb"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Release coldb",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/release/coldb",
+            "preLaunchTask": "swift: Build Release coldb"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Debug benchmarks",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/debug/benchmarks",
+            "preLaunchTask": "swift: Build Debug benchmarks"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Release benchmarks",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/release/benchmarks",
+            "preLaunchTask": "swift: Build Release benchmarks"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Debug coldb-server",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/debug/coldb-server",
+            "preLaunchTask": "swift: Build Debug coldb-server"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Release coldb-server",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/release/coldb-server",
+            "preLaunchTask": "swift: Build Release coldb-server"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Debug coldb-dev",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/debug/coldb-dev",
+            "preLaunchTask": "swift: Build Debug coldb-dev"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Release coldb-dev",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/release/coldb-dev",
+            "preLaunchTask": "swift: Build Release coldb-dev"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Debug test-gc",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/debug/test-gc",
+            "preLaunchTask": "swift: Build Debug test-gc"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:Colibrì-DB}",
+            "name": "Release test-gc",
+            "program": "${workspaceFolder:Colibrì-DB}/.build/release/test-gc",
+            "preLaunchTask": "swift: Build Release test-gc"
+        }
+    ]
+}
