@@ -9,7 +9,7 @@ jobs:
   run:
     runs-on: macos-13
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build
         run: |
           swift --version
