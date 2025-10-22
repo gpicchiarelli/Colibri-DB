@@ -308,7 +308,7 @@ public actor QueryExecutor {
     /// Initialize hash join
     /// TLA+ Action: InitHashJoin(opId, leftInput, rightInput, buildSide)
     public func initHashJoin(opId: Int, leftInput: [ExecutorTuple], rightInput: [ExecutorTuple]) {
-        var state = JoinState(joinType: .hash)
+        var state = QueryExecutorJoinState(joinType: .hash)
         state.leftInput = leftInput
         state.rightInput = rightInput
         
@@ -354,7 +354,7 @@ public actor QueryExecutor {
     /// Initialize aggregation operator
     /// TLA+ Action: InitAggregation(opId, groupBy, aggregates)
     public func initAggregation(opId: Int, groupBy: [Int], aggregates: [AggregateSpec]) {
-        var state = AggregationState()
+        var state = QueryExecutorAggregationState()
         state.groupBy = groupBy
         state.aggregates = aggregates
         
@@ -394,7 +394,7 @@ public actor QueryExecutor {
         // Materialize results
         var result: [ExecutorTuple] = []
         for (groupKey, aggValues) in state.hashTable {
-            let tuple = ExecutorTuple(values: groupKey + aggValues, rid: RID(pageId: 0, slotId: 0))
+            let tuple = ExecutorTuple(values: groupKey + aggValues, rid: RID(pageID: 0, slotID: 0))
             result.append(tuple)
         }
         
@@ -435,7 +435,7 @@ public actor QueryExecutor {
     /// Initialize sort operator
     /// TLA+ Action: InitSort(opId, sortKeys)
     public func initSort(opId: Int, sortKeys: [SortKey]) {
-        var state = SortState()
+        var state = QueryExecutorSortState()
         state.sortKeys = sortKeys
         
         sortState[opId] = state
