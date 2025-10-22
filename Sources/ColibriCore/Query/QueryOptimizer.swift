@@ -42,12 +42,12 @@ public actor QueryOptimizer {
     
     /// Optimize a logical query plan
     /// TLA+ Action: Optimize(logicalPlan)
-    public func optimize(logical plan: LogicalPlan) async -> QueryPlanNode {
+    public func optimize(logical plan: LogicalPlan) async -> PlanNode {
         // Step 1: Generate candidate physical plans
         let candidates = await generateCandidates(logical: plan)
         
         // Step 2: Estimate cost for each candidate
-        var bestPlan: QueryPlanNode?
+        var bestPlan: PlanNode?
         var bestCost = Double.infinity
         
         for candidate in candidates {
