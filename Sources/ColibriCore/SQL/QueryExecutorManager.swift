@@ -295,7 +295,7 @@ public actor SQLQueryExecutorManager {
             let predicate = params["predicate"] as? String ?? ""
             try await executeSelection(operatorId: operatorId, predicate: predicate)
         default:
-            throw QueryExecutorManagerError.unknownOperatorType
+            throw SQLQueryExecutorManagerError.unknownOperatorType
         }
     }
     
@@ -305,7 +305,7 @@ public actor SQLQueryExecutorManager {
     /// TLA+ Function: ExecuteScanOperator(operatorId)
     private func executeScanOperator(operatorId: String) async throws {
         guard var scanState = scanStates[operatorId] else {
-            throw QueryExecutorManagerError.operatorNotFound
+            throw SQLQueryExecutorManagerError.operatorNotFound
         }
         
         // TLA+: Scan tuples
@@ -332,7 +332,7 @@ public actor SQLQueryExecutorManager {
     /// TLA+ Function: ExecuteJoinOperator(operatorId)
     private func executeJoinOperator(operatorId: String) async throws {
         guard var joinState = joinStates[operatorId] else {
-            throw QueryExecutorManagerError.operatorNotFound
+            throw SQLQueryExecutorManagerError.operatorNotFound
         }
         
         // TLA+: Join tuples
@@ -361,7 +361,7 @@ public actor SQLQueryExecutorManager {
     /// TLA+ Function: ExecuteAggregationOperator(operatorId)
     private func executeAggregationOperator(operatorId: String) async throws {
         guard var aggState = aggStates[operatorId] else {
-            throw QueryExecutorManagerError.operatorNotFound
+            throw SQLQueryExecutorManagerError.operatorNotFound
         }
         
         // TLA+: Aggregate tuples
@@ -400,7 +400,7 @@ public actor SQLQueryExecutorManager {
     /// TLA+ Function: ExecuteSortOperator(operatorId)
     private func executeSortOperator(operatorId: String) async throws {
         guard var sortState = sortStates[operatorId] else {
-            throw QueryExecutorManagerError.operatorNotFound
+            throw SQLQueryExecutorManagerError.operatorNotFound
         }
         
         // TLA+: Sort tuples
@@ -618,8 +618,8 @@ public protocol IndexManager: Sendable {
     func searchIndex(tableName: String, column: String, value: Value) async throws -> [RID]
 }
 
-/// Query executor manager error
-public enum QueryExecutorManagerError: Error, LocalizedError {
+/// SQL query executor manager error
+public enum SQLQueryExecutorManagerError: Error, LocalizedError {
     case operatorNotFound
     case unknownOperatorType
     case executionFailed

@@ -201,7 +201,7 @@ public actor QueryExecutor {
     /// Initialize sequential scan
     /// TLA+ Action: InitSeqScan(opId, tableName)
     public func initSeqScan(opId: Int, tableName: String) {
-        scanState[opId] = ScanState(table: tableName, scanType: .sequential)
+        scanState[opId] = QueryExecutorScanState(table: tableName, scanType: .sequential)
         outputBuffer[opId] = []
         pipelineActive[opId] = true
     }
@@ -216,14 +216,14 @@ public actor QueryExecutor {
         // Fetch next tuple (simplified - would scan heap table)
         if let rid = state.currentRID {
             // Get next RID
-            state.currentRID = RID(pageId: rid.pageId, slotId: rid.slotId + 1)
+            state.currentRID = RID(pageID: rid.pageID, slotID: rid.slotID + 1)
         } else {
             // Start scan
-            state.currentRID = RID(pageId: 1, slotId: 0)
+            state.currentRID = RID(pageID: 1, slotID: 0)
         }
         
         // Check if exhausted
-        if state.currentRID!.pageId > 100 {  // Simplified
+        if state.currentRID!.pageID > 100 {  // Simplified
             state.exhausted = true
             scanState[opId] = state
             return nil
@@ -241,7 +241,7 @@ public actor QueryExecutor {
     /// Initialize index scan
     /// TLA+ Action: InitIndexScan(opId, tableName, indexName, searchKey)
     public func initIndexScan(opId: Int, tableName: String, indexName: String, searchKey: Value) {
-        var state = ScanState(table: tableName, scanType: .index)
+        var state = QueryExecutorScanState(table: tableName, scanType: .index)
         state.indexName = indexName
         state.predicate = "\(searchKey)"
         
