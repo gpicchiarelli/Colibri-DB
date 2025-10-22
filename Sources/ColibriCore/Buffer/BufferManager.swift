@@ -556,12 +556,6 @@ public actor BufferManager {
 // MARK: - Supporting Types
 
 
-/// Disk manager
-public protocol DiskManager: Sendable {
-    func readPage(pageId: PageID) async throws -> Data
-    func writePage(pageId: PageID, data: Data) async throws
-    func deletePage(pageId: PageID) async throws
-}
 
 /// Buffer error
 public enum BufferError: Error, LocalizedError {

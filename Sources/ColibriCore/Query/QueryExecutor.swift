@@ -148,7 +148,7 @@ public struct QueryExecutorSortState {
     }
 }
 
-public struct SortKey {
+public struct SortKey: Sendable {
     public let column: Int
     public let order: SortOrder
     
