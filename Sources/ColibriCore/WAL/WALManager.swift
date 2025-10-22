@@ -18,32 +18,6 @@ import Foundation
 
 // MARK: - WAL Types
 
-/// LSN (Log Sequence Number)
-/// Corresponds to TLA+: LSN
-public typealias LSN = UInt64
-
-/// Page ID
-/// Corresponds to TLA+: PageID
-public typealias PageID = UInt64
-
-/// Transaction ID
-/// Corresponds to TLA+: TxID
-public typealias TxID = UInt64
-
-/// WAL record kind
-/// Corresponds to TLA+: WALRecordKind
-public enum WALRecordKind: String, Codable, Sendable, CaseIterable {
-    case insert = "insert"
-    case update = "update"
-    case delete = "delete"
-    case commit = "commit"
-    case abort = "abort"
-    case checkpoint = "checkpoint"
-    case begin = "begin"
-    case prepare = "prepare"
-    case rollback = "rollback"
-}
-
 /// WAL record
 /// Corresponds to TLA+: WALRecord
 public protocol WALRecord: Codable, Sendable {
@@ -107,18 +81,6 @@ public struct WALRecordHeader: Codable, Sendable, Equatable {
     }
 }
 
-/// Group commit configuration
-public struct GroupCommitConfig: Codable, Sendable, Equatable {
-    public let maxBatchSize: Int
-    public let maxWaitTimeMs: UInt64
-    public let flushThreshold: Int
-    
-    public init(maxBatchSize: Int, maxWaitTimeMs: UInt64, flushThreshold: Int) {
-        self.maxBatchSize = maxBatchSize
-        self.maxWaitTimeMs = maxWaitTimeMs
-        self.flushThreshold = flushThreshold
-    }
-}
 
 /// Disk manager
 public protocol DiskManager: Sendable {

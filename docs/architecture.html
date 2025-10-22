@@ -1,810 +1,192 @@
 ---
 layout: default
-title: Architettura - Colibrì DB
-description: Architettura modulare dettagliata di Colibrì DB con specifiche TLA+ e componenti implementati
+title: Architettura di Colibrì DB
+description: Architettura modulare derivata dai file Swift del progetto: storage, MVCC, query planner, distribuzione e observability collegati alle rispettive specifiche TLA+.
 ---
 
-<style>
-/* Architecture Page Specific Styles */
-.hero {
-    background: var(--gradient-hero);
-    padding: var(--space-20) 0;
-    text-align: center;
-}
-
-.hero h1 {
-    font-size: clamp(2.5rem, 6vw, 4rem);
-    font-weight: var(--font-light);
-    color: var(--primary);
-    margin-bottom: var(--space-6);
-    letter-spacing: -0.02em;
-}
-
-.hero p {
-    font-size: var(--text-xl);
-    color: var(--gray-600);
-    max-width: 700px;
-    margin: 0 auto;
-}
-
-/* Architecture Overview */
-.architecture-overview {
-    padding: var(--space-20) 0;
-    background: var(--white);
-}
-
-.section-title {
-    text-align: center;
-    font-size: clamp(2rem, 4vw, 3rem);
-    font-weight: var(--font-light);
-    color: var(--primary);
-    margin-bottom: var(--space-8);
-    letter-spacing: -0.02em;
-}
-
-.section-subtitle {
-    text-align: center;
-    font-size: var(--text-xl);
-    color: var(--gray-600);
-    margin-bottom: var(--space-12);
-    max-width: 700px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-/* Architecture Diagram */
-.architecture-diagram {
-    background: var(--gray-50);
-    border-radius: var(--radius-2xl);
-    padding: var(--space-12);
-    margin: var(--space-8) 0;
-    border: 1px solid var(--gray-200);
-    box-shadow: var(--shadow-md);
-}
-
-.arch-layer {
-    background: var(--white);
-    border: 2px solid var(--gray-300);
-    border-radius: var(--radius-xl);
-    padding: var(--space-6);
-    margin: var(--space-4) 0;
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-base);
-    position: relative;
-}
-
-.arch-layer:hover {
-    border-color: var(--secondary);
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-}
-
-.arch-layer h4 {
-    color: var(--primary);
-    margin-bottom: var(--space-3);
-    font-weight: var(--font-semibold);
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    font-size: var(--text-lg);
-}
-
-.arch-layer p {
-    color: var(--gray-600);
-    font-size: var(--text-sm);
-    margin-bottom: var(--space-3);
-}
-
-.arch-layer .layer-number {
-    background: var(--secondary);
-    color: var(--white);
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--text-sm);
-    font-weight: var(--font-bold);
-}
-
-.arch-components {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--space-2);
-    margin-top: var(--space-3);
-}
-
-.component {
-    background: var(--gray-100);
-    padding: var(--space-2) var(--space-3);
-    border-radius: var(--radius-lg);
-    font-size: var(--text-xs);
-    color: var(--gray-700);
-    text-align: center;
-    font-weight: var(--font-medium);
-}
-
-/* TLA+ Specifications */
-.tla-specs {
-    background: var(--gray-50);
-    padding: var(--space-20) 0;
-}
-
-.specs-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: var(--space-6);
-    margin-top: var(--space-12);
-}
-
-.spec-card {
-    background: var(--white);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-xl);
-    padding: var(--space-6);
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-base);
-}
-
-.spec-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--gray-300);
-}
-
-.spec-card h4 {
-    color: var(--primary);
-    margin-bottom: var(--space-3);
-    font-weight: var(--font-semibold);
-    font-size: var(--text-lg);
-}
-
-.spec-card p {
-    color: var(--gray-600);
-    font-size: var(--text-sm);
-    line-height: 1.5;
-    margin-bottom: var(--space-4);
-}
-
-.spec-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-    margin-top: var(--space-3);
-}
-
-.spec-tag {
-    background: var(--gray-100);
-    color: var(--gray-700);
-    padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius-lg);
-    font-size: var(--text-xs);
-    font-weight: var(--font-medium);
-}
-
-.spec-tag.tla { background: var(--accent); color: var(--white); }
-.spec-tag.invariant { background: var(--success); color: var(--white); }
-.spec-tag.liveness { background: var(--info); color: var(--white); }
-
-/* Module Details */
-.module-details {
-    padding: var(--space-20) 0;
-    background: var(--white);
-}
-
-.module-tabs {
-    display: flex;
-    gap: var(--space-2);
-    margin-bottom: var(--space-8);
-    border-bottom: 1px solid var(--gray-200);
-    overflow-x: auto;
-    padding-bottom: var(--space-2);
-}
-
-.module-tab {
-    padding: var(--space-4) var(--space-6);
-    background: none;
-    border: none;
-    color: var(--gray-600);
-    font-weight: var(--font-medium);
-    cursor: pointer;
-    transition: all var(--transition-base);
-    border-bottom: 2px solid transparent;
-    white-space: nowrap;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-
-.module-tab.active {
-    color: var(--primary);
-    border-bottom-color: var(--secondary);
-    background: var(--gray-50);
-}
-
-.module-tab:hover {
-    color: var(--primary);
-    background: var(--gray-50);
-}
-
-.module-content {
-    display: none;
-}
-
-.module-content.active {
-    display: block;
-}
-
-.module-info {
-    background: var(--gray-50);
-    border-radius: var(--radius-xl);
-    padding: var(--space-8);
-    margin-bottom: var(--space-8);
-}
-
-.module-info h3 {
-    color: var(--primary);
-    margin-bottom: var(--space-4);
-    font-size: var(--text-2xl);
-    font-weight: var(--font-semibold);
-}
-
-.module-info p {
-    color: var(--gray-600);
-    margin-bottom: var(--space-4);
-    line-height: 1.6;
-    font-size: var(--text-base);
-}
-
-.module-features {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: var(--space-6);
-}
-
-.module-feature {
-    background: var(--white);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-xl);
-    padding: var(--space-6);
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-base);
-}
-
-.module-feature:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.module-feature h4 {
-    color: var(--primary);
-    margin-bottom: var(--space-3);
-    font-size: var(--text-lg);
-    font-weight: var(--font-semibold);
-}
-
-.module-feature p {
-    color: var(--gray-600);
-    font-size: var(--text-sm);
-    line-height: 1.5;
-}
-
-/* Code Examples */
-.code-example {
-    background: var(--gray-900);
-    border-radius: var(--radius-xl);
-    padding: var(--space-8);
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
-    line-height: 1.6;
-    color: var(--gray-100);
-    overflow-x: auto;
-    box-shadow: var(--shadow-xl);
-    position: relative;
-    margin: var(--space-6) 0;
-}
-
-.code-example::before {
-    content: '';
-    position: absolute;
-    top: var(--space-4);
-    left: var(--space-4);
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--error);
-    box-shadow: 20px 0 0 var(--warning), 40px 0 0 var(--success);
-}
-
-.code-example pre {
-    margin: 0;
-    padding-top: var(--space-6);
-}
-
-.code-comment { color: var(--gray-500); }
-.code-keyword { color: #FF79C6; }
-.code-string { color: #F1FA8C; }
-.code-function { color: #50FA7B; }
-.code-type { color: #8BE9FD; }
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .module-tabs {
-        flex-direction: column;
-        gap: var(--space-1);
-    }
-    
-    .module-tab {
-        border-radius: var(--radius-lg);
-        border-bottom: 1px solid var(--gray-200);
-    }
-    
-    .module-features {
-        grid-template-columns: 1fr;
-    }
-    
-    .arch-components {
-        grid-template-columns: 1fr;
-    }
-    
-    .specs-grid {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
-
-<!-- Hero Section -->
-<section class="hero">
-    <div class="container">
-        <h1>Architettura Modulare</h1>
-        <p>Design enterprise-grade con specifiche TLA+ complete e separazione delle responsabilità</p>
-    </div>
+<section class="hero hero--sub">
+  <div class="shell hero__inner hero__inner--compact">
+    <span class="hero__eyebrow">Sorgenti Swift come blueprint</span>
+    <h1 class="hero__title">Architettura modulare, TLA+ allineata</h1>
+    <p class="hero__lede">
+      Il runtime descritto in <code>Sources/ColibriCore</code> separa chiaramente buffering, transazioni, query e
+      distribuzione. Ogni attore Swift rimanda al proprio modulo TLA+, permettendo di collegare invarianti formali e
+      comportamento concreto.
+    </p>
+  </div>
 </section>
 
-<!-- Architecture Overview -->
-<section class="architecture-overview">
-    <div class="container">
-        <h2 class="section-title">🏗️ Architettura a Livelli</h2>
-        <p class="section-subtitle">
-            Design modulare con interfacce ben definite e verifiche formali complete
+<section class="section">
+  <div class="shell">
+    <header class="section__header">
+      <span class="section__eyebrow">Layer principali</span>
+      <h2 class="section__title">Dal disco al consensus: blocchi indipendenti</h2>
+      <p class="section__lede">
+        Il repository modella ogni funzione vitale dentro un sotto-pacchetto. Navigare la cartella <code>Sources/ColibriCore</code>
+        equivale a seguire il percorso dei dati dopo un comando SQL.
+      </p>
+    </header>
+    <div class="layer-map">
+      <article class="layer-map__group">
+        <div class="layer-map__title">
+          <span>Storage &amp; Buffering</span>
+          <code>Storage</code>
+        </div>
+        <ul class="layer-map__list">
+          <li><code>BufferPool/BufferPool.swift</code> – cache clock-sweep con pin-count, dirty set e LSN.</li>
+          <li><code>Storage/HeapTable.swift</code> – pagine slotted, free list e gestione tombstone.</li>
+          <li><code>Storage/StorageManager.swift</code> – astrazione IO su file e page manager.</li>
+          <li><code>WAL/FileWAL.swift</code> – ARIES, prevLSN, dirty page table e group commit.</li>
+        </ul>
+      </article>
+      <article class="layer-map__group">
+        <div class="layer-map__title">
+          <span>Transazioni &amp; MVCC</span>
+          <code>Transaction</code>
+        </div>
+        <ul class="layer-map__list">
+          <li><code>Transaction/TransactionManager.swift</code> – lifecycle, commit, abort e log tail.</li>
+          <li><code>Transaction/LockManager.swift</code> – lock intent, wait-for graph e deadlock detection.</li>
+          <li><code>MVCC/MVCCManager.swift</code> – snapshot isolation, version chain, vacuum cooperativo.</li>
+          <li><code>TwoPhaseCommit/TwoPhaseCommitManager.swift</code> – coordinamento prepare/commit distribuito.</li>
+        </ul>
+      </article>
+      <article class="layer-map__group">
+        <div class="layer-map__title">
+          <span>Catalogo &amp; Query</span>
+          <code>SQL / Query</code>
+        </div>
+        <ul class="layer-map__list">
+          <li><code>SQL/SQLProcessor.swift</code> – parsing, rewrite e validazione DDL/DML.</li>
+          <li><code>Catalog/Catalog.swift</code> – metadati di tabelle, indici e constraint.</li>
+          <li><code>Planner/QueryPlanner.swift</code> – costruzione di piani logici.</li>
+          <li><code>Query/QueryExecutor.swift</code> – operatori fisici (scan, join hash/sort, aggregate).</li>
+          <li><code>Optimization/OptimizationManager.swift</code> – strategie cost-based e feedback runtime.</li>
+        </ul>
+      </article>
+      <article class="layer-map__group">
+        <div class="layer-map__title">
+          <span>Distribuzione</span>
+          <code>Distributed</code>
+        </div>
+        <ul class="layer-map__list">
+          <li><code>Consensus/RaftConsensusManager.swift</code> – log matching, election safety e heartbeat.</li>
+          <li><code>DistributedQuery/DistributedQuery.swift</code> – coordinamento federato delle query.</li>
+          <li><code>Sharding/ShardingManager.swift</code> – partizionamento logico e routing.</li>
+          <li><code>Replication/ReplicationManager.swift</code> – repliche calde e policy di sync.</li>
+          <li><code>DistributedTx</code> – protocolli per coordinare transazioni tra shard.</li>
+        </ul>
+      </article>
+      <article class="layer-map__group">
+        <div class="layer-map__title">
+          <span>Osservabilità &amp; Sicurezza</span>
+          <code>Monitoring / Security</code>
+        </div>
+        <ul class="layer-map__list">
+          <li><code>Monitoring/Monitor.swift</code> – metriche, threshold e health routing.</li>
+          <li><code>Performance/Benchmarking.swift</code> – profili di carico e analisi runtime.</li>
+          <li><code>Security/Authentication.swift</code> – hashing, sessioni e utente admin.</li>
+          <li><code>Security/RolesPermissions.swift</code> – ruoli, privilegi e policy row-level.</li>
+          <li><code>Policy/PolicyManager.swift</code> – quote, limiti e retention.</li>
+        </ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section section--muted">
+  <div class="shell">
+    <header class="section__header">
+      <span class="section__eyebrow">Lifecycle della query</span>
+      <h2 class="section__title">Sequenza di esecuzione secondo il codice Swift</h2>
+      <p class="section__lede">
+        Dalla connessione al commit, ogni passaggio è implementato in un attore o manager dedicato. I punti chiave sono
+        annotati con invarianti TLA+ direttamente nel file sorgente.
+      </p>
+    </header>
+    <ol class="timeline">
+      <li class="timeline__item">
+        <h3 class="timeline__title">Connessione e autenticazione</h3>
+        <p><code>MultiTenancy/ConnectionPooling.swift</code> consegna connessioni attive, mentre <code>Security/Authentication.swift</code> valida credenziali e sessioni.</p>
+      </li>
+      <li class="timeline__item">
+        <h3 class="timeline__title">Parsing e pianificazione</h3>
+        <p><code>SQL/SQLProcessor.swift</code> analizza la query, <code>Planner/QueryPlanner.swift</code> genera il piano logico e <code>Optimization/OptimizationManager.swift</code> sceglie strategie fisiche.</p>
+      </li>
+      <li class="timeline__item">
+        <h3 class="timeline__title">Esecuzione e accesso dati</h3>
+        <p><code>Query/QueryExecutor.swift</code> esegue operatori; si interfaccia con <code>BufferPool</code>, <code>HeapTable</code> e <code>IndexManager.swift</code> per scansioni ed accessi indicizzati.</p>
+      </li>
+      <li class="timeline__item">
+        <h3 class="timeline__title">Commit e replica</h3>
+        <p><code>TransactionManager</code> registra record nel WAL tramite <code>FileWAL.swift</code>; eventuali transazioni distribuite passano da <code>TwoPhaseCommitManager.swift</code>, con replica assicurata da <code>ReplicationManager.swift</code>.</p>
+      </li>
+      <li class="timeline__item">
+        <h3 class="timeline__title">Monitoraggio e feedback</h3>
+        <p><code>Monitoring/Monitor.swift</code> aggiorna metriche e stato, fornendo input a <code>Performance/Benchmarking.swift</code> e alle policy di tuning automatico.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section">
+  <div class="shell">
+    <header class="section__header">
+      <span class="section__eyebrow">Resilienza</span>
+      <h2 class="section__title">Recupero, backup e gestione errori interni</h2>
+      <p class="section__lede">
+        I componenti di protezione lavorano di concerto con WAL e storage. Il codice Swift implementa i passaggi REDO/UNDO
+        e i piani di backup integrandosi con il catalogo.
+      </p>
+    </header>
+    <div class="grid grid--three">
+      <article class="card">
+        <span class="badge">Recovery</span>
+        <h3 class="card__title">ARIES step-by-step</h3>
+        <p class="card__body">
+          <code>Recovery/ARIESRecovery.swift</code> definisce passaggi di analysis, redo e undo; le strutture DPT e transaction table
+          sono popolate tramite <code>FileWAL.swift</code> e <code>TransactionManager</code>.
         </p>
-        
-        <div class="architecture-diagram">
-            <div class="arch-layer">
-                <h4><span class="layer-number">1</span> 🎯 SQL Interface & CLI</h4>
-                <p>Parser SQL completo, CLI amministrativa e interfacce programmatiche Swift</p>
-                <div class="arch-components">
-                    <div class="component">SQL Parser</div>
-                    <div class="component">CLI Tool</div>
-                    <div class="component">Swift API</div>
-                    <div class="component">Query Interface</div>
-                </div>
-            </div>
-            
-            <div class="arch-layer">
-                <h4><span class="layer-number">2</span> 🧠 Query Processor</h4>
-                <p>Planner cost-based, operatori Volcano e ottimizzazione query avanzata</p>
-                <div class="arch-components">
-                    <div class="component">Query Planner</div>
-                    <div class="component">Volcano Iterator</div>
-                    <div class="component">Cost Optimizer</div>
-                    <div class="component">Plan Cache</div>
-                </div>
-            </div>
-            
-            <div class="arch-layer">
-                <h4><span class="layer-number">3</span> ⚡ Transaction Manager</h4>
-                <p>MVCC, lock manager, 2PC e gestione concorrenza enterprise</p>
-                <div class="arch-components">
-                    <div class="component">MVCC Engine</div>
-                    <div class="component">Lock Manager</div>
-                    <div class="component">2PC Protocol</div>
-                    <div class="component">Snapshot Manager</div>
-                </div>
-            </div>
-            
-            <div class="arch-layer">
-                <h4><span class="layer-number">4</span> 🚀 Index Manager</h4>
-                <p>B+Tree, indici pluggabili e gestione indici avanzata</p>
-                <div class="arch-components">
-                    <div class="component">B+Tree Engine</div>
-                    <div class="component">Hash Indexes</div>
-                    <div class="component">ART Indexes</div>
-                    <div class="component">Index Validator</div>
-                </div>
-            </div>
-            
-            <div class="arch-layer">
-                <h4><span class="layer-number">5</span> 🗄️ Storage Engine</h4>
-                <p>Heap storage, buffer pool e WAL con recovery completo</p>
-                <div class="arch-components">
-                    <div class="component">Heap Storage</div>
-                    <div class="component">Buffer Pool</div>
-                    <div class="component">WAL Engine</div>
-                    <div class="component">Recovery System</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- TLA+ Specifications -->
-<section class="tla-specs">
-    <div class="container">
-        <h2 class="section-title">🔬 Specifiche TLA+ Complete</h2>
-        <p class="section-subtitle">
-            149 specifiche TLA+ modulari con invarianti e proprietà di liveness verificate
+      </article>
+      <article class="card">
+        <span class="badge">Backup</span>
+        <h3 class="card__title">Snapshot e retention</h3>
+        <p class="card__body">
+          <code>Backup/BackupManager.swift</code> orchestra snapshot e restore; sincronizza il catalogo con <code>CatalogManager.swift</code>
+          e rispetta le policy definite in <code>Policy/PolicyManager.swift</code>.
         </p>
-        
-        <div class="specs-grid">
-            <div class="spec-card">
-                <h4>Schema Evolution</h4>
-                <p>Gestione evoluzione schema con migrazioni online e compatibilità backward/forward.</p>
-                <div class="spec-tags">
-                    <span class="spec-tag tla">TLA+</span>
-                    <span class="spec-tag invariant">Invariants</span>
-                    <span class="spec-tag liveness">Liveness</span>
-                </div>
-            </div>
-            
-            <div class="spec-card">
-                <h4>Statistics Maintenance</h4>
-                <p>Aggiornamento statistiche per query optimizer con histogrammi e cardinalità.</p>
-                <div class="spec-tags">
-                    <span class="spec-tag tla">TLA+</span>
-                    <span class="spec-tag invariant">Invariants</span>
-                    <span class="spec-tag liveness">Liveness</span>
-                </div>
-            </div>
-            
-            <div class="spec-card">
-                <h4>Connection Pooling</h4>
-                <p>Gestione pool connessioni con multi-tenancy e load balancing.</p>
-                <div class="spec-tags">
-                    <span class="spec-tag tla">TLA+</span>
-                    <span class="spec-tag invariant">Invariants</span>
-                    <span class="spec-tag liveness">Liveness</span>
-                </div>
-            </div>
-            
-            <div class="spec-card">
-                <h4>Memory Management</h4>
-                <p>Gestione memoria avanzata con arena allocator e garbage collection.</p>
-                <div class="spec-tags">
-                    <span class="spec-tag tla">TLA+</span>
-                    <span class="spec-tag invariant">Invariants</span>
-                    <span class="spec-tag liveness">Liveness</span>
-                </div>
-            </div>
-            
-            <div class="spec-card">
-                <h4>Compression</h4>
-                <p>Compressione dati con algoritmi pluggabili e dizionari adattivi.</p>
-                <div class="spec-tags">
-                    <span class="spec-tag tla">TLA+</span>
-                    <span class="spec-tag invariant">Invariants</span>
-                    <span class="spec-tag liveness">Liveness</span>
-                </div>
-            </div>
-            
-            <div class="spec-card">
-                <h4>Monitoring</h4>
-                <p>Sistema di monitoraggio con metriche Prometheus e alerting.</p>
-                <div class="spec-tags">
-                    <span class="spec-tag tla">TLA+</span>
-                    <span class="spec-tag invariant">Invariants</span>
-                    <span class="spec-tag liveness">Liveness</span>
-                </div>
-            </div>
-            
-            <div class="spec-card">
-                <h4>Backup & Restore</h4>
-                <p>Sistema completo di backup con compressione e crittografia.</p>
-                <div class="spec-tags">
-                    <span class="spec-tag tla">TLA+</span>
-                    <span class="spec-tag invariant">Invariants</span>
-                    <span class="spec-tag liveness">Liveness</span>
-                </div>
-            </div>
-            
-            <div class="spec-card">
-                <h4>Point-in-Time Recovery</h4>
-                <p>Recovery temporale con WAL replay e checkpoint.</p>
-                <div class="spec-tags">
-                    <span class="spec-tag tla">TLA+</span>
-                    <span class="spec-tag invariant">Invariants</span>
-                    <span class="spec-tag liveness">Liveness</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Module Details -->
-<section class="module-details">
-    <div class="container">
-        <h2 class="section-title">📦 Dettagli Moduli</h2>
-        <p class="section-subtitle">
-            Implementazione dettagliata di ogni componente con esempi di codice
+      </article>
+      <article class="card">
+        <span class="badge">Fault handling</span>
+        <h3 class="card__title">Controllo degli errori</h3>
+        <p class="card__body">
+          <code>ErrorRecovery</code> e <code>Utilities</code> includono circuit breaker, retry con backoff e strumenti di audit
+          usati da <code>ColibrìDB</code> per mantenere consistenza anche in presenza di crash.
         </p>
-        
-        <div class="module-tabs">
-            <button class="module-tab active" onclick="showModule('schema')">Schema Evolution</button>
-            <button class="module-tab" onclick="showModule('statistics')">Statistics</button>
-            <button class="module-tab" onclick="showModule('pooling')">Connection Pooling</button>
-            <button class="module-tab" onclick="showModule('memory')">Memory Management</button>
-            <button class="module-tab" onclick="showModule('compression')">Compression</button>
-            <button class="module-tab" onclick="showModule('monitoring')">Monitoring</button>
-            <button class="module-tab" onclick="showModule('backup')">Backup</button>
-            <button class="module-tab" onclick="showModule('pitr')">PITR</button>
-        </div>
-        
-        <!-- Schema Evolution Module -->
-        <div id="schema" class="module-content active">
-            <div class="module-info">
-                <h3>Schema Evolution</h3>
-                <p>
-                    Gestisce l'evoluzione dello schema database con migrazioni online, compatibilità backward/forward 
-                    e validazione constraint. Supporta operazioni DDL atomiche e rollback sicuri.
-                </p>
-            </div>
-            
-            <div class="module-features">
-                <div class="module-feature">
-                    <h4>DDL Operations</h4>
-                    <p>CREATE, ALTER, DROP con supporto per operazioni atomiche e rollback.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Migration System</h4>
-                    <p>Sistema di migrazione con versioning e compatibilità garantita.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Constraint Validation</h4>
-                    <p>Validazione constraint con supporto per NOT NULL, UNIQUE, CHECK, FOREIGN KEY.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Online Changes</h4>
-                    <p>Modifiche schema online senza downtime per operazioni critiche.</p>
-                </div>
-            </div>
-            
-            <div class="code-example">
-                <pre><code><span class="code-comment">// Esempio di migrazione schema</span>
-<span class="code-keyword">let</span> <span class="code-function">migration</span> = <span class="code-type">SchemaMigration</span>(
-    <span class="code-string">version</span>: <span class="code-string">"1.1.0"</span>,
-    <span class="code-string">description</span>: <span class="code-string">"Add email column to users table"</span>,
-    <span class="code-string">ddl</span>: <span class="code-string">"ALTER TABLE users ADD COLUMN email VARCHAR(255)"</span>
-)
-
-<span class="code-keyword">try</span> <span class="code-function">await</span> <span class="code-type">schemaManager</span>.<span class="code-function">applyMigration</span>(migration)</code></pre>
-            </div>
-        </div>
-        
-        <!-- Statistics Module -->
-        <div id="statistics" class="module-content">
-            <div class="module-info">
-                <h3>Statistics Maintenance</h3>
-                <p>
-                    Mantiene statistiche aggiornate per il query optimizer, inclusi histogrammi, cardinalità 
-                    e distribuzione dei valori. Supporta aggiornamenti incrementali e validazione automatica.
-                </p>
-            </div>
-            
-            <div class="module-features">
-                <div class="module-feature">
-                    <h4>Histogram Generation</h4>
-                    <p>Generazione automatica di histogrammi per distribuzione valori.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Cardinality Estimation</h4>
-                    <p>Stima cardinalità per ottimizzazione query cost-based.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Incremental Updates</h4>
-                    <p>Aggiornamenti incrementali per performance ottimali.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Auto Validation</h4>
-                    <p>Validazione automatica e correzione statistiche obsolete.</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Connection Pooling Module -->
-        <div id="pooling" class="module-content">
-            <div class="module-info">
-                <h3>Connection Pooling</h3>
-                <p>
-                    Gestisce pool di connessioni con multi-tenancy, load balancing e gestione risorse 
-                    per milioni di connessioni logiche. Supporta isolamento tenant e QoS.
-                </p>
-            </div>
-            
-            <div class="module-features">
-                <div class="module-feature">
-                    <h4>Multi-Tenancy</h4>
-                    <p>Supporto completo per multi-tenancy con isolamento garantito.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Load Balancing</h4>
-                    <p>Bilanciamento carico intelligente tra pool di connessioni.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Resource Management</h4>
-                    <p>Gestione risorse con QoS e limiti per tenant.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Health Monitoring</h4>
-                    <p>Monitoraggio salute connessioni e recovery automatico.</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Memory Management Module -->
-        <div id="memory" class="module-content">
-            <div class="module-info">
-                <h3>Memory Management</h3>
-                <p>
-                    Gestione memoria avanzata con arena allocator, garbage collection e deframmentazione 
-                    automatica. Ottimizzato per Apple Silicon con allocazioni zero-copy.
-                </p>
-            </div>
-            
-            <div class="module-features">
-                <div class="module-feature">
-                    <h4>Arena Allocator</h4>
-                    <p>Allocatore arena per gestione memoria efficiente.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Garbage Collection</h4>
-                    <p>GC automatico con strategie pluggabili.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Defragmentation</h4>
-                    <p>Deframmentazione automatica per ottimizzazione memoria.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Zero-Copy</h4>
-                    <p>Allocazioni zero-copy per performance Apple Silicon.</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Compression Module -->
-        <div id="compression" class="module-content">
-            <div class="module-info">
-                <h3>Compression</h3>
-                <p>
-                    Compressione dati con algoritmi pluggabili, dizionari adattivi e ottimizzazione 
-                    storage. Supporta LZ4, Zstandard e algoritmi custom.
-                </p>
-            </div>
-            
-            <div class="module-features">
-                <div class="module-feature">
-                    <h4>Pluggable Algorithms</h4>
-                    <p>Algoritmi di compressione pluggabili (LZ4, Zstd, custom).</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Adaptive Dictionaries</h4>
-                    <p>Dizionari adattivi per compressione ottimale.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Storage Optimization</h4>
-                    <p>Ottimizzazione storage con compressione intelligente.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Performance Tuning</h4>
-                    <p>Auto-tuning per bilanciamento compressione/performance.</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Monitoring Module -->
-        <div id="monitoring" class="module-content">
-            <div class="module-info">
-                <h3>Monitoring</h3>
-                <p>
-                    Sistema di monitoraggio completo con metriche Prometheus, alerting e health check 
-                    automatici. Dashboard real-time e analisi performance.
-                </p>
-            </div>
-            
-            <div class="module-features">
-                <div class="module-feature">
-                    <h4>Prometheus Metrics</h4>
-                    <p>Metriche Prometheus native per monitoring enterprise.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Real-time Dashboard</h4>
-                    <p>Dashboard real-time per monitoring operativo.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Alerting System</h4>
-                    <p>Sistema di alerting con soglie configurabili.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Health Checks</h4>
-                    <p>Health check automatici con recovery proattivo.</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Backup Module -->
-        <div id="backup" class="module-content">
-            <div class="module-info">
-                <h3>Backup & Restore</h3>
-                <p>
-                    Sistema completo di backup con compressione, crittografia e restore incrementale. 
-                    Supporta backup distribuiti e verifica integrità automatica.
-                </p>
-            </div>
-            
-            <div class="module-features">
-                <div class="module-feature">
-                    <h4>Incremental Backup</h4>
-                    <p>Backup incrementali per efficienza storage.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Encryption</h4>
-                    <p>Crittografia end-to-end per sicurezza dati.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Distributed Storage</h4>
-                    <p>Supporto backup distribuiti e replicazione.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Integrity Verification</h4>
-                    <p>Verifica integrità automatica con checksum.</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- PITR Module -->
-        <div id="pitr" class="module-content">
-            <div class="module-info">
-                <h3>Point-in-Time Recovery</h3>
-                <p>
-                    Recovery temporale con WAL replay, checkpoint e restore a timestamp specifici. 
-                    Supporta recovery granulare e verifica consistenza.
-                </p>
-            </div>
-            
-            <div class="module-features">
-                <div class="module-feature">
-                    <h4>WAL Replay</h4>
-                    <p>Replay WAL per recovery temporale preciso.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Checkpoint System</h4>
-                    <p>Sistema checkpoint per recovery efficiente.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Granular Recovery</h4>
-                    <p>Recovery granulare per tabelle specifiche.</p>
-                </div>
-                <div class="module-feature">
-                    <h4>Consistency Verification</h4>
-                    <p>Verifica consistenza post-recovery automatica.</p>
-                </div>
-            </div>
-        </div>
+      </article>
     </div>
+  </div>
 </section>
 
-<script>
-function showModule(moduleId) {
-    // Hide all module contents
-    const contents = document.querySelectorAll('.module-content');
-    contents.forEach(content => content.classList.remove('active'));
-    
-    // Remove active class from all tabs
-    const tabs = document.querySelectorAll('.module-tab');
-    tabs.forEach(tab => tab.classList.remove('active'));
-    
-    // Show selected module content
-    document.getElementById(moduleId).classList.add('active');
-    
-    // Add active class to clicked tab
-    event.target.classList.add('active');
-}
-</script>
+<section class="section section--muted">
+  <div class="shell">
+    <header class="section__header section__header--center">
+      <span class="section__eyebrow">Collegamenti rapidi</span>
+      <h2 class="section__title">Passa dal diagramma al file concreto</h2>
+    </header>
+    <div class="highlight-grid">
+      <div class="highlight">
+        <strong>Schema completo</strong>
+        <p>Consulta il codice di <code>Sources/ColibriCore/Database/ColibrìDB.swift</code> per vedere come gli attori vengono istanziati e collegati.</p>
+      </div>
+      <div class="highlight">
+        <strong>Specifica formale</strong>
+        <p>I commenti nei file indicano il modulo TLA+ corrispondente: ad esempio <code>spec/WAL.tla</code> per il WAL e <code>spec/ConsensusProtocol.tla</code> per Raft.</p>
+      </div>
+      <div class="highlight">
+        <strong>Server esterno</strong>
+        <p><code>Sources/ColibriServer/Server.swift</code> integra il core in un listener HTTP con concurrency via <code>Network</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>

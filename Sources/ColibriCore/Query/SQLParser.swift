@@ -16,19 +16,19 @@ public enum SQLToken {
 }
 
 public enum SQLParserStatement {
-    case select(columns: [String], table: String, whereClause: SQLParserSQLParserExpression?)
+    case select(columns: [String], table: String, whereClause: SQLParserExpression?)
     case insert(table: String, columns: [String], values: [Value])
-    case update(table: String, assignments: [(String, Value)], whereClause: SQLParserSQLParserExpression?)
-    case delete(table: String, whereClause: SQLParserSQLParserExpression?)
+    case update(table: String, assignments: [(String, Value)], whereClause: SQLParserExpression?)
+    case delete(table: String, whereClause: SQLParserExpression?)
     case createTable(name: String, columns: [ColumnDefinition])
     case dropTable(name: String)
 }
 
-public enum SQLParserSQLParserExpression {
+public indirect enum SQLParserExpression {
     case column(String)
     case literal(Value)
-    case binaryOp(BinaryOperator, SQLParserSQLParserExpression, SQLParserSQLParserExpression)
-    case unaryOp(UnaryOperator, SQLParserSQLParserExpression)
+    case binaryOp(BinaryOperator, SQLParserExpression, SQLParserExpression)
+    case unaryOp(UnaryOperator, SQLParserExpression)
 }
 
 public enum BinaryOperator {

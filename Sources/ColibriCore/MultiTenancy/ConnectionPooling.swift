@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct PooledConnection {
+public struct PooledConnection: Sendable {
     public let id: UUID
     public let createdAt: Date
     public var lastUsed: Date
