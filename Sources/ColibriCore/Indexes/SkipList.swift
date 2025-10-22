@@ -5,6 +5,9 @@
 
 import Foundation
 
+// Use the Value type from Core/Types.swift
+typealias Value = ColibriCore.Value
+
 private class SkipListNode {
     let key: Value
     var rids: [RID]

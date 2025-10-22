@@ -130,7 +130,7 @@ public actor IndexSubsystem {
         )
         
         indexRegistry[indexName] = definition
-        indexStats[indexName] = IndexStatistics(indexName: indexName)
+        indexStats[indexName] = IndexStatistics(indexName: indexName, size: 0, height: 0, selectivity: 100.0)
         
         // Create appropriate index structure
         switch indexType {
@@ -242,10 +242,13 @@ public actor IndexSubsystem {
             $0.value.columns.contains(column)
         }
         
-        guard let (indexName, definition) = candidateIndexes.min(by: {
-            (indexStats[$0.key]?.selectivity ?? 100) <
-            (indexStats[$1.key]?.selectivity ?? 100)
-        }) else {
+        let bestIndex = candidateIndexes.min { index1, index2 in
+            let selectivity1 = indexStats[index1.key]?.selectivity ?? 100
+            let selectivity2 = indexStats[index2.key]?.selectivity ?? 100
+            return selectivity1 < selectivity2
+        }
+        
+        guard let (indexName, definition) = bestIndex else {
             throw IndexSubsystemError.noSuitableIndex(table: tableName, column: column)
         }
         
@@ -267,10 +270,13 @@ public actor IndexSubsystem {
             $0.value.columns.first == whereColumn
         }
         
-        guard let (bestIndexName, _) = candidates.min(by: {
-            (indexStats[$0.key]?.selectivity ?? 100) <
-            (indexStats[$1.key]?.selectivity ?? 100)
-        }) else {
+        let bestCandidate = candidates.min { index1, index2 in
+            let selectivity1 = indexStats[index1.key]?.selectivity ?? 100
+            let selectivity2 = indexStats[index2.key]?.selectivity ?? 100
+            return selectivity1 < selectivity2
+        }
+        
+        guard let (bestIndexName, _) = bestCandidate else {
             return nil
         }
         

@@ -9,6 +9,9 @@
 
 import Foundation
 
+// Use the Value type from Core/Types.swift
+typealias Value = ColibriCore.Value
+
 // MARK: - Version Structure
 
 /// Version structure with full MVCC metadata

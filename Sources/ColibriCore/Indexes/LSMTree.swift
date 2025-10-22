@@ -12,6 +12,9 @@
 
 import Foundation
 
+// Use the Value type from Core/Types.swift
+typealias Value = ColibriCore.Value
+
 /// LSM-Tree Level
 private class LSMLevel {
     var sstables: [SSTable] = []
