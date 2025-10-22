@@ -188,7 +188,7 @@ public actor TransactionManager {
     // MARK: - Dependencies
     
     /// WAL manager
-    private let walManager: WALManager
+    private let walManager: TransactionWALManager
     
     /// MVCC manager
     private let mvccManager: TransactionMVCCManager
@@ -699,8 +699,8 @@ public actor TransactionManager {
 
 // MARK: - Supporting Types
 
-/// WAL manager
-public protocol WALManager: Sendable {
+/// Transaction WAL manager
+public protocol TransactionWALManager: Sendable {
     func appendRecord(txId: TxID, kind: String, data: Data) async throws -> LSN
     func flushLog() async throws
 }
