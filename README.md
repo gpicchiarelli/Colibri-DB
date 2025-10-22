@@ -216,6 +216,4 @@ Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi [LICENSE]
 
 **[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibri-DB)** • **[📖 Documentazione](https://gpicchiarelli.github.io/Colibri-DB/docs/)** • **[🐛 Segnala problemi](https://github.com/gpicchiarelli/Colibri-DB/issues)** • **[💬 Discussioni](https://github.com/gpicchiarelli/Colibri-DB/discussions)**
 
-**ColibrìDB: Dove la Teoria Incontra la Pratica** 🚀
-
 </div>
