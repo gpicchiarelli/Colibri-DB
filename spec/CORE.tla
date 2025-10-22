@@ -45,7 +45,8 @@ Timestamp == Nat
 
 \* Record Identifier (pageId, slotId) - points to a tuple location
 \* In implementation: RID struct
-RID == [pageId: PageId, slotId: Nat]
+\* Fixed: More precise type definitions with proper constraints
+RID == [pageId: PageIds, slotId: Nat]
 
 (* --------------------------------------------------------------------------
    DATABASE VALUES
@@ -126,13 +127,14 @@ WALRecordKind == {
 \* Abstract WAL record structure
 \* In implementation: WALRecord protocol + specific record types
 \* Based on ARIES paper (Mohan et al., 1992) - Figure 3
+\* Fixed: More precise type definitions with proper constraints
 WALRecord == [
-  lsn: LSN,
-  prevLSN: LSN,        \* Previous LSN for same transaction (undo chain)
+  lsn: LSNs,
+  prevLSN: LSNs,        \* Previous LSN for same transaction (undo chain)
   kind: WALRecordKind,
-  txId: TxId,
-  pageId: PageId,
-  undoNextLSN: LSN     \* For CLR records - next LSN to undo
+  txId: TxIds,
+  pageId: PageIds,
+  undoNextLSN: LSNs     \* For CLR records - next LSN to undo
 ]
 
 (* --------------------------------------------------------------------------
@@ -144,10 +146,11 @@ PAGE_MAGIC == 0x434F4C49  \* 'COLI'
 
 \* Page header structure
 \* In implementation: PageHeader struct
+\* Fixed: More precise type definitions with proper constraints
 PageHeader == [
   magic: {PAGE_MAGIC},
-  pageId: PageId,
-  pageLSN: LSN,
+  pageId: PageIds,
+  pageLSN: LSNs,
   freeStart: Nat,
   freeEnd: Nat,
   slotCount: Nat,

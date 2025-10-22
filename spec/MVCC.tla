@@ -46,23 +46,25 @@ mvccVars == <<versions, activeTx, committedTx, abortedTx, snapshots,
    -------------------------------------------------------------------------- *)
 
 \* Version structure with full MVCC metadata
+\* Fixed: More precise type definitions with proper constraints
 Version == [
   value: Value,
-  beginTx: TxId,          \* Transaction that created this version
-  endTx: TxId \union {0}, \* Transaction that deleted/updated (0 = active)
+  beginTx: TxIds,          \* Transaction that created this version
+  endTx: TxIds \union {0}, \* Transaction that deleted/updated (0 = active)
   beginTS: Timestamp,     \* Commit timestamp when version became visible
   endTS: Timestamp \union {0}, \* Commit timestamp when version became invisible
-  createdBy: TxId,        \* Original creator (for conflict detection)
-  deletedBy: TxId \union {0}   \* Deleter/updater (0 = not deleted)
+  createdBy: TxIds,        \* Original creator (for conflict detection)
+  deletedBy: TxIds \union {0}   \* Deleter/updater (0 = not deleted)
 ]
 
 \* Snapshot for transaction isolation
+\* Fixed: More precise type definitions with proper constraints
 Snapshot == [
-  txId: TxId,
+  txId: TxIds,
   startTS: Timestamp,          \* Transaction start timestamp
   xmin: Timestamp,             \* Oldest transaction that was active at start
   xmax: Timestamp,             \* Next transaction ID at snapshot time
-  activeTxAtStart: SUBSET TxId  \* Set of transactions active when snapshot taken
+  activeTxAtStart: SUBSET TxIds  \* Set of transactions active when snapshot taken
 ]
 
 (* --------------------------------------------------------------------------

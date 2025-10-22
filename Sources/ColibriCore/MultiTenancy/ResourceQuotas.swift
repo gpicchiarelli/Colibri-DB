@@ -44,7 +44,7 @@ public actor ResourceQuotaManager {
     // MARK: - State
     
     private var quotas: [String: ResourceQuota] = [:]  // database -> quota
-    private var usage: [String: ResourceUsage] = [:]   // database -> usage
+    private var usage: [String: MultiTenancyResourceUsage] = [:]   // database -> usage
     
     // MARK: - Quota Management
     
@@ -57,7 +57,7 @@ public actor ResourceQuotaManager {
     }
     
     /// Check if resource can be allocated
-    public func canAllocate(database: String, resource: ResourceType, amount: Int) -> Bool {
+    public func canAllocate(database: String, resource: MultiTenancyResourceType, amount: Int) -> Bool {
         guard let quota = quotas[database],
               var currentUsage = usage[database] else {
             return true  // No quota = unlimited
@@ -83,7 +83,7 @@ public actor ResourceQuotaManager {
     }
     
     /// Allocate resource
-    public func allocate(database: String, resource: ResourceType, amount: Int) throws {
+    public func allocate(database: String, resource: MultiTenancyResourceType, amount: Int) throws {
         guard canAllocate(database: database, resource: resource, amount: amount) else {
             throw DBError.internalError("Resource quota exceeded")
         }
@@ -133,8 +133,8 @@ public actor ResourceQuotaManager {
     }
 }
 
-/// Resource types
-public enum ResourceType {
+/// Multi-tenancy resource types
+public enum MultiTenancyResourceType {
     case connections
     case memory
     case storage
