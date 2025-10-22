@@ -17,41 +17,26 @@ import Foundation
 
 // MARK: - Heap Table Types
 
-
-
-/// Page header
-/// Corresponds to TLA+: PageHeader
-public struct PageHeader: Codable, Sendable, Equatable {
-    public let pageId: PageID
-    public let slotCount: Int
-    public let freeStart: Int
-    public let freeEnd: Int
-    public let checksum: UInt32
-    public let timestamp: UInt64
+/// Extended Page structure for HeapTableManager
+public struct HeapPage: Sendable {
+    public var pageID: PageID
+    public var header: PageHeader
+    public var slots: [PageSlot]
+    public var data: Data
+    public var lsn: LSN
+    public var isDirty: Bool
+    public var isPinned: Bool
+    public var timestamp: UInt64
     
-    public init(pageId: PageID, slotCount: Int, freeStart: Int, freeEnd: Int, checksum: UInt32, timestamp: UInt64) {
-        self.pageId = pageId
-        self.slotCount = slotCount
-        self.freeStart = freeStart
-        self.freeEnd = freeEnd
-        self.checksum = checksum
-        self.timestamp = timestamp
-    }
-}
-
-/// Page slot
-/// Corresponds to TLA+: PageSlot
-public struct PageSlot: Codable, Sendable, Equatable {
-    public let offset: Int
-    public let length: Int
-    public let isTombstone: Bool
-    public let timestamp: UInt64
-    
-    public init(offset: Int, length: Int, isTombstone: Bool, timestamp: UInt64) {
-        self.offset = offset
-        self.length = length
-        self.isTombstone = isTombstone
-        self.timestamp = timestamp
+    public init(pageID: PageID) {
+        self.pageID = pageID
+        self.header = PageHeader(pageID: pageID)
+        self.slots = []
+        self.data = Data(count: PAGE_SIZE)
+        self.lsn = 0
+        self.isDirty = false
+        self.isPinned = false
+        self.timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
     }
 }
 
@@ -65,7 +50,7 @@ public actor HeapTableManager {
     
     /// Pages
     /// TLA+: pages \in [PageID -> Page]
-    private var pages: [PageID: Page] = [:]
+    private var pages: [PageID: HeapPage] = [:]
     
     /// Free list
     /// TLA+: freeList \in Set(PageID)
@@ -106,22 +91,21 @@ public actor HeapTableManager {
         }
         
         // TLA+: Find page with space
-        let pageId = try await findPageWithSpace(rowSize: calculateRowSize(row))
+        let pageID = try await findPageWithSpace(rowSize: calculateRowSize(row))
         
         // TLA+: Get page
-        guard var page = pages[pageId] else {
+        guard var page = pages[pageID] else {
             throw HeapTableManagerError.pageNotFound
         }
         
         // TLA+: Calculate offset
-        let offset = page.header.freeEnd - calculateRowSize(row)
+        let offset = Int(page.header.freeEnd) - calculateRowSize(row)
         
         // TLA+: Create slot
         let slot = PageSlot(
-            offset: offset,
-            length: calculateRowSize(row),
-            isTombstone: false,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+            offset: UInt16(offset),
+            length: UInt16(calculateRowSize(row)),
+            tombstone: false
         )
         
         // TLA+: Update page
@@ -129,32 +113,30 @@ public actor HeapTableManager {
         newSlots.append(slot)
         
         let newHeader = PageHeader(
-            pageId: pageId,
-            slotCount: page.header.slotCount + 1,
-            freeStart: page.header.freeStart,
-            freeEnd: offset,
-            checksum: calculatePageChecksum(page: page),
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+            pageID: pageID,
+            pageLSN: page.header.pageLSN
         )
+        newHeader.slotCount = UInt16(page.header.slotCount + 1)
+        newHeader.freeStart = page.header.freeStart
+        newHeader.freeEnd = UInt16(offset)
+        newHeader.checksum = calculatePageChecksum(page: page)
         
-        let newPage = Page(
-            pageId: pageId,
-            header: newHeader,
-            slots: newSlots,
-            data: page.data,
-            lsn: page.lsn,
-            isDirty: true,
-            isPinned: page.isPinned,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
-        )
+        let newPage = HeapPage(pageID: pageID)
+        newPage.header = newHeader
+        newPage.slots = newSlots
+        newPage.data = page.data
+        newPage.lsn = page.lsn
+        newPage.isDirty = true
+        newPage.isPinned = page.isPinned
+        newPage.timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
         
-        pages[pageId] = newPage
+        pages[pageID] = newPage
         
         // TLA+: Add to allocated RIDs
         allocatedRIDs.insert(rid)
         
         // TLA+: Update free space tracking
-        try await updateFreeSpaceTracking(pageId: pageId)
+        try await updateFreeSpaceTracking(pageID: pageID)
         
         print("Inserted row: \(rid)")
     }
@@ -168,12 +150,12 @@ public actor HeapTableManager {
         }
         
         // TLA+: Find page containing RID
-        guard let pageId = findPageContainingRID(rid: rid) else {
+        guard let pageID = findPageContainingRID(rid: rid) else {
             throw HeapTableManagerError.ridNotFound
         }
         
         // TLA+: Get page
-        guard var page = pages[pageId] else {
+        guard var page = pages[pageID] else {
             throw HeapTableManagerError.pageNotFound
         }
         
@@ -187,28 +169,25 @@ public actor HeapTableManager {
         newSlots[slotIndex] = PageSlot(
             offset: newSlots[slotIndex].offset,
             length: newSlots[slotIndex].length,
-            isTombstone: true,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+            tombstone: true
         )
         
-        let newPage = Page(
-            pageId: pageId,
-            header: page.header,
-            slots: newSlots,
-            data: page.data,
-            lsn: page.lsn,
-            isDirty: true,
-            isPinned: page.isPinned,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
-        )
+        let newPage = HeapPage(pageID: pageID)
+        newPage.header = page.header
+        newPage.slots = newSlots
+        newPage.data = page.data
+        newPage.lsn = page.lsn
+        newPage.isDirty = true
+        newPage.isPinned = page.isPinned
+        newPage.timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
         
-        pages[pageId] = newPage
+        pages[pageID] = newPage
         
         // TLA+: Remove from allocated RIDs
         allocatedRIDs.remove(rid)
         
         // TLA+: Update free space tracking
-        try await updateFreeSpaceTracking(pageId: pageId)
+        try await updateFreeSpaceTracking(pageID: pageID)
         
         print("Deleted row: \(rid)")
     }
@@ -222,12 +201,12 @@ public actor HeapTableManager {
         }
         
         // TLA+: Find page containing RID
-        guard let pageId = findPageContainingRID(rid: rid) else {
+        guard let pageID = findPageContainingRID(rid: rid) else {
             return nil
         }
         
         // TLA+: Get page
-        guard let page = pages[pageId] else {
+        guard let page = pages[pageID] else {
             return nil
         }
         
@@ -239,7 +218,7 @@ public actor HeapTableManager {
         let slot = page.slots[slotIndex]
         
         // TLA+: Check if slot is tombstone
-        guard !slot.isTombstone else {
+        guard !slot.tombstone else {
             return nil
         }
         
@@ -260,12 +239,12 @@ public actor HeapTableManager {
         }
         
         // TLA+: Find page containing RID
-        guard let pageId = findPageContainingRID(rid: rid) else {
+        guard let pageID = findPageContainingRID(rid: rid) else {
             throw HeapTableManagerError.ridNotFound
         }
         
         // TLA+: Get page
-        guard var page = pages[pageId] else {
+        guard var page = pages[pageID] else {
             throw HeapTableManagerError.pageNotFound
         }
         
@@ -277,7 +256,7 @@ public actor HeapTableManager {
         let slot = page.slots[slotIndex]
         
         // TLA+: Check if slot is tombstone
-        guard !slot.isTombstone else {
+        guard !slot.tombstone else {
             throw HeapTableManagerError.slotIsTombstone
         }
         
@@ -293,7 +272,7 @@ public actor HeapTableManager {
         // TLA+: Update row data
         let newRowData = serializeRowData(row)
         let newPage = updateRowData(page: page, slot: slot, newRowData: newRowData)
-        pages[pageId] = newPage
+        pages[pageID] = newPage
         
         print("Updated row: \(rid)")
     }
@@ -304,27 +283,27 @@ public actor HeapTableManager {
     /// TLA+ Function: FindPageWithSpace(rowSize)
     private func findPageWithSpace(rowSize: Int) async throws -> PageID {
         // TLA+: Check free list
-        for pageId in freeList {
-            if let page = pages[pageId] {
+        for pageID in freeList {
+            if let page = pages[pageID] {
                 if hasFreeSpace(page: page, requiredSize: rowSize) {
-                    return pageId
+                    return pageID
                 }
             }
         }
         
         // TLA+: Create new page
-        let newPageId = generateNewPageID()
-        let newPage = createNewPage(pageId: newPageId)
-        pages[newPageId] = newPage
-        freeList.insert(newPageId)
+        let newPageID = generateNewPageID()
+        let newPage = createNewPage(pageID: newPageID)
+        pages[newPageID] = newPage
+        freeList.insert(newPageID)
         
-        return newPageId
+        return newPageID
     }
     
     /// Check if page has free space
     /// TLA+ Function: HasFreeSpace(page, requiredSize)
-    private func hasFreeSpace(page: Page, requiredSize: Int) -> Bool {
-        let freeSpace = page.header.freeEnd - page.header.freeStart
+    private func hasFreeSpace(page: HeapPage, requiredSize: Int) -> Bool {
+        let freeSpace = Int(page.header.freeEnd) - Int(page.header.freeStart)
         return freeSpace >= requiredSize
     }
     
@@ -336,7 +315,7 @@ public actor HeapTableManager {
     
     /// Calculate page checksum
     /// TLA+ Function: CalculatePageChecksum(page)
-    private func calculatePageChecksum(page: Page) -> UInt32 {
+    private func calculatePageChecksum(page: HeapPage) -> UInt32 {
         // Simplified checksum calculation
         return UInt32(page.data.hashValue)
     }
@@ -346,9 +325,9 @@ public actor HeapTableManager {
     private func findPageContainingRID(rid: RID) -> PageID? {
         // This would require a more complex implementation to track RID to page mapping
         // For now, we'll search through all pages
-        for (pageId, page) in pages {
+        for (pageID, page) in pages {
             if findSlotForRID(page: page, rid: rid) != nil {
-                return pageId
+                return pageID
             }
         }
         return nil
@@ -356,7 +335,7 @@ public actor HeapTableManager {
     
     /// Find slot for RID
     /// TLA+ Function: FindSlotForRID(page, rid)
-    private func findSlotForRID(page: Page, rid: RID) -> Int? {
+    private func findSlotForRID(page: HeapPage, rid: RID) -> Int? {
         // This would require a more complex implementation to track RID to slot mapping
         // For now, we'll return nil
         return nil
@@ -364,9 +343,9 @@ public actor HeapTableManager {
     
     /// Read row data
     /// TLA+ Function: ReadRowData(page, slot)
-    private func readRowData(page: Page, slot: PageSlot) -> Data {
-        let startIndex = slot.offset
-        let endIndex = slot.offset + slot.length
+    private func readRowData(page: HeapPage, slot: PageSlot) -> Data {
+        let startIndex = Int(slot.offset)
+        let endIndex = Int(slot.offset) + Int(slot.length)
         return page.data.subdata(in: startIndex..<endIndex)
     }
     
@@ -388,25 +367,25 @@ public actor HeapTableManager {
     
     /// Update row data
     /// TLA+ Function: UpdateRowData(page, slot, newRowData)
-    private func updateRowData(page: Page, slot: PageSlot, newRowData: Data) -> Page {
+    private func updateRowData(page: HeapPage, slot: PageSlot, newRowData: Data) -> HeapPage {
         var newData = page.data
-        let startIndex = slot.offset
-        let endIndex = slot.offset + slot.length
+        let startIndex = Int(slot.offset)
+        let endIndex = Int(slot.offset) + Int(slot.length)
         
         if endIndex <= newData.count {
             newData.replaceSubrange(startIndex..<endIndex, with: newRowData)
         }
         
-        return Page(
-            pageId: page.pageId,
-            header: page.header,
-            slots: page.slots,
-            data: newData,
-            lsn: page.lsn,
-            isDirty: true,
-            isPinned: page.isPinned,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
-        )
+        let newPage = HeapPage(pageID: page.pageID)
+        newPage.header = page.header
+        newPage.slots = page.slots
+        newPage.data = newData
+        newPage.lsn = page.lsn
+        newPage.isDirty = true
+        newPage.isPinned = page.isPinned
+        newPage.timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
+        
+        return newPage
     }
     
     /// Generate new page ID
@@ -416,57 +395,49 @@ public actor HeapTableManager {
     }
     
     /// Create new page
-    /// TLA+ Function: CreateNewPage(pageId)
-    private func createNewPage(pageId: PageID) -> Page {
-        let header = PageHeader(
-            pageId: pageId,
-            slotCount: 0,
-            freeStart: 0,
-            freeEnd: 4096, // Page size
-            checksum: 0,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
-        )
+    /// TLA+ Function: CreateNewPage(pageID)
+    private func createNewPage(pageID: PageID) -> HeapPage {
+        let page = HeapPage(pageID: pageID)
+        page.header.slotCount = 0
+        page.header.freeStart = UInt16(MemoryLayout<PageHeader>.size)
+        page.header.freeEnd = UInt16(PAGE_SIZE)
+        page.header.checksum = 0
+        page.lsn = 0
+        page.isDirty = false
+        page.isPinned = false
+        page.timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
         
-        return Page(
-            pageId: pageId,
-            header: header,
-            slots: [],
-            data: Data(count: 4096),
-            lsn: 0,
-            isDirty: false,
-            isPinned: false,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
-        )
+        return page
     }
     
     /// Update free space tracking
-    /// TLA+ Function: UpdateFreeSpaceTracking(pageId)
-    private func updateFreeSpaceTracking(pageId: PageID) async throws {
-        guard let page = pages[pageId] else {
+    /// TLA+ Function: UpdateFreeSpaceTracking(pageID)
+    private func updateFreeSpaceTracking(pageID: PageID) async throws {
+        guard let page = pages[pageID] else {
             return
         }
         
-        let freeSpace = page.header.freeEnd - page.header.freeStart
+        let freeSpace = Int(page.header.freeEnd) - Int(page.header.freeStart)
         
         if freeSpace > 0 {
-            freeList.insert(pageId)
+            freeList.insert(pageID)
         } else {
-            freeList.remove(pageId)
+            freeList.remove(pageID)
         }
     }
     
     /// Check if slots are non-overlapping
     /// TLA+ Function: SlotsNonOverlapping(page)
-    private func slotsNonOverlapping(page: Page) -> Bool {
-        let slots = page.slots.filter { !$0.isTombstone }
+    private func slotsNonOverlapping(page: HeapPage) -> Bool {
+        let slots = page.slots.filter { !$0.tombstone }
         
         for i in 0..<slots.count {
             for j in (i+1)..<slots.count {
                 let slot1 = slots[i]
                 let slot2 = slots[j]
                 
-                if (slot1.offset < slot2.offset + slot2.length) &&
-                   (slot2.offset < slot1.offset + slot1.length) {
+                if (Int(slot1.offset) < Int(slot2.offset) + Int(slot2.length)) &&
+                   (Int(slot2.offset) < Int(slot1.offset) + Int(slot1.length)) {
                     return false
                 }
             }
@@ -477,13 +448,13 @@ public actor HeapTableManager {
     
     /// Check if page is valid
     /// TLA+ Function: ValidPage(page)
-    private func validPage(page: Page) -> Bool {
+    private func validPage(page: HeapPage) -> Bool {
         // Check basic page validity
-        return page.header.pageId == page.pageId &&
+        return page.header.pageID == page.pageID &&
                page.header.slotCount >= 0 &&
                page.header.freeStart >= 0 &&
                page.header.freeEnd >= page.header.freeStart &&
-               page.header.freeEnd <= 4096 &&
+               page.header.freeEnd <= UInt16(PAGE_SIZE) &&
                slotsNonOverlapping(page: page)
     }
     
@@ -505,12 +476,12 @@ public actor HeapTableManager {
     }
     
     /// Get page
-    public func getPage(pageId: PageID) -> Page? {
-        return pages[pageId]
+    public func getPage(pageID: PageID) -> Page? {
+        return pages[pageID]
     }
     
     /// Get all pages
-    public func getAllPages() -> [PageID: Page] {
+    public func getAllPages() -> [PageID: HeapPage] {
         return pages
     }
     
@@ -531,9 +502,9 @@ public actor HeapTableManager {
         var totalUsedSpace = 0
         
         for page in pages.values {
-            totalSlots += page.header.slotCount
-            totalFreeSpace += (page.header.freeEnd - page.header.freeStart)
-            totalUsedSpace += (4096 - (page.header.freeEnd - page.header.freeStart))
+            totalSlots += Int(page.header.slotCount)
+            totalFreeSpace += (Int(page.header.freeEnd) - Int(page.header.freeStart))
+            totalUsedSpace += (PAGE_SIZE - (Int(page.header.freeEnd) - Int(page.header.freeStart)))
         }
         
         return [
@@ -583,7 +554,7 @@ public actor HeapTableManager {
             if page.header.freeEnd < page.header.freeStart {
                 return false
             }
-            if page.header.freeEnd > 4096 {
+            if page.header.freeEnd > UInt16(PAGE_SIZE) {
                 return false
             }
         }
@@ -617,10 +588,10 @@ public actor HeapTableManager {
 
 /// Buffer pool manager
 public protocol BufferPoolManager: Sendable {
-    func getPage(pageId: PageID) async throws -> Page
-    func putPage(page: Page) async throws
-    func pinPage(pageId: PageID) async throws
-    func unpinPage(pageId: PageID) async throws
+    func getPage(pageID: PageID) async throws -> HeapPage
+    func putPage(page: HeapPage) async throws
+    func pinPage(pageID: PageID) async throws
+    func unpinPage(pageID: PageID) async throws
 }
 
 /// WAL manager
