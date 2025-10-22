@@ -18,9 +18,9 @@ import Foundation
 
 // MARK: - Distributed Query Types
 
-/// Query fragment
+/// Distributed query fragment
 /// Corresponds to TLA+: QueryFragment
-public struct QueryFragment: Codable, Sendable, Equatable {
+public struct DistributedQueryFragment: Codable, Sendable, Equatable {
     public let fragmentId: String
     public let nodeId: String
     public let queryText: String
@@ -76,7 +76,7 @@ public actor DistributedQueryManager {
     
     /// Fragments
     /// TLA+: fragments \in [String -> QueryFragment]
-    private var fragments: [String: QueryFragment] = [:]
+    private var fragments: [String: DistributedQueryFragment] = [:]
     
     /// Results
     /// TLA+: results \in [String -> QueryResult]
@@ -122,7 +122,7 @@ public actor DistributedQueryManager {
         // TLA+: Create fragments for each node
         for (index, nodeId) in nodes.enumerated() {
             let fragmentId = "fragment_\(index)_\(nodeId)"
-            let fragment = QueryFragment(
+            let fragment = DistributedQueryFragment(
                 fragmentId: fragmentId,
                 nodeId: nodeId,
                 queryText: query,
