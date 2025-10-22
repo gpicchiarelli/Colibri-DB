@@ -67,8 +67,8 @@ public enum WireProtocolMessageType: String, Codable {
 
 // MARK: - Transaction States (TLA+: TransactionStates)
 
-/// Transaction state (PostgreSQL-like)
-public enum TransactionState: String, Codable {
+/// Wire protocol transaction state (PostgreSQL-like)
+public enum WireTransactionState: String, Codable {
     case idle = "IDLE"              // Not in transaction (I)
     case inTransaction = "IN_TRANSACTION"  // In transaction block (T)
     case failed = "FAILED"          // Failed transaction (E)
@@ -91,14 +91,14 @@ public enum ProtocolState: String, Codable {
 
 /// Wire protocol message structure
 public struct WireMessage: Codable {
-    public let type: MessageType        // TLA+: type
+    public let type: WireProtocolMessageType        // TLA+: type
     public let from: String             // TLA+: from
     public let to: String               // TLA+: to
     public let seqNum: Int              // TLA+: seqNum
     public let payload: [String: String]  // TLA+: payload
     public let size: Int                // TLA+: size
     
-    public init(type: MessageType, from: String, to: String, seqNum: Int, 
+    public init(type: WireProtocolMessageType, from: String, to: String, seqNum: Int, 
                 payload: [String: String] = [:]) {
         self.type = type
         self.from = from

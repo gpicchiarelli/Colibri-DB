@@ -27,7 +27,7 @@ import Foundation
 // MARK: - Connection States
 
 /// State of a database connection
-public enum ConnectionState: String, Codable {
+public enum ConnectionState: String, Codable, Sendable {
     case pending        // Accepted, waiting for authentication
     case authenticating // Authentication in progress
     case authenticated  // Authenticated, ready to serve
@@ -40,7 +40,7 @@ public enum ConnectionState: String, Codable {
 // MARK: - Process Models
 
 /// Process model for connection handling
-public enum ProcessModel: String, Codable {
+public enum ProcessModel: String, Codable, Sendable {
     case processPerConnection  // Fork process per connection (classic)
     case threadPerConnection   // Thread per connection (modern)
     case threadPool            // Thread pool with work queue (scalable)
@@ -260,7 +260,7 @@ public actor ConnectionManager {
         if success {
             // Create session
             let sid = cid  // Simple: use cid as session id
-            let session = Session(sid: sid, connectionId: cid)
+            let session = ConnectionSession(sid: sid, connectionId: cid)
             sessions[sid] = session
             
             conn.state = .authenticated

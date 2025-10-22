@@ -268,14 +268,14 @@ public actor PolicyManager {
     
     // MARK: - Query Operations
     
-    /// Get policy
+    /// Get policy (public)
     public func getPolicy(ruleId: String) -> PolicyRule? {
-        return getPolicy(ruleId: ruleId)
+        return policies[ruleId]
     }
     
-    /// Get violations
+    /// Get violations (public)
     public func getViolations() -> [PolicyEvaluationResult] {
-        return getViolations()
+        return Array(policyViolations.values)
     }
     
     /// Check if has violations
