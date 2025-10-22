@@ -1,4 +1,8 @@
 {
+  "_comment": "ColibrìDB Configuration File - High-performance RDBMS for macOS",
+  "_version": "1.0.0",
+  "_description": "Main configuration file for ColibrìDB database engine",
+  
   "dataDir": "./data",
   "maxConnectionsLogical": 1000000,
   "maxConnectionsPhysical": 16,
@@ -11,6 +15,7 @@
   "serverEnabled": false,
   "indexImplementation": "Hash",
   "storageEngine": "FileHeap",
+  
   "performanceOptimizations": {
     "lockStripingEnabled": true,
     "lockStripeCount": 64,
@@ -21,5 +26,18 @@
     "queryPlanCacheSize": 500,
     "periodicCleanupEnabled": true,
     "periodicCleanupIntervalSeconds": 300
+  },
+  
+  "logging": {
+    "level": "INFO",
+    "file": "./logs/colibridb.log",
+    "maxFileSize": "10MB",
+    "maxFiles": 5
+  },
+  
+  "security": {
+    "encryptionEnabled": false,
+    "sslEnabled": false,
+    "authenticationRequired": false
   }
 }

@@ -16,6 +16,20 @@
 ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
 [![Tooling](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/tooling.yml?label=Tooling&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibri-DB/actions/workflows/tooling.yml)
 
+[![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/ci.yml?branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibri-DB/actions/workflows/ci.yml)
+[![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/codeql.yml?label=CodeQL&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibri-DB/actions/workflows/codeql.yml)
+![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg?style=flat-square)
+![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey.svg?style=flat-square)
+![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg?style=flat-square)
+![Stars](https://img.shields.io/github/stars/gpicchiarelli/Colibri-DB?style=social)
+![Issues](https://img.shields.io/github/issues/gpicchiarelli/Colibri-DB?style=flat-square)
+![PRs](https://img.shields.io/github/issues-pr/gpicchiarelli/Colibri-DB?style=flat-square)
+![Last commit](https://img.shields.io/github/last-commit/gpicchiarelli/Colibri-DB?style=flat-square)
+![Contributors](https://img.shields.io/github/contributors/gpicchiarelli/Colibri-DB?style=flat-square)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)
+[![Tooling](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/tooling.yml?label=Tooling&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibri-DB/actions/workflows/tooling.yml)
+
 **ColibrìDB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
 
 ## ✨ Caratteristiche Principali

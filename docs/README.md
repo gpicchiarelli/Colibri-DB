@@ -1,6 +1,6 @@
-# Colibrì DB Documentation
+# ColibrìDB Documentation
 
-Questo è il sito di documentazione per Colibrì DB, un RDBMS professionale per macOS scritto in Swift 6.2.
+This is the documentation site for ColibrìDB, a high-performance relational database management system for macOS written in Swift 6.2.
 
 ## 🚀 Quick Start
 
