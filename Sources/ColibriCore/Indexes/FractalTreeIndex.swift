@@ -52,7 +52,7 @@ public struct FractalMessage<Key: Comparable, Value>: Codable where Key: Codable
 
 /// Fractal Tree node type
 public enum FractalNodeType: String, Codable {
-    case internal   // Internal node with children and buffers
+    case `internal`   // Internal node with children and buffers
     case leaf       // Leaf node with actual data
 }
 

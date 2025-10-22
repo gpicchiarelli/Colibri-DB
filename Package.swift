@@ -29,7 +29,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-testing", exact: "0.10.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
         .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.25.0"),
-        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.3.0")
+        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.3.0"),
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "3.0.0")
     ],
     targets: [
         .target(
@@ -38,7 +39,10 @@ let package = Package(
         ),
         .target(
             name: "ColibriCore",
-            dependencies: ["CRC32Accelerator"],
+            dependencies: [
+                "CRC32Accelerator",
+                .product(name: "Crypto", package: "swift-crypto")
+            ],
             exclude: [
                 "README.md",
                 "Query/QueryOptimizer.swift.backup",

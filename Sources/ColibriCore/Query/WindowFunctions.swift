@@ -172,7 +172,7 @@ public enum Value: Codable, Hashable {
 
 /// Window function definition
 public struct WindowFunction {
-    public let func: WindowFunc
+    public let `func`: WindowFunc
     public let spec: WindowSpec
     public let targetColumn: String
     public let offset: Int              // For LAG/LEAD/NTH_VALUE
