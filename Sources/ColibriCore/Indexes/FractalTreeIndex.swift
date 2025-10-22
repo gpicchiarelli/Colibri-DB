@@ -34,7 +34,7 @@ public enum FractalMessageType: String, Codable {
 }
 
 /// Message for lazy propagation
-public struct FractalMessage<Key: Comparable, Value>: Codable where Key: Codable, Value: Codable {
+public struct FractalMessage<Key: Comparable & Codable & Hashable, Value: Codable>: Codable {
     public let type: FractalMessageType
     public let key: Key
     public let value: Value?
@@ -57,7 +57,7 @@ public enum FractalNodeType: String, Codable {
 }
 
 /// Fractal Tree node
-public class FractalNode<Key: Comparable & Codable, Value: Codable> {
+public class FractalNode<Key: Comparable & Codable & Hashable, Value: Codable> {
     public let nodeId: Int
     public let nodeType: FractalNodeType
     
@@ -86,7 +86,7 @@ public class FractalNode<Key: Comparable & Codable, Value: Codable> {
 // MARK: - Configuration
 
 /// Fractal Tree configuration
-public struct FractalTreeConfig {
+public struct FractalTreeConfig: Sendable {
     public let maxBufferSize: Int       // Messages before flush
     public let maxChildren: Int         // Node fanout
     public let minChildren: Int         // Minimum fanout
@@ -108,7 +108,7 @@ public struct FractalTreeConfig {
 // MARK: - Fractal Tree Index
 
 /// Fractal Tree Index for write-optimized indexing
-public class FractalTreeIndex<Key: Comparable & Codable, Value: Codable> {
+public class FractalTreeIndex<Key: Comparable & Codable & Hashable, Value: Codable> {
     
     // Configuration
     private let config: FractalTreeConfig

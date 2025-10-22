@@ -116,7 +116,7 @@ public actor HashIndexManager {
     public func search(key: Value) async throws -> RID? {
         let position = try await findEntryPosition(key: key)
         
-        if let entry = buckets[position] {
+        if let optionalEntry = buckets[position], let entry = optionalEntry {
             if !entry.deleted && entry.key == key {
                 return entry.rid
             }
@@ -130,7 +130,7 @@ public actor HashIndexManager {
     public func delete(key: Value) async throws {
         let position = try await findEntryPosition(key: key)
         
-        if let entry = buckets[position] {
+        if let optionalEntry = buckets[position], let entry = optionalEntry {
             if !entry.deleted && entry.key == key {
                 // TLA+: Mark as deleted (tombstone)
                 let deletedEntry = HashEntry(
@@ -211,7 +211,7 @@ public actor HashIndexManager {
         
         // TLA+: Linear probing
         while buckets[position] != nil && probes < MAX_PROBES {
-            if let entry = buckets[position], entry.key == key {
+            if let optionalEntry = buckets[position], let entry = optionalEntry, entry.key == key {
                 return position
             }
             position = (position + 1) % numBuckets
@@ -244,7 +244,7 @@ public actor HashIndexManager {
     /// TLA+: KeyExists
     private func keyExists(key: Value) async throws -> Bool {
         let position = try await findEntryPosition(key: key)
-        if let entry = buckets[position], !entry.deleted && entry.key == key {
+        if let optionalEntry = buckets[position], let entry = optionalEntry, !entry.deleted && entry.key == key {
             return true
         }
         return false
