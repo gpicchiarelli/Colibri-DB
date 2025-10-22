@@ -21,29 +21,6 @@ import Foundation
 /// Corresponds to TLA+: Row
 public typealias Row = [Value]
 
-/// Page
-/// Corresponds to TLA+: Page
-public struct Page: Codable, Sendable, Equatable {
-    public let pageId: PageID
-    public let header: PageHeader
-    public let slots: [PageSlot]
-    public let data: Data
-    public let lsn: LSN
-    public let isDirty: Bool
-    public let isPinned: Bool
-    public let timestamp: UInt64
-    
-    public init(pageId: PageID, header: PageHeader, slots: [PageSlot], data: Data, lsn: LSN, isDirty: Bool, isPinned: Bool, timestamp: UInt64) {
-        self.pageId = pageId
-        self.header = header
-        self.slots = slots
-        self.data = data
-        self.lsn = lsn
-        self.isDirty = isDirty
-        self.isPinned = isPinned
-        self.timestamp = timestamp
-    }
-}
 
 /// Page header
 /// Corresponds to TLA+: PageHeader

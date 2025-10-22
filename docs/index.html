@@ -415,112 +415,109 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 <!-- Hero Section -->
 <section class="hero">
     <div class="container">
-        <div class="hero-content">
-            <h1>Colibrì DB</h1>
-            <p class="hero-subtitle">RDBMS sperimentale ad alte prestazioni per macOS</p>
-            <p class="hero-description">
-                Un database relazionale moderno scritto in Swift 6.2, progettato per gestire milioni di connessioni 
-                logiche con architettura modulare completa: WAL, MVCC, B+Tree, TLA+ specifications e CLI amministrativa.
-            </p>
-            
-            <div class="hero-badges">
-                <span class="badge swift">Swift 6.2</span>
-                <span class="badge macos">macOS 13+</span>
-                <span class="badge performance">Apple Silicon</span>
-                <span class="badge tla">TLA+ Verified</span>
-                <span class="badge">WAL • MVCC • B+Tree</span>
-            </div>
-            
-            <div class="hero-actions">
-                <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-primary" target="_blank">
-                    ⭐ Star su GitHub
-                </a>
-                <a href="#quickstart" class="btn btn-secondary">
-                    🚀 Quick Start
-                </a>
-            </div>
+        <h1>Colibrì DB</h1>
+        <p class="hero-subtitle">RDBMS Sperimentale in Swift</p>
+        <p class="hero-description">
+            Un database relazionale moderno scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon 
+            con architettura modulare completa e specifiche TLA+ formali.
+        </p>
+        
+        <div class="hero-badges">
+            <span class="badge swift">Swift 6.2</span>
+            <span class="badge macos">macOS</span>
+            <span class="badge performance">Alta Performance</span>
+            <span class="badge tla">TLA+ Verified</span>
+        </div>
+        
+        <div class="hero-actions">
+            <a href="/wiki/Quick-Start" class="btn btn-primary">
+                Inizia Subito
+            </a>
+            <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-secondary" target="_blank">
+                GitHub
+            </a>
         </div>
     </div>
 </section>
 
 <!-- Features Section -->
-<section class="features" id="features">
+<section class="section">
     <div class="container">
-        <h2 class="section-title">✨ Caratteristiche Principali</h2>
+        <h2 class="section-title">Caratteristiche Principali</h2>
         <p class="section-subtitle">
-            Un database enterprise-grade con architettura modulare e verifiche formali complete
+            Un database moderno progettato per performance, affidabilità e facilità d'uso
         </p>
         
         <div class="features-grid">
             <div class="feature-card">
-                <span class="feature-icon">🗄️</span>
-                <h3>Storage Engine Avanzato</h3>
-                <p>Sistema di storage enterprise con heap file paginati, buffer pool LRU/Clock e compattazione online senza downtime.</p>
+                <span class="feature-icon">⚡</span>
+                <h3>Performance Ottimizzate</h3>
+                <p>Architettura progettata per sfruttare al meglio Apple Silicon e macOS, con buffer pool intelligente e indici B+Tree ottimizzati.</p>
                 <ul class="feature-list">
-                    <li>Heap file storage con slot directory</li>
-                    <li>Buffer pool intelligente con eviction LRU</li>
-                    <li>Compattazione online in tempo reale</li>
-                    <li>Ottimizzazioni Apple Silicon native</li>
+                    <li>Buffer Pool con algoritmo LRU avanzato</li>
+                    <li>Indici B+Tree con split/merge automatici</li>
+                    <li>Query optimizer con statistiche in tempo reale</li>
+                    <li>Compressione dati integrata</li>
                 </ul>
             </div>
             
             <div class="feature-card">
                 <span class="feature-icon">🔒</span>
-                <h3>Durabilità Garantita</h3>
-                <p>Write-Ahead Logging v2 con checksum CRC32, recovery ARIES-like e sistema di checkpoint efficiente.</p>
+                <h3>Sicurezza e Affidabilità</h3>
+                <p>MVCC, WAL e recovery automatico garantiscono la consistenza dei dati anche in caso di crash del sistema.</p>
                 <ul class="feature-list">
-                    <li>WAL v2 con record tipizzati</li>
-                    <li>Checksum CRC32 per integrità</li>
-                    <li>Recovery ARIES-compliant</li>
-                    <li>Gestione Dirty Page Table</li>
+                    <li>Multi-Version Concurrency Control (MVCC)</li>
+                    <li>Write-Ahead Logging (WAL)</li>
+                    <li>Recovery automatico post-crash</li>
+                    <li>Transazioni ACID complete</li>
                 </ul>
             </div>
             
             <div class="feature-card">
-                <span class="feature-icon">🚀</span>
-                <h3>Indicizzazione Avanzata</h3>
-                <p>B+Tree persistenti su disco con supporto per indici pluggabili e operazioni bulk ad alte prestazioni.</p>
+                <span class="feature-icon">🏗️</span>
+                <h3>Architettura Modulare</h3>
+                <p>Design modulare che separa storage, query engine, transazioni e networking per massima flessibilità e manutenibilità.</p>
                 <ul class="feature-list">
-                    <li>B+Tree persistenti con checkpoint</li>
-                    <li>Indici pluggabili (Hash, ART, LSM)</li>
-                    <li>Validazione e manutenzione online</li>
-                    <li>Caching intelligente per dataset grandi</li>
+                    <li>Storage engine pluggable</li>
+                    <li>Query planner estendibile</li>
+                    <li>API REST completa</li>
+                    <li>CLI integrata</li>
                 </ul>
             </div>
             
             <div class="feature-card">
-                <span class="feature-icon">⚡</span>
-                <h3>Controllo Concorrenza</h3>
-                <p>MVCC con livelli di isolamento configurabili, lock manager avanzato e supporto Two-Phase Commit.</p>
+                <span class="feature-icon">📊</span>
+                <h3>SQL Completo</h3>
+                <p>Supporto completo per SQL standard con estensioni moderne per analisi e reporting avanzati.</p>
                 <ul class="feature-list">
-                    <li>MVCC con snapshot isolation</li>
-                    <li>Lock manager con deadlock detection</li>
-                    <li>Supporto 2PC per transazioni distribuite</li>
-                    <li>Livelli di isolamento configurabili</li>
-                </ul>
-            </div>
-            
-            <div class="feature-card">
-                <span class="feature-icon">🧠</span>
-                <h3>Query Processing</h3>
-                <p>Volcano iterator con planner cost-based, predicate pushdown e supporto SQL completo con sintassi moderna.</p>
-                <ul class="feature-list">
-                    <li>Planner cost-based intelligente</li>
-                    <li>Operatori Volcano ottimizzati</li>
-                    <li>Viste materializzate</li>
-                    <li>Query plan cache</li>
+                    <li>Parser SQL con AST ottimizzato</li>
+                    <li>Window functions e CTE</li>
+                    <li>Subquery e join complessi</li>
+                    <li>Funzioni aggregate personalizzate</li>
                 </ul>
             </div>
             
             <div class="feature-card">
                 <span class="feature-icon">🔬</span>
-                <h3>Verifiche Formali</h3>
-                <p>Specifiche TLA+ complete per tutti i componenti critici con invarianti e proprietà di liveness verificate.</p>
+                <h3>Verifica Formale</h3>
+                <p>Specifiche TLA+ formali per garantire la correttezza degli algoritmi critici del database.</p>
                 <ul class="feature-list">
-                    <li>149 specifiche TLA+ modulari</li>
-                    <li>Invarianti di sicurezza verificate</li>
-                    <li>Proprietà di liveness garantite</li>
-                    <li>Model checking automatico</li>
+                    <li>Specifiche TLA+ per MVCC</li>
+                    <li>Verifica proprietà ACID</li>
+                    <li>Modelli di concorrenza</li>
+                    <li>Test di regressione automatici</li>
+                </ul>
+            </div>
+            
+            <div class="feature-card">
+                <span class="feature-icon">🛠️</span>
+                <h3>Tooling Avanzato</h3>
+                <p>Strumenti di sviluppo, monitoraggio e debugging integrati per semplificare la gestione del database.</p>
+                <ul class="feature-list">
+                    <li>Dashboard di monitoraggio real-time</li>
+                    <li>Profiler per query lente</li>
+                    <li>Backup e restore automatici</li>
+                    <li>Logging strutturato</li>
                 </ul>
             </div>
         </div>
@@ -528,100 +525,95 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 </section>
 
 <!-- Architecture Section -->
-<section class="architecture" id="architecture">
+<section class="section section-alt">
     <div class="container">
-        <h2 class="section-title">🏗️ Architettura Modulare</h2>
+        <h2 class="section-title">Architettura Modulare</h2>
         <p class="section-subtitle">
             Design modulare con separazione delle responsabilità e interfacce ben definite
         </p>
         
         <div class="architecture-diagram">
             <div class="arch-layer">
-                <h4><span class="layer-number">1</span> 🎯 SQL Interface & CLI</h4>
-                <p>Parser SQL completo, CLI amministrativa `coldb` e interfacce programmatiche Swift</p>
+                <h4>SQL Interface & CLI</h4>
+                <p>Parser SQL completo, CLI amministrativa e interfacce programmatiche Swift</p>
             </div>
             <div class="arch-layer">
-                <h4><span class="layer-number">2</span> 🧠 Query Processor</h4>
-                <p>Planner cost-based, operatori Volcano, ottimizzazione query e viste materializzate</p>
+                <h4>Query Processor</h4>
+                <p>Planner cost-based, operatori Volcano e ottimizzazione query</p>
             </div>
             <div class="arch-layer">
-                <h4><span class="layer-number">3</span> ⚡ Transaction Manager</h4>
-                <p>MVCC, lock manager, 2PC, livelli di isolamento e gestione snapshot</p>
+                <h4>Transaction Manager</h4>
+                <p>MVCC, lock manager e livelli di isolamento</p>
             </div>
             <div class="arch-layer">
-                <h4><span class="layer-number">4</span> 🚀 Index Manager</h4>
-                <p>B+Tree, Hash, ART, indici pluggabili e validazione online</p>
+                <h4>Index Manager</h4>
+                <p>B+Tree, indici pluggabili e validazione online</p>
             </div>
             <div class="arch-layer">
-                <h4><span class="layer-number">5</span> 🗄️ Storage Engine</h4>
-                <p>Heap storage, buffer pool, WAL con recovery e compattazione online</p>
+                <h4>Storage Engine</h4>
+                <p>Heap storage, buffer pool e WAL con recovery</p>
             </div>
         </div>
     </div>
 </section>
 
 <!-- Modules Section -->
-<section class="modules" id="modules">
+<section class="section">
     <div class="container">
-        <h2 class="section-title">📦 Moduli Implementati</h2>
+        <h2 class="section-title">Moduli Implementati</h2>
         <p class="section-subtitle">
-            Architettura modulare con 8 componenti principali e specifiche TLA+ complete
+            Architettura modulare con componenti principali e specifiche TLA+ complete
         </p>
         
         <div class="modules-grid">
             <div class="module-card">
                 <h4>Schema Evolution</h4>
-                <p>Gestione evoluzione schema database con migrazioni online, compatibilità backward/forward e validazione constraint.</p>
+                <p>Gestione evoluzione schema database con migrazioni online e compatibilità backward/forward.</p>
                 <div class="module-tags">
                     <span class="module-tag">DDL</span>
                     <span class="module-tag">Migration</span>
-                    <span class="module-tag">TLA+</span>
                 </div>
             </div>
             
             <div class="module-card">
                 <h4>Statistics Maintenance</h4>
-                <p>Aggiornamento statistiche per query optimizer con histogrammi, cardinalità e distribuzione valori.</p>
+                <p>Aggiornamento statistiche per query optimizer con histogrammi e distribuzione valori.</p>
                 <div class="module-tags">
                     <span class="module-tag">Optimizer</span>
                     <span class="module-tag">Histogram</span>
-                    <span class="module-tag">TLA+</span>
                 </div>
             </div>
             
             <div class="module-card">
                 <h4>Connection Pooling</h4>
-                <p>Gestione pool connessioni con multi-tenancy, load balancing e gestione risorse per milioni di connessioni.</p>
+                <p>Gestione pool connessioni con multi-tenancy e load balancing per milioni di connessioni.</p>
                 <div class="module-tags">
                     <span class="module-tag">Pool</span>
                     <span class="module-tag">Multi-tenant</span>
-                    <span class="module-tag">TLA+</span>
                 </div>
             </div>
             
             <div class="module-card">
                 <h4>Memory Management</h4>
-                <p>Gestione memoria avanzata con arena allocator, garbage collection e deframmentazione automatica.</p>
+                <p>Gestione memoria avanzata con arena allocator e garbage collection automatico.</p>
                 <div class="module-tags">
                     <span class="module-tag">Memory</span>
                     <span class="module-tag">GC</span>
-                    <span class="module-tag">TLA+</span>
                 </div>
             </div>
             
             <div class="module-card">
                 <h4>Compression</h4>
-                <p>Compressione dati con algoritmi pluggabili, dizionari adattivi e ottimizzazione storage.</p>
+                <p>Compressione dati con algoritmi pluggabili e ottimizzazione storage.</p>
                 <div class="module-tags">
                     <span class="module-tag">Compression</span>
                     <span class="module-tag">Storage</span>
-                    <span class="module-tag">TLA+</span>
                 </div>
             </div>
             
             <div class="module-card">
                 <h4>Monitoring</h4>
-                <p>Sistema di monitoraggio con metriche Prometheus, alerting e health check automatici.</p>
+                <p>Sistema di monitoraggio con metriche Prometheus e health check automatici.</p>
                 <div class="module-tags">
                     <span class="module-tag">Metrics</span>
                     <span class="module-tag">Prometheus</span>
@@ -631,21 +623,19 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
             
             <div class="module-card">
                 <h4>Backup & Restore</h4>
-                <p>Sistema completo di backup con compressione, crittografia e restore incrementale.</p>
+                <p>Sistema completo di backup con compressione e restore incrementale.</p>
                 <div class="module-tags">
                     <span class="module-tag">Backup</span>
                     <span class="module-tag">Recovery</span>
-                    <span class="module-tag">TLA+</span>
                 </div>
             </div>
             
             <div class="module-card">
                 <h4>Point-in-Time Recovery</h4>
-                <p>Recovery temporale con WAL replay, checkpoint e restore a timestamp specifici.</p>
+                <p>Recovery temporale con WAL replay e restore a timestamp specifici.</p>
                 <div class="module-tags">
                     <span class="module-tag">PITR</span>
                     <span class="module-tag">WAL</span>
-                    <span class="module-tag">TLA+</span>
                 </div>
             </div>
         </div>
@@ -653,21 +643,21 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 </section>
 
 <!-- Quick Start Section -->
-<section class="quick-start" id="quickstart">
+<section class="section section-alt">
     <div class="container">
         <div class="quick-start-grid">
             <div class="quick-start-content">
-                <h2>🚀 Inizia in 30 Secondi</h2>
+                <h2>Inizia in 30 Secondi</h2>
                 <p>
                     Colibrì DB è progettato per essere semplice da installare e utilizzare. 
                     Con pochi comandi puoi avere un database completo in esecuzione sul tuo Mac.
                 </p>
                 <div class="hero-actions">
-                    <a href="{{ site.baseurl }}/wiki/Quick-Start" class="btn btn-primary">
-                        📖 Guida Completa
+                    <a href="/wiki/Quick-Start" class="btn btn-primary">
+                        Guida Completa
                     </a>
-                    <a href="{{ site.baseurl }}/wiki/API-Reference" class="btn btn-secondary">
-                        📚 API Reference
+                    <a href="/wiki/API-Reference" class="btn btn-secondary">
+                        API Reference
                     </a>
                 </div>
             </div>
@@ -696,7 +686,7 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 <!-- Performance Section -->
 <section class="performance">
     <div class="container">
-        <h2 class="section-title">📊 Performance Target</h2>
+        <h2 class="section-title">Performance Target</h2>
         <p class="section-subtitle">
             Obiettivi di performance per database enterprise su Apple Silicon
         </p>
@@ -740,7 +730,7 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
         </p>
         <div class="hero-actions">
             <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn" target="_blank">
-                🌟 Contribuisci su GitHub
+                Contribuisci su GitHub
             </a>
         </div>
     </div>

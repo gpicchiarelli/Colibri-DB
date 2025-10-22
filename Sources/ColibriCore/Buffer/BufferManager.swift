@@ -79,7 +79,7 @@ public actor BufferManager {
     
     /// Buffer pool
     /// TLA+: bufferPool \in [FrameIndex -> Page]
-    private var bufferPool: [FrameIndex: Page] = [:]
+    private var bufferPool: [FrameIndex: BufferPage] = [:]
     
     /// Page table
     /// TLA+: pageTable \in [PageID -> FrameIndex]
@@ -153,7 +153,7 @@ public actor BufferManager {
     
     /// Fetch page
     /// TLA+ Action: FetchPage(pageId)
-    public func fetchPage(pageId: PageID) async throws -> Page {
+    public func fetchPage(pageId: PageID) async throws -> BufferPage {
         // TLA+: Check if page is in buffer
         if let frameIndex = pageTable[pageId] {
             // TLA+: Page hit
@@ -171,7 +171,7 @@ public actor BufferManager {
         
         // TLA+: Read page from disk
         let pageData = try await diskManager.readPage(pageId: pageId)
-        let page = Page(
+        let page = BufferPage(
             pageId: pageId,
             data: pageData,
             frameIndex: frameIndex,
@@ -454,7 +454,7 @@ public actor BufferManager {
     }
     
     /// Get buffer pool
-    public func getBufferPool() -> [FrameIndex: Page] {
+    public func getBufferPool() -> [FrameIndex: BufferPage] {
         return bufferPool
     }
     
@@ -469,7 +469,7 @@ public actor BufferManager {
     }
     
     /// Get page by ID
-    public func getPage(pageId: PageID) -> Page? {
+    public func getPage(pageId: PageID) -> BufferPage? {
         guard let frameIndex = pageTable[pageId] else {
             return nil
         }
@@ -559,8 +559,8 @@ public actor BufferManager {
 
 // MARK: - Supporting Types
 
-/// Page
-public struct Page: Codable, Sendable, Equatable {
+/// Buffer page
+public struct BufferPage: Codable, Sendable, Equatable {
     public let pageId: PageID
     public let data: Data
     public let frameIndex: FrameIndex

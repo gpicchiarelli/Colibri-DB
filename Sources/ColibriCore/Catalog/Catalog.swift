@@ -25,23 +25,8 @@ public struct ColumnDefinition: Codable, Sendable {
     }
 }
 
-/// Table definition
-public struct TableDefinition: Codable, Sendable {
-    public let name: String
-    public let columns: [ColumnDefinition]
-    public let primaryKey: [String]?
-    public let indexes: [IndexDefinition]
-    
-    public init(name: String, columns: [ColumnDefinition], primaryKey: [String]? = nil, indexes: [IndexDefinition] = []) {
-        self.name = name
-        self.columns = columns
-        self.primaryKey = primaryKey
-        self.indexes = indexes
-    }
-}
-
-/// Index definition
-public struct IndexDefinition: Codable, Sendable {
+/// Catalog index definition
+public struct CatalogIndexDefinition: Codable, Sendable {
     public let name: String
     public let columns: [String]
     public let unique: Bool
@@ -59,6 +44,22 @@ public struct IndexDefinition: Codable, Sendable {
         self.type = type
     }
 }
+
+/// Table definition
+public struct TableDefinition: Codable, Sendable {
+    public let name: String
+    public let columns: [ColumnDefinition]
+    public let primaryKey: [String]?
+    public let indexes: [CatalogIndexDefinition]
+    
+    public init(name: String, columns: [ColumnDefinition], primaryKey: [String]? = nil, indexes: [CatalogIndexDefinition] = []) {
+        self.name = name
+        self.columns = columns
+        self.primaryKey = primaryKey
+        self.indexes = indexes
+    }
+}
+
 
 /// System Catalog
 /// Corresponds to TLA+ module: Catalog.tla
@@ -124,7 +125,7 @@ public actor Catalog {
     }
     
     /// Add index to table
-    public func addIndex(tableName: String, index: IndexDefinition) throws {
+    public func addIndex(tableName: String, index: CatalogIndexDefinition) throws {
         guard var table = tables[tableName] else {
             throw DBError.notFound
         }

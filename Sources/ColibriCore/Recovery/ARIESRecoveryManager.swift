@@ -676,24 +676,6 @@ public protocol WALManager: Sendable {
     func flushLog() async throws
 }
 
-/// Page
-public struct Page: Codable, Sendable, Equatable {
-    public let pageId: PageID
-    public let data: Data
-    public let lsn: LSN
-    public let isDirty: Bool
-    public let isPinned: Bool
-    public let timestamp: UInt64
-    
-    public init(pageId: PageID, data: Data, lsn: LSN, isDirty: Bool, isPinned: Bool, timestamp: UInt64) {
-        self.pageId = pageId
-        self.data = data
-        self.lsn = lsn
-        self.isDirty = isDirty
-        self.isPinned = isPinned
-        self.timestamp = timestamp
-    }
-}
 
 /// ARIES recovery manager error
 public enum ARIESRecoveryManagerError: Error, LocalizedError {

@@ -561,24 +561,6 @@ public protocol BufferManager: Sendable {
     func flushPage(pageId: UInt64) async throws
 }
 
-/// Page
-public struct Page: Codable, Sendable, Equatable {
-    public let pageId: UInt64
-    public let data: Data
-    public let frameIndex: Int
-    public let isDirty: Bool
-    public let isPinned: Bool
-    public let timestamp: UInt64
-    
-    public init(pageId: UInt64, data: Data, frameIndex: Int, isDirty: Bool, isPinned: Bool, timestamp: UInt64) {
-        self.pageId = pageId
-        self.data = data
-        self.frameIndex = frameIndex
-        self.isDirty = isDirty
-        self.isPinned = isPinned
-        self.timestamp = timestamp
-    }
-}
 
 /// Index error
 public enum IndexError: Error, LocalizedError {

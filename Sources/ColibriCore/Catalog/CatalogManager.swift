@@ -87,11 +87,6 @@ public struct ConstraintMetadata: Codable, Sendable, Equatable {
     }
 }
 
-public enum ConstraintType: String, Codable, Sendable {
-    case unique = "unique"
-    case check = "check"
-    case notNull = "not_null"
-}
 
 // MARK: - Index Metadata
 

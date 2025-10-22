@@ -490,25 +490,6 @@ public actor StorageManager {
 // MARK: - Supporting Types
 
 /// Page
-public struct Page: Codable, Sendable, Equatable {
-    public let pageId: PageID
-    public let area: StorageArea?
-    public let size: UInt64
-    public let data: Data
-    public let isAllocated: Bool
-    public let isDirty: Bool
-    public let timestamp: UInt64
-    
-    public init(pageId: PageID, area: StorageArea?, size: UInt64, data: Data, isAllocated: Bool, isDirty: Bool, timestamp: UInt64) {
-        self.pageId = pageId
-        self.area = area
-        self.size = size
-        self.data = data
-        self.isAllocated = isAllocated
-        self.isDirty = isDirty
-        self.timestamp = timestamp
-    }
-}
 
 /// Record
 public struct Record: Codable, Sendable, Equatable {
