@@ -56,9 +56,9 @@ public struct QueryResult: Codable, Sendable, Equatable {
     }
 }
 
-/// Query phase
+/// Distributed query phase
 /// Corresponds to TLA+: QueryPhase
-public enum QueryPhase: String, Codable, Sendable, CaseIterable {
+public enum DistributedQueryPhase: String, Codable, Sendable, CaseIterable {
     case planning = "planning"
     case distribution = "distribution"
     case execution = "execution"
@@ -88,7 +88,7 @@ public actor DistributedQueryManager {
     
     /// Phase
     /// TLA+: phase \in QueryPhase
-    private var phase: QueryPhase = .planning
+    private var phase: DistributedQueryPhase = .planning
     
     // MARK: - Dependencies
     
@@ -148,7 +148,7 @@ public actor DistributedQueryManager {
         }
         
         // TLA+: Set status to executing
-        fragment = QueryFragment(
+        fragment = DistributedQueryFragment(
             fragmentId: fragment.fragmentId,
             nodeId: fragment.nodeId,
             queryText: fragment.queryText,
@@ -164,7 +164,7 @@ public actor DistributedQueryManager {
         results[fragmentId] = result
         
         // TLA+: Update fragment status
-        fragment = QueryFragment(
+        fragment = DistributedQueryFragment(
             fragmentId: fragment.fragmentId,
             nodeId: fragment.nodeId,
             queryText: fragment.queryText,
@@ -215,7 +215,7 @@ public actor DistributedQueryManager {
     }
     
     /// Execute query on node
-    private func executeQueryOnNode(fragment: QueryFragment) async throws -> QueryResult {
+    private func executeQueryOnNode(fragment: DistributedQueryFragment) async throws -> QueryResult {
         // TLA+: Execute query on node
         let data = try await queryExecutor.executeQuery(query: fragment.queryText)
         
@@ -259,7 +259,7 @@ public actor DistributedQueryManager {
     // MARK: - Query Operations
     
     /// Get current phase
-    public func getCurrentPhase() -> QueryPhase {
+    public func getCurrentPhase() -> DistributedQueryPhase {
         return phase
     }
     
@@ -269,12 +269,12 @@ public actor DistributedQueryManager {
     }
     
     /// Get fragments for node
-    public func getFragmentsForNode(nodeId: String) -> [QueryFragment] {
+    public func getFragmentsForNode(nodeId: String) -> [DistributedQueryFragment] {
         return fragments.values.filter { $0.nodeId == nodeId }
     }
     
     /// Get fragment
-    public func getFragment(fragmentId: String) -> QueryFragment? {
+    public func getFragment(fragmentId: String) -> DistributedQueryFragment? {
         return fragments[fragmentId]
     }
     
@@ -284,7 +284,7 @@ public actor DistributedQueryManager {
     }
     
     /// Get all fragments
-    public func getAllFragments() -> [QueryFragment] {
+    public func getAllFragments() -> [DistributedQueryFragment] {
         return Array(fragments.values)
     }
     
@@ -362,8 +362,8 @@ public protocol NetworkManager: Sendable {
     func receiveMessage() async throws -> (from: String, message: Data)
 }
 
-/// Distributed query error
-public enum DistributedQueryError: Error, LocalizedError {
+/// Distributed query manager error
+public enum DistributedQueryManagerError: Error, LocalizedError {
     case fragmentNotFound
     case nodeUnavailable
     case queryExecutionFailed

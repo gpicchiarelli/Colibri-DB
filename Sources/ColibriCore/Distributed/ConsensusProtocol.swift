@@ -444,11 +444,11 @@ public actor RaftServer {
     /// Handle client request (leader only)
     public func handleClientRequest(command: String) async throws -> UInt64 {
         guard state == .leader else {
-            throw RaftError.notLeader
+            throw ConsensusRaftError.notLeader
         }
         
         guard log.count < config.maxLogLength else {
-            throw RaftError.logFull
+            throw ConsensusRaftError.logFull
         }
         
         let entry = RaftLogEntry(
@@ -560,7 +560,7 @@ public struct RaftStats: Codable {
 
 // MARK: - Errors
 
-public enum RaftError: Error, LocalizedError {
+public enum ConsensusRaftError: Error, LocalizedError {
     case notLeader
     case logFull
     case invalidTerm

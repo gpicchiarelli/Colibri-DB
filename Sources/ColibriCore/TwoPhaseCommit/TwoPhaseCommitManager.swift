@@ -30,9 +30,9 @@ public typealias ParticipantID = String
 /// Corresponds to TLA+: TransactionID
 public typealias TransactionID = TxID
 
-/// Coordinator state
+/// Two-phase commit coordinator state
 /// Corresponds to TLA+: CoordinatorState
-public enum CoordinatorState: String, Codable, Sendable, CaseIterable {
+public enum TwoPhaseCoordinatorState: String, Codable, Sendable, CaseIterable {
     case active = "active"
     case preparing = "preparing"
     case prepared = "prepared"
@@ -42,9 +42,9 @@ public enum CoordinatorState: String, Codable, Sendable, CaseIterable {
     case aborted = "aborted"
 }
 
-/// Participant state
+/// Two-phase commit participant state
 /// Corresponds to TLA+: ParticipantState
-public enum ParticipantState: String, Codable, Sendable, CaseIterable {
+public enum TwoPhaseParticipantState: String, Codable, Sendable, CaseIterable {
     case active = "active"
     case prepared = "prepared"
     case committed = "committed"
