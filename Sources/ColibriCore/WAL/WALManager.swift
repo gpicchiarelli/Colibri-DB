@@ -28,22 +28,6 @@ public protocol WALRecord: Codable, Sendable {
     var timestamp: UInt64 { get }
 }
 
-/// Concrete WAL record
-public struct ConcreteWALRecord: WALRecord, Codable, Sendable, Equatable {
-    public let lsn: LSN
-    public let txId: TxID
-    public let kind: WALRecordKind
-    public let data: Data
-    public let timestamp: UInt64
-    
-    public init(lsn: LSN, txId: TxID, kind: WALRecordKind, data: Data, timestamp: UInt64) {
-        self.lsn = lsn
-        self.txId = txId
-        self.kind = kind
-        self.data = data
-        self.timestamp = timestamp
-    }
-}
 
 
 
