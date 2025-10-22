@@ -20,9 +20,22 @@ import Foundation
 
 // Types are defined in Core/Types.swift and MVCCTypes.swift
 
-/// Snapshot
+/// MVCC transaction manager protocol
+public protocol MVCCTransactionManager: Sendable {
+    func beginTransaction() async throws -> TxID
+    func commitTransaction(txId: TxID) async throws
+    func abortTransaction(txId: TxID) async throws
+}
+
+/// MVCC lock manager protocol
+public protocol MVCCLockManager: Sendable {
+    func requestLock(txId: TxID, resource: String, mode: String) async throws
+    func releaseLock(txId: TxID, resource: String) async throws
+}
+
+/// MVCC snapshot
 /// Corresponds to TLA+: Snapshot
-public struct Snapshot: Codable, Sendable, Equatable {
+public struct MVCCSnapshot: Codable, Sendable, Equatable {
     public let txId: TxID
     public let timestamp: Timestamp
     public let activeTransactions: Set<TxID>
@@ -68,7 +81,7 @@ public actor MVCCManager {
     
     /// Snapshots
     /// TLA+: snapshots \in [TxID -> Snapshot]
-    private var snapshots: [TxID: Snapshot] = [:]
+    private var snapshots: [TxID: MVCCSnapshot] = [:]
     
     /// Read sets
     /// TLA+: readSets \in [TxID -> Set(Key)]
@@ -89,14 +102,14 @@ public actor MVCCManager {
     // MARK: - Dependencies
     
     /// Transaction manager
-    private let transactionManager: TransactionManager
+    private let transactionManager: MVCCTransactionManager
     
     /// Lock manager
-    private let lockManager: LockManager
+    private let lockManager: MVCCLockManager
     
     // MARK: - Initialization
     
-    public init(transactionManager: TransactionManager, lockManager: LockManager) {
+    public init(transactionManager: MVCCTransactionManager, lockManager: MVCCLockManager) {
         self.transactionManager = transactionManager
         self.lockManager = lockManager
         
@@ -116,7 +129,7 @@ public actor MVCCManager {
     
     /// Begin transaction
     /// TLA+ Action: BeginTransaction(txId)
-    public func beginTransaction(txId: TxID) async throws -> Snapshot {
+    public func beginTransaction(txId: TxID) async throws -> MVCCSnapshot {
         // TLA+: Add to active transactions
         activeTx.insert(txId)
         
@@ -284,7 +297,7 @@ public actor MVCCManager {
     // MARK: - Helper Methods
     
     /// Find visible version
-    private func findVisibleVersion(key: Key, snapshot: Snapshot) async throws -> Version? {
+    private func findVisibleVersion(key: Key, snapshot: MVCCSnapshot) async throws -> Version? {
         // TLA+: Find visible version
         guard let keyVersions = versions[key] else {
             return nil
@@ -308,7 +321,7 @@ public actor MVCCManager {
     }
     
     /// Is version visible
-    private func isVersionVisible(version: Version, snapshot: Snapshot) -> Bool {
+    private func isVersionVisible(version: Version, snapshot: MVCCSnapshot) -> Bool {
         // TLA+: Check if version is visible to snapshot
         return committedTx.contains(version.txId) && version.timestamp <= snapshot.timestamp
     }

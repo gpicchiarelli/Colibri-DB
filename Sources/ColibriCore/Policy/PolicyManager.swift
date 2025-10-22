@@ -251,20 +251,8 @@ public actor PolicyManager {
         return true // Default to allow
     }
     
-    /// Get policy
-    private func getPolicy(ruleId: String) -> PolicyRule? {
-        return policies[ruleId]
-    }
     
-    /// Get violations
-    private func getViolations() -> [PolicyEvaluationResult] {
-        return Array(policyViolations.values)
-    }
     
-    /// Check if has violations
-    private func hasViolations() -> Bool {
-        return !policyViolations.isEmpty
-    }
     
     // MARK: - Query Operations
     

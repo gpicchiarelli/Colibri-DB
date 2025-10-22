@@ -315,36 +315,24 @@ public actor OptimizationManager {
         // This would trigger alerts or adjustments if thresholds are exceeded
     }
     
-    /// Get strategy
-    private func getStrategy(strategyId: String) -> OptimizationStrategy? {
-        return optimizationStrategies[strategyId]
-    }
     
-    /// Get metrics
-    private func getMetrics() -> [OptimizationMetric] {
-        return Array(metrics.values)
-    }
     
-    /// Get history
-    private func getHistory() -> [OptimizationResult] {
-        return Array(optimizationHistory.values)
-    }
     
     // MARK: - Query Operations
     
-    /// Get strategy
+    /// Get strategy (public)
     public func getStrategy(strategyId: String) -> OptimizationStrategy? {
-        return getStrategy(strategyId: strategyId)
+        return optimizationStrategies[strategyId]
     }
     
-    /// Get metrics
+    /// Get metrics (public)
     public func getMetrics() -> [OptimizationMetric] {
-        return getMetrics()
+        return Array(metrics.values)
     }
     
-    /// Get history
+    /// Get history (public)
     public func getHistory() -> [OptimizationResult] {
-        return getHistory()
+        return Array(optimizationHistory.values)
     }
     
     /// Get all strategies

@@ -242,8 +242,8 @@ public struct LogicalPlan {
     }
 }
 
-/// Statistics manager interface
-public actor StatisticsManager {
+/// Query optimizer statistics manager interface
+public actor QueryOptimizerStatisticsManager {
     private var tableStats: [String: TableStatistics] = [:]
     
     public init() {}

@@ -31,7 +31,7 @@ import Foundation
 // MARK: - Message Types (TLA+: MessageTypes)
 
 /// Wire protocol message types (PostgreSQL-like)
-public enum WireProtocolMessageType: String, Codable {
+public enum WireProtocolMessageType: String, Codable, Sendable {
     // Client -> Server
     case authRequest = "AUTH_REQUEST"
     case query = "QUERY"
@@ -77,7 +77,7 @@ public enum WireTransactionState: String, Codable {
 // MARK: - Protocol States (TLA+: ProtocolStates)
 
 /// Protocol state machine states
-public enum ProtocolState: String, Codable {
+public enum ProtocolState: String, Codable, Sendable {
     case startup = "STARTUP"
     case authenticating = "AUTHENTICATING"
     case ready = "READY"
@@ -325,7 +325,7 @@ public actor WireProtocolHandler {
     
     /// Server sends query response
     /// TLA+ Action: ServerSendResponse(server, client, result)
-    public func serverSendResponse(server: String, client: String, result: String, txState: TransactionState) throws {
+    public func serverSendResponse(server: String, client: String, result: String, txState: WireTransactionState) throws {
         var messages: [WireMessage] = []
         let baseSeqNum = serverSeqNum[[server, client], default: 1]
         
@@ -392,7 +392,7 @@ public actor WireProtocolHandler {
                 }
             case .readyForQuery:
                 if let txStateStr = message.payload["txState"],
-                   let txState = TransactionState(rawValue: txStateStr) {
+                   let txState = WireTransactionState(rawValue: txStateStr) {
                     clientTxnState[client] = txState
                 }
                 clientStates[client] = .ready
@@ -492,7 +492,7 @@ public actor WireProtocolHandler {
         return clientStates[client]
     }
     
-    public func getTransactionState(_ client: String) -> TransactionState? {
+    public func getTransactionState(_ client: String) -> WireTransactionState? {
         return clientTxnState[client]
     }
 }
@@ -513,7 +513,7 @@ public enum WireError: Error, LocalizedError {
     case messageTooLarge(size: Int, max: Int)
     case invalidState(current: ProtocolState, expected: ProtocolState)
     case noMessage
-    case unexpectedMessageType(expected: MessageType, got: MessageType)
+    case unexpectedMessageType(expected: WireProtocolMessageType, got: WireProtocolMessageType)
     case authenticationFailed
     case serverError(message: String)
     

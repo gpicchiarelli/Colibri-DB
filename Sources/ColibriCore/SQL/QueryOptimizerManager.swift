@@ -630,8 +630,8 @@ public protocol StatisticsManager: Sendable {
     func updateColumnStats(tableName: String, columnName: String, stats: ColumnStats) async throws
 }
 
-/// Cost estimator
-public protocol CostEstimator: Sendable {
+/// Query optimizer cost estimator
+public protocol QueryOptimizerCostEstimator: Sendable {
     func estimateScanCost(tableName: String, predicate: String) async throws -> Double
     func estimateJoinCost(leftTable: String, rightTable: String, joinType: String) async throws -> Double
     func estimateAggregationCost(tableName: String, function: String, column: String) async throws -> Double

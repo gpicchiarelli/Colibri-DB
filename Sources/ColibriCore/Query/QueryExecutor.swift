@@ -45,8 +45,8 @@ public struct ExecutorTuple: Codable {
 
 // MARK: - Operator States (TLA+ VARIABLES)
 
-/// Scan operator state (TLA+: ScanState)
-public struct ScanState {
+/// Query executor scan state (TLA+: ScanState)
+public struct QueryExecutorScanState {
     public var table: String
     public var predicate: String?
     public var currentRID: RID?
@@ -69,8 +69,8 @@ public struct ScanState {
     }
 }
 
-/// Join operator state (TLA+: JoinState)
-public struct JoinState {
+/// Query executor join state (TLA+: JoinState)
+public struct QueryExecutorJoinState {
     public var leftInput: [ExecutorTuple]
     public var rightInput: [ExecutorTuple]
     public var joinType: JoinType
@@ -98,8 +98,8 @@ public struct JoinState {
     }
 }
 
-/// Aggregation state (TLA+: AggregationState)
-public struct AggregationState {
+/// Query executor aggregation state (TLA+: AggregationState)
+public struct QueryExecutorAggregationState {
     public var groupBy: [Int]           // Column indices
     public var aggregates: [AggregateSpec]
     public var hashTable: [[Value]: [Value]]  // GroupKey -> AggValues
@@ -126,8 +126,8 @@ public struct AggregateSpec {
     }
 }
 
-/// Sort state (TLA+: SortState)
-public struct SortState {
+/// Query executor sort state (TLA+: SortState)
+public struct QueryExecutorSortState {
     public var input: [ExecutorTuple]
     public var sortKeys: [SortKey]
     public var sorted: [ExecutorTuple]
@@ -160,16 +160,16 @@ public actor QueryExecutor {
     // TLA+ VARIABLES
     
     /// Scan state per operator (TLA+: scanState)
-    private var scanState: [Int: ScanState] = [:]
+    private var scanState: [Int: QueryExecutorScanState] = [:]
     
     /// Join state per operator (TLA+: joinState)
-    private var joinState: [Int: JoinState] = [:]
+    private var joinState: [Int: QueryExecutorJoinState] = [:]
     
     /// Aggregation state per operator (TLA+: aggState)
-    private var aggState: [Int: AggregationState] = [:]
+    private var aggState: [Int: QueryExecutorAggregationState] = [:]
     
     /// Sort state per operator (TLA+: sortState)
-    private var sortState: [Int: SortState] = [:]
+    private var sortState: [Int: QueryExecutorSortState] = [:]
     
     /// Output buffer per operator (TLA+: outputBuffer)
     private var outputBuffer: [Int: [ExecutorTuple]] = [:]

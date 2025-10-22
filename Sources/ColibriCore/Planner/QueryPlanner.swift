@@ -15,6 +15,12 @@
 
 import Foundation
 
+/// Query planner statistics manager protocol
+public protocol QueryPlannerStatisticsManager: Sendable {
+    func getStatistics(tableName: String) async throws -> [String: Double]
+    func updateStatistics(tableName: String, statistics: [String: Double]) async throws
+}
+
 // MARK: - Planning Types
 
 /// Query node
@@ -112,11 +118,11 @@ public actor QueryPlanner {
     private let costEstimator: CostEstimator
     
     /// Statistics manager
-    private let statisticsManager: StatisticsManager
+    private let statisticsManager: QueryPlannerStatisticsManager
     
     // MARK: - Initialization
     
-    public init(costEstimator: CostEstimator, statisticsManager: StatisticsManager) {
+    public init(costEstimator: CostEstimator, statisticsManager: QueryPlannerStatisticsManager) {
         self.costEstimator = costEstimator
         self.statisticsManager = statisticsManager
         
@@ -297,10 +303,6 @@ public actor QueryPlanner {
         return 0.1 // Simplified
     }
     
-    /// Get plan
-    private func getPlan(planId: String) -> PlanNode? {
-        return queryPlans[planId]
-    }
     
     /// Get plan cost
     private func getPlanCost(planId: String) -> Double? {
