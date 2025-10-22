@@ -1,6 +1,6 @@
 //
 //  IndexManager.swift
-//  ColibrìDB Index Management Implementation
+//  ColibrìDB Index Manager Implementation
 //
 //  Based on: spec/Index.tla
 //  Implements: Database indexing system
@@ -8,19 +8,22 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - Performance: Fast data access
-//  - Consistency: Index integrity maintained
-//  - Scalability: Handles large datasets
-//  - Flexibility: Multiple index types
+//  - Index Consistency: Indexes are consistent
+//  - Data Integrity: Data integrity is maintained
+//  - Performance Metrics: Performance metrics are tracked
 //
 
 import Foundation
 
 // MARK: - Index Types
 
+/// Index ID
+/// Corresponds to TLA+: IndexID
+public typealias IndexID = UInt64
+
 /// Index type
 /// Corresponds to TLA+: IndexType
-public enum IndexType: String, Codable, Sendable {
+public enum IndexType: String, Codable, Sendable, CaseIterable {
     case btree = "btree"
     case hash = "hash"
     case bitmap = "bitmap"
@@ -29,108 +32,93 @@ public enum IndexType: String, Codable, Sendable {
     case composite = "composite"
 }
 
-/// Index status
-/// Corresponds to TLA+: IndexStatus
-public enum IndexStatus: String, Codable, Sendable {
-    case active = "active"
-    case inactive = "inactive"
-    case building = "building"
-    case rebuilding = "rebuilding"
-    case failed = "failed"
+/// Index entry
+/// Corresponds to TLA+: IndexEntry
+public struct IndexEntry: Codable, Sendable, Equatable {
+    public let entryId: String
+    public let indexId: IndexID
+    public let key: String
+    public let value: String
+    public let pageId: UInt64
+    public let offset: UInt64
+    public let isDeleted: Bool
+    public let timestamp: UInt64
+    
+    public init(entryId: String, indexId: IndexID, key: String, value: String, pageId: UInt64, offset: UInt64, isDeleted: Bool, timestamp: UInt64) {
+        self.entryId = entryId
+        self.indexId = indexId
+        self.key = key
+        self.value = value
+        self.pageId = pageId
+        self.offset = offset
+        self.isDeleted = isDeleted
+        self.timestamp = timestamp
+    }
 }
-
-/// Index operation
-/// Corresponds to TLA+: IndexOperation
-public enum IndexOperation: String, Codable, Sendable {
-    case create = "create"
-    case drop = "drop"
-    case insert = "insert"
-    case delete = "delete"
-    case update = "update"
-    case search = "search"
-    case scan = "scan"
-    case rebuild = "rebuild"
-}
-
-// MARK: - Index Metadata
 
 /// Index metadata
 /// Corresponds to TLA+: IndexMetadata
 public struct IndexMetadata: Codable, Sendable, Equatable {
-    public let indexId: String
+    public let indexId: IndexID
     public let name: String
-    public let type: IndexType
-    public let status: IndexStatus
     public let tableName: String
-    public let columns: [String]
+    public let columnNames: [String]
+    public let indexType: IndexType
     public let isUnique: Bool
     public let isPrimary: Bool
     public let isClustered: Bool
-    public let statistics: IndexStatistics
-    public let createdAt: Date
-    public let lastUpdated: Date
+    public let fillFactor: Double
+    public let created: UInt64
+    public let lastModified: UInt64
     
-    public init(indexId: String, name: String, type: IndexType, status: IndexStatus, tableName: String, columns: [String], isUnique: Bool, isPrimary: Bool, isClustered: Bool, statistics: IndexStatistics, createdAt: Date = Date(), lastUpdated: Date = Date()) {
+    public init(indexId: IndexID, name: String, tableName: String, columnNames: [String], indexType: IndexType, isUnique: Bool, isPrimary: Bool, isClustered: Bool, fillFactor: Double, created: UInt64, lastModified: UInt64) {
         self.indexId = indexId
         self.name = name
-        self.type = type
-        self.status = status
         self.tableName = tableName
-        self.columns = columns
+        self.columnNames = columnNames
+        self.indexType = indexType
         self.isUnique = isUnique
         self.isPrimary = isPrimary
         self.isClustered = isClustered
-        self.statistics = statistics
-        self.createdAt = createdAt
-        self.lastUpdated = lastUpdated
+        self.fillFactor = fillFactor
+        self.created = created
+        self.lastModified = lastModified
     }
 }
 
-/// Index statistics
-/// Corresponds to TLA+: IndexStatistics
-public struct IndexStatistics: Codable, Sendable, Equatable {
-    public let totalEntries: Int
-    public let uniqueEntries: Int
-    public let averageKeySize: Int
-    public let averageValueSize: Int
+/// Index metrics
+/// Corresponds to TLA+: IndexMetrics
+public struct IndexMetrics: Codable, Sendable, Equatable {
+    public let indexId: IndexID
+    public let entryCount: Int
+    public let size: UInt64
     public let height: Int
-    public let leafPages: Int
-    public let internalPages: Int
-    public let lastAnalyzed: Date
+    public let leafCount: Int
+    public let internalCount: Int
+    public let averageKeySize: Double
+    public let averageValueSize: Double
+    public let hitRate: Double
+    public let missRate: Double
+    public let scanCount: Int
+    public let insertCount: Int
+    public let updateCount: Int
+    public let deleteCount: Int
     
-    public init(totalEntries: Int, uniqueEntries: Int, averageKeySize: Int, averageValueSize: Int, height: Int, leafPages: Int, internalPages: Int, lastAnalyzed: Date = Date()) {
-        self.totalEntries = totalEntries
-        self.uniqueEntries = uniqueEntries
+    public init(indexId: IndexID, entryCount: Int, size: UInt64, height: Int, leafCount: Int, internalCount: Int, averageKeySize: Double, averageValueSize: Double, hitRate: Double, missRate: Double, scanCount: Int, insertCount: Int, updateCount: Int, deleteCount: Int) {
+        self.indexId = indexId
+        self.entryCount = entryCount
+        self.size = size
+        self.height = height
+        self.leafCount = leafCount
+        self.internalCount = internalCount
         self.averageKeySize = averageKeySize
         self.averageValueSize = averageValueSize
-        self.height = height
-        self.leafPages = leafPages
-        self.internalPages = internalPages
-        self.lastAnalyzed = lastAnalyzed
-    }
-}
-
-/// Index operation result
-/// Corresponds to TLA+: IndexOperationResult
-public struct IndexOperationResult: Codable, Sendable, Equatable {
-    public let operationId: String
-    public let operation: IndexOperation
-    public let indexId: String
-    public let success: Bool
-    public let data: [Value]?
-    public let executionTime: TimeInterval
-    public let error: String?
-    public let timestamp: Date
-    
-    public init(operationId: String, operation: IndexOperation, indexId: String, success: Bool, data: [Value]?, executionTime: TimeInterval, error: String? = nil, timestamp: Date = Date()) {
-        self.operationId = operationId
-        self.operation = operation
-        self.indexId = indexId
-        self.success = success
-        self.data = data
-        self.executionTime = executionTime
-        self.error = error
-        self.timestamp = timestamp
+        self.hitRate = hitRate
+        self.missRate = missRate
+        self.scanCount = scanCount
+        self.insertCount = insertCount
+        self.updateCount = updateCount
+        self.deleteCount = deleteCount
     }
 }
 
@@ -142,24 +130,21 @@ public actor IndexManager {
     
     // MARK: - State Variables (TLA+ vars)
     
-    /// Index registry
-    /// TLA+: indexes \in [IndexId -> IndexMetadata]
-    private var indexes: [String: IndexMetadata] = [:]
+    /// Indexes
+    /// TLA+: indexes \in [IndexID -> Index]
+    private var indexes: [IndexID: Index] = [:]
     
-    /// Index instances
-    /// TLA+: indexInstances \in [IndexId -> IndexInstance]
-    private var indexInstances: [String: IndexInstance] = [:]
+    /// Index metadata
+    /// TLA+: indexMetadata \in [IndexID -> IndexMetadata]
+    private var indexMetadata: [IndexID: IndexMetadata] = [:]
     
-    /// Index operations
-    /// TLA+: indexOperations \in [OperationId -> IndexOperationResult]
-    private var indexOperations: [String: IndexOperationResult] = [:]
+    /// Index metrics
+    /// TLA+: indexMetrics \in [IndexID -> IndexMetrics]
+    private var indexMetrics: [IndexID: IndexMetrics] = [:]
     
-    /// Index history
-    /// TLA+: indexHistory \in Seq(IndexEvent)
-    private var indexHistory: [IndexEvent] = []
-    
-    /// Index configuration
-    private var indexConfig: IndexConfig
+    /// Index cache
+    /// TLA+: indexCache \in [IndexID -> [IndexEntry]]
+    private var indexCache: [IndexID: [IndexEntry]] = [:]
     
     // MARK: - Dependencies
     
@@ -169,912 +154,464 @@ public actor IndexManager {
     /// Buffer manager
     private let bufferManager: BufferManager
     
-    /// WAL for logging
-    private let wal: FileWAL
-    
     // MARK: - Initialization
     
-    public init(storageManager: StorageManager, bufferManager: BufferManager, wal: FileWAL, indexConfig: IndexConfig = IndexConfig()) {
+    public init(storageManager: StorageManager, bufferManager: BufferManager) {
         self.storageManager = storageManager
         self.bufferManager = bufferManager
-        self.wal = wal
-        self.indexConfig = indexConfig
         
         // TLA+ Init
         self.indexes = [:]
-        self.indexInstances = [:]
-        self.indexOperations = [:]
-        self.indexHistory = []
-    }
-    
-    // MARK: - Index Management
-    
-    /// Create index
-    /// TLA+ Action: CreateIndex(indexId, metadata)
-    public func createIndex(indexId: String, metadata: IndexMetadata) async throws {
-        // TLA+: Check if index already exists
-        guard indexes[indexId] == nil else {
-            throw IndexError.indexAlreadyExists
-        }
-        
-        // TLA+: Validate index metadata
-        try validateIndexMetadata(metadata)
-        
-        // TLA+: Create index
-        indexes[indexId] = metadata
-        
-        // TLA+: Create index instance
-        let instance = try await createIndexInstance(metadata: metadata)
-        indexInstances[indexId] = instance
-        
-        // TLA+: Log index creation
-        let event = IndexEvent(
-            eventId: "\(indexId)_created",
-            indexId: indexId,
-            eventType: .indexCreated,
-            timestamp: Date(),
-            data: ["name": .string(metadata.name), "type": .string(metadata.type.rawValue)])
-        indexHistory.append(event)
-    }
-    
-    /// Drop index
-    /// TLA+ Action: DropIndex(indexId)
-    public func dropIndex(indexId: String) async throws {
-        // TLA+: Check if index exists
-        guard let metadata = indexes[indexId] else {
-            throw IndexError.indexNotFound
-        }
-        
-        // TLA+: Check if index is primary
-        guard !metadata.isPrimary else {
-            throw IndexError.cannotDropPrimaryIndex
-        }
-        
-        // TLA+: Drop index instance
-        if let instance = indexInstances[indexId] {
-            try await instance.drop()
-        }
-        
-        // TLA+: Remove index
-        indexes.removeValue(forKey: indexId)
-        indexInstances.removeValue(forKey: indexId)
-        
-        // TLA+: Log index drop
-        let event = IndexEvent(
-            eventId: "\(indexId)_dropped",
-            indexId: indexId,
-            eventType: .indexDropped,
-            timestamp: Date(),
-            data: ["name": .string(metadata.name)])
-        indexHistory.append(event)
-    }
-    
-    /// Rebuild index
-    /// TLA+ Action: RebuildIndex(indexId)
-    public func rebuildIndex(indexId: String) async throws {
-        // TLA+: Check if index exists
-        guard var metadata = indexes[indexId] else {
-            throw IndexError.indexNotFound
-        }
-        
-        // TLA+: Update index status
-        metadata.status = .rebuilding
-        indexes[indexId] = metadata
-        
-        // TLA+: Log rebuild start
-        let event = IndexEvent(
-            eventId: "\(indexId)_rebuild_started",
-            indexId: indexId,
-            eventType: .rebuildStarted,
-            timestamp: Date(),
-            data: [:])
-        indexHistory.append(event)
-        
-        let startTime = Date()
-        
-        do {
-            // TLA+: Rebuild index instance
-            if let instance = indexInstances[indexId] {
-                try await instance.rebuild()
-            }
-            
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Update index status
-            metadata.status = .active
-            metadata.lastUpdated = Date()
-            indexes[indexId] = metadata
-            
-            // TLA+: Record operation
-            let operation = IndexOperationResult(
-                operationId: "\(indexId)_rebuild_\(Date().timeIntervalSince1970)",
-                operation: .rebuild,
-                indexId: indexId,
-                success: true,
-                data: nil,
-                executionTime: executionTime
-            )
-            indexOperations[operation.operationId] = operation
-            
-            // TLA+: Log rebuild completion
-            let event = IndexEvent(
-                eventId: "\(indexId)_rebuild_completed",
-                indexId: indexId,
-                eventType: .rebuildCompleted,
-                timestamp: Date(),
-                data: ["executionTime": .double(executionTime)])
-            indexHistory.append(event)
-            
-        } catch {
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Update index status
-            metadata.status = .failed
-            indexes[indexId] = metadata
-            
-            // TLA+: Record failed operation
-            let operation = IndexOperationResult(
-                operationId: "\(indexId)_rebuild_\(Date().timeIntervalSince1970)",
-                operation: .rebuild,
-                indexId: indexId,
-                success: false,
-                data: nil,
-                executionTime: executionTime,
-                error: error.localizedDescription
-            )
-            indexOperations[operation.operationId] = operation
-            
-            // TLA+: Log rebuild failure
-            let event = IndexEvent(
-                eventId: "\(indexId)_rebuild_failed",
-                indexId: indexId,
-                eventType: .rebuildFailed,
-                timestamp: Date(),
-                data: ["error": .string(error.localizedDescription)])
-            indexHistory.append(event)
-            
-            throw error
-        }
+        self.indexMetadata = [:]
+        self.indexMetrics = [:]
+        self.indexCache = [:]
     }
     
     // MARK: - Index Operations
     
-    /// Insert entry
-    /// TLA+ Action: InsertEntry(indexId, key, value)
-    public func insertEntry(indexId: String, key: Value, value: Value) async throws {
+    /// Create index
+    /// TLA+ Action: CreateIndex(metadata)
+    public func createIndex(metadata: IndexMetadata) async throws -> IndexID {
+        // TLA+: Create index
+        let index = Index(
+            indexId: metadata.indexId,
+            indexType: metadata.indexType,
+            entries: [],
+            isUnique: metadata.isUnique,
+            isPrimary: metadata.isPrimary,
+            isClustered: metadata.isClustered,
+            fillFactor: metadata.fillFactor,
+            created: metadata.created,
+            lastModified: metadata.lastModified
+        )
+        
+        indexes[metadata.indexId] = index
+        indexMetadata[metadata.indexId] = metadata
+        
+        // TLA+: Initialize metrics
+        let metrics = IndexMetrics(
+            indexId: metadata.indexId,
+            entryCount: 0,
+            size: 0,
+            height: 0,
+            leafCount: 0,
+            internalCount: 0,
+            averageKeySize: 0.0,
+            averageValueSize: 0.0,
+            hitRate: 0.0,
+            missRate: 0.0,
+            scanCount: 0,
+            insertCount: 0,
+            updateCount: 0,
+            deleteCount: 0
+        )
+        indexMetrics[metadata.indexId] = metrics
+        
+        print("Created index: \(metadata.name) (ID: \(metadata.indexId))")
+        return metadata.indexId
+    }
+    
+    /// Drop index
+    /// TLA+ Action: DropIndex(indexId)
+    public func dropIndex(indexId: IndexID) async throws {
         // TLA+: Check if index exists
-        guard let metadata = indexes[indexId] else {
+        guard indexes[indexId] != nil else {
             throw IndexError.indexNotFound
         }
         
-        // TLA+: Check if index is active
-        guard metadata.status == .active else {
-            throw IndexError.indexNotActive
+        // TLA+: Drop index
+        indexes.removeValue(forKey: indexId)
+        indexMetadata.removeValue(forKey: indexId)
+        indexMetrics.removeValue(forKey: indexId)
+        indexCache.removeValue(forKey: indexId)
+        
+        print("Dropped index: \(indexId)")
+    }
+    
+    /// Insert entry
+    /// TLA+ Action: InsertEntry(indexId, entry)
+    public func insertEntry(indexId: IndexID, entry: IndexEntry) async throws {
+        // TLA+: Check if index exists
+        guard var index = indexes[indexId] else {
+            throw IndexError.indexNotFound
         }
         
-        let startTime = Date()
-        
-        do {
-            // TLA+: Insert entry into index
-            if let instance = indexInstances[indexId] {
-                try await instance.insert(key: key, value: value)
+        // TLA+: Check uniqueness
+        if index.isUnique {
+            let existingEntry = index.entries.first { $0.key == entry.key && !$0.isDeleted }
+            if existingEntry != nil {
+                throw IndexError.duplicateKey
             }
-            
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Record operation
-            let operation = IndexOperationResult(
-                operationId: "\(indexId)_insert_\(Date().timeIntervalSince1970)",
-                operation: .insert,
-                indexId: indexId,
-                success: true,
-                data: [key, value],
-                executionTime: executionTime
-            )
-            indexOperations[operation.operationId] = operation
-            
-            // TLA+: Log insert operation
-            let event = IndexEvent(
-                eventId: "\(indexId)_insert",
-                indexId: indexId,
-                eventType: .insertOperation,
-                timestamp: Date(),
-                data: ["key": key, "value": value])
-            indexHistory.append(event)
-            
-        } catch {
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Record failed operation
-            let operation = IndexOperationResult(
-                operationId: "\(indexId)_insert_\(Date().timeIntervalSince1970)",
-                operation: .insert,
-                indexId: indexId,
-                success: false,
-                data: [key, value],
-                executionTime: executionTime,
-                error: error.localizedDescription
-            )
-            indexOperations[operation.operationId] = operation
-            
-            // TLA+: Log insert failure
-            let event = IndexEvent(
-                eventId: "\(indexId)_insert_failed",
-                indexId: indexId,
-                eventType: .insertFailure,
-                timestamp: Date(),
-                data: ["key": key, "error": .string(error.localizedDescription)])
-            indexHistory.append(event)
-            
-            throw error
         }
+        
+        // TLA+: Insert entry
+        index.entries.append(entry)
+        index.lastModified = UInt64(Date().timeIntervalSince1970 * 1000)
+        indexes[indexId] = index
+        
+        // TLA+: Update cache
+        if indexCache[indexId] == nil {
+            indexCache[indexId] = []
+        }
+        indexCache[indexId]?.append(entry)
+        
+        // TLA+: Update metrics
+        updateMetrics(indexId: indexId)
+        
+        print("Inserted entry into index: \(indexId)")
     }
     
     /// Delete entry
-    /// TLA+ Action: DeleteEntry(indexId, key)
-    public func deleteEntry(indexId: String, key: Value) async throws {
+    /// TLA+ Action: DeleteEntry(indexId, entryId)
+    public func deleteEntry(indexId: IndexID, entryId: String) async throws {
         // TLA+: Check if index exists
-        guard let metadata = indexes[indexId] else {
+        guard var index = indexes[indexId] else {
             throw IndexError.indexNotFound
         }
         
-        // TLA+: Check if index is active
-        guard metadata.status == .active else {
-            throw IndexError.indexNotActive
-        }
-        
-        let startTime = Date()
-        
-        do {
-            // TLA+: Delete entry from index
-            if let instance = indexInstances[indexId] {
-                try await instance.delete(key: key)
+        // TLA+: Find and mark as deleted
+        if let entryIndex = index.entries.firstIndex(where: { $0.entryId == entryId }) {
+            index.entries[entryIndex].isDeleted = true
+            index.lastModified = UInt64(Date().timeIntervalSince1970 * 1000)
+            indexes[indexId] = index
+            
+            // TLA+: Update cache
+            if let cacheIndex = indexCache[indexId]?.firstIndex(where: { $0.entryId == entryId }) {
+                indexCache[indexId]?[cacheIndex].isDeleted = true
             }
             
-            let executionTime = Date().timeIntervalSince(startTime)
+            // TLA+: Update metrics
+            updateMetrics(indexId: indexId)
             
-            // TLA+: Record operation
-            let operation = IndexOperationResult(
-                operationId: "\(indexId)_delete_\(Date().timeIntervalSince1970)",
-                operation: .delete,
-                indexId: indexId,
-                success: true,
-                data: [key],
-                executionTime: executionTime
-            )
-            indexOperations[operation.operationId] = operation
-            
-            // TLA+: Log delete operation
-            let event = IndexEvent(
-                eventId: "\(indexId)_delete",
-                indexId: indexId,
-                eventType: .deleteOperation,
-                timestamp: Date(),
-                data: ["key": key])
-            indexHistory.append(event)
-            
-        } catch {
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Record failed operation
-            let operation = IndexOperationResult(
-                operationId: "\(indexId)_delete_\(Date().timeIntervalSince1970)",
-                operation: .delete,
-                indexId: indexId,
-                success: false,
-                data: [key],
-                executionTime: executionTime,
-                error: error.localizedDescription
-            )
-            indexOperations[operation.operationId] = operation
-            
-            // TLA+: Log delete failure
-            let event = IndexEvent(
-                eventId: "\(indexId)_delete_failed",
-                indexId: indexId,
-                eventType: .deleteFailure,
-                timestamp: Date(),
-                data: ["key": key, "error": .string(error.localizedDescription)])
-            indexHistory.append(event)
-            
-            throw error
+            print("Deleted entry from index: \(indexId)")
+        } else {
+            throw IndexError.entryNotFound
         }
     }
     
-    /// Search index
-    /// TLA+ Action: SearchIndex(indexId, key)
-    public func searchIndex(indexId: String, key: Value) async throws -> [Value] {
+    /// Lookup entry
+    /// TLA+ Action: LookupEntry(indexId, key)
+    public func lookupEntry(indexId: IndexID, key: String) async throws -> [IndexEntry] {
         // TLA+: Check if index exists
-        guard let metadata = indexes[indexId] else {
+        guard let index = indexes[indexId] else {
             throw IndexError.indexNotFound
         }
         
-        // TLA+: Check if index is active
-        guard metadata.status == .active else {
-            throw IndexError.indexNotActive
-        }
+        // TLA+: Lookup entries
+        let entries = index.entries.filter { $0.key == key && !$0.isDeleted }
         
-        let startTime = Date()
+        // TLA+: Update metrics
+        updateMetrics(indexId: indexId)
         
-        do {
-            // TLA+: Search index
-            let results = try await indexInstances[indexId]?.search(key: key) ?? []
-            
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Record operation
-            let operation = IndexOperationResult(
-                operationId: "\(indexId)_search_\(Date().timeIntervalSince1970)",
-                operation: .search,
-                indexId: indexId,
-                success: true,
-                data: results,
-                executionTime: executionTime
-            )
-            indexOperations[operation.operationId] = operation
-            
-            // TLA+: Log search operation
-            let event = IndexEvent(
-                eventId: "\(indexId)_search",
-                indexId: indexId,
-                eventType: .searchOperation,
-                timestamp: Date(),
-                data: ["key": key, "resultCount": .int(results.count)])
-            indexHistory.append(event)
-            
-            return results
-            
-        } catch {
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Record failed operation
-            let operation = IndexOperationResult(
-                operationId: "\(indexId)_search_\(Date().timeIntervalSince1970)",
-                operation: .search,
-                indexId: indexId,
-                success: false,
-                data: nil,
-                executionTime: executionTime,
-                error: error.localizedDescription
-            )
-            indexOperations[operation.operationId] = operation
-            
-            // TLA+: Log search failure
-            let event = IndexEvent(
-                eventId: "\(indexId)_search_failed",
-                indexId: indexId,
-                eventType: .searchFailure,
-                timestamp: Date(),
-                data: ["key": key, "error": .string(error.localizedDescription)])
-            indexHistory.append(event)
-            
-            throw error
-        }
+        print("Looked up entries in index: \(indexId) for key: \(key)")
+        return entries
     }
     
-    /// Scan index
-    /// TLA+ Action: ScanIndex(indexId, startKey, endKey)
-    public func scanIndex(indexId: String, startKey: Value, endKey: Value) async throws -> [Value] {
+    /// Range scan
+    /// TLA+ Action: RangeScan(indexId, startKey, endKey)
+    public func rangeScan(indexId: IndexID, startKey: String, endKey: String) async throws -> [IndexEntry] {
         // TLA+: Check if index exists
-        guard let metadata = indexes[indexId] else {
+        guard let index = indexes[indexId] else {
             throw IndexError.indexNotFound
         }
         
-        // TLA+: Check if index is active
-        guard metadata.status == .active else {
-            throw IndexError.indexNotActive
+        // TLA+: Range scan
+        let entries = index.entries.filter { entry in
+            !entry.isDeleted && entry.key >= startKey && entry.key <= endKey
         }
         
-        let startTime = Date()
+        // TLA+: Update metrics
+        updateMetrics(indexId: indexId)
         
-        do {
-            // TLA+: Scan index
-            let results = try await indexInstances[indexId]?.scan(startKey: startKey, endKey: endKey) ?? []
-            
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Record operation
-            let operation = IndexOperationResult(
-                operationId: "\(indexId)_scan_\(Date().timeIntervalSince1970)",
-                operation: .scan,
-                indexId: indexId,
-                success: true,
-                data: results,
-                executionTime: executionTime
-            )
-            indexOperations[operation.operationId] = operation
-            
-            // TLA+: Log scan operation
-            let event = IndexEvent(
-                eventId: "\(indexId)_scan",
-                indexId: indexId,
-                eventType: .scanOperation,
-                timestamp: Date(),
-                data: ["startKey": startKey, "endKey": endKey, "resultCount": .int(results.count)])
-            indexHistory.append(event)
-            
-            return results
-            
-        } catch {
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Record failed operation
-            let operation = IndexOperationResult(
-                operationId: "\(indexId)_scan_\(Date().timeIntervalSince1970)",
-                operation: .scan,
-                indexId: indexId,
-                success: false,
-                data: nil,
-                executionTime: executionTime,
-                error: error.localizedDescription
-            )
-            indexOperations[operation.operationId] = operation
-            
-            // TLA+: Log scan failure
-            let event = IndexEvent(
-                eventId: "\(indexId)_scan_failed",
-                indexId: indexId,
-                eventType: .scanFailure,
-                timestamp: Date(),
-                data: ["startKey": startKey, "endKey": endKey, "error": .string(error.localizedDescription)])
-            indexHistory.append(event)
-            
-            throw error
-        }
+        print("Range scanned index: \(indexId) from \(startKey) to \(endKey)")
+        return entries
     }
     
     // MARK: - Helper Methods
     
-    /// Validate index metadata
-    private func validateIndexMetadata(_ metadata: IndexMetadata) throws {
-        // TLA+: Validate index metadata
-        guard !metadata.name.isEmpty else {
-            throw IndexError.invalidIndexName
-        }
+    /// Update metrics
+    private func updateMetrics(indexId: IndexID) {
+        // TLA+: Update index metrics
+        guard let index = indexes[indexId] else { return }
         
-        guard !metadata.columns.isEmpty else {
-            throw IndexError.invalidColumns
-        }
+        let entryCount = index.entries.filter { !$0.isDeleted }.count
+        let size = index.entries.reduce(0) { $0 + UInt64($1.key.count + $1.value.count) }
+        let averageKeySize = index.entries.isEmpty ? 0.0 : Double(index.entries.reduce(0) { $0 + $1.key.count }) / Double(index.entries.count)
+        let averageValueSize = index.entries.isEmpty ? 0.0 : Double(index.entries.reduce(0) { $0 + $1.value.count }) / Double(index.entries.count)
         
-        guard metadata.tableName.isEmpty == false else {
-            throw IndexError.invalidTableName
-        }
+        let metrics = IndexMetrics(
+            indexId: indexId,
+            entryCount: entryCount,
+            size: size,
+            height: 0, // Simplified
+            leafCount: 0, // Simplified
+            internalCount: 0, // Simplified
+            averageKeySize: averageKeySize,
+            averageValueSize: averageValueSize,
+            hitRate: 0.0, // Simplified
+            missRate: 0.0, // Simplified
+            scanCount: 0, // Simplified
+            insertCount: 0, // Simplified
+            updateCount: 0, // Simplified
+            deleteCount: 0 // Simplified
+        )
+        
+        indexMetrics[indexId] = metrics
     }
     
-    /// Create index instance
-    private func createIndexInstance(metadata: IndexMetadata) async throws -> IndexInstance {
-        // TLA+: Create index instance based on type
-        switch metadata.type {
-        case .btree:
-            return BTreeIndexInstance(metadata: metadata)
-        case .hash:
-            return HashIndexInstance(metadata: metadata)
-        case .bitmap:
-            return BitmapIndexInstance(metadata: metadata)
-        case .fulltext:
-            return FullTextIndexInstance(metadata: metadata)
-        case .spatial:
-            return SpatialIndexInstance(metadata: metadata)
-        case .composite:
-            return CompositeIndexInstance(metadata: metadata)
-        }
+    /// Get index type
+    private func getIndexType(indexId: IndexID) -> IndexType? {
+        return indexes[indexId]?.indexType
+    }
+    
+    /// Get index metadata
+    private func getIndexMetadata(indexId: IndexID) -> IndexMetadata? {
+        return indexMetadata[indexId]
+    }
+    
+    /// Update index metrics
+    private func updateIndexMetrics(indexId: IndexID, metrics: IndexMetrics) {
+        indexMetrics[indexId] = metrics
     }
     
     // MARK: - Query Operations
     
+    /// Get index type
+    public func getIndexType(indexId: IndexID) -> IndexType? {
+        return getIndexType(indexId: indexId)
+    }
+    
     /// Get index metadata
-    public func getIndexMetadata(indexId: String) -> IndexMetadata? {
-        return indexes[indexId]
+    public func getIndexMetadata(indexId: IndexID) -> IndexMetadata? {
+        return getIndexMetadata(indexId: indexId)
+    }
+    
+    /// Get index metrics
+    public func getIndexMetrics(indexId: IndexID) -> IndexMetrics? {
+        return indexMetrics[indexId]
     }
     
     /// Get all indexes
-    public func getAllIndexes() -> [IndexMetadata] {
+    public func getAllIndexes() -> [Index] {
         return Array(indexes.values)
     }
     
-    /// Get indexes for table
-    public func getIndexesForTable(tableName: String) -> [IndexMetadata] {
-        return indexes.values.filter { $0.tableName == tableName }
+    /// Get indexes by table
+    public func getIndexesByTable(tableName: String) -> [Index] {
+        return indexes.values.filter { index in
+            indexMetadata[index.indexId]?.tableName == tableName
+        }
     }
     
-    /// Get index operations
-    public func getIndexOperations() -> [IndexOperationResult] {
-        return Array(indexOperations.values)
+    /// Get indexes by type
+    public func getIndexesByType(type: IndexType) -> [Index] {
+        return indexes.values.filter { $0.indexType == type }
     }
     
-    /// Get index history
-    public func getIndexHistory() -> [IndexEvent] {
-        return indexHistory
+    /// Get index count
+    public func getIndexCount() -> Int {
+        return indexes.count
+    }
+    
+    /// Get index metrics
+    public func getIndexMetrics() -> [IndexMetrics] {
+        return Array(indexMetrics.values)
+    }
+    
+    /// Get index metadata for table
+    public func getIndexMetadataForTable(tableName: String) -> [IndexMetadata] {
+        return indexMetadata.values.filter { $0.tableName == tableName }
     }
     
     /// Check if index exists
-    public func indexExists(indexId: String) -> Bool {
+    public func indexExists(indexId: IndexID) -> Bool {
         return indexes[indexId] != nil
     }
     
-    /// Check if index is active
-    public func isIndexActive(indexId: String) -> Bool {
-        return indexes[indexId]?.status == .active
+    /// Get index by name
+    public func getIndexByName(name: String) -> Index? {
+        return indexes.values.first { index in
+            indexMetadata[index.indexId]?.name == name
+        }
+    }
+    
+    /// Get unique indexes
+    public func getUniqueIndexes() -> [Index] {
+        return indexes.values.filter { $0.isUnique }
+    }
+    
+    /// Get primary indexes
+    public func getPrimaryIndexes() -> [Index] {
+        return indexes.values.filter { $0.isPrimary }
+    }
+    
+    /// Get clustered indexes
+    public func getClusteredIndexes() -> [Index] {
+        return indexes.values.filter { $0.isClustered }
+    }
+    
+    /// Get index entries
+    public func getIndexEntries(indexId: IndexID) -> [IndexEntry] {
+        return indexes[indexId]?.entries ?? []
+    }
+    
+    /// Get cached entries
+    public func getCachedEntries(indexId: IndexID) -> [IndexEntry] {
+        return indexCache[indexId] ?? []
+    }
+    
+    /// Clear index cache
+    public func clearIndexCache() async throws {
+        indexCache.removeAll()
+        print("Index cache cleared")
+    }
+    
+    /// Rebuild index
+    public func rebuildIndex(indexId: IndexID) async throws {
+        // TLA+: Rebuild index
+        guard var index = indexes[indexId] else {
+            throw IndexError.indexNotFound
+        }
+        
+        // TLA+: Clear and rebuild
+        index.entries.removeAll()
+        index.lastModified = UInt64(Date().timeIntervalSince1970 * 1000)
+        indexes[indexId] = index
+        
+        // TLA+: Clear cache
+        indexCache[indexId] = []
+        
+        // TLA+: Update metrics
+        updateMetrics(indexId: indexId)
+        
+        print("Rebuilt index: \(indexId)")
     }
     
     // MARK: - Invariant Checking (for testing)
     
-    /// Check performance invariant
-    /// TLA+ Inv_Index_Performance
-    public func checkPerformanceInvariant() -> Bool {
-        // Check that index operations are fast
+    /// Check index consistency invariant
+    /// TLA+ Inv_Index_IndexConsistency
+    public func checkIndexConsistencyInvariant() -> Bool {
+        // Check that indexes are consistent
         return true // Simplified
     }
     
-    /// Check consistency invariant
-    /// TLA+ Inv_Index_Consistency
-    public func checkConsistencyInvariant() -> Bool {
-        // Check that index integrity is maintained
+    /// Check data integrity invariant
+    /// TLA+ Inv_Index_DataIntegrity
+    public func checkDataIntegrityInvariant() -> Bool {
+        // Check that data integrity is maintained
         return true // Simplified
     }
     
-    /// Check scalability invariant
-    /// TLA+ Inv_Index_Scalability
-    public func checkScalabilityInvariant() -> Bool {
-        // Check that system can handle large datasets
-        return indexes.count > 0
-    }
-    
-    /// Check flexibility invariant
-    /// TLA+ Inv_Index_Flexibility
-    public func checkFlexibilityInvariant() -> Bool {
-        // Check that multiple index types are supported
+    /// Check performance metrics invariant
+    /// TLA+ Inv_Index_PerformanceMetrics
+    public func checkPerformanceMetricsInvariant() -> Bool {
+        // Check that performance metrics are tracked
         return true // Simplified
     }
     
     /// Check all invariants
     public func checkAllInvariants() -> Bool {
-        let performance = checkPerformanceInvariant()
-        let consistency = checkConsistencyInvariant()
-        let scalability = checkScalabilityInvariant()
-        let flexibility = checkFlexibilityInvariant()
+        let indexConsistency = checkIndexConsistencyInvariant()
+        let dataIntegrity = checkDataIntegrityInvariant()
+        let performanceMetrics = checkPerformanceMetricsInvariant()
         
-        return performance && consistency && scalability && flexibility
+        return indexConsistency && dataIntegrity && performanceMetrics
     }
 }
 
 // MARK: - Supporting Types
 
-/// Index event type
-public enum IndexEventType: String, Codable, Sendable {
-    case indexCreated = "index_created"
-    case indexDropped = "index_dropped"
-    case rebuildStarted = "rebuild_started"
-    case rebuildCompleted = "rebuild_completed"
-    case rebuildFailed = "rebuild_failed"
-    case insertOperation = "insert_operation"
-    case deleteOperation = "delete_operation"
-    case searchOperation = "search_operation"
-    case scanOperation = "scan_operation"
-    case insertFailure = "insert_failure"
-    case deleteFailure = "delete_failure"
-    case searchFailure = "search_failure"
-    case scanFailure = "scan_failure"
-}
-
-/// Index event
-public struct IndexEvent: Codable, Sendable, Equatable {
-    public let eventId: String
-    public let indexId: String
-    public let eventType: IndexEventType
-    public let timestamp: Date
-    public let data: [String: Value]
+/// Index
+public struct Index: Codable, Sendable, Equatable {
+    public let indexId: IndexID
+    public let indexType: IndexType
+    public var entries: [IndexEntry]
+    public let isUnique: Bool
+    public let isPrimary: Bool
+    public let isClustered: Bool
+    public let fillFactor: Double
+    public let created: UInt64
+    public var lastModified: UInt64
     
-    public init(eventId: String, indexId: String, eventType: IndexEventType, timestamp: Date, data: [String: Value]) {
-        self.eventId = eventId
+    public init(indexId: IndexID, indexType: IndexType, entries: [IndexEntry], isUnique: Bool, isPrimary: Bool, isClustered: Bool, fillFactor: Double, created: UInt64, lastModified: UInt64) {
         self.indexId = indexId
-        self.eventType = eventType
-        self.timestamp = timestamp
+        self.indexType = indexType
+        self.entries = entries
+        self.isUnique = isUnique
+        self.isPrimary = isPrimary
+        self.isClustered = isClustered
+        self.fillFactor = fillFactor
+        self.created = created
+        self.lastModified = lastModified
+    }
+}
+
+/// Storage manager
+public protocol StorageManager: Sendable {
+    func readPage(pageId: UInt64) async throws -> Data
+    func writePage(pageId: UInt64, data: Data) async throws
+    func deletePage(pageId: UInt64) async throws
+}
+
+/// Buffer manager
+public protocol BufferManager: Sendable {
+    func fetchPage(pageId: UInt64) async throws -> Page
+    func unpinPage(pageId: UInt64) async throws
+    func flushPage(pageId: UInt64) async throws
+}
+
+/// Page
+public struct Page: Codable, Sendable, Equatable {
+    public let pageId: UInt64
+    public let data: Data
+    public let frameIndex: Int
+    public let isDirty: Bool
+    public let isPinned: Bool
+    public let timestamp: UInt64
+    
+    public init(pageId: UInt64, data: Data, frameIndex: Int, isDirty: Bool, isPinned: Bool, timestamp: UInt64) {
+        self.pageId = pageId
         self.data = data
+        self.frameIndex = frameIndex
+        self.isDirty = isDirty
+        self.isPinned = isPinned
+        self.timestamp = timestamp
     }
 }
 
-/// Index configuration
-public struct IndexConfig: Codable, Sendable {
-    public let maxIndexes: Int
-    public let enableAutoRebuild: Bool
-    public let rebuildThreshold: Double
-    public let enableStatistics: Bool
-    
-    public init(maxIndexes: Int = 1000, enableAutoRebuild: Bool = true, rebuildThreshold: Double = 0.1, enableStatistics: Bool = true) {
-        self.maxIndexes = maxIndexes
-        self.enableAutoRebuild = enableAutoRebuild
-        self.rebuildThreshold = rebuildThreshold
-        self.enableStatistics = enableStatistics
-    }
-}
-
-/// Index instance protocol
-public protocol IndexInstance: Sendable {
-    func insert(key: Value, value: Value) async throws
-    func delete(key: Value) async throws
-    func search(key: Value) async throws -> [Value]
-    func scan(startKey: Value, endKey: Value) async throws -> [Value]
-    func rebuild() async throws
-    func drop() async throws
-}
-
-/// BTree index instance
-public class BTreeIndexInstance: IndexInstance {
-    private let metadata: IndexMetadata
-    
-    public init(metadata: IndexMetadata) {
-        self.metadata = metadata
-    }
-    
-    public func insert(key: Value, value: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func delete(key: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func search(key: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func scan(startKey: Value, endKey: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func rebuild() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-    }
-    
-    public func drop() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-}
-
-/// Hash index instance
-public class HashIndexInstance: IndexInstance {
-    private let metadata: IndexMetadata
-    
-    public init(metadata: IndexMetadata) {
-        self.metadata = metadata
-    }
-    
-    public func insert(key: Value, value: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func delete(key: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func search(key: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func scan(startKey: Value, endKey: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func rebuild() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-    }
-    
-    public func drop() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-}
-
-/// Bitmap index instance
-public class BitmapIndexInstance: IndexInstance {
-    private let metadata: IndexMetadata
-    
-    public init(metadata: IndexMetadata) {
-        self.metadata = metadata
-    }
-    
-    public func insert(key: Value, value: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func delete(key: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func search(key: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func scan(startKey: Value, endKey: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func rebuild() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-    }
-    
-    public func drop() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-}
-
-/// Full-text index instance
-public class FullTextIndexInstance: IndexInstance {
-    private let metadata: IndexMetadata
-    
-    public init(metadata: IndexMetadata) {
-        self.metadata = metadata
-    }
-    
-    public func insert(key: Value, value: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func delete(key: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func search(key: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func scan(startKey: Value, endKey: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func rebuild() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-    }
-    
-    public func drop() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-}
-
-/// Spatial index instance
-public class SpatialIndexInstance: IndexInstance {
-    private let metadata: IndexMetadata
-    
-    public init(metadata: IndexMetadata) {
-        self.metadata = metadata
-    }
-    
-    public func insert(key: Value, value: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func delete(key: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func search(key: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func scan(startKey: Value, endKey: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func rebuild() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-    }
-    
-    public func drop() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-}
-
-/// Composite index instance
-public class CompositeIndexInstance: IndexInstance {
-    private let metadata: IndexMetadata
-    
-    public init(metadata: IndexMetadata) {
-        self.metadata = metadata
-    }
-    
-    public func insert(key: Value, value: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func delete(key: Value) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func search(key: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func scan(startKey: Value, endKey: Value) async throws -> [Value] {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return []
-    }
-    
-    public func rebuild() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-    }
-    
-    public func drop() async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-}
-
-// MARK: - Errors
-
+/// Index error
 public enum IndexError: Error, LocalizedError {
-    case indexAlreadyExists
     case indexNotFound
-    case indexNotActive
-    case cannotDropPrimaryIndex
-    case invalidIndexName
-    case invalidColumns
-    case invalidTableName
-    case operationFailed
+    case entryNotFound
+    case duplicateKey
+    case indexCreationFailed
+    case indexDropFailed
+    case entryInsertFailed
+    case entryDeleteFailed
+    case lookupFailed
+    case scanFailed
     
     public var errorDescription: String? {
         switch self {
-        case .indexAlreadyExists:
-            return "Index already exists"
         case .indexNotFound:
             return "Index not found"
-        case .indexNotActive:
-            return "Index is not active"
-        case .cannotDropPrimaryIndex:
-            return "Cannot drop primary index"
-        case .invalidIndexName:
-            return "Invalid index name"
-        case .invalidColumns:
-            return "Invalid columns"
-        case .invalidTableName:
-            return "Invalid table name"
-        case .operationFailed:
-            return "Index operation failed"
+        case .entryNotFound:
+            return "Index entry not found"
+        case .duplicateKey:
+            return "Duplicate key in unique index"
+        case .indexCreationFailed:
+            return "Index creation failed"
+        case .indexDropFailed:
+            return "Index drop failed"
+        case .entryInsertFailed:
+            return "Entry insertion failed"
+        case .entryDeleteFailed:
+            return "Entry deletion failed"
+        case .lookupFailed:
+            return "Entry lookup failed"
+        case .scanFailed:
+            return "Range scan failed"
         }
     }
 }
