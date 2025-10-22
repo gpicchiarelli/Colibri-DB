@@ -8,41 +8,85 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - O(1) average case lookup
-//  - Open addressing with linear probing
-//  - Dynamic resizing when load factor exceeds threshold
-//  - Uniqueness enforcement
+//  - Uniqueness: No duplicate keys (if unique index)
+//  - Load Factor: Maintains load factor below threshold
+//  - Collision Handling: All collisions resolved
+//  - Deterministic Hashing: Same key hashes to same bucket
+//
+//  Based on:
+//  - "Introduction to Algorithms" (Cormen et al., 2009) - Hash Tables
+//  - "The Art of Computer Programming" (Knuth, Vol 3) - Searching
 //
 
 import Foundation
 
+// MARK: - Hash Entry
+
+/// Hash index entry
+/// Corresponds to TLA+: HashEntry
+public struct HashEntry: Codable, Sendable, Equatable {
+    public let key: Value
+    public let rid: RID
+    public let deleted: Bool  // For tombstone in open addressing
+    
+    public init(key: Value, rid: RID, deleted: Bool = false) {
+        self.key = key
+        self.rid = rid
+        self.deleted = deleted
+    }
+}
+
+// MARK: - Hash Index
+
 /// Hash Index with open addressing
 /// Corresponds to TLA+ module: HashIndex.tla
 public actor HashIndex {
-    // MARK: - Configuration
+    
+    // MARK: - Constants (TLA+ constants)
     
     /// Initial bucket count
+    /// TLA+: InitialBuckets
     private static let initialBuckets = 16
     
-    /// Load factor threshold for resizing (75%)
-    private static let loadFactorThreshold = 0.75
+    /// Maximum load factor before resize (75%)
+    /// TLA+: MaxLoadFactor
+    private static let maxLoadFactor = 75
     
-    // MARK: - State Variables
+    /// Maximum probe attempts for open addressing
+    /// TLA+: MaxProbes
+    private static let maxProbes = 1000
     
-    /// Hash table buckets
-    private var buckets: [HashBucket?]
+    // MARK: - State Variables (TLA+ vars)
     
-    /// Number of entries
-    private var count: Int = 0
+    /// Array of buckets
+    /// TLA+: buckets \in [0..(numBuckets-1) -> Bucket]
+    private var buckets: [HashEntry?]
     
-    /// Unique index flag
-    private let unique: Bool
+    /// Total number of entries in index
+    /// TLA+: numEntries \in Nat
+    private var numEntries: Int = 0
+    
+    /// Current number of buckets
+    /// TLA+: numBuckets \in Nat
+    private var numBuckets: Int
+    
+    /// Current load factor (numEntries / numBuckets * 100)
+    /// TLA+: loadFactor \in 0..100
+    private var loadFactor: Int = 0
+    
+    /// Whether this is a unique index
+    /// TLA+: isUnique \in BOOLEAN
+    private let isUnique: Bool
     
     // MARK: - Initialization
     
-    public init(unique: Bool = false) {
+    public init(unique: Bool = true) {
+        // TLA+ Init
         self.buckets = Array(repeating: nil, count: Self.initialBuckets)
-        self.unique = unique
+        self.numEntries = 0
+        self.numBuckets = Self.initialBuckets
+        self.loadFactor = 0
+        self.isUnique = unique
     }
     
     // MARK: - Core Operations
