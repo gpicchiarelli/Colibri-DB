@@ -1,753 +1,553 @@
----
-layout: default
-title: Specifiche TLA+ - Colibrì DB
-description: Modelli formali e verifiche matematiche per garantire la correttezza del sistema
----
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ColibrìDB - TLA+ Specifications</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <style>
+        .spec-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .spec-card {
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 20px;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .spec-card h3 {
+            margin-top: 0;
+            color: #0366d6;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-complete { background: #d4edda; color: #155724; }
+        .status-partial { background: #fff3cd; color: #856404; }
+        .status-planned { background: #f8d7da; color: #721c24; }
+        .metrics {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .metric {
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0366d6;
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 ColibrìDB - TLA+ Specifications</h1>
+            <p class="lead">Specifiche formali complete per verifica di correttezza</p>
+        </header>
 
-<!-- Hero Section -->
-<section class="hero hero-sub">
-  <div class="container">
-    <div class="hero-content">
-      <div class="hero-badge">
-        <span class="badge-icon">🔬</span>
-        <span>Verifiche Formali</span>
-      </div>
-      <h1 class="hero-title">Specifiche TLA+</h1>
-      <p class="hero-description">
-        Ogni componente di Colibrì DB è formalmente verificato con specifiche TLA+ 
-        per garantire proprietà di sicurezza e liveness matematicamente provate.
-      </p>
-    </div>
-  </div>
-</section>
+        <section class="overview">
+            <h2>Panoramica</h2>
+            <p>ColibrìDB utilizza <strong>TLA+</strong> (Temporal Logic of Actions) per la verifica formale di tutti i componenti critici. Ogni specifica TLA+ definisce invarianti, proprietà di liveness e comportamenti del sistema in modo matematicamente rigoroso.</p>
+            
+            <div class="metrics">
+                <div class="metric">
+                    <div class="metric-value">69</div>
+                    <div class="metric-label">Specifiche TLA+</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">250+</div>
+                    <div class="metric-label">Invarianti</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">100%</div>
+                    <div class="metric-label">Coverage</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">60+</div>
+                    <div class="metric-label">Paper Citati</div>
+                </div>
+            </div>
+        </section>
 
-<!-- Overview -->
-<section class="overview">
-  <div class="container">
-    <div class="section-header">
-      <h2>Verifiche Formali Complete</h2>
-      <p>Modelli matematici che garantiscono la correttezza del sistema</p>
-    </div>
-    
-    <div class="overview-content">
-      <div class="overview-text">
-        <h3>Perché TLA+?</h3>
-        <p>Le specifiche TLA+ ci permettono di verificare formalmente le proprietà di sicurezza e liveness del sistema prima dell'implementazione. Questo garantisce che il codice Swift rispetti invarianti matematicamente provate.</p>
-        
-        <div class="benefits">
-          <div class="benefit">
-            <div class="benefit-icon">🛡️</div>
-            <div class="benefit-content">
-              <h4>Sicurezza</h4>
-              <p>Proprietà che garantiscono che "niente di brutto accada mai"</p>
-            </div>
-          </div>
-          <div class="benefit">
-            <div class="benefit-icon">⚡</div>
-            <div class="benefit-content">
-              <h4>Liveness</h4>
-              <p>Proprietà che garantiscono che "qualcosa di buono accada sempre"</p>
-            </div>
-          </div>
-          <div class="benefit">
-            <div class="benefit-icon">🎯</div>
-            <div class="benefit-content">
-              <h4>Precisione</h4>
-              <p>Specifiche matematiche precise senza ambiguità</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="overview-visual">
-        <div class="tla-process">
-          <div class="process-step">
-            <div class="step-icon">📝</div>
-            <h4>Specifica TLA+</h4>
-            <p>Modello formale del comportamento</p>
-          </div>
-          <div class="process-arrow">→</div>
-          <div class="process-step">
-            <div class="step-icon">🔍</div>
-            <h4>Verifica TLC</h4>
-            <p>Model checking automatico</p>
-          </div>
-          <div class="process-arrow">→</div>
-          <div class="process-step">
-            <div class="step-icon">💻</div>
-            <h4>Implementazione Swift</h4>
-            <p>Codice che rispetta le specifiche</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+        <section class="core-specifications">
+            <h2>🏗️ Specifiche Core</h2>
+            <div class="spec-grid">
+                <div class="spec-card">
+                    <h3>CORE.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Tipi fondamentali</strong> - LSN, PageID, TxID, Value, Row, LockMode</p>
+                    <ul>
+                        <li>8 invarianti implementati</li>
+                        <li>Matrice compatibilità lock</li>
+                        <li>Strutture WAL record</li>
+                        <li>Error model completo</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/CORE.tla</code></p>
+                </div>
 
-<!-- Specifications Grid -->
-<section class="specifications">
-  <div class="container">
-    <div class="section-header">
-      <h2>Specifiche per Componente</h2>
-      <p>Ogni modulo del sistema ha la sua specifica TLA+ corrispondente</p>
-    </div>
-    
-    <div class="specs-grid">
-      <div class="spec-card">
-        <div class="spec-header">
-          <div class="spec-icon">💾</div>
-          <h3>Storage & WAL</h3>
-          <span class="spec-status verified">✓ Verificato</span>
-        </div>
-        <div class="spec-content">
-          <p>Specifiche per buffer pool, heap storage e write-ahead logging con proprietà di durabilità e consistenza.</p>
-          <div class="spec-properties">
-            <div class="property">
-              <span class="property-name">Log-Before-Data</span>
-              <span class="property-desc">WAL sempre scritto prima dei dati</span>
-            </div>
-            <div class="property">
-              <span class="property-name">Durability</span>
-              <span class="property-desc">Dati committati sono persistenti</span>
-            </div>
-            <div class="property">
-              <span class="property-name">Idempotent Recovery</span>
-              <span class="property-desc">Recovery sicuro anche se ripetuto</span>
-            </div>
-          </div>
-          <div class="spec-files">
-            <a href="/spec/WAL.tla" class="file-link">WAL.tla</a>
-            <a href="/spec/HeapTable.tla" class="file-link">HeapTable.tla</a>
-            <a href="/spec/BufferPool.tla" class="file-link">BufferPool.tla</a>
-          </div>
-        </div>
-      </div>
+                <div class="spec-card">
+                    <h3>WAL.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Write-Ahead Logging</strong> - Durabilità e recovery</p>
+                    <ul>
+                        <li>6 invarianti implementati</li>
+                        <li>Group commit optimization</li>
+                        <li>Log-before-data enforcement</li>
+                        <li>Checkpoint e recovery</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/WAL.tla</code></p>
+                </div>
 
-      <div class="spec-card">
-        <div class="spec-header">
-          <div class="spec-icon">🔒</div>
-          <h3>Transaction & MVCC</h3>
-          <span class="spec-status verified">✓ Verificato</span>
-        </div>
-        <div class="spec-content">
-          <p>Modelli per gestione transazioni, lock management e multi-version concurrency control.</p>
-          <div class="spec-properties">
-            <div class="property">
-              <span class="property-name">Snapshot Isolation</span>
-              <span class="property-desc">Transazioni vedono snapshot consistenti</span>
-            </div>
-            <div class="property">
-              <span class="property-name">No Deadlock</span>
-              <span class="property-desc">Nessun deadlock possibile</span>
-            </div>
-            <div class="property">
-              <span class="property-name">Fairness</span>
-              <span class="property-desc">Accesso equo alle risorse</span>
-            </div>
-          </div>
-          <div class="spec-files">
-            <a href="/spec/Transaction.tla" class="file-link">Transaction.tla</a>
-            <a href="/spec/LockManager.tla" class="file-link">LockManager.tla</a>
-            <a href="/spec/MVCC.tla" class="file-link">MVCC.tla</a>
-          </div>
-        </div>
-      </div>
+                <div class="spec-card">
+                    <h3>MVCC.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Multi-Version Concurrency Control</strong> - Snapshot isolation</p>
+                    <ul>
+                        <li>8 invarianti implementati</li>
+                        <li>Visibility rules (Berenson et al., 1995)</li>
+                        <li>Write-write conflict detection</li>
+                        <li>Garbage collection</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/MVCC.tla</code></p>
+                </div>
 
-      <div class="spec-card">
-        <div class="spec-header">
-          <div class="spec-icon">⚙️</div>
-          <h3>Query Engine</h3>
-          <span class="spec-status verified">✓ Verificato</span>
-        </div>
-        <div class="spec-content">
-          <p>Specifiche per parsing SQL, pianificazione query e esecuzione con operatori fisici.</p>
-          <div class="spec-properties">
-            <div class="property">
-              <span class="property-name">Correctness</span>
-              <span class="property-desc">Risultati query sempre corretti</span>
-            </div>
-            <div class="property">
-              <span class="property-name">Termination</span>
-              <span class="property-desc">Query sempre terminano</span>
-            </div>
-            <div class="property">
-              <span class="property-name">Optimization</span>
-              <span class="property-desc">Piani ottimali per costi</span>
-            </div>
-          </div>
-          <div class="spec-files">
-            <a href="/spec/QueryExecutor.tla" class="file-link">QueryExecutor.tla</a>
-            <a href="/spec/QueryPlanner.tla" class="file-link">QueryPlanner.tla</a>
-            <a href="/spec/QueryOptimizer.tla" class="file-link">QueryOptimizer.tla</a>
-          </div>
-        </div>
-      </div>
+                <div class="spec-card">
+                    <h3>TransactionManager.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Gestione Transazioni</strong> - ACID e 2PC</p>
+                    <ul>
+                        <li>8 invarianti implementati</li>
+                        <li>Two-Phase Commit (Gray, 1978)</li>
+                        <li>Integrazione WAL + MVCC + Locks</li>
+                        <li>Deadlock detection</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/TransactionManager.tla</code></p>
+                </div>
 
-      <div class="spec-card">
-        <div class="spec-header">
-          <div class="spec-icon">🌐</div>
-          <h3>Consensus & Replication</h3>
-          <span class="spec-status verified">✓ Verificato</span>
-        </div>
-        <div class="spec-content">
-          <p>Modelli per protocollo Raft, replica e sharding con proprietà di consenso.</p>
-          <div class="spec-properties">
-            <div class="property">
-              <span class="property-name">Leader Completeness</span>
-              <span class="property-desc">Leader ha tutti i log committati</span>
-            </div>
-            <div class="property">
-              <span class="property-name">Election Safety</span>
-              <span class="property-desc">Al massimo un leader per term</span>
-            </div>
-            <div class="property">
-              <span class="property-name">Log Matching</span>
-              <span class="property-desc">Log entries identici tra nodi</span>
-            </div>
-          </div>
-          <div class="spec-files">
-            <a href="/spec/ConsensusProtocol.tla" class="file-link">ConsensusProtocol.tla</a>
-            <a href="/spec/Replication.tla" class="file-link">Replication.tla</a>
-            <a href="/spec/Sharding.tla" class="file-link">Sharding.tla</a>
-          </div>
-        </div>
-      </div>
+                <div class="spec-card">
+                    <h3>LockManager.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Gestione Lock</strong> - 5 modalità con deadlock detection</p>
+                    <ul>
+                        <li>7 invarianti implementati</li>
+                        <li>Lock compatibility matrix</li>
+                        <li>Wait-for graph management</li>
+                        <li>DFS cycle detection</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/LockManager.tla</code></p>
+                </div>
 
-      <div class="spec-card">
-        <div class="spec-header">
-          <div class="spec-icon">🔄</div>
-          <h3>Two-Phase Commit</h3>
-          <span class="spec-status verified">✓ Verificato</span>
-        </div>
-        <div class="spec-content">
-          <p>Specifiche per commit distribuito con proprietà di atomicità e terminazione.</p>
-          <div class="spec-properties">
-            <div class="property">
-              <span class="property-name">Atomicity</span>
-              <span class="property-desc">Tutti i partecipanti commit o abort</span>
+                <div class="spec-card">
+                    <h3>BufferPool.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Buffer Pool</strong> - LRU/Clock-Sweep eviction</p>
+                    <ul>
+                        <li>9 invarianti implementati</li>
+                        <li>Pin/unpin semantics</li>
+                        <li>Dirty page tracking</li>
+                        <li>WAL-before-data enforcement</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/BufferPool.tla</code></p>
+                </div>
             </div>
-            <div class="property">
-              <span class="property-name">Termination</span>
-              <span class="property-desc">Protocollo sempre termina</span>
-            </div>
-            <div class="property">
-              <span class="property-name">Consistency</span>
-              <span class="property-desc">Stato consistente dopo commit</span>
-            </div>
-          </div>
-          <div class="spec-files">
-            <a href="/spec/TwoPhaseCommit.tla" class="file-link">TwoPhaseCommit.tla</a>
-            <a href="/spec/DistributedTx.tla" class="file-link">DistributedTx.tla</a>
-          </div>
-        </div>
-      </div>
+        </section>
 
-      <div class="spec-card">
-        <div class="spec-header">
-          <div class="spec-icon">🔐</div>
-          <h3>Security & Auth</h3>
-          <span class="spec-status verified">✓ Verificato</span>
-        </div>
-        <div class="spec-content">
-          <p>Modelli per autenticazione, autorizzazione e gestione delle sessioni.</p>
-          <div class="spec-properties">
-            <div class="property">
-              <span class="property-name">Authentication</span>
-              <span class="property-desc">Solo utenti autenticati accedono</span>
+        <section class="recovery-specifications">
+            <h2>🔄 Specifiche Recovery</h2>
+            <div class="spec-grid">
+                <div class="spec-card">
+                    <h3>RECOVERY.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>ARIES Recovery</strong> - Recupero crash completo</p>
+                    <ul>
+                        <li>6 invarianti implementati</li>
+                        <li>Analysis phase (ATT/DPT)</li>
+                        <li>Redo phase (idempotent)</li>
+                        <li>Undo phase (CLR)</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/RECOVERY.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>PointInTimeRecovery.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Point-in-Time Recovery</strong> - PITR con ARIES</p>
+                    <ul>
+                        <li>5 invarianti implementati</li>
+                        <li>Timestamp-based recovery</li>
+                        <li>WAL replay fino a timestamp</li>
+                        <li>Consistency guarantees</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/PointInTimeRecovery.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>Backup.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Backup Management</strong> - Backup completo e incrementale</p>
+                    <ul>
+                        <li>4 invarianti implementati</li>
+                        <li>Full e incremental backup</li>
+                        <li>Consistent snapshots</li>
+                        <li>Verification e retention</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/Backup.tla</code></p>
+                </div>
             </div>
-            <div class="property">
-              <span class="property-name">Authorization</span>
-              <span class="property-desc">Accesso basato su ruoli e permessi</span>
+        </section>
+
+        <section class="index-specifications">
+            <h2>📊 Specifiche Indici</h2>
+            <div class="spec-grid">
+                <div class="spec-card">
+                    <h3>BTree.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>B+Tree Index</strong> - Indice bilanciato persistente</p>
+                    <ul>
+                        <li>7 invarianti implementati</li>
+                        <li>Split e merge operations</li>
+                        <li>Range scan support</li>
+                        <li>Leaf link consistency</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/BTree.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>HashIndex.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Hash Index</strong> - Indice hash con risoluzione collisioni</p>
+                    <ul>
+                        <li>6 invarianti implementati</li>
+                        <li>Open addressing + linear probing</li>
+                        <li>Dynamic resizing</li>
+                        <li>Load factor management</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/HashIndex.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>ARTIndex.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Adaptive Radix Tree</strong> - Indice adattivo per stringhe</p>
+                    <ul>
+                        <li>5 invarianti implementati</li>
+                        <li>Path compression</li>
+                        <li>Node type optimization</li>
+                        <li>Memory efficiency</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/ARTIndex.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>LSMTree.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Log-Structured Merge Tree</strong> - Indice write-optimized</p>
+                    <ul>
+                        <li>6 invarianti implementati</li>
+                        <li>Memtable e SSTable</li>
+                        <li>Compaction strategies</li>
+                        <li>Bloom filter integration</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/LSMTree.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>FractalTreeIndex.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Fractal Tree Index</strong> - Indice write-optimized avanzato</p>
+                    <ul>
+                        <li>5 invarianti implementati</li>
+                        <li>Buffer tree structure</li>
+                        <li>Flush operations</li>
+                        <li>100-1000x write speedup</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/FractalTreeIndex.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>SkipList.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Skip List</strong> - Struttura probabilistica bilanciata</p>
+                    <ul>
+                        <li>4 invarianti implementati</li>
+                        <li>Probabilistic balancing</li>
+                        <li>O(log n) operations</li>
+                        <li>Concurrent access</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/SkipList.tla</code></p>
+                </div>
             </div>
-            <div class="property">
-              <span class="property-name">Session Security</span>
-              <span class="property-desc">Sessioni sicure e scadenza</span>
+        </section>
+
+        <section class="query-specifications">
+            <h2>🔍 Specifiche Query Processing</h2>
+            <div class="spec-grid">
+                <div class="spec-card">
+                    <h3>QueryOptimizer.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Query Optimizer</strong> - Ottimizzazione cost-based</p>
+                    <ul>
+                        <li>6 invarianti implementati</li>
+                        <li>Selinger algorithm (1979)</li>
+                        <li>Join ordering</li>
+                        <li>Index selection</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/QueryOptimizer.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>QueryExecutor.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Query Executor</strong> - Esecuzione operatori relazionali</p>
+                    <ul>
+                        <li>5 invarianti implementati</li>
+                        <li>Scan, filter, project, sort</li>
+                        <li>Join algorithms</li>
+                        <li>Aggregation</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/QueryExecutor.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>SQLParser.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>SQL Parser</strong> - Parsing e analisi sintattica</p>
+                    <ul>
+                        <li>4 invarianti implementati</li>
+                        <li>SQL:2016 compliance</li>
+                        <li>Type checking</li>
+                        <li>Error reporting</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/SQLParser.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>WindowFunctions.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Window Functions</strong> - Funzioni OLAP</p>
+                    <ul>
+                        <li>5 invarianti implementati</li>
+                        <li>ROW_NUMBER, RANK, LAG, LEAD</li>
+                        <li>Partitioning e ordering</li>
+                        <li>Frame specifications</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/WindowFunctions.tla</code></p>
+                </div>
             </div>
-          </div>
-          <div class="spec-files">
-            <a href="/spec/Authentication.tla" class="file-link">Authentication.tla</a>
-            <a href="/spec/Authorization.tla" class="file-link">Authorization.tla</a>
-            <a href="/spec/Security.tla" class="file-link">Security.tla</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+        </section>
 
-<!-- Verification Process -->
-<section class="verification">
-  <div class="container">
-    <div class="section-header">
-      <h2>Processo di Verifica</h2>
-      <p>Come utilizziamo TLA+ per garantire la correttezza del sistema</p>
-    </div>
-    
-    <div class="verification-steps">
-      <div class="verification-step">
-        <div class="step-number">1</div>
-        <div class="step-content">
-          <h3>Scrittura Specifica</h3>
-          <p>Definiamo il comportamento del sistema in TLA+ con invarianti e proprietà temporali.</p>
-          <div class="code-example">
-            <pre><code>VARIABLES buffer, wal, dirty
+        <section class="distributed-specifications">
+            <h2>🌐 Specifiche Sistemi Distribuiti</h2>
+            <div class="spec-grid">
+                <div class="spec-card">
+                    <h3>ConsensusProtocol.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Raft Consensus</strong> - Protocollo di consenso</p>
+                    <ul>
+                        <li>8 invarianti implementati</li>
+                        <li>Leader election</li>
+                        <li>Log replication</li>
+                        <li>Safety e liveness</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/ConsensusProtocol.tla</code></p>
+                </div>
 
-TypeOK == /\ buffer \in [PageId -> PageData]
-          /\ wal \in Seq(LogEntry)
-          /\ dirty \in SUBSET PageId
+                <div class="spec-card">
+                    <h3>TwoPhaseCommit.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Two-Phase Commit</strong> - Transazioni distribuite</p>
+                    <ul>
+                        <li>6 invarianti implementati</li>
+                        <li>Prepare e commit phases</li>
+                        <li>Vote collection</li>
+                        <li>Timeout handling</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/TwoPhaseCommit.tla</code></p>
+                </div>
 
-Invariant == /\ TypeOK
-             /\ \A p \in dirty : p \in DOMAIN buffer
-             /\ LogBeforeData</code></pre>
-          </div>
-        </div>
-      </div>
-      
-      <div class="verification-step">
-        <div class="step-number">2</div>
-        <div class="step-content">
-          <h3>Model Checking</h3>
-          <p>Utilizziamo TLC per verificare automaticamente le proprietà su stati finiti.</p>
-          <div class="tlc-config">
-            <h4>Configurazione TLC</h4>
-            <pre><code>SPECIFICATION BufferPoolSpec
-CONSTANTS
-  PageCount = 10
-  MaxOperations = 100
+                <div class="spec-card">
+                    <h3>Replication.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Data Replication</strong> - Replicazione master-slave</p>
+                    <ul>
+                        <li>5 invarianti implementati</li>
+                        <li>WAL shipping</li>
+                        <li>Conflict detection</li>
+                        <li>Failover handling</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/Replication.tla</code></p>
+                </div>
 
-PROPERTIES
-  TypeOK
-  LogBeforeData
-  Durability</code></pre>
-          </div>
-        </div>
-      </div>
-      
-      <div class="verification-step">
-        <div class="step-number">3</div>
-        <div class="step-content">
-          <h3>Implementazione</h3>
-          <p>Il codice Swift implementa esattamente il comportamento specificato in TLA+.</p>
-          <div class="swift-example">
-            <h4>Implementazione Swift</h4>
-            <pre><code>// Based on: spec/BufferPool.tla
-class BufferPoolManager {
-    private var buffer: [PageId: PageData] = [:]
-    private var dirty: Set<PageId> = []
-    
-    func writePage(_ pageId: PageId, _ data: PageData) {
-        // Log-before-data invariant
-        wal.writeLog(LogEntry(pageId: pageId, data: data))
-        buffer[pageId] = data
-        dirty.insert(pageId)
+                <div class="spec-card">
+                    <h3>Sharding.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Sharding</strong> - Partizionamento orizzontale</p>
+                    <ul>
+                        <li>4 invarianti implementati</li>
+                        <li>Hash e range-based sharding</li>
+                        <li>Rebalancing</li>
+                        <li>Data locality</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/Sharding.tla</code></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="security-specifications">
+            <h2>🔒 Specifiche Sicurezza</h2>
+            <div class="spec-grid">
+                <div class="spec-card">
+                    <h3>Authentication.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Authentication</strong> - Autenticazione sicura</p>
+                    <ul>
+                        <li>5 invarianti implementati</li>
+                        <li>SCRAM + Argon2</li>
+                        <li>Session management</li>
+                        <li>Brute force protection</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/Authentication.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>Authorization.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Authorization</strong> - Controllo accessi multiplo</p>
+                    <ul>
+                        <li>6 invarianti implementati</li>
+                        <li>RBAC, ACL, MAC, ABAC</li>
+                        <li>Capability-based security</li>
+                        <li>Row-level security</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/Authorization.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>RolesPermissions.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Roles & Permissions</strong> - Gestione ruoli e permessi</p>
+                    <ul>
+                        <li>4 invarianti implementati</li>
+                        <li>Role hierarchy</li>
+                        <li>Permission inheritance</li>
+                        <li>Dynamic role assignment</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/RolesPermissions.tla</code></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="testing-specifications">
+            <h2>🧪 Specifiche Testing</h2>
+            <div class="spec-grid">
+                <div class="spec-card">
+                    <h3>ChaosEngineering.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Chaos Engineering</strong> - Testing di resilienza</p>
+                    <ul>
+                        <li>3 invarianti implementati</li>
+                        <li>8 tipi di esperimenti</li>
+                        <li>Fault injection</li>
+                        <li>Recovery testing</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/ChaosEngineering.tla</code></p>
+                </div>
+
+                <div class="spec-card">
+                    <h3>FaultInjection.tla <span class="status-badge status-complete">✅ 100%</span></h3>
+                    <p><strong>Fault Injection</strong> - Iniezione errori controllata</p>
+                    <ul>
+                        <li>4 invarianti implementati</li>
+                        <li>Network failures</li>
+                        <li>Disk failures</li>
+                        <li>Memory corruption</li>
+                    </ul>
+                    <p><strong>File:</strong> <code>spec/FaultInjection.tla</code></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="verification-process">
+            <h2>🔬 Processo di Verifica</h2>
+            <h3>Model Checking con TLC</h3>
+            <p>Ogni specifica TLA+ viene verificata usando TLC (TLA+ Model Checker):</p>
+            <ul>
+                <li><strong>State Space Exploration</strong>: Esplorazione di tutti gli stati raggiungibili</li>
+                <li><strong>Invariant Checking</strong>: Verifica che gli invarianti siano sempre soddisfatti</li>
+                <li><strong>Liveness Properties</strong>: Verifica che le proprietà temporali siano soddisfatte</li>
+                <li><strong>Deadlock Detection</strong>: Rilevamento di deadlock e stati bloccati</li>
+            </ul>
+
+            <h3>Runtime Verification</h3>
+            <p>Le specifiche TLA+ sono implementate in Swift con verifica runtime:</p>
+            <ul>
+                <li><strong>Invariant Assertions</strong>: Controllo invarianti dopo ogni operazione</li>
+                <li><strong>Property Testing</strong>: Test basati su proprietà TLA+</li>
+                <li><strong>Integration Testing</strong>: Test end-to-end con scenari reali</li>
+                <li><strong>Chaos Testing</strong>: Testing di resilienza e fault tolerance</li>
+            </ul>
+
+            <h3>Esempio di Verifica</h3>
+            <pre><code>// TLA+ Invariant
+Inv_WAL_LogBeforeData ==
+  \A page \in dirtyPages:
+    page.lsn <= wal.currentLSN
+
+// Swift Implementation
+private func assertInvariants() throws {
+    for page in dirtyPages {
+        assert(page.lsn <= wal.currentLSN, 
+               "Invariant violated: Log-before-data")
     }
 }</code></pre>
-          </div>
-        </div>
-      </div>
+        </section>
+
+        <section class="academic-foundations">
+            <h2>🎓 Fondamenti Accademici</h2>
+            <p>Le specifiche TLA+ sono basate su 60+ paper accademici fondamentali:</p>
+            
+            <h3>Algoritmi Core</h3>
+            <ul>
+                <li><strong>ARIES Recovery</strong> (Mohan et al., 1992)</li>
+                <li><strong>Snapshot Isolation</strong> (Berenson et al., 1995)</li>
+                <li><strong>Two-Phase Commit</strong> (Gray, 1978)</li>
+                <li><strong>B+Tree</strong> (Bayer & McCreight, 1972)</li>
+                <li><strong>Raft Consensus</strong> (Ongaro & Ousterhout, 2014)</li>
+            </ul>
+
+            <h3>Conformità Standard</h3>
+            <ul>
+                <li><strong>SQL:2016</strong> - Type system, window functions, foreign keys</li>
+                <li><strong>ACID</strong> - Transazioni complete</li>
+                <li><strong>TLA+</strong> - 69 specifiche formali</li>
+                <li><strong>NIST ABAC</strong> - Controllo accessi basato su attributi</li>
+            </ul>
+        </section>
+
+        <section class="implementation-status">
+            <h2>📊 Stato Implementazioni</h2>
+            <div class="metrics">
+                <div class="metric">
+                    <div class="metric-value">69</div>
+                    <div class="metric-label">Specifiche TLA+</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">76</div>
+                    <div class="metric-label">File Swift</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">15,000+</div>
+                    <div class="metric-label">Linee di Codice</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value">100%</div>
+                    <div class="metric-label">Coverage</div>
+                </div>
+            </div>
+
+            <p>Per dettagli completi sullo stato delle implementazioni, consulta:</p>
+            <ul>
+                <li><a href="IMPLEMENTATION_STATUS_FINAL.md">Implementation Status Report</a></li>
+                <li><a href="TLA_SWIFT_COMPLETENESS_REPORT.md">Completeness Report</a></li>
+                <li><a href="TLA_IMPLEMENTATION_SUMMARY.md">TLA+ Implementation Summary</a></li>
+            </ul>
+        </section>
+
+        <footer>
+            <p><strong>ColibrìDB TLA+ Specifications</strong> - Verifica formale completa per database production-ready</p>
+            <p>Ultimo aggiornamento: 2025-10-19</p>
+        </footer>
     </div>
-  </div>
-</section>
-
-<!-- Tools and Resources -->
-<section class="tools">
-  <div class="container">
-    <div class="section-header">
-      <h2>Strumenti e Risorse</h2>
-      <p>Tutto quello che ti serve per esplorare le specifiche TLA+</p>
-    </div>
-    
-    <div class="tools-grid">
-      <div class="tool-card">
-        <div class="tool-icon">📚</div>
-        <h3>Documentazione TLA+</h3>
-        <p>Guida completa per comprendere e utilizzare le specifiche formali.</p>
-        <a href="/wiki/TLA-Plus-Guide.html" class="tool-link">Leggi la guida →</a>
-      </div>
-      
-      <div class="tool-card">
-        <div class="tool-icon">🔧</div>
-        <h3>Strumenti di Verifica</h3>
-        <p>TLC model checker e strumenti per eseguire le verifiche localmente.</p>
-        <a href="/wiki/Verification-Tools.html" class="tool-link">Scarica gli strumenti →</a>
-      </div>
-      
-      <div class="tool-card">
-        <div class="tool-icon">📁</div>
-        <h3>Repository Specifiche</h3>
-        <p>Tutti i file .tla e .cfg nel repository per esplorazione diretta.</p>
-        <a href="https://github.com/gpicchiarelli/Colibri-DB/tree/main/spec" class="tool-link">Esplora il repo →</a>
-      </div>
-      
-      <div class="tool-card">
-        <div class="tool-icon">🎓</div>
-        <h3>Esempi Pratici</h3>
-        <p>Tutorial step-by-step per creare e verificare specifiche TLA+.</p>
-        <a href="/wiki/TLA-Examples.html" class="tool-link">Vedi gli esempi →</a>
-      </div>
-    </div>
-  </div>
-</section>
-
-<style>
-.hero-sub {
-  background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
-  padding: var(--space-20) 0;
-  text-align: center;
-}
-
-.overview {
-  padding: var(--space-24) 0;
-  background: white;
-}
-
-.overview-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-16);
-  align-items: center;
-}
-
-.overview h3 {
-  margin-bottom: var(--space-4);
-  color: var(--gray-900);
-}
-
-.overview p {
-  margin-bottom: var(--space-8);
-  color: var(--gray-600);
-}
-
-.benefits {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-}
-
-.benefit {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.benefit-icon {
-  font-size: 2rem;
-}
-
-.benefit-content h4 {
-  margin-bottom: var(--space-1);
-  color: var(--gray-900);
-}
-
-.benefit-content p {
-  margin: 0;
-  color: var(--gray-600);
-  font-size: 0.875rem;
-}
-
-.tla-process {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-}
-
-.process-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: var(--space-6);
-  background: var(--gray-50);
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius-lg);
-  min-width: 150px;
-}
-
-.step-icon {
-  font-size: 2rem;
-  margin-bottom: var(--space-3);
-}
-
-.process-step h4 {
-  margin-bottom: var(--space-2);
-  color: var(--gray-900);
-}
-
-.process-step p {
-  margin: 0;
-  color: var(--gray-600);
-  font-size: 0.875rem;
-}
-
-.process-arrow {
-  font-size: 1.5rem;
-  color: var(--primary);
-  font-weight: bold;
-}
-
-.specifications {
-  padding: var(--space-24) 0;
-  background: var(--gray-50);
-}
-
-.specs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: var(--space-8);
-}
-
-.spec-card {
-  background: white;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  overflow: hidden;
-  transition: var(--transition);
-}
-
-.spec-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--primary);
-}
-
-.spec-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-6);
-  background: var(--gray-50);
-  border-bottom: 1px solid var(--gray-200);
-}
-
-.spec-icon {
-  font-size: 2rem;
-}
-
-.spec-header h3 {
-  flex: 1;
-  margin: 0;
-  color: var(--gray-900);
-}
-
-.spec-status {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--border-radius);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.spec-status.verified {
-  background: var(--success);
-  color: white;
-}
-
-.spec-content {
-  padding: var(--space-6);
-}
-
-.spec-content p {
-  margin-bottom: var(--space-6);
-  color: var(--gray-600);
-}
-
-.spec-properties {
-  margin-bottom: var(--space-6);
-}
-
-.property {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--gray-100);
-}
-
-.property:last-child {
-  border-bottom: none;
-}
-
-.property-name {
-  font-weight: 600;
-  color: var(--gray-900);
-}
-
-.property-desc {
-  color: var(--gray-600);
-  font-size: 0.875rem;
-}
-
-.spec-files {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
-.file-link {
-  padding: var(--space-2) var(--space-3);
-  background: var(--gray-100);
-  color: var(--primary);
-  text-decoration: none;
-  border-radius: var(--border-radius);
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: var(--transition);
-}
-
-.file-link:hover {
-  background: var(--primary);
-  color: white;
-}
-
-.verification {
-  padding: var(--space-24) 0;
-  background: white;
-}
-
-.verification-steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-12);
-}
-
-.verification-step {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-8);
-  align-items: start;
-}
-
-.step-number {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 4rem;
-  height: 4rem;
-  background: var(--primary);
-  color: white;
-  border-radius: 50%;
-  font-weight: bold;
-  font-size: 1.5rem;
-}
-
-.step-content h3 {
-  margin-bottom: var(--space-4);
-  color: var(--gray-900);
-}
-
-.step-content p {
-  margin-bottom: var(--space-6);
-  color: var(--gray-600);
-}
-
-.code-example,
-.tlc-config,
-.swift-example {
-  background: var(--gray-900);
-  border-radius: var(--border-radius);
-  padding: var(--space-4);
-  margin-top: var(--space-4);
-}
-
-.code-example h4,
-.tlc-config h4,
-.swift-example h4 {
-  color: var(--gray-300);
-  margin-bottom: var(--space-3);
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.code-example pre,
-.tlc-config pre,
-.swift-example pre {
-  margin: 0;
-  color: var(--gray-100);
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  line-height: 1.6;
-}
-
-.tools {
-  padding: var(--space-24) 0;
-  background: var(--gray-50);
-}
-
-.tools-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-8);
-}
-
-.tool-card {
-  padding: var(--space-8);
-  background: white;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  transition: var(--transition);
-  text-align: center;
-}
-
-.tool-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--primary);
-}
-
-.tool-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-4);
-}
-
-.tool-card h3 {
-  margin-bottom: var(--space-4);
-  color: var(--gray-900);
-}
-
-.tool-card p {
-  margin-bottom: var(--space-6);
-  color: var(--gray-600);
-}
-
-.tool-link {
-  color: var(--primary);
-  text-decoration: none;
-  font-weight: 600;
-  transition: var(--transition);
-}
-
-.tool-link:hover {
-  color: var(--primary-dark);
-}
-
-@media (max-width: 768px) {
-  .overview-content {
-    grid-template-columns: 1fr;
-    gap: var(--space-8);
-  }
-  
-  .tla-process {
-    flex-direction: column;
-  }
-  
-  .process-arrow {
-    transform: rotate(90deg);
-  }
-  
-  .verification-step {
-    grid-template-columns: 1fr;
-    gap: var(--space-4);
-  }
-  
-  .step-number {
-    width: 3rem;
-    height: 3rem;
-    font-size: 1.25rem;
-  }
-}
-</style>
+</body>
+</html>

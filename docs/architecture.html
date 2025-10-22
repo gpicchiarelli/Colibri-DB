@@ -1,571 +1,469 @@
----
-layout: default
-title: Architettura - Colibrì DB
-description: Architettura modulare e design interno di Colibrì DB
----
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ColibrìDB - Architecture</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <style>
+        .architecture-diagram {
+            background: #f8f9fa;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .layer {
+            background: #fff;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .layer h3 {
+            margin-top: 0;
+            color: #0366d6;
+            border-bottom: 2px solid #0366d6;
+            padding-bottom: 10px;
+        }
+        .component {
+            background: #f8f9fa;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .component h4 {
+            margin-top: 0;
+            color: #28a745;
+        }
+        .tla-badge {
+            display: inline-block;
+            background: #17a2b8;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background: #fff;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0366d6;
+        }
+        .metric-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏗️ ColibrìDB Architecture</h1>
+            <p class="lead">Architettura completa di un database relazionale formalmente verificato</p>
+        </header>
 
-<!-- Hero Section -->
-<section class="hero hero-sub">
-  <div class="container">
-    <div class="hero-content">
-      <div class="hero-badge">
-        <span class="badge-icon">🏗️</span>
-        <span>Architettura del Sistema</span>
-      </div>
-      <h1 class="hero-title">Design Interno</h1>
-      <p class="hero-description">
-        Colibrì DB utilizza un'architettura modulare con componenti indipendenti e verificabili. 
-        Ogni layer ha responsabilità specifiche e interfacce ben definite.
-      </p>
+        <section class="overview">
+            <h2>Panoramica Architetturale</h2>
+            <p>ColibrìDB è un database relazionale completo implementato in Swift 6.2 con verifica formale TLA+. L'architettura è progettata per garantire correttezza, performance e scalabilità attraverso l'uso di specifiche formali e implementazione rigorosa.</p>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">69</div>
+                    <div class="metric-label">Specifiche TLA+</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">76</div>
+                    <div class="metric-label">Moduli Swift</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">15,000+</div>
+                    <div class="metric-label">Linee di Codice</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">250+</div>
+                    <div class="metric-label">Invarianti</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="architecture-diagram">
+            <h2>Architettura del Sistema</h2>
+            <div class="architecture-diagram">
+                <h3>ColibrìDB - Architettura Completa</h3>
+                <div style="font-family: monospace; text-align: left; background: #f8f9fa; padding: 20px; border-radius: 4px; margin: 20px 0;">
+┌─────────────────────────────────────────────────────────────────┐
+│                    CLIENT LAYER                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │   CLI Tool  │  │  Web UI     │  │  API Client │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    PROTOCOL LAYER                               │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │ Wire Protocol│  │  TLS/SSL    │  │  Auth Layer │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    SERVER LAYER                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │Connection Mgr│  │  Query Mgr  │  │  Session Mgr│            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    QUERY LAYER                                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │ SQL Parser  │  │  Optimizer  │  │  Executor   │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  TRANSACTION LAYER                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │Transaction  │  │  Lock Mgr   │  │    MVCC     │            │
+│  │   Manager   │  │             │  │             │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    STORAGE LAYER                                │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │ Buffer Pool │  │     WAL     │  │ Heap Tables │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │   Indexes   │  │  Recovery   │  │   Backup    │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    DISTRIBUTED LAYER                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
+│  │    Raft     │  │     2PC     │  │ Replication │            │
+│  └─────────────┘  └─────────────┘  └─────────────┘            │
+└─────────────────────────────────────────────────────────────────┘
+                </div>
+            </div>
+        </section>
+
+        <section class="layers">
+            <h2>Livelli Architetturali</h2>
+
+            <div class="layer">
+                <h3>🌐 Client Layer</h3>
+                <p>Interfacce per l'accesso al database</p>
+                <div class="component">
+                    <h4>CLI Tool (coldb) <span class="tla-badge">CLI.tla</span></h4>
+                    <p>Strumento amministrativo per gestione database, backup, monitoring e troubleshooting.</p>
+                </div>
+                <div class="component">
+                    <h4>Web UI <span class="tla-badge">WebUI.tla</span></h4>
+                    <p>Interfaccia web per amministrazione e monitoring in tempo reale.</p>
+                </div>
+                <div class="component">
+                    <h4>API Client <span class="tla-badge">APIClient.tla</span></h4>
+                    <p>Client programmatico per integrazione con applicazioni Swift.</p>
+                </div>
+            </div>
+
+            <div class="layer">
+                <h3>🔌 Protocol Layer</h3>
+                <p>Protocolli di comunicazione e sicurezza</p>
+                <div class="component">
+                    <h4>Wire Protocol <span class="tla-badge">WireProtocol.tla</span></h4>
+                    <p>Protocollo binario efficiente per comunicazione client-server con serializzazione custom.</p>
+                </div>
+                <div class="component">
+                    <h4>TLS/SSL <span class="tla-badge">TLS.tla</span></h4>
+                    <p>Crittografia end-to-end per sicurezza delle comunicazioni.</p>
+                </div>
+                <div class="component">
+                    <h4>Authentication Layer <span class="tla-badge">Authentication.tla</span></h4>
+                    <p>Autenticazione sicura con SCRAM e Argon2 password hashing.</p>
+                </div>
+            </div>
+
+            <div class="layer">
+                <h3>🖥️ Server Layer</h3>
+                <p>Gestione connessioni e sessioni</p>
+                <div class="component">
+                    <h4>Connection Manager <span class="tla-badge">ConnectionManager.tla</span></h4>
+                    <p>Gestione pool di connessioni con thread pool e load balancing.</p>
+                </div>
+                <div class="component">
+                    <h4>Query Manager <span class="tla-badge">QueryManager.tla</span></h4>
+                    <p>Orchestrazione del processing delle query end-to-end.</p>
+                </div>
+                <div class="component">
+                    <h4>Session Manager <span class="tla-badge">SessionManager.tla</span></h4>
+                    <p>Gestione sessioni utente con isolamento e timeout.</p>
+                </div>
+            </div>
+
+            <div class="layer">
+                <h3>🔍 Query Layer</h3>
+                <p>Elaborazione e ottimizzazione query</p>
+                <div class="component">
+                    <h4>SQL Parser <span class="tla-badge">SQLParser.tla</span></h4>
+                    <p>Parser SQL completo con type checking e validazione sintattica.</p>
+                </div>
+                <div class="component">
+                    <h4>Query Optimizer <span class="tla-badge">QueryOptimizer.tla</span></h4>
+                    <p>Ottimizzazione cost-based con Selinger algorithm e statistiche.</p>
+                </div>
+                <div class="component">
+                    <h4>Query Executor <span class="tla-badge">QueryExecutor.tla</span></h4>
+                    <p>Esecuzione operatori relazionali con pipeline e materializzazione.</p>
+                </div>
+            </div>
+
+            <div class="layer">
+                <h3>⚡ Transaction Layer</h3>
+                <p>Gestione transazioni e concorrenza</p>
+                <div class="component">
+                    <h4>Transaction Manager <span class="tla-badge">TransactionManager.tla</span></h4>
+                    <p>Gestione transazioni ACID con Two-Phase Commit e deadlock detection.</p>
+                </div>
+                <div class="component">
+                    <h4>Lock Manager <span class="tla-badge">LockManager.tla</span></h4>
+                    <p>Gestione lock con 5 modalità e rilevamento deadlock DFS.</p>
+                </div>
+                <div class="component">
+                    <h4>MVCC <span class="tla-badge">MVCC.tla</span></h4>
+                    <p>Multi-Version Concurrency Control con snapshot isolation e SSI.</p>
+                </div>
+            </div>
+
+            <div class="layer">
+                <h3>🗄️ Storage Layer</h3>
+                <p>Gestione persistenza e indicizzazione</p>
+                <div class="component">
+                    <h4>Buffer Pool <span class="tla-badge">BufferPool.tla</span></h4>
+                    <p>Cache intelligente con LRU/Clock-Sweep eviction e dirty page tracking.</p>
+                </div>
+                <div class="component">
+                    <h4>Write-Ahead Log <span class="tla-badge">WAL.tla</span></h4>
+                    <p>Logging per durabilità con group commit e checksum CRC32.</p>
+                </div>
+                <div class="component">
+                    <h4>Heap Tables <span class="tla-badge">HeapTable.tla</span></h4>
+                    <p>Storage engine con slotted pages e free space management.</p>
+                </div>
+                <div class="component">
+                    <h4>Index Manager <span class="tla-badge">IndexManager.tla</span></h4>
+                    <p>Gestione 9 tipi di indici: B+Tree, Hash, ART, LSM, Fractal, Skip, T-Tree, Radix, Bloom.</p>
+                </div>
+                <div class="component">
+                    <h4>Recovery Manager <span class="tla-badge">RECOVERY.tla</span></h4>
+                    <p>Recupero crash con algoritmo ARIES (Analysis, Redo, Undo).</p>
+                </div>
+                <div class="component">
+                    <h4>Backup Manager <span class="tla-badge">Backup.tla</span></h4>
+                    <p>Backup completo e incrementale con point-in-time recovery.</p>
+                </div>
+            </div>
+
+            <div class="layer">
+                <h3>🌐 Distributed Layer</h3>
+                <p>Sistemi distribuiti e consenso</p>
+                <div class="component">
+                    <h4>Raft Consensus <span class="tla-badge">ConsensusProtocol.tla</span></h4>
+                    <p>Protocollo di consenso per elezione leader e replicazione log.</p>
+                </div>
+                <div class="component">
+                    <h4>Two-Phase Commit <span class="tla-badge">TwoPhaseCommit.tla</span></h4>
+                    <p>Transazioni distribuite ACID con timeout e recovery.</p>
+                </div>
+                <div class="component">
+                    <h4>Replication Manager <span class="tla-badge">Replication.tla</span></h4>
+                    <p>Replicazione master-slave e multi-master con conflict resolution.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="design-principles">
+            <h2>Principi di Design</h2>
+            
+            <h3>🔬 Verifica Formale</h3>
+            <p>Ogni componente critico ha una specifica TLA+ completa con:</p>
+            <ul>
+                <li><strong>Invarianti</strong>: Proprietà che devono sempre essere soddisfatte</li>
+                <li><strong>Liveness Properties</strong>: Proprietà temporali che devono eventualmente essere soddisfatte</li>
+                <li><strong>Model Checking</strong>: Verifica automatica con TLC</li>
+                <li><strong>Runtime Verification</strong>: Controllo invarianti in tempo reale</li>
+            </ul>
+
+            <h3>⚡ Concorrenza Sicura</h3>
+            <p>Architettura basata su Swift actors per:</p>
+            <ul>
+                <li><strong>Isolamento</strong>: Un task per volta per actor</li>
+                <li><strong>Safety</strong>: Zero data races garantiti</li>
+                <li><strong>Async/Await</strong>: Concorrenza non-bloccante</li>
+                <li><strong>Type Safety</strong>: Controlli statici completi</li>
+            </ul>
+
+            <h3>🎯 Performance</h3>
+            <p>Ottimizzazioni per database ad alte prestazioni:</p>
+            <ul>
+                <li><strong>Group Commit</strong>: Batch I/O per throughput elevato</li>
+                <li><strong>Clock-Sweep Eviction</strong>: O(1) amortized eviction</li>
+                <li><strong>Index Optimization</strong>: 9 tipi di indici per accesso ottimizzato</li>
+                <li><strong>Query Optimization</strong>: Cost-based planning con statistiche</li>
+            </ul>
+
+            <h3>🔒 Sicurezza</h3>
+            <p>Modelli di sicurezza multipli per defense in depth:</p>
+            <ul>
+                <li><strong>Authentication</strong>: SCRAM + Argon2</li>
+                <li><strong>Authorization</strong>: RBAC, ACL, MAC, ABAC, Capabilities</li>
+                <li><strong>Encryption</strong>: TLS end-to-end</li>
+                <li><strong>Audit</strong>: Logging completo per compliance</li>
+            </ul>
+        </section>
+
+        <section class="data-flow">
+            <h2>Flusso Dati</h2>
+            
+            <h3>Query Processing</h3>
+            <ol>
+                <li><strong>Parsing</strong>: SQL → AST con type checking</li>
+                <li><strong>Planning</strong>: AST → Logical plan → Physical plan</li>
+                <li><strong>Optimization</strong>: Cost-based optimization con statistiche</li>
+                <li><strong>Execution</strong>: Esecuzione operatori relazionali</li>
+                <li><strong>Result</strong>: Serializzazione e invio risultati</li>
+            </ol>
+
+            <h3>Transaction Processing</h3>
+            <ol>
+                <li><strong>Begin</strong>: Allocazione TxID e snapshot</li>
+                <li><strong>Operations</strong>: Read/Write con MVCC e locking</li>
+                <li><strong>WAL</strong>: Logging per durabilità</li>
+                <li><strong>Commit</strong>: 2PC per transazioni distribuite</li>
+                <li><strong>Recovery</strong>: ARIES per crash recovery</li>
+            </ol>
+
+            <h3>Storage Operations</h3>
+            <ol>
+                <li><strong>Buffer Pool</strong>: Cache hit/miss con eviction</li>
+                <li><strong>WAL</strong>: Log-before-data enforcement</li>
+                <li><strong>Heap Storage</strong>: Slotted pages con free space</li>
+                <li><strong>Indexes</strong>: B+Tree, Hash, ART per accesso veloce</li>
+                <li><strong>Recovery</strong>: ARIES analysis, redo, undo</li>
+            </ol>
+        </section>
+
+        <section class="scalability">
+            <h2>Scalabilità e Distribuzione</h2>
+            
+            <h3>Scaling Verticale</h3>
+            <ul>
+                <li><strong>Buffer Pool</strong>: Cache memory configurabile</li>
+                <li><strong>Thread Pool</strong>: Connessioni concorrenti</li>
+                <li><strong>Index Types</strong>: Selezione ottimale per workload</li>
+                <li><strong>Query Optimization</strong>: Planning adattivo</li>
+            </ul>
+
+            <h3>Scaling Orizzontale</h3>
+            <ul>
+                <li><strong>Sharding</strong>: Partizionamento hash e range-based</li>
+                <li><strong>Replication</strong>: Master-slave e multi-master</li>
+                <li><strong>Consensus</strong>: Raft per coerenza forte</li>
+                <li><strong>Load Balancing</strong>: Distribuzione automatica carico</li>
+            </ul>
+
+            <h3>Fault Tolerance</h3>
+            <ul>
+                <li><strong>Crash Recovery</strong>: ARIES per consistenza</li>
+                <li><strong>Network Partitions</strong>: Raft per split-brain prevention</li>
+                <li><strong>Chaos Engineering</strong>: Testing resilienza integrato</li>
+                <li><strong>Backup/Restore</strong>: Point-in-time recovery</li>
+            </ul>
+        </section>
+
+        <section class="monitoring">
+            <h2>Monitoring e Observability</h2>
+            
+            <h3>Metriche Performance</h3>
+            <ul>
+                <li><strong>Throughput</strong>: TPS, QPS, WAL ops/sec</li>
+                <li><strong>Latency</strong>: Query time, commit time, lock wait</li>
+                <li><strong>Resource Usage</strong>: CPU, memory, disk I/O</li>
+                <li><strong>Cache Efficiency</strong>: Hit rate, eviction rate</li>
+            </ul>
+
+            <h3>Health Checks</h3>
+            <ul>
+                <li><strong>System Health</strong>: Buffer pool, WAL, indexes</li>
+                <li><strong>Transaction Health</strong>: Deadlock rate, abort rate</li>
+                <li><strong>Storage Health</strong>: Disk space, fragmentation</li>
+                <li><strong>Network Health</strong>: Connection count, replication lag</li>
+            </ul>
+
+            <h3>Alerting</h3>
+            <ul>
+                <li><strong>Performance Alerts</strong>: Latency spikes, throughput drops</li>
+                <li><strong>Error Alerts</strong>: Deadlocks, failures, corruption</li>
+                <li><strong>Resource Alerts</strong>: Memory pressure, disk full</li>
+                <li><strong>Security Alerts</strong>: Failed logins, privilege escalation</li>
+            </ul>
+        </section>
+
+        <section class="testing">
+            <h2>Testing e Qualità</h2>
+            
+            <h3>Verifica Formale</h3>
+            <ul>
+                <li><strong>TLA+ Model Checking</strong>: Verifica invarianti per tutti gli stati</li>
+                <li><strong>Runtime Assertions</strong>: Controllo invarianti in tempo reale</li>
+                <li><strong>Property Testing</strong>: 154 test basati su proprietà TLA+</li>
+                <li><strong>Integration Testing</strong>: Test end-to-end con scenari reali</li>
+            </ul>
+
+            <h3>Chaos Engineering</h3>
+            <ul>
+                <li><strong>Fault Injection</strong>: Network, disk, memory failures</li>
+                <li><strong>Chaos Experiments</strong>: 8 tipi di esperimenti</li>
+                <li><strong>Recovery Testing</strong>: Verifica resilienza e recovery</li>
+                <li><strong>Load Testing</strong>: Stress test con carico elevato</li>
+            </ul>
+
+            <h3>Quality Gates</h3>
+            <ul>
+                <li><strong>Code Coverage</strong>: 100% per moduli critici</li>
+                <li><strong>Performance Regression</strong>: < 5% degradation</li>
+                <li><strong>Security Scanning</strong>: CodeQL e SAST</li>
+                <li><strong>Documentation</strong>: Sincronizzazione con codice</li>
+            </ul>
+        </section>
+
+        <footer>
+            <p><strong>ColibrìDB Architecture</strong> - Architettura production-ready con verifica formale</p>
+            <p>Ultimo aggiornamento: 2025-10-19</p>
+        </footer>
     </div>
-  </div>
-</section>
-
-<!-- Architecture Overview -->
-<section class="architecture">
-  <div class="container">
-    <div class="section-header">
-      <h2>Panoramica Architetturale</h2>
-      <p>Un sistema a 4 layer con separazione netta delle responsabilità</p>
-    </div>
-    
-    <div class="architecture-diagram">
-      <div class="arch-layer">
-        <div class="layer-header">
-          <div class="layer-icon">🌐</div>
-          <h3>Distributed Layer</h3>
-          <span class="layer-badge">Consenso & Replica</span>
-        </div>
-        <div class="layer-description">
-          <p>Gestisce la distribuzione, il consenso e la replica dei dati attraverso il cluster.</p>
-        </div>
-        <div class="layer-components">
-          <div class="component">
-            <div class="component-icon">🤝</div>
-            <div class="component-name">Raft Consensus</div>
-            <div class="component-desc">Elezione leader e log matching</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">🔄</div>
-            <div class="component-name">Two-Phase Commit</div>
-            <div class="component-desc">Transazioni distribuite atomiche</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">📊</div>
-            <div class="component-name">Sharding Manager</div>
-            <div class="component-desc">Partizionamento automatico</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">📡</div>
-            <div class="component-name">Replication</div>
-            <div class="component-desc">Replica sincrona/asincrona</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="arch-layer">
-        <div class="layer-header">
-          <div class="layer-icon">⚙️</div>
-          <h3>Query Layer</h3>
-          <span class="layer-badge">SQL & Ottimizzazione</span>
-        </div>
-        <div class="layer-description">
-          <p>Processa le query SQL, le ottimizza e le esegue utilizzando operatori fisici efficienti.</p>
-        </div>
-        <div class="layer-components">
-          <div class="component">
-            <div class="component-icon">📝</div>
-            <div class="component-name">SQL Parser</div>
-            <div class="component-desc">Parsing e validazione SQL</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">🧠</div>
-            <div class="component-name">Query Planner</div>
-            <div class="component-desc">Pianificazione logica</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">⚡</div>
-            <div class="component-name">Query Executor</div>
-            <div class="component-desc">Esecuzione operatori fisici</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">🎯</div>
-            <div class="component-name">Optimizer</div>
-            <div class="component-desc">Ottimizzazione cost-based</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="arch-layer">
-        <div class="layer-header">
-          <div class="layer-icon">🔒</div>
-          <h3>Transaction Layer</h3>
-          <span class="layer-badge">ACID & Concorrenza</span>
-        </div>
-        <div class="layer-description">
-          <p>Garantisce le proprietà ACID e gestisce la concorrenza attraverso MVCC e lock management.</p>
-        </div>
-        <div class="layer-components">
-          <div class="component">
-            <div class="component-icon">📋</div>
-            <div class="component-name">Transaction Manager</div>
-            <div class="component-desc">Lifecycle transazioni</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">🔐</div>
-            <div class="component-name">Lock Manager</div>
-            <div class="component-desc">Gestione lock e deadlock</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">📸</div>
-            <div class="component-name">MVCC Manager</div>
-            <div class="component-desc">Snapshot isolation</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">🔄</div>
-            <div class="component-name">Recovery Manager</div>
-            <div class="component-desc">ARIES recovery</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="arch-layer">
-        <div class="layer-header">
-          <div class="layer-icon">💾</div>
-          <h3>Storage Layer</h3>
-          <span class="layer-badge">Persistenza & Indici</span>
-        </div>
-        <div class="layer-description">
-          <p>Gestisce la persistenza dei dati, il buffering in memoria e l'indicizzazione per accessi veloci.</p>
-        </div>
-        <div class="layer-components">
-          <div class="component">
-            <div class="component-icon">🧠</div>
-            <div class="component-name">Buffer Pool</div>
-            <div class="component-desc">Cache intelligente</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">📁</div>
-            <div class="component-name">Heap Storage</div>
-            <div class="component-desc">Storage slotted pages</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">📝</div>
-            <div class="component-name">WAL</div>
-            <div class="component-desc">Write-ahead logging</div>
-          </div>
-          <div class="component">
-            <div class="component-icon">🔍</div>
-            <div class="component-name">Index Manager</div>
-            <div class="component-desc">B-Tree, Hash, Bitmap</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Data Flow -->
-<section class="data-flow">
-  <div class="container">
-    <div class="section-header">
-      <h2>Flusso dei Dati</h2>
-      <p>Come una query attraversa i vari layer del sistema</p>
-    </div>
-    
-    <div class="flow-diagram">
-      <div class="flow-step">
-        <div class="step-number">1</div>
-        <div class="step-content">
-          <h4>SQL Input</h4>
-          <p>Query SQL ricevuta dal client</p>
-        </div>
-      </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step">
-        <div class="step-number">2</div>
-        <div class="step-content">
-          <h4>Parsing</h4>
-          <p>Analisi sintattica e semantica</p>
-        </div>
-      </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step">
-        <div class="step-number">3</div>
-        <div class="step-content">
-          <h4>Planning</h4>
-          <p>Generazione piano di esecuzione</p>
-        </div>
-      </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step">
-        <div class="step-number">4</div>
-        <div class="step-content">
-          <h4>Optimization</h4>
-          <p>Ottimizzazione cost-based</p>
-        </div>
-      </div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-step">
-        <div class="step-number">5</div>
-        <div class="step-content">
-          <h4>Execution</h4>
-          <p>Esecuzione operatori fisici</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Performance Characteristics -->
-<section class="performance">
-  <div class="container">
-    <div class="section-header">
-      <h2>Caratteristiche di Performance</h2>
-      <p>Ottimizzazioni e algoritmi per massime prestazioni</p>
-    </div>
-    
-    <div class="performance-grid">
-      <div class="perf-card">
-        <div class="perf-icon">⚡</div>
-        <h3>Buffer Pool</h3>
-        <p>Algoritmo clock-sweep per gestione efficiente della memoria con pin-count e dirty set tracking.</p>
-        <ul>
-          <li>LRU eviction policy</li>
-          <li>Dirty page tracking</li>
-          <li>Prefetching intelligente</li>
-          <li>Memory pressure handling</li>
-        </ul>
-      </div>
-      
-      <div class="perf-card">
-        <div class="perf-icon">📝</div>
-        <h3>WAL Optimization</h3>
-        <p>Write-ahead logging ottimizzato con group commit e checkpointing efficiente.</p>
-        <ul>
-          <li>Group commit batching</li>
-          <li>Incremental checkpointing</li>
-          <li>Log compression</li>
-          <li>Parallel recovery</li>
-        </ul>
-      </div>
-      
-      <div class="perf-card">
-        <div class="perf-icon">🔍</div>
-        <h3>Query Optimization</h3>
-        <p>Ottimizzatore cost-based con statistiche runtime e feedback loop per query performance.</p>
-        <ul>
-          <li>Cost-based optimization</li>
-          <li>Runtime statistics</li>
-          <li>Adaptive query plans</li>
-          <li>Index selection</li>
-        </ul>
-      </div>
-      
-      <div class="perf-card">
-        <div class="perf-icon">🔒</div>
-        <h3>Concurrency Control</h3>
-        <p>MVCC con snapshot isolation per concorrenza senza blocchi e performance ottimali.</p>
-        <ul>
-          <li>Snapshot isolation</li>
-          <li>Version chain optimization</li>
-          <li>Garbage collection</li>
-          <li>Lock-free reads</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Scalability -->
-<section class="scalability">
-  <div class="container">
-    <div class="section-header">
-      <h2>Scalabilità e Distribuzione</h2>
-      <p>Architettura progettata per crescere da single-node a cluster enterprise</p>
-    </div>
-    
-    <div class="scalability-content">
-      <div class="scalability-text">
-        <h3>Sharding Automatico</h3>
-        <p>Il sistema partiziona automaticamente i dati basandosi su chiavi di sharding configurabili, garantendo distribuzione uniforme e performance lineari.</p>
-        
-        <h3>Consenso Raft</h3>
-        <p>Implementazione completa del protocollo Raft per elezione leader, log replication e gestione dei failure in modo deterministico.</p>
-        
-        <h3>Query Distribuite</h3>
-        <p>Esecuzione federata delle query che attraversa multiple shard, con merge intelligente dei risultati e ottimizzazione del network traffic.</p>
-      </div>
-      
-      <div class="scalability-visual">
-        <div class="cluster-diagram">
-          <div class="node leader">
-            <div class="node-icon">👑</div>
-            <div class="node-label">Leader</div>
-          </div>
-          <div class="node follower">
-            <div class="node-icon">📡</div>
-            <div class="node-label">Follower</div>
-          </div>
-          <div class="node follower">
-            <div class="node-icon">📡</div>
-            <div class="node-label">Follower</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<style>
-.hero-sub {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-  padding: var(--space-20) 0;
-  text-align: center;
-}
-
-.layer-badge {
-  background: var(--accent);
-  color: white;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--border-radius);
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.layer-description {
-  padding: var(--space-4) var(--space-6);
-  background: var(--gray-50);
-  border-bottom: 1px solid var(--gray-200);
-}
-
-.layer-description p {
-  margin: 0;
-  color: var(--gray-600);
-}
-
-.component {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: var(--space-4);
-  background: white;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius);
-  transition: var(--transition);
-}
-
-.component:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--primary);
-}
-
-.component-icon {
-  font-size: 2rem;
-  margin-bottom: var(--space-2);
-}
-
-.component-name {
-  font-weight: 600;
-  color: var(--gray-900);
-  margin-bottom: var(--space-1);
-}
-
-.component-desc {
-  font-size: 0.875rem;
-  color: var(--gray-600);
-}
-
-.data-flow {
-  padding: var(--space-24) 0;
-  background: white;
-}
-
-.flow-diagram {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-  max-width: 1000px;
-  margin: 0 auto;
-}
-
-.flow-step {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  min-width: 150px;
-}
-
-.step-number {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  background: var(--primary);
-  color: white;
-  border-radius: 50%;
-  font-weight: bold;
-  font-size: 1.25rem;
-  margin-bottom: var(--space-3);
-}
-
-.step-content h4 {
-  margin-bottom: var(--space-2);
-  color: var(--gray-900);
-}
-
-.step-content p {
-  margin: 0;
-  color: var(--gray-600);
-  font-size: 0.875rem;
-}
-
-.flow-arrow {
-  font-size: 2rem;
-  color: var(--primary);
-  font-weight: bold;
-}
-
-.performance {
-  padding: var(--space-24) 0;
-  background: var(--gray-50);
-}
-
-.performance-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--space-8);
-}
-
-.perf-card {
-  padding: var(--space-8);
-  background: white;
-  border: 1px solid var(--gray-200);
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  transition: var(--transition);
-}
-
-.perf-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
-  border-color: var(--primary);
-}
-
-.perf-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-4);
-}
-
-.perf-card h3 {
-  margin-bottom: var(--space-4);
-  color: var(--gray-900);
-}
-
-.perf-card p {
-  margin-bottom: var(--space-6);
-  color: var(--gray-600);
-}
-
-.perf-card ul {
-  list-style: none;
-}
-
-.perf-card li {
-  padding: var(--space-2) 0;
-  color: var(--gray-600);
-  position: relative;
-  padding-left: var(--space-6);
-}
-
-.perf-card li::before {
-  content: "•";
-  position: absolute;
-  left: 0;
-  color: var(--primary);
-  font-weight: bold;
-}
-
-.scalability {
-  padding: var(--space-24) 0;
-  background: white;
-}
-
-.scalability-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-16);
-  align-items: center;
-}
-
-.scalability h3 {
-  margin-bottom: var(--space-4);
-  color: var(--gray-900);
-}
-
-.scalability p {
-  margin-bottom: var(--space-6);
-  color: var(--gray-600);
-}
-
-.cluster-diagram {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-6);
-  flex-wrap: wrap;
-}
-
-.node {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: var(--space-6);
-  background: var(--gray-50);
-  border: 2px solid var(--gray-200);
-  border-radius: var(--border-radius-lg);
-  transition: var(--transition);
-}
-
-.node:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-}
-
-.node.leader {
-  border-color: var(--primary);
-  background: rgba(37, 99, 235, 0.05);
-}
-
-.node-icon {
-  font-size: 2rem;
-  margin-bottom: var(--space-2);
-}
-
-.node-label {
-  font-weight: 600;
-  color: var(--gray-700);
-}
-
-@media (max-width: 768px) {
-  .scalability-content {
-    grid-template-columns: 1fr;
-    gap: var(--space-8);
-  }
-  
-  .flow-diagram {
-    flex-direction: column;
-  }
-  
-  .flow-arrow {
-    transform: rotate(90deg);
-  }
-}
-</style>
+</body>
+</html>
