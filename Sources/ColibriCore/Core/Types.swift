@@ -114,8 +114,8 @@ public enum IsolationLevel: String, Codable, Sendable {
 // MARK: - Lock Modes
 
 /// Lock modes for concurrency control
-/// Corresponds to TLA+: LockMode == {"S", "X"}
-public enum LockMode: String, Codable, Sendable {
+/// Corresponds to TLA+: CoreLockMode == {"S", "X"}
+public enum CoreCoreLockMode: String, Codable, Sendable {
     case shared = "S"
     case exclusive = "X"
     case intentShared = "IS"
@@ -124,7 +124,7 @@ public enum LockMode: String, Codable, Sendable {
     
     /// Check if two lock modes are compatible
     /// Corresponds to TLA+: LockCompatible(m1, m2)
-    public func isCompatible(with other: LockMode) -> Bool {
+    public func isCompatible(with other: CoreLockMode) -> Bool {
         switch (self, other) {
         case (.shared, .shared),
              (.shared, .intentShared),
@@ -138,8 +138,8 @@ public enum LockMode: String, Codable, Sendable {
     }
     
     /// Full compatibility matrix (IBM DB2/PostgreSQL style)
-    public static func areCompatible(_ m1: LockMode, _ m2: LockMode) -> Bool {
-        let matrix: [LockMode: [LockMode: Bool]] = [
+    public static func areCompatible(_ m1: CoreLockMode, _ m2: CoreLockMode) -> Bool {
+        let matrix: [CoreLockMode: [CoreLockMode: Bool]] = [
             .intentShared: [
                 .intentShared: true,
                 .intentExclusive: true,

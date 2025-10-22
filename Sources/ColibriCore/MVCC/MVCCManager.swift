@@ -380,7 +380,11 @@ public actor MVCCManager {
     
     /// Get versions for key
     public func getVersionsForKey(key: Key) -> [Version] {
-        return Array(versions[key]?.values ?? [])
+        if let versionDict = versions[key] {
+            return Array(versionDict.values)
+        } else {
+            return []
+        }
     }
     
     /// Get active transactions

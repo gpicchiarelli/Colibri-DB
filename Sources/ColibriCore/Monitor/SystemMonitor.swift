@@ -383,7 +383,7 @@ public actor SystemMonitor {
         
         // TLA+: Check threshold
         if monitoringConfig.enableAlerts {
-            try await checkThreshold(metricId: metricId)
+            try? await checkThreshold(metricId: metricId)
         }
         
         print("Updated metric: \(metricId) = \(value)")

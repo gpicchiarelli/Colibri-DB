@@ -56,24 +56,6 @@ public struct CheckpointRecord: Codable, Sendable {
 }
 
 
-/// WAL record header
-public struct WALRecordHeader: Codable, Sendable {
-    public let crc32: UInt32
-    public let type: WALRecordKind
-    public let lsn: LSN
-    public let prevLSN: LSN
-    public let pageID: PageID
-    public let length: UInt32
-    
-    public init(crc32: UInt32, type: WALRecordKind, lsn: LSN, prevLSN: LSN, pageID: PageID, length: UInt32) {
-        self.crc32 = crc32
-        self.type = type
-        self.lsn = lsn
-        self.prevLSN = prevLSN
-        self.pageID = pageID
-        self.length = length
-    }
-}
 
 /// Group commit configuration
 public struct GroupCommitConfig: Sendable {

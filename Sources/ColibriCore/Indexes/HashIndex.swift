@@ -180,6 +180,14 @@ public actor HashIndex {
             return abs(value.hashValue)
         case .bool(let value):
             return value ? 1 : 0
+        case .double(let value):
+            return abs(value.hashValue)
+        case .decimal(let value):
+            return abs(value.hashValue)
+        case .date(let value):
+            return abs(value.hashValue)
+        case .bytes(let value):
+            return abs(value.hashValue)
         case .null:
             return 0
         }

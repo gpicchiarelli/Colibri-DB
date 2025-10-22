@@ -46,24 +46,6 @@ public struct ConcreteWALRecord: WALRecord, Codable, Sendable, Equatable {
 }
 
 
-/// WAL record header
-public struct WALRecordHeader: Codable, Sendable, Equatable {
-    public let lsn: LSN
-    public let txId: TxID
-    public let kind: WALRecordKind
-    public let dataSize: UInt32
-    public let checksum: UInt32
-    public let timestamp: UInt64
-    
-    public init(lsn: LSN, txId: TxID, kind: WALRecordKind, dataSize: UInt32, checksum: UInt32, timestamp: UInt64) {
-        self.lsn = lsn
-        self.txId = txId
-        self.kind = kind
-        self.dataSize = dataSize
-        self.checksum = checksum
-        self.timestamp = timestamp
-    }
-}
 
 
 /// Disk manager
