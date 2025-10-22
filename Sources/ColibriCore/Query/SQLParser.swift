@@ -16,19 +16,19 @@ public enum SQLToken {
 }
 
 public enum SQLParserStatement {
-    case select(columns: [String], table: String, whereClause: SQLParserExpression?)
+    case select(columns: [String], table: String, whereClause: SQLParserSQLParserExpression?)
     case insert(table: String, columns: [String], values: [Value])
-    case update(table: String, assignments: [(String, Value)], whereClause: SQLParserExpression?)
-    case delete(table: String, whereClause: SQLParserExpression?)
+    case update(table: String, assignments: [(String, Value)], whereClause: SQLParserSQLParserExpression?)
+    case delete(table: String, whereClause: SQLParserSQLParserExpression?)
     case createTable(name: String, columns: [ColumnDefinition])
     case dropTable(name: String)
 }
 
-public enum SQLParserExpression {
+public enum SQLParserSQLParserExpression {
     case column(String)
     case literal(Value)
-    case binaryOp(BinaryOperator, SQLParserExpression, SQLParserExpression)
-    case unaryOp(UnaryOperator, SQLParserExpression)
+    case binaryOp(BinaryOperator, SQLParserSQLParserExpression, SQLParserSQLParserExpression)
+    case unaryOp(UnaryOperator, SQLParserSQLParserExpression)
 }
 
 public enum BinaryOperator {
@@ -46,7 +46,7 @@ public struct SQLParser {
     
     public init() {}
     
-    public mutating func parse(_ sql: String) throws -> SQLStatement {
+    public mutating func parse(_ sql: String) throws -> SQLParserStatement {
         tokens = try tokenize(sql)
         position = 0
         return try parseStatement()
@@ -137,7 +137,7 @@ public struct SQLParser {
         }
     }
     
-    private mutating func parseStatement() throws -> SQLStatement {
+    private mutating func parseStatement() throws -> SQLParserStatement {
         guard position < tokens.count else {
             throw DBError.invalidData
         }
@@ -160,7 +160,7 @@ public struct SQLParser {
         }
     }
     
-    private mutating func parseSelect() throws -> SQLStatement {
+    private mutating func parseSelect() throws -> SQLParserStatement {
         position += 1
         
         var columns: [String] = []
@@ -193,17 +193,17 @@ public struct SQLParser {
         }
         position += 1
         
-        var whereClause: Expression? = nil
+        var whereClause: SQLParserExpression? = nil
         
         if position < tokens.count, case .where = tokens[position] {
             position += 1
-            whereClause = try parseExpression()
+            whereClause = try parseSQLParserExpression()
         }
         
         return .select(columns: columns, table: tableName, whereClause: whereClause)
     }
     
-    private mutating func parseInsert() throws -> SQLStatement {
+    private mutating func parseInsert() throws -> SQLParserStatement {
         position += 1
         
         guard case .into = tokens[position] else {
@@ -219,7 +219,7 @@ public struct SQLParser {
         return .insert(table: tableName, columns: [], values: [])
     }
     
-    private mutating func parseUpdate() throws -> SQLStatement {
+    private mutating func parseUpdate() throws -> SQLParserStatement {
         position += 1
         
         guard case .identifier(let tableName) = tokens[position] else {
@@ -235,7 +235,7 @@ public struct SQLParser {
         return .update(table: tableName, assignments: [], whereClause: nil)
     }
     
-    private mutating func parseDelete() throws -> SQLStatement {
+    private mutating func parseDelete() throws -> SQLParserStatement {
         position += 1
         
         guard case .from = tokens[position] else {
@@ -251,7 +251,7 @@ public struct SQLParser {
         return .delete(table: tableName, whereClause: nil)
     }
     
-    private mutating func parseCreate() throws -> SQLStatement {
+    private mutating func parseCreate() throws -> SQLParserStatement {
         position += 1
         
         guard case .table = tokens[position] else {
@@ -267,7 +267,7 @@ public struct SQLParser {
         return .createTable(name: tableName, columns: [])
     }
     
-    private mutating func parseDrop() throws -> SQLStatement {
+    private mutating func parseDrop() throws -> SQLParserStatement {
         position += 1
         
         guard case .table = tokens[position] else {
@@ -283,7 +283,7 @@ public struct SQLParser {
         return .dropTable(name: tableName)
     }
     
-    private mutating func parseExpression() throws -> Expression {
+    private mutating func parseSQLParserExpression() throws -> SQLParserExpression {
         return .column("dummy")
     }
 }

@@ -44,11 +44,11 @@ public enum SchemaChangeType: String, Codable {
 }
 
 /// Schema change phases (TLA+: SchemaChangePhase)
-public enum SchemaChangePhase: String, Codable {
+public enum SchemaChangePhase: String, Codable, Sendable {
     case prepare    // Prepare shadow objects
     case copy       // Copy existing data
     case apply      // Apply ongoing writes
-    case switch     // Atomic switch
+    case `switch`     // Atomic switch
     case cleanup    // Remove old schema
     case done       // Completed
     case failed     // Failed

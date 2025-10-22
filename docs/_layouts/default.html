@@ -1,608 +1,127 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}</title>
-    <meta name="description" content="{{ page.description | default: site.description }}">
-    
-    <!-- Open Graph -->
-    <meta property="og:title" content="{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}">
-    <meta property="og:description" content="{{ page.description | default: site.description }}">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ site.url }}{{ page.url }}">
-    
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}">
-    <meta name="twitter:description" content="{{ page.description | default: site.description }}">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐦</text></svg>">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <style>
-        /* Modern Design System */
-        :root {
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --secondary: #7c3aed;
-            --accent: #f59e0b;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-400: #9ca3af;
-            --gray-500: #6b7280;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --gray-800: #1f2937;
-            --gray-900: #111827;
-            --white: #ffffff;
-            --black: #000000;
-            
-            --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-            
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            
-            --radius: 0.5rem;
-            --radius-lg: 0.75rem;
-            --radius-xl: 1rem;
-            
-            --transition: all 0.2s ease-in-out;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: var(--font-sans);
-            line-height: 1.6;
-            color: var(--gray-800);
-            background: var(--white);
-            font-size: 16px;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 1rem;
-        }
-        
-        /* Navigation */
-        .nav {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--gray-200);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            padding: 1rem 0;
-            transition: var(--transition);
-        }
-        
-        .nav-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            text-decoration: none;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--gray-900);
-            transition: var(--transition);
-        }
-        
-        .logo:hover {
-            color: var(--primary);
-            text-decoration: none;
-        }
-        
-        .logo-icon {
-            font-size: 1.75rem;
-        }
-        
-        .desktop-nav {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-            align-items: center;
-        }
-        
-        .nav-link {
-            color: var(--gray-600);
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: var(--radius);
-            transition: var(--transition);
-            position: relative;
-        }
-        
-        .nav-link:hover {
-            color: var(--primary);
-            background: var(--gray-100);
-            text-decoration: none;
-        }
-        
-        .nav-link.external {
-            color: var(--primary);
-        }
-        
-        .nav-link.external:hover {
-            background: var(--gray-100);
-        }
-        
-        .mobile-menu-toggle {
-            display: none;
-            flex-direction: column;
-            gap: 0.25rem;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: var(--radius);
-            transition: var(--transition);
-        }
-        
-        .mobile-menu-toggle:hover {
-            background: var(--gray-100);
-        }
-        
-        .hamburger-line {
-            width: 24px;
-            height: 2px;
-            background-color: var(--gray-600);
-            border-radius: 1px;
-            transition: var(--transition);
-        }
-        
-        .mobile-menu-toggle.active .hamburger-line:nth-child(1) {
-            transform: rotate(45deg) translate(6px, 6px);
-        }
-        
-        .mobile-menu-toggle.active .hamburger-line:nth-child(2) {
-            opacity: 0;
-        }
-        
-        .mobile-menu-toggle.active .hamburger-line:nth-child(3) {
-            transform: rotate(-45deg) translate(6px, -6px);
-        }
-        
-        .mobile-nav {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: var(--white);
-            border: 1px solid var(--gray-200);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-xl);
-            margin-top: 0.5rem;
-            padding: 1rem;
-            z-index: 999;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px);
-            transition: var(--transition);
-        }
-        
-        .mobile-nav.active {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-        
-        .mobile-nav-links {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        
-        .mobile-nav-link {
-            color: var(--gray-600);
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.75rem 1rem;
-            border-radius: var(--radius);
-            transition: var(--transition);
-            display: block;
-        }
-        
-        .mobile-nav-link:hover {
-            color: var(--primary);
-            background: var(--gray-100);
-            text-decoration: none;
-        }
-        
-        .mobile-nav-link.external {
-            color: var(--primary);
-        }
-        
-        /* Main Content */
-        .main {
-            min-height: calc(100vh - 80px);
-        }
-        
-        /* Footer */
-        .footer {
-            background: var(--gray-900);
-            color: var(--white);
-            padding: 4rem 0 2rem;
-            margin-top: 4rem;
-        }
-        
-        .footer-content {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-bottom: 2rem;
-        }
-        
-        .footer-title {
-            color: var(--white);
-            margin-bottom: 1rem;
-            font-size: 1.125rem;
-            font-weight: 600;
-        }
-        
-        .footer-description {
-            color: var(--gray-300);
-            font-size: 0.875rem;
-            line-height: 1.6;
-            margin-bottom: 1rem;
-        }
-        
-        .footer-links {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        
-        .footer-link {
-            color: var(--gray-300);
-            text-decoration: none;
-            font-size: 0.875rem;
-            line-height: 1.6;
-            padding: 0.25rem 0;
-            transition: var(--transition);
-        }
-        
-        .footer-link:hover {
-            color: var(--white);
-            text-decoration: none;
-        }
-        
-        .footer-bottom {
-            border-top: 1px solid var(--gray-800);
-            padding-top: 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        
-        .footer-copyright {
-            color: var(--gray-400);
-            font-size: 0.875rem;
-        }
-        
-        .footer-version {
-            color: var(--gray-500);
-            font-size: 0.75rem;
-            font-family: var(--font-mono);
-        }
-        
-        /* Typography */
-        h1, h2, h3, h4, h5, h6 {
-            font-weight: 600;
-            line-height: 1.3;
-            color: var(--gray-900);
-            margin-bottom: 1rem;
-        }
-        
-        h1 { font-size: 2.5rem; }
-        h2 { font-size: 2rem; }
-        h3 { font-size: 1.5rem; }
-        h4 { font-size: 1.25rem; }
-        
-        p {
-            margin-bottom: 1.5rem;
-            line-height: 1.7;
-            color: var(--gray-700);
-        }
-        
-        a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-        
-        a:hover {
-            text-decoration: underline;
-        }
-        
-        /* Code */
-        code {
-            font-family: var(--font-mono);
-            font-size: 0.875em;
-            background-color: var(--gray-100);
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            color: var(--error);
-            font-weight: 500;
-        }
-        
-        pre {
-            font-family: var(--font-mono);
-            background-color: var(--gray-900);
-            color: var(--gray-100);
-            padding: 1.5rem;
-            border-radius: var(--radius);
-            overflow-x: auto;
-            margin: 1.5rem 0;
-            font-size: 0.875rem;
-            line-height: 1.6;
-        }
-        
-        pre code {
-            background: none;
-            padding: 0;
-            color: inherit;
-            font-weight: normal;
-        }
-        
-        /* Lists */
-        ul, ol {
-            margin-bottom: 1.5rem;
-            padding-left: 1.5rem;
-        }
-        
-        li {
-            margin-bottom: 0.5rem;
-            line-height: 1.6;
-            color: var(--gray-700);
-        }
-        
-        /* Tables */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1.5rem 0;
-            border-radius: var(--radius);
-            overflow: hidden;
-            border: 1px solid var(--gray-200);
-        }
-        
-        th, td {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--gray-200);
-        }
-        
-        th {
-            background-color: var(--gray-50);
-            font-weight: 600;
-            color: var(--gray-900);
-            font-size: 0.875rem;
-        }
-        
-        tr:last-child td {
-            border-bottom: none;
-        }
-        
-        tr:hover {
-            background-color: var(--gray-50);
-        }
-        
-        /* Images */
-        img {
-            max-width: 100%;
-            height: auto;
-            border-radius: var(--radius);
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .desktop-nav {
-                display: none;
-            }
-            
-            .mobile-menu-toggle {
-                display: flex;
-            }
-            
-            .mobile-nav {
-                display: block;
-            }
-            
-            .footer-content {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-            
-            .footer-bottom {
-                flex-direction: column;
-                text-align: center;
-                gap: 0.5rem;
-            }
-            
-            .container {
-                padding: 0 1rem;
-            }
-            
-            h1 { font-size: 2rem; }
-            h2 { font-size: 1.75rem; }
-        }
-        
-        /* Accessibility */
-        @media (prefers-reduced-motion: reduce) {
-            *,
-            *::before,
-            *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-                scroll-behavior: auto !important;
-            }
-        }
-        
-        /* Focus styles */
-        :focus-visible {
-            outline: 2px solid var(--primary);
-            outline-offset: 2px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if page.title %}{{ page.title }} · {% endif %}{{ site.title | default: "Colibrì DB" }}</title>
+  <meta name="description" content="{{ page.description | default: site.description | default: 'Colibrì DB è un RDBMS sperimentale verificato con TLA+ e implementato in Swift 6.2.' }}">
+  <meta name="theme-color" content="#0f172a">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ site.url }}{{ page.url }}">
+  <meta property="og:title" content="{% if page.title %}{{ page.title }} · {% endif %}{{ site.title | default: 'Colibrì DB' }}">
+  <meta property="og:description" content="{{ page.description | default: site.description | default: 'Colibrì DB è un RDBMS sperimentale verificato con TLA+ e implementato in Swift 6.2.' }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{% if page.title %}{{ page.title }} · {% endif %}{{ site.title | default: 'Colibrì DB' }}">
+  <meta name="twitter:description" content="{{ page.description | default: site.description | default: 'Colibrì DB è un RDBMS sperimentale verificato con TLA+ e implementato in Swift 6.2.' }}">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.82em' font-size='78'>🐦</text></svg>">
+  <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="nav">
-        <div class="container">
-            <div class="nav-content">
-                <a href="{{ site.baseurl }}/" class="logo">
-                    <span class="logo-icon">🐦</span>
-                    <span class="logo-text">Colibrì DB</span>
-                </a>
-                
-                <!-- Desktop Navigation -->
-                <ul class="desktop-nav">
-                    <li><a href="{{ site.baseurl }}/" class="nav-link">Home</a></li>
-                    <li><a href="{{ site.baseurl }}/architecture" class="nav-link">Architecture</a></li>
-                    <li><a href="{{ site.baseurl }}/tla-specifications" class="nav-link">TLA+</a></li>
-                    <li><a href="{{ site.baseurl }}/wiki/Quick-Start/" class="nav-link">Quick Start</a></li>
-                    <li><a href="{{ site.baseurl }}/wiki/API-Reference/" class="nav-link">API</a></li>
-                    <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank" class="nav-link external">
-                        GitHub ↗
-                    </a></li>
-                </ul>
-                
-                <!-- Mobile Menu Button -->
-                <button class="mobile-menu-toggle" aria-label="Toggle mobile menu">
-                    <span class="hamburger-line"></span>
-                    <span class="hamburger-line"></span>
-                    <span class="hamburger-line"></span>
-                </button>
-            </div>
-            
-            <!-- Mobile Navigation -->
-            <div class="mobile-nav">
-                <ul class="mobile-nav-links">
-                    <li><a href="{{ site.baseurl }}/" class="mobile-nav-link">Home</a></li>
-                    <li><a href="{{ site.baseurl }}/architecture" class="mobile-nav-link">Architecture</a></li>
-                    <li><a href="{{ site.baseurl }}/tla-specifications" class="mobile-nav-link">TLA+</a></li>
-                    <li><a href="{{ site.baseurl }}/wiki/Quick-Start/" class="mobile-nav-link">Quick Start</a></li>
-                    <li><a href="{{ site.baseurl }}/wiki/API-Reference/" class="mobile-nav-link">API</a></li>
-                    <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank" class="mobile-nav-link external">
-                        GitHub ↗
-                    </a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+  <a class="skip-link" href="#contenuto">Salta al contenuto</a>
+  <div class="site-frame">
+    <header class="site-header" data-component="site-header">
+      <div class="shell site-header__inner">
+        <a class="brand" href="{{ '/' | relative_url }}" aria-label="Colibrì DB home">
+          <span class="brand__icon" aria-hidden="true">🐦</span>
+          <span class="brand__text">Colibrì DB</span>
+        </a>
+        <nav class="site-nav" data-site-nav>
+          <ul class="site-nav__list">
+            <li><a class="site-nav__link{% if page.url == '/' %} site-nav__link--active{% endif %}" href="{{ '/' | relative_url }}">Panoramica</a></li>
+            <li><a class="site-nav__link{% if page.url contains 'architecture' %} site-nav__link--active{% endif %}" href="{{ '/architecture.html' | relative_url }}">Architettura</a></li>
+            <li><a class="site-nav__link{% if page.url contains 'tla-specifications' %} site-nav__link--active{% endif %}" href="{{ '/tla-specifications.html' | relative_url }}">Specifiche TLA+</a></li>
+            <li><a class="site-nav__link" href="{{ '/wiki/Home.html' | relative_url }}">Wiki</a></li>
+            <li><a class="site-nav__link site-nav__link--external" href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank" rel="noreferrer">GitHub ↗</a></li>
+          </ul>
+        </nav>
+        <button class="nav-toggle" type="button" aria-label="Apri il menu" aria-expanded="false" data-nav-toggle>
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+      <nav class="site-nav site-nav--mobile" data-site-nav-mobile>
+        <ul class="site-nav__list">
+          <li><a class="site-nav__link" href="{{ '/' | relative_url }}">Panoramica</a></li>
+          <li><a class="site-nav__link" href="{{ '/architecture.html' | relative_url }}">Architettura</a></li>
+          <li><a class="site-nav__link" href="{{ '/tla-specifications.html' | relative_url }}">Specifiche TLA+</a></li>
+          <li><a class="site-nav__link" href="{{ '/wiki/Home.html' | relative_url }}">Wiki</a></li>
+          <li><a class="site-nav__link site-nav__link--external" href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank" rel="noreferrer">GitHub ↗</a></li>
+        </ul>
+      </nav>
+    </header>
 
-    <!-- Main Content -->
-    <main class="main">
-        {{ content }}
+    <main id="contenuto" class="site-main">
+      {{ content }}
     </main>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div>
-                    <h3 class="footer-title">Colibrì DB</h3>
-                    <p class="footer-description">
-                        Un database relazionale moderno scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon 
-                        con architettura modulare completa e specifiche TLA+ formali.
-                    </p>
-                </div>
-                
-                <div>
-                    <h3 class="footer-title">Documentazione</h3>
-                    <ul class="footer-links">
-                        <li><a href="{{ site.baseurl }}/architecture" class="footer-link">Architettura</a></li>
-                        <li><a href="{{ site.baseurl }}/tla-specifications" class="footer-link">TLA+ Specifications</a></li>
-                        <li><a href="{{ site.baseurl }}/wiki/Quick-Start/" class="footer-link">Quick Start</a></li>
-                        <li><a href="{{ site.baseurl }}/wiki/API-Reference/" class="footer-link">API Reference</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h3 class="footer-title">Community</h3>
-                    <ul class="footer-links">
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB" class="footer-link">GitHub</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/issues" class="footer-link">Issues</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/discussions" class="footer-link">Discussions</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE" class="footer-link">Licenza</a></li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="footer-bottom">
-                <div class="footer-copyright">
-                    © 2024 Colibrì DB. Tutti i diritti riservati.
-                </div>
-                <div class="footer-version">
-                    v1.0.0-beta
-                </div>
-            </div>
-        </div>
+    <footer class="site-footer">
+      <div class="shell site-footer__grid">
+        <section class="footer-block">
+          <h2 class="footer-title">Motore verificato</h2>
+          <p>Il core <code>ColibrìDB</code> orchestra <code>BufferPool.swift</code>, <code>FileWAL.swift</code> e <code>MVCCManager.swift</code> per garantire durabilità ARIES, isolamento snapshot e gestione del clock-sweep in memoria.</p>
+        </section>
+        <section class="footer-block">
+          <h2 class="footer-title">Distribuzione</h2>
+          <ul class="footer-list">
+            <li><code>RaftConsensusManager.swift</code> coordina leader e repliche.</li>
+            <li><code>TwoPhaseCommitManager.swift</code> assicura commit atomici.</li>
+            <li><code>Sharding</code> e <code>Replication</code> separano partizioni e repliche calde.</li>
+          </ul>
+        </section>
+        <section class="footer-block">
+          <h2 class="footer-title">Operatività</h2>
+          <ul class="footer-list">
+            <li><code>Monitor.swift</code> raccoglie metriche e health check.</li>
+            <li><code>Backup</code> e <code>Recovery</code> coprono snapshot e PITR.</li>
+            <li><code>ColibriServer/Server.swift</code> espone l'API HTTP concorrente.</li>
+          </ul>
+        </section>
+      </div>
+      <div class="shell site-footer__bottom">
+        <span>© {{ "now" | date: "%Y" }} Colibrì DB · Swift 6.2 · Specifiche TLA+ allineate al codice sorgente.</span>
+        <a class="footer-link" href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE" target="_blank" rel="noreferrer">Licenza MIT ↗</a>
+      </div>
     </footer>
+  </div>
+  <script>
+    (function() {
+      const toggle = document.querySelector('[data-nav-toggle]');
+      const mobileNav = document.querySelector('[data-site-nav-mobile]');
+      const siteHeader = document.querySelector('[data-component="site-header"]');
 
-    <script>
-        // Mobile menu toggle
-        document.addEventListener('DOMContentLoaded', function() {
-            const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-            const mobileNav = document.querySelector('.mobile-nav');
-            
-            if (mobileMenuToggle && mobileNav) {
-                mobileMenuToggle.addEventListener('click', function() {
-                    mobileNav.classList.toggle('active');
-                    mobileMenuToggle.classList.toggle('active');
-                });
-                
-                // Close mobile menu when clicking on a link
-                const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
-                mobileNavLinks.forEach(link => {
-                    link.addEventListener('click', function() {
-                        mobileNav.classList.remove('active');
-                        mobileMenuToggle.classList.remove('active');
-                    });
-                });
-                
-                // Close mobile menu when clicking outside
-                document.addEventListener('click', function(event) {
-                    if (!mobileNav.contains(event.target) && !mobileMenuToggle.contains(event.target)) {
-                        mobileNav.classList.remove('active');
-                        mobileMenuToggle.classList.remove('active');
-                    }
-                });
-            }
-        });
-    </script>
+      if (!toggle || !mobileNav) { return; }
+
+      const closeNav = () => {
+        mobileNav.classList.remove('site-nav--mobile-open');
+        toggle.classList.remove('nav-toggle--open');
+        toggle.setAttribute('aria-expanded', 'false');
+      };
+
+      toggle.addEventListener('click', () => {
+        const isOpen = mobileNav.classList.toggle('site-nav--mobile-open');
+        toggle.classList.toggle('nav-toggle--open', isOpen);
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+
+      mobileNav.addEventListener('click', (event) => {
+        if (event.target.matches('a')) {
+          closeNav();
+        }
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!siteHeader.contains(event.target)) {
+          closeNav();
+        }
+      });
+
+      window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeNav();
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
