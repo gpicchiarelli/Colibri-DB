@@ -17,9 +17,6 @@ import Foundation
 
 // MARK: - Heap Table Types
 
-/// Row
-/// Corresponds to TLA+: Row
-public typealias Row = [Value]
 
 
 /// Page header

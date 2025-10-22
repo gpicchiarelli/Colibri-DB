@@ -278,9 +278,9 @@ public actor PolicyManager {
         return Array(policyViolations.values)
     }
     
-    /// Check if has violations
+    /// Check if has violations (public)
     public func hasViolations() -> Bool {
-        return hasViolations()
+        return !policyViolations.isEmpty
     }
     
     /// Get all policies
@@ -294,7 +294,7 @@ public actor PolicyManager {
     }
     
     /// Get policies by type
-    public func getPoliciesByType(type: PolicyType) -> [PolicyRule] {
+    public func getPoliciesByType(type: PolicyManagerPolicyType) -> [PolicyRule] {
         return policies.values.filter { $0.policyType == type }
     }
     

@@ -124,7 +124,7 @@ public actor WireProtocolHandler {
     private var clientStates: [String: ProtocolState] = [:]
     
     /// Client transaction states (TLA+: clientTxnState)
-    private var clientTxnState: [String: TransactionState] = [:]
+    private var clientTxnState: [String: WireTransactionState] = [:]
     
     /// Client pipeline (TLA+: clientPipeline)
     private var clientPipeline: [String: [WireMessage]] = [:]
@@ -136,7 +136,7 @@ public actor WireProtocolHandler {
     private var serverConnections: [String: Set<String>] = [:]
     
     /// Server transaction states (TLA+: serverTxnState)
-    private var serverTxnState: [[String]: TransactionState] = [:]
+    private var serverTxnState: [[String]: WireTransactionState] = [:]
     
     /// Client sequence numbers (TLA+: clientSeqNum)
     private var clientSeqNum: [String: Int] = [:]
