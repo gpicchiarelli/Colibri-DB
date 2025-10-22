@@ -1,19 +1,21 @@
 ---
 layout: default
 title: Colibrì DB - RDBMS Sperimentale in Swift
-description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon con WAL, MVCC, B+Tree e architettura modulare
+description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon con architettura modulare completa
 ---
 
 <style>
-/* Modern Apple-inspired Design System */
+/* Modern Design System - Inspired by Apple and GitHub */
 :root {
     /* Color Palette */
     --primary: #000000;
     --primary-light: #333333;
     --secondary: #007AFF;
+    --accent: #FF6B35;
     --success: #34C759;
     --warning: #FF9500;
     --error: #FF3B30;
+    --info: #5AC8FA;
     
     /* Grays */
     --gray-50: #FAFAFA;
@@ -54,6 +56,11 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.15);
     --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.2);
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    --gradient-secondary: linear-gradient(135deg, var(--secondary) 0%, var(--info) 100%);
+    --gradient-accent: linear-gradient(135deg, var(--accent) 0%, var(--warning) 100%);
 }
 
 * {
@@ -77,6 +84,50 @@ body {
     padding: 0 var(--space-lg);
 }
 
+/* Navigation */
+.nav {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: var(--space-md) 0;
+}
+
+.nav-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.nav-links {
+    display: flex;
+    gap: var(--space-xl);
+    list-style: none;
+}
+
+.nav-links a {
+    color: var(--gray-700);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.nav-links a:hover {
+    color: var(--primary);
+}
+
 /* Hero Section */
 .hero {
     background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
@@ -93,7 +144,8 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at 30% 20%, rgba(0, 122, 255, 0.05) 0%, transparent 50%);
+    background: radial-gradient(circle at 30% 20%, rgba(0, 122, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 70% 80%, rgba(255, 107, 53, 0.05) 0%, transparent 50%);
     pointer-events: none;
 }
 
@@ -103,19 +155,20 @@ body {
 }
 
 .hero h1 {
-    font-size: clamp(2.5rem, 8vw, 4rem);
-    font-weight: 300;
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    font-weight: 200;
     color: var(--primary);
     margin-bottom: var(--space-lg);
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
 }
 
 .hero-subtitle {
-    font-size: clamp(1.25rem, 4vw, 1.75rem);
+    font-size: clamp(1.25rem, 4vw, 1.875rem);
     color: var(--gray-700);
     margin-bottom: var(--space-xl);
-    font-weight: 400;
-    max-width: 800px;
+    font-weight: 300;
+    max-width: 900px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -124,7 +177,7 @@ body {
     font-size: clamp(1rem, 2.5vw, 1.125rem);
     color: var(--gray-600);
     margin-bottom: var(--space-2xl);
-    max-width: 700px;
+    max-width: 800px;
     margin-left: auto;
     margin-right: auto;
     line-height: 1.7;
@@ -160,6 +213,7 @@ body {
 .badge.swift { background: var(--primary); color: var(--white); border-color: var(--primary); }
 .badge.macos { background: var(--gray-800); color: var(--white); border-color: var(--gray-800); }
 .badge.performance { background: var(--success); color: var(--white); border-color: var(--success); }
+.badge.tla { background: var(--accent); color: var(--white); border-color: var(--accent); }
 
 .hero-actions {
     display: flex;
@@ -181,6 +235,7 @@ body {
     border: 1px solid transparent;
     min-width: 160px;
     height: 48px;
+    gap: var(--space-sm);
 }
 
 .btn-primary {
@@ -215,11 +270,21 @@ body {
 
 .section-title {
     text-align: center;
-    font-size: clamp(2rem, 5vw, 2.5rem);
-    font-weight: 300;
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    font-weight: 200;
     color: var(--primary);
     margin-bottom: var(--space-xl);
     letter-spacing: -0.02em;
+}
+
+.section-subtitle {
+    text-align: center;
+    font-size: 1.125rem;
+    color: var(--gray-600);
+    margin-bottom: var(--space-2xl);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .features-grid {
@@ -247,7 +312,7 @@ body {
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--secondary), var(--success));
+    background: var(--gradient-secondary);
     transform: scaleX(0);
     transition: transform 0.3s ease;
 }
@@ -302,6 +367,122 @@ body {
     font-weight: 600;
 }
 
+/* Architecture Section */
+.architecture {
+    background: var(--gray-50);
+    padding: var(--space-4xl) 0;
+}
+
+.architecture-diagram {
+    background: var(--white);
+    border-radius: var(--radius-xl);
+    padding: var(--space-2xl);
+    margin: var(--space-xl) 0;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-md);
+}
+
+.arch-layer {
+    background: var(--white);
+    border: 2px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    margin: var(--space-md) 0;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.arch-layer:hover {
+    border-color: var(--secondary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.arch-layer h4 {
+    color: var(--primary);
+    margin-bottom: var(--space-sm);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.arch-layer p {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+}
+
+.arch-layer .layer-number {
+    background: var(--secondary);
+    color: var(--white);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Modules Section */
+.modules {
+    padding: var(--space-4xl) 0;
+    background: var(--white);
+}
+
+.modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-lg);
+    margin-top: var(--space-2xl);
+}
+
+.module-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.module-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--gray-300);
+}
+
+.module-card h4 {
+    color: var(--primary);
+    margin-bottom: var(--space-sm);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.module-card p {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.module-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin-top: var(--space-sm);
+}
+
+.module-tag {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
 /* Quick Start Section */
 .quick-start {
     background: var(--gray-50);
@@ -317,7 +498,7 @@ body {
 
 .quick-start-content h2 {
     font-size: clamp(1.75rem, 4vw, 2.25rem);
-    font-weight: 400;
+    font-weight: 300;
     color: var(--primary);
     margin-bottom: var(--space-lg);
 }
@@ -359,63 +540,11 @@ body {
     padding-top: var(--space-lg);
 }
 
-.code-comment {
-    color: var(--gray-500);
-}
-
-.code-keyword {
-    color: #FF79C6;
-}
-
-.code-string {
-    color: #F1FA8C;
-}
-
-.code-function {
-    color: #50FA7B;
-}
-
-/* Architecture Section */
-.architecture {
-    padding: var(--space-4xl) 0;
-    background: var(--white);
-}
-
-.architecture-diagram {
-    background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
-    border-radius: var(--radius-xl);
-    padding: var(--space-2xl);
-    margin: var(--space-xl) 0;
-    border: 1px solid var(--gray-200);
-    text-align: center;
-}
-
-.arch-layer {
-    background: var(--white);
-    border: 2px solid var(--gray-300);
-    border-radius: var(--radius-md);
-    padding: var(--space-lg);
-    margin: var(--space-md) 0;
-    box-shadow: var(--shadow-sm);
-    transition: all 0.2s ease;
-}
-
-.arch-layer:hover {
-    border-color: var(--secondary);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.arch-layer h4 {
-    color: var(--primary);
-    margin-bottom: var(--space-sm);
-    font-weight: 600;
-}
-
-.arch-layer p {
-    color: var(--gray-600);
-    font-size: 0.9rem;
-}
+.code-comment { color: var(--gray-500); }
+.code-keyword { color: #FF79C6; }
+.code-string { color: #F1FA8C; }
+.code-function { color: #50FA7B; }
+.code-type { color: #8BE9FD; }
 
 /* Performance Section */
 .performance {
@@ -452,7 +581,7 @@ body {
 
 .performance-number {
     font-size: 2.5rem;
-    font-weight: 300;
+    font-weight: 200;
     color: var(--success);
     display: block;
     margin-bottom: var(--space-sm);
@@ -466,7 +595,7 @@ body {
 
 /* CTA Section */
 .cta {
-    background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+    background: var(--gradient-primary);
     color: var(--white);
     padding: var(--space-4xl) 0;
     text-align: center;
@@ -474,7 +603,7 @@ body {
 
 .cta h2 {
     font-size: clamp(1.75rem, 4vw, 2.25rem);
-    font-weight: 400;
+    font-weight: 300;
     margin-bottom: var(--space-lg);
 }
 
@@ -501,6 +630,10 @@ body {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .nav-links {
+        display: none;
+    }
+    
     .hero {
         padding: var(--space-2xl) 0;
     }
@@ -529,6 +662,10 @@ body {
         grid-template-columns: repeat(2, 1fr);
         gap: var(--space-lg);
     }
+    
+    .modules-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 480px) {
@@ -551,21 +688,40 @@ body {
 }
 </style>
 
+<!-- Navigation -->
+<nav class="nav">
+    <div class="container">
+        <div class="nav-content">
+            <a href="#" class="logo">
+                🐦 Colibrì DB
+            </a>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#architecture">Architecture</a></li>
+                <li><a href="#modules">Modules</a></li>
+                <li><a href="#quickstart">Quick Start</a></li>
+                <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank">GitHub</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
 <!-- Hero Section -->
 <section class="hero">
     <div class="container">
         <div class="hero-content">
-            <h1>🐦 Colibrì DB</h1>
+            <h1>Colibrì DB</h1>
             <p class="hero-subtitle">RDBMS sperimentale ad alte prestazioni per macOS</p>
             <p class="hero-description">
                 Un database relazionale moderno scritto in Swift 6.2, progettato per gestire milioni di connessioni 
-                logiche con architettura modulare: WAL, MVCC, B+Tree e CLI amministrativa completa.
+                logiche con architettura modulare completa: WAL, MVCC, B+Tree, TLA+ specifications e CLI amministrativa.
             </p>
             
             <div class="hero-badges">
                 <span class="badge swift">Swift 6.2</span>
                 <span class="badge macos">macOS 13+</span>
                 <span class="badge performance">Apple Silicon</span>
+                <span class="badge tla">TLA+ Verified</span>
                 <span class="badge">WAL • MVCC • B+Tree</span>
             </div>
             
@@ -573,7 +729,7 @@ body {
                 <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-primary" target="_blank">
                     ⭐ Star su GitHub
                 </a>
-                <a href="{{ site.baseurl }}/wiki/Quick-Start" class="btn btn-secondary">
+                <a href="#quickstart" class="btn btn-secondary">
                     🚀 Quick Start
                 </a>
             </div>
@@ -582,15 +738,18 @@ body {
 </section>
 
 <!-- Features Section -->
-<section class="features">
+<section class="features" id="features">
     <div class="container">
         <h2 class="section-title">✨ Caratteristiche Principali</h2>
+        <p class="section-subtitle">
+            Un database enterprise-grade con architettura modulare e verifiche formali complete
+        </p>
         
         <div class="features-grid">
             <div class="feature-card">
                 <span class="feature-icon">🗄️</span>
-                <h3>Storage Enterprise</h3>
-                <p>Sistema di storage avanzato con heap file paginati, buffer pool LRU/Clock e compattazione online senza downtime.</p>
+                <h3>Storage Engine Avanzato</h3>
+                <p>Sistema di storage enterprise con heap file paginati, buffer pool LRU/Clock e compattazione online senza downtime.</p>
                 <ul class="feature-list">
                     <li>Heap file storage con slot directory</li>
                     <li>Buffer pool intelligente con eviction LRU</li>
@@ -648,22 +807,147 @@ body {
             </div>
             
             <div class="feature-card">
-                <span class="feature-icon">🛠️</span>
-                <h3>Operazioni Complete</h3>
-                <p>CLI amministrativa completa, import/export CSV, metriche Prometheus e policy engine per manutenzione automatica.</p>
+                <span class="feature-icon">🔬</span>
+                <h3>Verifiche Formali</h3>
+                <p>Specifiche TLA+ complete per tutti i componenti critici con invarianti e proprietà di liveness verificate.</p>
                 <ul class="feature-list">
-                    <li>CLI amministrativa `coldb`</li>
-                    <li>Import/export CSV con validazione</li>
-                    <li>Metriche Prometheus integrate</li>
-                    <li>Policy engine per ottimizzazione</li>
+                    <li>149 specifiche TLA+ modulari</li>
+                    <li>Invarianti di sicurezza verificate</li>
+                    <li>Proprietà di liveness garantite</li>
+                    <li>Model checking automatico</li>
                 </ul>
             </div>
         </div>
     </div>
 </section>
 
+<!-- Architecture Section -->
+<section class="architecture" id="architecture">
+    <div class="container">
+        <h2 class="section-title">🏗️ Architettura Modulare</h2>
+        <p class="section-subtitle">
+            Design modulare con separazione delle responsabilità e interfacce ben definite
+        </p>
+        
+        <div class="architecture-diagram">
+            <div class="arch-layer">
+                <h4><span class="layer-number">1</span> 🎯 SQL Interface & CLI</h4>
+                <p>Parser SQL completo, CLI amministrativa `coldb` e interfacce programmatiche Swift</p>
+            </div>
+            <div class="arch-layer">
+                <h4><span class="layer-number">2</span> 🧠 Query Processor</h4>
+                <p>Planner cost-based, operatori Volcano, ottimizzazione query e viste materializzate</p>
+            </div>
+            <div class="arch-layer">
+                <h4><span class="layer-number">3</span> ⚡ Transaction Manager</h4>
+                <p>MVCC, lock manager, 2PC, livelli di isolamento e gestione snapshot</p>
+            </div>
+            <div class="arch-layer">
+                <h4><span class="layer-number">4</span> 🚀 Index Manager</h4>
+                <p>B+Tree, Hash, ART, indici pluggabili e validazione online</p>
+            </div>
+            <div class="arch-layer">
+                <h4><span class="layer-number">5</span> 🗄️ Storage Engine</h4>
+                <p>Heap storage, buffer pool, WAL con recovery e compattazione online</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Modules Section -->
+<section class="modules" id="modules">
+    <div class="container">
+        <h2 class="section-title">📦 Moduli Implementati</h2>
+        <p class="section-subtitle">
+            Architettura modulare con 8 componenti principali e specifiche TLA+ complete
+        </p>
+        
+        <div class="modules-grid">
+            <div class="module-card">
+                <h4>Schema Evolution</h4>
+                <p>Gestione evoluzione schema database con migrazioni online, compatibilità backward/forward e validazione constraint.</p>
+                <div class="module-tags">
+                    <span class="module-tag">DDL</span>
+                    <span class="module-tag">Migration</span>
+                    <span class="module-tag">TLA+</span>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <h4>Statistics Maintenance</h4>
+                <p>Aggiornamento statistiche per query optimizer con histogrammi, cardinalità e distribuzione valori.</p>
+                <div class="module-tags">
+                    <span class="module-tag">Optimizer</span>
+                    <span class="module-tag">Histogram</span>
+                    <span class="module-tag">TLA+</span>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <h4>Connection Pooling</h4>
+                <p>Gestione pool connessioni con multi-tenancy, load balancing e gestione risorse per milioni di connessioni.</p>
+                <div class="module-tags">
+                    <span class="module-tag">Pool</span>
+                    <span class="module-tag">Multi-tenant</span>
+                    <span class="module-tag">TLA+</span>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <h4>Memory Management</h4>
+                <p>Gestione memoria avanzata con arena allocator, garbage collection e deframmentazione automatica.</p>
+                <div class="module-tags">
+                    <span class="module-tag">Memory</span>
+                    <span class="module-tag">GC</span>
+                    <span class="module-tag">TLA+</span>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <h4>Compression</h4>
+                <p>Compressione dati con algoritmi pluggabili, dizionari adattivi e ottimizzazione storage.</p>
+                <div class="module-tags">
+                    <span class="module-tag">Compression</span>
+                    <span class="module-tag">Storage</span>
+                    <span class="module-tag">TLA+</span>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <h4>Monitoring</h4>
+                <p>Sistema di monitoraggio con metriche Prometheus, alerting e health check automatici.</p>
+                <div class="module-tags">
+                    <span class="module-tag">Metrics</span>
+                    <span class="module-tag">Prometheus</span>
+                    <span class="module-tag">TLA+</span>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <h4>Backup & Restore</h4>
+                <p>Sistema completo di backup con compressione, crittografia e restore incrementale.</p>
+                <div class="module-tags">
+                    <span class="module-tag">Backup</span>
+                    <span class="module-tag">Recovery</span>
+                    <span class="module-tag">TLA+</span>
+                </div>
+            </div>
+            
+            <div class="module-card">
+                <h4>Point-in-Time Recovery</h4>
+                <p>Recovery temporale con WAL replay, checkpoint e restore a timestamp specifici.</p>
+                <div class="module-tags">
+                    <span class="module-tag">PITR</span>
+                    <span class="module-tag">WAL</span>
+                    <span class="module-tag">TLA+</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- Quick Start Section -->
-<section class="quick-start">
+<section class="quick-start" id="quickstart">
     <div class="container">
         <div class="quick-start-grid">
             <div class="quick-start-content">
@@ -694,37 +978,10 @@ body {
 <span class="code-comment"># Crea una tabella e inserisci dati</span>
 <span class="code-keyword">\create</span> <span class="code-function">table</span> <span class="code-string">users</span>
 <span class="code-keyword">\insert</span> <span class="code-string">users id=1,name=Alice,age=25</span>
-<span class="code-keyword">\select</span> <span class="code-string">* FROM users WHERE name = 'Alice'</span></code></pre>
-            </div>
-        </div>
-    </div>
-</section>
+<span class="code-keyword">\select</span> <span class="code-string">* FROM users WHERE name = 'Alice'</span>
 
-<!-- Architecture Section -->
-<section class="architecture">
-    <div class="container">
-        <h2 class="section-title">🏗️ Architettura Modulare</h2>
-        
-        <div class="architecture-diagram">
-            <div class="arch-layer">
-                <h4>🎯 SQL Interface & CLI</h4>
-                <p>Parser SQL completo, CLI amministrativa e interfacce programmatiche</p>
-            </div>
-            <div class="arch-layer">
-                <h4>🧠 Query Processor</h4>
-                <p>Planner cost-based, operatori Volcano e ottimizzazione query</p>
-            </div>
-            <div class="arch-layer">
-                <h4>⚡ Transaction Manager</h4>
-                <p>MVCC, lock manager, 2PC e livelli di isolamento</p>
-            </div>
-            <div class="arch-layer">
-                <h4>🚀 Index Manager</h4>
-                <p>B+Tree, Hash, ART e indici pluggabili</p>
-            </div>
-            <div class="arch-layer">
-                <h4>🗄️ Storage Engine</h4>
-                <p>Heap storage, buffer pool e WAL con recovery</p>
+<span class="code-comment"># Verifica le specifiche TLA+</span>
+<span class="code-keyword">make</span> <span class="code-function">tla-check</span></code></pre>
             </div>
         </div>
     </div>
@@ -734,6 +991,9 @@ body {
 <section class="performance">
     <div class="container">
         <h2 class="section-title">📊 Performance Target</h2>
+        <p class="section-subtitle">
+            Obiettivi di performance per database enterprise su Apple Silicon
+        </p>
         
         <div class="performance-grid">
             <div class="performance-card">
@@ -751,6 +1011,14 @@ body {
             <div class="performance-card">
                 <span class="performance-number">95%+</span>
                 <span class="performance-label">Buffer Hit Rate</span>
+            </div>
+            <div class="performance-card">
+                <span class="performance-number">149</span>
+                <span class="performance-label">Specifiche TLA+</span>
+            </div>
+            <div class="performance-card">
+                <span class="performance-number">8</span>
+                <span class="performance-label">Moduli Principali</span>
             </div>
         </div>
     </div>
