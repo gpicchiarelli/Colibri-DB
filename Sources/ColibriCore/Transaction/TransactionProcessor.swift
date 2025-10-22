@@ -541,15 +541,15 @@ public struct Savepoint: Codable, Sendable, Equatable {
     }
 }
 
-/// Transaction manager
-public protocol TransactionManager: Sendable {
+/// Transaction manager protocol for transaction processing
+public protocol TransactionProcessorManager: Sendable {
     func beginTransaction() async throws -> TransactionID
     func commitTransaction(txId: TransactionID) async throws
     func abortTransaction(txId: TransactionID) async throws
 }
 
-/// Lock manager
-public protocol LockManager: Sendable {
+/// Lock manager protocol for transaction processing
+public protocol TransactionProcessorLockManager: Sendable {
     func requestLock(txId: TransactionID, resource: String, mode: String) async throws
     func releaseLock(txId: TransactionID, resource: String) async throws
 }

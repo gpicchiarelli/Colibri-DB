@@ -25,19 +25,6 @@ import Foundation
 
 // MARK: - Index Type
 
-/// Type of index structure
-public enum IndexType: String, Codable {
-    case btree      // B+Tree (general purpose)
-    case hash       // Hash index (equality only)
-    case art        // Adaptive Radix Tree (strings)
-    case lsm        // LSM-Tree (write-heavy)
-    case fractal    // Fractal Tree (write-optimized)
-    case bloom      // Bloom filter (membership)
-    case skiplist   // Skip list (ordered)
-    case ttree      // T-Tree (main-memory)
-    case radix      // Radix tree (prefix search)
-}
-
 // MARK: - Index Definition
 
 /// Index definition

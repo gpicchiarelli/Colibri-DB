@@ -39,8 +39,8 @@ public enum ExperimentType: String, Codable {
 
 // MARK: - System Health
 
-/// Overall system health
-public enum SystemHealth: String, Codable {
+/// Overall system health status
+public enum SystemHealthStatusStatus: String, Codable {
     case healthy    // All systems operational
     case degraded   // Partial functionality
     case failed     // System non-functional
@@ -108,7 +108,7 @@ public actor ChaosEngineeringManager {
     
     // System state
     private var failures: Int = 0
-    private var systemHealth: SystemHealth = .healthy
+    private var systemHealth: SystemHealthStatus = .healthy
     
     // Fault injection manager
     private let faultInjector: FaultInjectionManager
@@ -215,7 +215,7 @@ public actor ChaosEngineeringManager {
             failures += 1
         }
         
-        updateSystemHealth()
+        updateSystemHealthStatus()
         observations.append("Network partition active, health: \(systemHealth)")
         
         // Wait for duration
@@ -227,7 +227,7 @@ public actor ChaosEngineeringManager {
             failures = max(0, failures - 1)
         }
         
-        updateSystemHealth()
+        updateSystemHealthStatus()
         observations.append("Network partition resolved, health: \(systemHealth)")
         
         return observations
@@ -245,7 +245,7 @@ public actor ChaosEngineeringManager {
             observations.append("Node \(node) crashed")
         }
         
-        updateSystemHealth()
+        updateSystemHealthStatus()
         
         try await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
         
@@ -255,7 +255,7 @@ public actor ChaosEngineeringManager {
             observations.append("Node \(node) recovered")
         }
         
-        updateSystemHealth()
+        updateSystemHealthStatus()
         
         return observations
     }
@@ -269,7 +269,7 @@ public actor ChaosEngineeringManager {
             failures += 1
             observations.append("Cascading failure: node \(node) crashed")
             
-            updateSystemHealth()
+            updateSystemHealthStatus()
             
             // Small delay before next failure
             try await Task.sleep(nanoseconds: 100_000_000) // 100ms
@@ -292,7 +292,7 @@ public actor ChaosEngineeringManager {
             observations.append("Memory pressure on node \(node)")
         }
         
-        updateSystemHealth()
+        updateSystemHealthStatus()
         
         try await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
         
@@ -332,7 +332,7 @@ public actor ChaosEngineeringManager {
             observations.append("Data corruption on node \(node)")
         }
         
-        updateSystemHealth()
+        updateSystemHealthStatus()
         
         try await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
         
@@ -365,14 +365,14 @@ public actor ChaosEngineeringManager {
             observations.append("Data corruption injected on node \(node)")
         }
         
-        updateSystemHealth()
+        updateSystemHealthStatus()
         
         return observations
     }
     
     // MARK: - Health Monitoring
     
-    private func updateSystemHealth() {
+    private func updateSystemHealthStatus() {
         if failures > maxFailures {
             systemHealth = .failed
         } else if failures > 0 {
@@ -397,7 +397,7 @@ public actor ChaosEngineeringManager {
         return experiments
     }
     
-    public func getSystemHealth() -> SystemHealth {
+    public func getSystemHealthStatus() -> SystemHealthStatus {
         return systemHealth
     }
     

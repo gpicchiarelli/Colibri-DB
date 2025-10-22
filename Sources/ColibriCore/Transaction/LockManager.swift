@@ -525,8 +525,8 @@ public actor LockManager {
 
 // MARK: - Supporting Types
 
-/// Transaction manager
-public protocol TransactionManager: Sendable {
+/// Transaction manager protocol for lock management
+public protocol LockTransactionManager: Sendable {
     func abortTransaction(txId: TxID) async throws
 }
 

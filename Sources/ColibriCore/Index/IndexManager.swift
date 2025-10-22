@@ -21,16 +21,6 @@ import Foundation
 /// Corresponds to TLA+: IndexID
 public typealias IndexID = UInt64
 
-/// Index type
-/// Corresponds to TLA+: IndexType
-public enum IndexType: String, Codable, Sendable, CaseIterable {
-    case btree = "btree"
-    case hash = "hash"
-    case bitmap = "bitmap"
-    case fulltext = "fulltext"
-    case spatial = "spatial"
-    case composite = "composite"
-}
 
 /// Index entry
 /// Corresponds to TLA+: IndexEntry

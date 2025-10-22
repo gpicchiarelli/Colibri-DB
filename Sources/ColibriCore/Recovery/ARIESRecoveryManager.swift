@@ -19,9 +19,6 @@ import Foundation
 
 // MARK: - ARIES Recovery Types
 
-/// LSN (Log Sequence Number)
-/// Corresponds to TLA+: LSN
-public typealias LSN = UInt64
 
 /// Page ID
 /// Corresponds to TLA+: PageID

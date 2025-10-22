@@ -163,8 +163,10 @@ public actor TypeSystem {
     private var currentContext: [String: SQLType] = [:]
     
     public init() {
-        initializeCoercionRules()
-        initializeCastRules()
+        Task {
+            await initializeCoercionRules()
+            await initializeCastRules()
+        }
     }
     
     // MARK: - Initialization
@@ -579,8 +581,8 @@ public struct Expression {
     public let value: SQLValue
     public let columnName: String?
     public let operatorName: String?
-    public let left: Expression?
-    public let right: Expression?
+    public let left: BoxedExpression?
+    public let right: BoxedExpression?
     public let functionName: String?
     public let arguments: [Expression]?
     public let source: Expression?

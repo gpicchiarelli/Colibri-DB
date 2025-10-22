@@ -17,10 +17,6 @@ import Foundation
 
 // MARK: - Buffer Types
 
-/// Page ID
-/// Corresponds to TLA+: PageID
-public typealias PageID = UInt64
-
 /// Frame index
 /// Corresponds to TLA+: FrameIndex
 public typealias FrameIndex = Int

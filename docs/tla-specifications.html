@@ -52,7 +52,7 @@ description: Collegamento tra moduli Swift e specifiche TLA+ ufficiali del proge
       </article>
       <article class="module-card">
         <h3>Query Engine</h3>
-        <p><code>Query/QueryExecutor.swift</code> implementa gli operatori descritti in <code>spec/QueryExecutor.tla</code>, mentre <code>Planner/QueryPlanner.swift</code> segue <code>spec/QueryPlanner.tla</code>.</p>
+        <p><code>Query/QueryExecutor.swift</code> implementa gli operatori descritti in <code>spec/QueryExecutor.tla</code>, mentre <code>Planner/QueryPlanner.swift</code> segue <code>spec/QueryPipeline.tla</code> e coordina con <code>spec/QueryOptimizer.tla</code>.</p>
         <div class="module-tags">
           <span class="module-tag">Join hash</span>
           <span class="module-tag">Aggregazioni</span>
@@ -76,7 +76,7 @@ description: Collegamento tra moduli Swift e specifiche TLA+ ufficiali del proge
       </article>
       <article class="module-card">
         <h3>Recovery</h3>
-        <p><code>Recovery/ARIESRecovery.swift</code> e <code>Recovery/ARIESRecoveryManager.swift</code> derivano da <code>spec/ARIES.tla</code>; completano analisi, redo e undo idempotenti.</p>
+        <p><code>Recovery/ARIESRecovery.swift</code> e <code>Recovery/ARIESRecoveryManager.swift</code> derivano da <code>spec/RECOVERY.tla</code>; completano analisi, redo e undo idempotenti.</p>
         <div class="module-tags">
           <span class="module-tag">REDO</span>
           <span class="module-tag">UNDO</span>
@@ -84,7 +84,7 @@ description: Collegamento tra moduli Swift e specifiche TLA+ ufficiali del proge
       </article>
       <article class="module-card">
         <h3>Security</h3>
-        <p><code>Security/Authentication.swift</code> e <code>Security/RolesPermissions.swift</code> si appoggiano a <code>spec/Authentication.tla</code> e <code>spec/Authorization.tla</code> per la gestione di utenti, sessioni e ruoli.</p>
+        <p><code>Authentication/AuthenticationManager.swift</code> e <code>Security/RolesPermissions.swift</code> si appoggiano a <code>spec/Authentication.tla</code> e <code>spec/Authorization.tla</code> per la gestione di utenti, sessioni e ruoli.</p>
         <div class="module-tags">
           <span class="module-tag">RBAC</span>
           <span class="module-tag">Crypto</span>

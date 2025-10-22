@@ -423,7 +423,7 @@ public actor BackupManager {
     /// Perform restore
     private func performRestore(backup: BackupMetadata, targetTables: [String]) async throws {
         // TLA+: Start transaction for restore
-        let txID = try await transactionManager.begin()
+        let txID = try await transactionManager.beginTransaction()
         
         do {
             // TLA+: Restore based on backup type
@@ -439,11 +439,11 @@ public actor BackupManager {
             }
             
             // TLA+: Commit restore transaction
-            try await transactionManager.commit(txID)
+            try await transactionManager.commitTransaction(txId: txID)
             
         } catch {
             // TLA+: Abort restore transaction
-            try await transactionManager.abort(txID)
+            try await transactionManager.abortTransaction(txId: txID)
             throw error
         }
     }
@@ -465,7 +465,7 @@ public actor BackupManager {
             throw BackupError.baseBackupNotFound
         }
         
-        try await restoreFromBackup(baseBackupId, targetTables: targetTables)
+        try await restoreFromBackup(backupId: baseBackupId, targetTables: targetTables)
         
         // TLA+: Then apply incremental changes
         try await applyIncrementalChanges(backup: backup, targetTables: targetTables)
@@ -481,24 +481,24 @@ public actor BackupManager {
     /// Restore point-in-time backup
     private func restorePointInTimeBackup(backup: BackupMetadata, targetTables: [String]) async throws {
         // TLA+: Restore data as of specific point in time
-        try await restoreToPointInTime(backup.startTime)
+        try await restoreToPointInTime(timestamp: backup.startTime)
     }
     
     /// Perform point-in-time restore
     private func performPointInTimeRestore(restorePoint: RestorePoint) async throws {
         // TLA+: Start transaction for restore
-        let txID = try await transactionManager.begin()
+        let txID = try await transactionManager.beginTransaction()
         
         do {
             // TLA+: Restore data as of restore point
             try await restoreDataAsOfLSN(restorePoint.lsn)
             
             // TLA+: Commit restore transaction
-            try await transactionManager.commit(txID)
+            try await transactionManager.commitTransaction(txId: txID)
             
         } catch {
             // TLA+: Abort restore transaction
-            try await transactionManager.abort(txID)
+            try await transactionManager.abortTransaction(txId: txID)
             throw error
         }
     }

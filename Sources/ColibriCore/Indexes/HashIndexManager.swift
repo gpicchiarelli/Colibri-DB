@@ -18,10 +18,6 @@ import Foundation
 
 // MARK: - Hash Index Types
 
-/// Key
-/// Corresponds to TLA+: Key
-public typealias Key = Value
-
 
 // MARK: - Hash Index Manager
 
@@ -124,8 +120,10 @@ public actor HashIndexManager {
         // TLA+: Find entry
         let position = try await findEntryPosition(key: key)
         
-        if let entry = buckets[position], !entry.deleted && entry.key == key {
-            return entry.rid
+        if let entry = buckets[position] {
+            if !entry.deleted && entry.key == key {
+                return entry.rid
+            }
         }
         
         return nil
@@ -137,17 +135,20 @@ public actor HashIndexManager {
         // TLA+: Find entry
         let position = try await findEntryPosition(key: key)
         
-        if let entry = buckets[position], !entry.deleted && entry.key == key {
-            // TLA+: Mark as deleted (tombstone)
-            let deletedEntry = HashEntry(
-                key: entry.key,
-                rid: entry.rid,
-                deleted: true,
-                timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
-            )
-            
-            buckets[position] = deletedEntry
-            numEntries -= 1
+        if let entry = buckets[position] {
+            if !entry.deleted && entry.key == key {
+                // TLA+: Mark as deleted (tombstone)
+                let deletedEntry = HashEntry(
+                    key: entry.key,
+                    rid: entry.rid,
+                    deleted: true,
+                    timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+                )
+                
+                buckets[position] = deletedEntry
+                numEntries -= 1
+            }
+        }
             
             // TLA+: Update load factor
             try await updateLoadFactor()
@@ -173,9 +174,11 @@ public actor HashIndexManager {
         
         // TLA+: Rehash entries
         for i in 0..<oldNumBuckets {
-            if let entry = oldBuckets[i], !entry.deleted {
-                let newPosition = try await findInsertPosition(key: entry.key)
-                buckets[newPosition] = entry
+            if let entry = oldBuckets[i] {
+                if !entry.deleted {
+                    let newPosition = try await findInsertPosition(key: entry.key)
+                    buckets[newPosition] = entry
+                }
             }
         }
         
@@ -352,7 +355,7 @@ public actor HashIndexManager {
     public func clearIndex() async throws {
         buckets.removeAll()
         numEntries = 0
-        numBuckets = Self.initialBuckets
+        numBuckets = INITIAL_BUCKETS
         print("Index cleared")
     }
     
@@ -416,7 +419,6 @@ public actor HashIndexManager {
         
         return loadFactor && uniqueness && collisionHandling && deterministicHashing
     }
-}
 
 // MARK: - Supporting Types
 

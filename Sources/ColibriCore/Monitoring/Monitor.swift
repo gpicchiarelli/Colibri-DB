@@ -10,33 +10,9 @@
 
 import Foundation
 
-/// Metric type
-public enum MetricType {
-    case counter
-    case gauge
-    case histogram
-    case summary
-}
-
-/// Metric value
-public struct Metric: Sendable {
-    public let name: String
-    public let type: MetricType
-    public let value: Double
-    public let timestamp: Date
-    public let labels: [String: String]
-    
-    public init(name: String, type: MetricType, value: Double, labels: [String: String] = [:]) {
-        self.name = name
-        self.type = type
-        self.value = value
-        self.timestamp = Date()
-        self.labels = labels
-    }
-}
 
 /// Health status
-public enum HealthStatus {
+public enum HealthStatus: Sendable {
     case healthy
     case degraded
     case unhealthy
@@ -92,7 +68,17 @@ public actor MonitorManager {
     /// Record a metric
     /// TLA+ Action: RecordMetric(name, value, type, labels)
     public func recordMetric(name: String, value: Double, type: MetricType, labels: [String: String] = [:]) {
-        let metric = Metric(name: name, type: type, value: value, labels: labels)
+        let metric = Metric(
+            metricId: UUID().uuidString,
+            name: name,
+            value: value,
+            unit: "count",
+            timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
+            componentId: "monitor",
+            metricType: type,
+            labels: labels,
+            isActive: true
+        )
         
         metrics[name, default: []].append(metric)
         
@@ -192,7 +178,8 @@ public actor MonitorManager {
         }
         
         if let since = since {
-            return metricHistory.filter { $0.timestamp >= since }
+            let sinceTimestamp = UInt64(since.timeIntervalSince1970 * 1000)
+            return metricHistory.filter { $0.timestamp >= sinceTimestamp }
         }
         
         return metricHistory

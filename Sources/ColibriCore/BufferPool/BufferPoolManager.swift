@@ -23,9 +23,6 @@ import Foundation
 /// Corresponds to TLA+: PageID
 public typealias PageID = UInt64
 
-/// LSN (Log Sequence Number)
-/// Corresponds to TLA+: LSN
-public typealias LSN = UInt64
 
 
 /// Buffer pool page

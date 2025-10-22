@@ -127,7 +127,9 @@ public actor AuthenticationManager {
         self.lockoutTimestamps = [:]
         
         // Create default admin user
-        try? createUser(username: "admin", email: "admin@colibridb.com", password: "admin123", role: .admin)
+        Task {
+            try? await createUser(username: "admin", email: "admin@colibridb.com", password: "admin123", role: .admin)
+        }
     }
     
     // MARK: - User Management

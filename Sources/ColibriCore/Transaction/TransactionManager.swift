@@ -23,9 +23,6 @@ import Foundation
 /// Corresponds to TLA+: TxID
 public typealias TxID = UInt64
 
-/// LSN (Log Sequence Number)
-/// Corresponds to TLA+: LSN
-public typealias LSN = UInt64
 
 /// Timestamp
 /// Corresponds to TLA+: Timestamp
@@ -723,8 +720,8 @@ public protocol TransactionMVCCManager: Sendable {
     func abort(txId: TxID) async throws
 }
 
-/// Lock manager
-public protocol LockManager: Sendable {
+/// Lock manager protocol for transaction management
+public protocol TransactionLockManager: Sendable {
     func requestLock(txId: TxID, resource: String, mode: String) async throws
     func releaseLock(txId: TxID, resource: String) async throws
 }
