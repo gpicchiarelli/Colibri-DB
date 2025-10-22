@@ -1,302 +1,340 @@
 ---
 layout: default
-title: Colibrì DB – RDBMS in Swift basato su codice verificato
-description: Colibrì DB integra BufferPool, FileWAL, MVCCManager, QueryExecutor e i sottosistemi distribuiti implementati nel sorgente Swift per offrire un RDBMS sperimentale formale e ad alte prestazioni.
+title: Colibrì DB – RDBMS professionale per macOS
+description: Database relazionale ad alte prestazioni con architettura modulare, verifiche formali e distribuzione nativa
 ---
 
-<section class="hero hero--home">
-  <div class="hero__particles">
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
-    <div class="particle"></div>
+<!-- Hero Section -->
+<section class="hero">
+  <div class="hero-background">
+    <div class="hero-particles"></div>
+    <div class="hero-grid"></div>
   </div>
-  <div class="shell hero__inner">
-    <div class="hero__content">
-      <span class="hero__eyebrow">Derivato da Sources/ColibriCore</span>
-      <h1 class="hero__title">Colibrì DB: RDBMS moderno per macOS</h1>
-      <p class="hero__lede">
-        Un database relazionale ad alte prestazioni scritto in Swift, con architettura modulare, 
-        verifiche formali complete e supporto nativo per distribuzione e replica. Perfetto per 
-        applicazioni moderne che richiedono consistenza e performance.
-      </p>
-      <div class="hero__actions">
-        <a class="btn btn--primary" href="{{ '/architecture.html' | relative_url }}">Architettura →</a>
-        <a class="btn btn--ghost" href="{{ '/wiki/Quick-Start.html' | relative_url }}">Quick Start →</a>
-        <a class="btn btn--ghost" href="https://github.com/gpicchiarelli/Colibri-DB/tree/main/Sources" target="_blank" rel="noreferrer">Codice Sorgente ↗</a>
+  <div class="container">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-icon">🚀</span>
+        <span>RDBMS Professionale per macOS</span>
       </div>
-      <ul class="metric-list">
-        <li class="metric">
-          <div class="metric__icon">⚡</div>
-          <span class="metric__label">Performance</span>
-          <p class="metric__value">
-            Buffer pool intelligente, WAL ottimizzato e indici B-Tree per query veloci. 
-            Supporto per join hash, aggregazioni e ordinamento efficiente.
-          </p>
-        </li>
-        <li class="metric">
-          <div class="metric__icon">🛡️</div>
-          <span class="metric__label">Affidabilità</span>
-          <p class="metric__value">
-            Transazioni ACID complete, MVCC per concorrenza senza blocchi e recovery 
-            automatico con ARIES. Dati sempre consistenti e durabili.
-          </p>
-        </li>
-        <li class="metric">
-          <div class="metric__icon">📈</div>
-          <span class="metric__label">Scalabilità</span>
-          <p class="metric__value">
-            Sharding automatico, replica Raft e query distribuite. Cresci da single-node 
-            a cluster multi-regione senza modifiche al codice.
-          </p>
-        </li>
-      </ul>
-    </div>
-    <aside class="hero__panel">
-      <h2>Perché scegliere Colibrì DB?</h2>
-      <ul>
-        <li>✅ <strong>Nativo macOS</strong> - Ottimizzato per l'ecosistema Apple</li>
-        <li>✅ <strong>SQL Standard</strong> - Compatibile con PostgreSQL e MySQL</li>
-        <li>✅ <strong>Verifiche Formali</strong> - Ogni componente è verificato con TLA+</li>
-        <li>✅ <strong>Open Source</strong> - Codice trasparente e community-driven</li>
-        <li>✅ <strong>Zero Config</strong> - Funziona out-of-the-box</li>
-        <li>✅ <strong>Cloud Ready</strong> - Deploy facile su AWS, GCP, Azure</li>
-      </ul>
-    </aside>
-  </div>
-</section>
-
-<section class="section">
-  <div class="shell">
-    <header class="section__header">
-      <span class="section__eyebrow">Layer dal repository</span>
-      <h2 class="section__title">Architettura modulare con responsabilità nette</h2>
-      <p class="section__lede">
-        Ogni directory del core Swift racchiude un sottosistema isolato: dagli heap slotted a MVCC, dai cataloghi
-        alla sicurezza. La segmentazione permette di ricondurre ogni feature direttamente al file sorgente e alla
-        rispettiva specifica TLA+.
+      <h1 class="hero-title">
+        Colibrì DB
+        <span class="hero-subtitle">Database relazionale ad alte prestazioni</span>
+      </h1>
+      <p class="hero-description">
+        Un RDBMS moderno scritto in Swift 6.2 con architettura modulare, verifiche formali complete 
+        e supporto nativo per distribuzione e replica. Progettato per applicazioni enterprise che 
+        richiedono performance, consistenza e scalabilità.
       </p>
-    </header>
-    <div class="grid grid--three">
-      <article class="card">
-        <div class="card__icon">💾</div>
-        <span class="badge">Storage &amp; WAL</span>
-        <h3 class="card__title">Buffering e durabilità</h3>
-        <p class="card__body">
-          <code>BufferPool.swift</code> gestisce pin, dirty set e clock-hand; <code>StorageManager.swift</code> incapsula IO
-          su disco; <code>FileWAL.swift</code> mantiene il log sequenziale e checkpointing ARIES.
-        </p>
-        <ul class="card__list">
-          <li><code>Storage/HeapTable.swift</code> gestisce slot, free space e tombstone.</li>
-          <li><code>WAL/FileWAL.swift</code> traccia <abbr title="Log Sequence Number">LSN</abbr>, DPT e group commit.</li>
-          <li><code>Recovery/ARIESRecovery.swift</code> rigioca REDO/UNDO con controllo idempotente.</li>
-        </ul>
-      </article>
-      <article class="card">
-        <div class="card__icon">🔒</div>
-        <span class="badge">Transazioni</span>
-        <h3 class="card__title">Gestione della concorrenza</h3>
-        <p class="card__body">
-          In <code>Transaction/TransactionManager.swift</code> convivono lifecycle, commit e abort; <code>LockManager.swift</code>
-          implementa grafi wait-for e fairness; <code>MVCCManager.swift</code> costruisce snapshot e version chain.
-        </p>
-        <ul class="card__list">
-          <li><code>Constraints</code> valida chiavi e foreign key a livello di catalogo.</li>
-          <li><code>MultiTenancy/ConnectionPooling.swift</code> offre pool elastico con eviction temporale.</li>
-          <li><code>Authentication/AuthenticationManager.swift</code> e <code>Security/RolesPermissions.swift</code> gestiscono RBAC.</li>
-        </ul>
-      </article>
-      <article class="card">
-        <div class="card__icon">⚙️</div>
-        <span class="badge">Query Engine</span>
-        <h3 class="card__title">Dalla pianificazione all'esecuzione</h3>
-        <p class="card__body">
-          <code>SQL/SQLProcessor.swift</code> traduce la sintassi; <code>Planner/QueryPlanner.swift</code> produce piani logici;
-          <code>QueryExecutor.swift</code> offre scan, join hash/sort-merge, aggregazioni e sorting.
-        </p>
-        <ul class="card__list">
-          <li><code>Indexes/IndexManager.swift</code> supporta B-Tree, hash, bitmap e full-text.</li>
-          <li><code>Optimization/OptimizationManager.swift</code> applica strategie su query, IO e memoria.</li>
-          <li><code>Statistics</code> alimenta il planner con cardinalità e distribuzioni.</li>
-        </ul>
-      </article>
+      <div class="hero-actions">
+        <a href="/wiki/Quick-Start.html" class="btn btn-primary">
+          <span class="btn-icon">⚡</span>
+          Inizia Subito
+        </a>
+        <a href="/architecture.html" class="btn btn-secondary">
+          <span class="btn-icon">🏗️</span>
+          Architettura
+        </a>
+        <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-outline" target="_blank">
+          <span class="btn-icon">📦</span>
+          GitHub
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat">
+          <div class="stat-number">100%</div>
+          <div class="stat-label">Swift 6.2</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">TLA+</div>
+          <div class="stat-label">Verifiche Formali</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">ACID</div>
+          <div class="stat-label">Transazioni</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">∞</div>
+          <div class="stat-label">Scalabilità</div>
+        </div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="database-diagram">
+        <div class="db-layer storage">
+          <div class="layer-icon">💾</div>
+          <div class="layer-title">Storage</div>
+          <div class="layer-desc">Buffer Pool + WAL</div>
+        </div>
+        <div class="db-layer transaction">
+          <div class="layer-icon">🔒</div>
+          <div class="layer-title">Transaction</div>
+          <div class="layer-desc">MVCC + Lock Manager</div>
+        </div>
+        <div class="db-layer query">
+          <div class="layer-icon">⚙️</div>
+          <div class="layer-title">Query Engine</div>
+          <div class="layer-desc">Parser + Optimizer</div>
+        </div>
+        <div class="db-layer distributed">
+          <div class="layer-icon">🌐</div>
+          <div class="layer-title">Distributed</div>
+          <div class="layer-desc">Raft + Sharding</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="section section--muted">
-  <div class="shell">
-    <header class="section__header">
-      <span class="section__eyebrow">Percorso di una query</span>
-      <h2 class="section__title">Pipeline SQL tracciabile file per file</h2>
-      <p class="section__lede">
-        L'esecuzione attraversa componenti Swift espliciti: dal parsing nel modulo SQL, alla pianificazione, sino al
-        commit sullo storage con sincronizzazione WAL.
-      </p>
-    </header>
-    <div class="grid grid--two">
-      <div class="card card--soft">
-        <h3 class="card__title">1. Parsing e normalizzazione</h3>
-        <p class="card__body">
-          <code>SQL/SQLProcessor.swift</code> gestisce il ciclo parse → validate → rewrite e popola il catalogo attraverso
-          <code>Catalog/Catalog.swift</code> e <code>CatalogManager.swift</code>.
-        </p>
-        <ul class="card__list">
-          <li><code>SQL/ConstraintManager.swift</code> applica vincoli dichiarativi.</li>
-          <li><code>Core/Types.swift</code> definisce il sistema di tipi relazionali.</li>
+<!-- Features Section -->
+<section class="features">
+  <div class="container">
+    <div class="section-header">
+      <h2>Caratteristiche Principali</h2>
+      <p>Un database enterprise-grade con tutte le funzionalità moderne</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Performance Estreme</h3>
+        <p>Buffer pool intelligente, WAL ottimizzato, indici B-Tree e query optimizer cost-based per performance superiori.</p>
+        <ul class="feature-list">
+          <li>Clock-sweep algorithm</li>
+          <li>Group commit WAL</li>
+          <li>Hash & Sort-merge joins</li>
+          <li>Statistics-driven optimization</li>
         </ul>
       </div>
-      <div class="card card--soft">
-        <h3 class="card__title">2. Pianificazione e ottimizzazione</h3>
-        <p class="card__body">
-          <code>Planner/QueryPlanner.swift</code> costruisce albero logico; <code>Optimization/OptimizationManager.swift</code>
-          valuta strategie e costi, arricchiti da <code>Statistics</code> e <code>Performance</code>.
-        </p>
-        <ul class="card__list">
-          <li><code>Query/PreparedStatements.swift</code> riduce overhead per workload ripetuti.</li>
-          <li><code>Indexes</code> fornisce metadati di selettività e access path.</li>
+      <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3>Affidabilità Totale</h3>
+        <p>Transazioni ACID complete, MVCC per concorrenza senza blocchi e recovery automatico con ARIES.</p>
+        <ul class="feature-list">
+          <li>ACID compliance</li>
+          <li>Snapshot isolation</li>
+          <li>ARIES recovery</li>
+          <li>Point-in-time recovery</li>
         </ul>
       </div>
-      <div class="card card--soft">
-        <h3 class="card__title">3. Esecuzione fisica</h3>
-        <p class="card__body">
-          <code>Query/QueryExecutor.swift</code> orchestralizza pipeline, buffer e operatori; raccoglie statistiche runtime
-          e richiama <code>TransactionManager</code> per commit/abort.
-        </p>
-        <ul class="card__list">
-          <li><code>Engine</code> integra esecuzione, scheduling e feedback.</li>
-          <li><code>Performance</code> aggiorna metriche per l'ottimizzatore.</li>
+      <div class="feature-card">
+        <div class="feature-icon">📈</div>
+        <h3>Scalabilità Infinita</h3>
+        <p>Sharding automatico, replica Raft e query distribuite. Cresci da single-node a cluster multi-regione.</p>
+        <ul class="feature-list">
+          <li>Automatic sharding</li>
+          <li>Raft consensus</li>
+          <li>Distributed queries</li>
+          <li>Multi-region support</li>
         </ul>
       </div>
-      <div class="card card--soft">
-        <h3 class="card__title">4. Scrittura durabile</h3>
-        <p class="card__body">
-          <code>WAL/FileWAL.swift</code> serializza record con prevLSN, <code>Recovery/ARIESRecovery.swift</code> gestisce redo/undo
-          e <code>BufferPool</code> esegue flush rispettando il log-before-data.
-        </p>
-        <ul class="card__list">
-          <li><code>Recovery/PointInTimeRecovery.swift</code> abilita ripristino temporale.</li>
-          <li><code>Storage/VACUUM.swift</code> pulisce versioni obsolete.</li>
+      <div class="feature-card">
+        <div class="feature-icon">🔬</div>
+        <h3>Verifiche Formali</h3>
+        <p>Ogni componente è verificato con specifiche TLA+ per garantire correttezza e proprietà di sicurezza.</p>
+        <ul class="feature-list">
+          <li>TLA+ specifications</li>
+          <li>Safety properties</li>
+          <li>Liveness guarantees</li>
+          <li>Formal verification</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Sicurezza Enterprise</h3>
+        <p>Autenticazione robusta, autorizzazione RBAC, crittografia end-to-end e audit completo.</p>
+        <ul class="feature-list">
+          <li>RBAC authorization</li>
+          <li>End-to-end encryption</li>
+          <li>Audit logging</li>
+          <li>Security policies</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🛠️</div>
+        <h3>Tooling Completo</h3>
+        <p>CLI avanzato, dashboard di monitoring, backup automatico e strumenti di sviluppo integrati.</p>
+        <ul class="feature-list">
+          <li>Advanced CLI</li>
+          <li>Real-time monitoring</li>
+          <li>Automated backup</li>
+          <li>Development tools</li>
         </ul>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section section--contrast">
-  <div class="shell">
-    <header class="section__header section__header--center">
-      <span class="section__eyebrow">Distribuzione e resilienza</span>
-      <h2 class="section__title">Consenso, coordinamento e replica nativi</h2>
-      <p class="section__lede">
-        I moduli distribuiti dichiarano invarianti direttamente nel codice: consenso Raft, commit a due fasi, query
-        distribuite e controlli di salute centralizzati.
-      </p>
-    </header>
-    <div class="highlight-grid">
-      <div class="highlight">
-        <div class="highlight__icon">🤝</div>
-        <strong>Consenso</strong>
-        <p><code>Consensus/RaftConsensusManager.swift</code> mantiene log matching, election safety e gestione timer.</p>
+<!-- Architecture Section -->
+<section class="architecture">
+  <div class="container">
+    <div class="section-header">
+      <h2>Architettura Modulare</h2>
+      <p>Ogni componente è progettato per essere indipendente e verificabile</p>
+    </div>
+    <div class="architecture-diagram">
+      <div class="arch-layer">
+        <div class="layer-header">
+          <div class="layer-icon">🌐</div>
+          <h3>Distributed Layer</h3>
+        </div>
+        <div class="layer-components">
+          <div class="component">Raft Consensus</div>
+          <div class="component">Two-Phase Commit</div>
+          <div class="component">Sharding Manager</div>
+          <div class="component">Replication</div>
+        </div>
       </div>
-      <div class="highlight">
-        <div class="highlight__icon">🔄</div>
-        <strong>Transazioni globali</strong>
-        <p><code>TwoPhaseCommit/TwoPhaseCommitManager.swift</code> governa prepare/commit/abort con messaggistica esplicita.</p>
+      <div class="arch-layer">
+        <div class="layer-header">
+          <div class="layer-icon">⚙️</div>
+          <h3>Query Layer</h3>
+        </div>
+        <div class="layer-components">
+          <div class="component">SQL Parser</div>
+          <div class="component">Query Planner</div>
+          <div class="component">Query Executor</div>
+          <div class="component">Optimizer</div>
+        </div>
       </div>
-      <div class="highlight">
-        <div class="highlight__icon">📊</div>
-        <strong>Replica &amp; Sharding</strong>
-        <p><code>Replication/ReplicationManager.swift</code> e <code>Sharding/ShardingManager.swift</code> definiscono layout di partizioni e repliche.</p>
+      <div class="arch-layer">
+        <div class="layer-header">
+          <div class="layer-icon">🔒</div>
+          <h3>Transaction Layer</h3>
+        </div>
+        <div class="layer-components">
+          <div class="component">Transaction Manager</div>
+          <div class="component">Lock Manager</div>
+          <div class="component">MVCC Manager</div>
+          <div class="component">Recovery Manager</div>
+        </div>
       </div>
-      <div class="highlight">
-        <div class="highlight__icon">🌐</div>
-        <strong>Query distribuite</strong>
-        <p><code>DistributedQuery/DistributedQuery.swift</code> coordina pianificazione federata e merge dei risultati.</p>
+      <div class="arch-layer">
+        <div class="layer-header">
+          <div class="layer-icon">💾</div>
+          <h3>Storage Layer</h3>
+        </div>
+        <div class="layer-components">
+          <div class="component">Buffer Pool</div>
+          <div class="component">Heap Storage</div>
+          <div class="component">WAL</div>
+          <div class="component">Index Manager</div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section">
-  <div class="shell">
-    <header class="section__header">
-      <span class="section__eyebrow">Operatività guidata dal codice</span>
-      <h2 class="section__title">Monitoring, sicurezza e tooling immediatamente disponibili</h2>
-      <p class="section__lede">
-        Le funzionalità di gestione non sono accessorie: vivono accanto ai percorsi critici ed espongono API per CLI e server.
-      </p>
-    </header>
-    <div class="grid grid--three">
-      <article class="card">
-        <div class="card__icon">📊</div>
-        <span class="badge">Monitoraggio</span>
-        <h3 class="card__title">Metriche e health check</h3>
-        <p class="card__body">
-          <code>Monitoring/Monitor.swift</code> registra gauge, histogram e summary; integra soglie e valutazioni di stato
-          complessivo interrogando <code>ColibrìDB.getStatistics()</code>.
-        </p>
-        <ul class="card__list">
-          <li><code>Performance/Benchmarking.swift</code> e <code>Statistics/StatisticsMaintenance.swift</code> producono insight per tuning.</li>
-          <li><code>Policy</code> e <code>Security</code> applicano limiti e audit.</li>
-        </ul>
-      </article>
-      <article class="card">
-        <div class="card__icon">💾</div>
-        <span class="badge">Backup &amp; Recovery</span>
-        <h3 class="card__title">Protezione dei dati</h3>
-        <p class="card__body">
-          <code>Backup/BackupManager.swift</code> gestisce snapshot e cataloghi; <code>Recovery/ARIESRecoveryManager.swift</code>
-          esegue analisi, redo e undo aderendo alle invarianti TLA+.
-        </p>
-        <ul class="card__list">
-          <li><code>ErrorRecovery</code> cattura path di fault con retry controllato.</li>
-          <li><code>Policy/PolicyManager.swift</code> gestisce quote e criteri di retention.</li>
-        </ul>
-      </article>
-      <article class="card">
-        <div class="card__icon">🛠️</div>
-        <span class="badge">Tooling</span>
-        <h3 class="card__title">Servizi e CLI</h3>
-        <p class="card__body">
-          <code>ColibriServer/Server.swift</code> espone un server HTTP concorrente via <code>Network</code>;
-          <code>Sources/coldb/main.swift</code> delega al modulo <code>ColibriCLI</code> per automazioni da terminale.
-        </p>
-        <ul class="card__list">
-          <li><code>Platform/MemoryManagement.swift</code> gestisce pool e quote.</li>
-          <li><code>Testing</code> contiene scenari end-to-end e generatori di workload.</li>
-        </ul>
-      </article>
+<!-- Quick Start Section -->
+<section class="quick-start">
+  <div class="container">
+    <div class="quick-start-content">
+      <div class="quick-start-text">
+        <h2>Inizia in 5 Minuti</h2>
+        <p>Installa e configura Colibrì DB con pochi comandi. Perfetto per sviluppo e produzione.</p>
+        <div class="quick-start-steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h4>Installa</h4>
+              <p>Clona il repository e compila</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h4>Configura</h4>
+              <p>Personalizza le impostazioni</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h4>Esegui</h4>
+              <p>Avvia il server e connettiti</p>
+            </div>
+          </div>
+        </div>
+        <a href="/wiki/Quick-Start.html" class="btn btn-primary btn-large">
+          <span class="btn-icon">🚀</span>
+          Guida Completa
+        </a>
+      </div>
+      <div class="quick-start-code">
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-title">Terminal</span>
+            <span class="code-lang">bash</span>
+          </div>
+          <div class="code-content">
+            <pre><code># Clona il repository
+git clone https://github.com/gpicchiarelli/Colibri-DB.git
+cd Colibri-DB
+
+# Compila il progetto
+swift build
+
+# Avvia il server
+swift run coldb-server
+
+# Connettiti con il CLI
+swift run coldb</code></pre>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="section section--muted">
-  <div class="shell">
-    <header class="section__header section__header--center">
-      <span class="section__eyebrow">Esempi pratici</span>
-      <h2 class="section__title">Inizia subito con Colibrì DB</h2>
-      <p class="section__lede">
-        Dalla configurazione base alle funzionalità avanzate, scopri come integrare 
-        Colibrì DB nelle tue applicazioni Swift e non solo.
-      </p>
-    </header>
-    <div class="highlight-grid">
-      <div class="highlight">
-        <strong>🚀 Quick Start</strong>
-        <p>Installa e configura Colibrì DB in meno di 5 minuti. Guida passo-passo con esempi pratici.</p>
-        <a class="btn btn--subtle" href="{{ '/wiki/Quick-Start.html' | relative_url }}">Inizia ora →</a>
+<!-- Documentation Section -->
+<section class="documentation">
+  <div class="container">
+    <div class="section-header">
+      <h2>Documentazione Completa</h2>
+      <p>Tutto quello che ti serve per utilizzare Colibrì DB al meglio</p>
+    </div>
+    <div class="docs-grid">
+      <div class="doc-card">
+        <div class="doc-icon">📚</div>
+        <h3>Guida Utente</h3>
+        <p>Impara le basi e le funzionalità avanzate di Colibrì DB</p>
+        <a href="/wiki/Home.html" class="doc-link">Leggi la guida →</a>
       </div>
-      <div class="highlight">
-        <strong>📚 Documentazione</strong>
-        <p>Wiki completo con guide dettagliate, API reference e best practices per ogni scenario d'uso.</p>
-        <a class="btn btn--subtle" href="{{ '/wiki/Home.html' | relative_url }}">Esplora docs →</a>
+      <div class="doc-card">
+        <div class="doc-icon">🔧</div>
+        <h3>API Reference</h3>
+        <p>Documentazione completa di tutte le API e interfacce</p>
+        <a href="/wiki/API-Reference.html" class="doc-link">Consulta le API →</a>
       </div>
-      <div class="highlight">
-        <strong>🔬 Specifiche TLA+</strong>
-        <p>Modelli formali e verifiche matematiche che garantiscono la correttezza del sistema.</p>
-        <a class="btn btn--subtle" href="{{ '/tla-specifications.html' | relative_url }}">Vedi specifiche →</a>
+      <div class="doc-card">
+        <div class="doc-icon">🏗️</div>
+        <h3>Architettura</h3>
+        <p>Comprendi il design interno e le decisioni architetturali</p>
+        <a href="/architecture.html" class="doc-link">Esplora l'architettura →</a>
+      </div>
+      <div class="doc-card">
+        <div class="doc-icon">🔬</div>
+        <h3>Specifiche TLA+</h3>
+        <p>Modelli formali e verifiche matematiche del sistema</p>
+        <a href="/tla-specifications.html" class="doc-link">Vedi le specifiche →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA Section -->
+<section class="cta">
+  <div class="container">
+    <div class="cta-content">
+      <h2>Pronto per iniziare?</h2>
+      <p>Unisciti alla community e contribuisci allo sviluppo di Colibrì DB</p>
+      <div class="cta-actions">
+        <a href="/wiki/Quick-Start.html" class="btn btn-primary btn-large">
+          <span class="btn-icon">⚡</span>
+          Inizia Subito
+        </a>
+        <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-outline btn-large" target="_blank">
+          <span class="btn-icon">⭐</span>
+          Star su GitHub
+        </a>
       </div>
     </div>
   </div>

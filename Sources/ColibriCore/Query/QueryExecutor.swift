@@ -381,8 +381,10 @@ public actor QueryExecutor {
                 state.hashTable[groupKey] = aggValues
             } else {
                 // Initialize group
-                let initValues = state.aggregates.map { spec in
-                    initializeAggregate(value: tuple.values[spec.column], function: spec.function)
+                let aggregates = state.aggregates
+                let tupleValues = tuple.values
+                let initValues = aggregates.map { spec in
+                    initializeAggregate(value: tupleValues[spec.column], function: spec.function)
                 }
                 state.hashTable[groupKey] = initValues
             }
@@ -451,8 +453,9 @@ public actor QueryExecutor {
         state.input = input
         
         // Sort tuples
+        let sortKeys = state.sortKeys
         state.sorted = input.sorted { t1, t2 in
-            for sortKey in state.sortKeys {
+            for sortKey in sortKeys {
                 let v1 = t1.values[sortKey.column]
                 let v2 = t2.values[sortKey.column]
                 
