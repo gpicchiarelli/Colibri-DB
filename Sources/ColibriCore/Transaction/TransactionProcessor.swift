@@ -22,15 +22,6 @@ import Foundation
 /// Corresponds to TLA+: TransactionID
 public typealias TransactionID = UInt64
 
-/// Transaction state
-/// Corresponds to TLA+: TransactionState
-public enum TransactionState: String, Codable, Sendable, CaseIterable {
-    case active = "active"
-    case committed = "committed"
-    case aborted = "aborted"
-    case prepared = "prepared"
-    case preparing = "preparing"
-}
 
 // IsolationLevel is defined in Core/Types.swift
 
@@ -501,30 +492,6 @@ public actor TransactionProcessor {
 
 // MARK: - Supporting Types
 
-/// Transaction
-public struct Transaction: Codable, Sendable, Equatable {
-    public let txId: TransactionID
-    public var state: TransactionState
-    public var isolationLevel: IsolationLevel
-    public let startTime: UInt64
-    public var endTime: UInt64?
-    public var operations: [String]
-    public var locks: [String]
-    public var savepoints: [Savepoint]
-    public var isDirty: Bool
-    
-    public init(txId: TransactionID, state: TransactionState, isolationLevel: IsolationLevel, startTime: UInt64, endTime: UInt64?, operations: [String], locks: [String], savepoints: [Savepoint], isDirty: Bool) {
-        self.txId = txId
-        self.state = state
-        self.isolationLevel = isolationLevel
-        self.startTime = startTime
-        self.endTime = endTime
-        self.operations = operations
-        self.locks = locks
-        self.savepoints = savepoints
-        self.isDirty = isDirty
-    }
-}
 
 /// Savepoint
 public struct Savepoint: Codable, Sendable, Equatable {
