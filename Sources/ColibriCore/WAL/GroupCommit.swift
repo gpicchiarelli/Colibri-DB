@@ -25,6 +25,19 @@ import Foundation
 
 // MARK: - Group Commit Configuration
 
+/// Commit request structure
+public struct CommitRequest: Codable, Sendable {
+    public let tid: TxID
+    public let targetLSN: LSN
+    public let timestamp: Timestamp
+    
+    public init(tid: TxID, targetLSN: LSN, timestamp: Timestamp) {
+        self.tid = tid
+        self.targetLSN = targetLSN
+        self.timestamp = timestamp
+    }
+}
+
 /// Configuration for group commit optimization
 /// Corresponds to TLA+ constants: MAX_BATCH_SIZE, MAX_WAIT_TIME_MS
 public struct GroupCommitConfig: Sendable {

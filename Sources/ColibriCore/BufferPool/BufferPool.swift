@@ -221,6 +221,14 @@ public actor BufferPool {
         }
     }
     
+    /// Flush all dirty pages (async version)
+    public func flushAll() async throws {
+        // TLA+: \A p \in dirty: FlushPage(p)
+        for pageID in dirty {
+            try flushPage(pageID)
+        }
+    }
+    
     /// Update flushed LSN from WAL
     /// TLA+ Action: UpdateFlushedLSN(lsn)
     /// Precondition: lsn >= flushedLSN

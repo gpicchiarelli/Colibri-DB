@@ -23,16 +23,6 @@ import Foundation
 
 
 
-/// Group commit configuration
-public struct GroupCommitConfig: Sendable {
-    public let threshold: Int
-    public let timeoutMs: Int
-    
-    public init(threshold: Int = 10, timeoutMs: Int = 100) {
-        self.threshold = threshold
-        self.timeoutMs = timeoutMs
-    }
-}
 
 /// Disk manager interface
 public protocol DiskManager: Sendable {
