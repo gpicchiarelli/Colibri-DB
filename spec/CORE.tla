@@ -13,6 +13,17 @@
 EXTENDS Naturals, Sequences, FiniteSets, TLC
 
 (* --------------------------------------------------------------------------
+   CONSTANTS TO BE DEFINED IN .cfg FILES
+   -------------------------------------------------------------------------- *)
+
+CONSTANTS
+  MAX_TX,              \* Maximum number of transactions
+  MAX_LSN,             \* Maximum LSN value
+  MAX_PAGES,           \* Maximum number of pages
+  StringSet,           \* Set of strings for model checking
+  globalTimestamp      \* Global timestamp for model checking
+
+(* --------------------------------------------------------------------------
    BASIC TYPES
    -------------------------------------------------------------------------- *)
 
@@ -47,6 +58,18 @@ ValueType == {"int", "double", "bool", "string", "null"}
 \* A database value is a tuple of (type, value)
 \* For model checking, we abstract values to small integers/strings
 Value == [type: ValueType, val: -10..10] \union {[type |-> "null"]}
+
+\* String type for model checking
+STRING == StringSet
+
+\* Common string sets for model checking
+TableNames == StringSet
+ColumnNames == StringSet
+SchemaNames == StringSet
+DatabaseNames == StringSet
+PoolNames == StringSet
+IndexNames == StringSet
+ResourceNames == StringSet
 
 \* A row is a function from column names to values
 \* In implementation: Row = [String: Value]
@@ -197,19 +220,6 @@ Contains(seq, elem) == \E i \in DOMAIN seq : seq[i] = elem
 \* Range of sequence indices
 Range(seq) == {seq[i] : i \in DOMAIN seq}
 
-(* --------------------------------------------------------------------------
-   CONSTANTS (to be defined in .cfg files)
-   -------------------------------------------------------------------------- *)
-
-\* Maximum number of transactions (for model checking bounds)
-CONSTANT MAX_TX
-
-\* Maximum LSN value (for model checking bounds)
-CONSTANT MAX_LSN
-
-\* Maximum number of pages (for model checking bounds)
-CONSTANT MAX_PAGES
-
 \* Set of all possible transaction IDs
 TxIds == 1..MAX_TX
 
@@ -218,6 +228,22 @@ LSNs == 0..MAX_LSN
 
 \* Set of all possible page IDs
 PageIds == 1..MAX_PAGES
+
+\* Common ID types for new modules
+AllocationId == Nat
+JobId == Nat
+RequestId == Nat
+PoolId == Nat
+ArenaId == Nat
+EngineId == Nat
+MapId == Nat
+NodeId == Nat
+PointId == Nat
+HistoryId == Nat
+PolicyId == Nat
+StorageId == Nat
+SegmentId == Nat
+CheckpointId == Nat
 
 =============================================================================
 

@@ -26,7 +26,7 @@
   Version: 1.0.0
 *)
 
-EXTENDS CORE, INTERFACES, DISK_FORMAT, Naturals, Sequences, FiniteSets, TLC
+EXTENDS CORE, Naturals, Sequences, FiniteSets, TLC
 
 CONSTANTS
   MaxSchemaVersions,    \* Maximum number of schema versions to keep
@@ -303,6 +303,9 @@ ExecutePendingChange(schemaName, txId) ==
          [] "alter" -> AlterSchema(schemaName, pendingChange.ddlStatement, txId)
          [] "drop" -> DropSchema(schemaName, txId)
          [] "rename" -> RenameSchema(schemaName, pendingChange.ddlStatement, txId)
+         OTHERWISE -> UNCHANGED <<schemas, schemaVersions, changeHistory, 
+                                   compatibilityMatrix, migrationScripts, 
+                                   constraintValidators, onlineChanges>>
        ENDCASE
 
 \* Rename schema
