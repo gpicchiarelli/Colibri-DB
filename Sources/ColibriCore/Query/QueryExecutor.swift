@@ -255,7 +255,7 @@ public actor QueryExecutor {
     /// Initialize nested loop join
     /// TLA+ Action: InitNestedLoopJoin(opId, leftInput, rightInput)
     public func initNestedLoopJoin(opId: Int, leftInput: [ExecutorTuple], rightInput: [ExecutorTuple]) {
-        var state = JoinState(joinType: .nestedLoop)
+        var state = QueryExecutorJoinState(joinType: .nestedLoop)
         state.leftInput = leftInput
         state.rightInput = rightInput
         
