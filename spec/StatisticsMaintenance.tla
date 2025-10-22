@@ -1,463 +1,711 @@
------------------------------ MODULE StatisticsMaintenance -----------------------------
+---------------------------- MODULE StatisticsMaintenance ----------------------------
 (*
-  Statistics Maintenance and Query Optimization Specification for ColibrìDB
+  ColibrìDB Statistics Maintenance Specification
   
-  This module specifies the collection and maintenance of table/index statistics
-  for query optimization. It implements:
-  - Histogram construction (equi-depth, equi-width)
-  - Cardinality estimation (distinct values)
-  - Selectivity estimation
-  - Multi-column statistics (correlation)
-  - HyperLogLog sketches for approximate counting
-  - Statistics aging and automatic refresh
-  - ANALYZE command execution
+  Manages database statistics for query optimization including:
+  - Table and column statistics collection
+  - Histogram generation and maintenance
+  - Cardinality estimation
+  - Cost model updates
+  - Statistics refresh strategies
+  - Sampling-based statistics
   
   Based on:
-  - Ioannidis, Y. E. (2003). "The history of histograms." Proceedings of VLDB 2003.
-  - Ioannidis, Y., & Poosala, V. (1995). "Balancing histogram optimality and
-    practicality for query result size estimation." Proceedings of ACM SIGMOD 1995.
-  - Flajolet, P., et al. (2007). "HyperLogLog: the analysis of a near-optimal
-    cardinality estimation algorithm." AofA 2007.
-  - Selinger, P. G., et al. (1979). "Access path selection in a relational database
-    management system." Proceedings of ACM SIGMOD 1979.
-  - Chaudhuri, S., & Narasayya, V. (2007). "Statistics on query expressions."
-    Proceedings of ACM SIGMOD 2007.
+  - Selinger et al. (1979) - "Access Path Selection in a Relational Database Management System"
+  - Ioannidis (1993) - "Universality of Serial Histograms"
+  - Chaudhuri et al. (1998) - "Sampling-based Statistics for Query Optimization"
+  - PostgreSQL Statistics Implementation
+  - Oracle Statistics Management
   
   Key Properties:
-  - Accuracy: Statistics accurately represent data distribution
-  - Freshness: Statistics updated after significant data changes
-  - Efficiency: Statistics collection doesn't block queries
-  - Compactness: Statistics stored efficiently
+  - Accuracy: Statistics reflect actual data distribution
+  - Freshness: Statistics are updated when data changes significantly
+  - Efficiency: Statistics collection doesn't impact query performance
+  - Consistency: Statistics are consistent across related tables
   
   Author: ColibrìDB Team
   Date: 2025-10-19
+  Version: 1.0.0
 *)
 
-EXTENDS Naturals, Sequences, FiniteSets, TLC, CORE
+EXTENDS CORE, INTERFACES, DISK_FORMAT, Naturals, Sequences, FiniteSets, TLC
 
 CONSTANTS
-  MAX_TX,                  \* From CORE
-  MAX_LSN,                 \* From CORE
-  MAX_PAGES,               \* From CORE
-  Tables,                  \* Set of table names
-  Columns,                 \* Set of column names
-  MAX_HISTOGRAM_BUCKETS,   \* Maximum histogram buckets
-  STATS_THRESHOLD          \* % change to trigger auto-analyze
-
-(* --------------------------------------------------------------------------
-   STATISTICS TYPES
-   -------------------------------------------------------------------------- *)
-
-\* Histogram types
-HistogramType == {
-  "equi-width",      \* Equal bucket width (value range)
-  "equi-depth",      \* Equal bucket depth (row count)
-  "max-diff",        \* Maximum difference
-  "v-optimal"        \* V-Optimal (minimize estimate error)
-}
-
-\* Histogram bucket
-HistogramBucket == [
-  minValue: Value,
-  maxValue: Value,
-  frequency: Nat,        \* Number of values in bucket
-  distinctValues: Nat    \* Number of distinct values
-]
-
-\* Column statistics
-ColumnStats == [
-  nullFraction: Nat,                     \* Percentage of NULL values (0-100)
-  distinctValues: Nat,                   \* Number of distinct values (cardinality)
-  avgWidth: Nat,                         \* Average column width in bytes
-  mostCommonValues: Seq(Value),          \* MCVs (Most Common Values)
-  mostCommonFreqs: Seq(Nat),             \* Frequencies of MCVs
-  histogram: Seq(HistogramBucket),       \* Histogram for non-MCV values
-  correlation: Nat                       \* Correlation with physical order (-100 to 100)
-]
-
-\* Table statistics
-TableStats == [
-  rowCount: Nat,                \* Total rows
-  pageCount: Nat,               \* Total pages
-  tupleSize: Nat,               \* Average tuple size
-  deadTuples: Nat,              \* Dead tuple count
-  lastAnalyzed: Nat,            \* Timestamp of last ANALYZE
-  modifications: Nat            \* Modifications since last ANALYZE
-]
-
-\* HyperLogLog sketch for cardinality estimation
-HLLSketch == [
-  precision: Nat,               \* Number of bits for bucket index (4-16)
-  registers: Seq(Nat),          \* 2^precision registers
-  estimatedCardinality: Nat
-]
-
-(* --------------------------------------------------------------------------
-   VARIABLES
-   -------------------------------------------------------------------------- *)
+  MaxHistogramBuckets,    \* Maximum number of histogram buckets
+  SampleSize,             \* Sample size for statistics collection
+  StatisticsRefreshThreshold, \* Threshold for statistics refresh
+  MaxStatisticsAge        \* Maximum age of statistics before refresh
 
 VARIABLES
-  \* Table statistics
-  tableStats,           \* [Tables -> TableStats] - Per-table statistics
-  columnStats,          \* [Tables -> [Columns -> ColumnStats]] - Per-column stats
-  
-  \* Index statistics
-  indexStats,           \* [IndexName -> [distinctKeys, height, pages]]
-  
-  \* Cardinality sketches
-  hllSketches,          \* [Tables -> [Columns -> HLLSketch]] - HLL sketches
-  
-  \* Statistics collection state
-  analyzeInProgress,    \* [Tables -> BOOLEAN] - ANALYZE running
-  sampleSize,           \* [Tables -> Nat] - Sample size for statistics
-  sampledRows,          \* [Tables -> Seq(Row)] - Sampled rows
-  
-  \* Statistics metadata
-  statsVersion,         \* [Tables -> Nat] - Statistics version number
-  autoAnalyzeEnabled,   \* BOOLEAN - Auto-analyze enabled
-  modificationCount,    \* [Tables -> Nat] - Modifications since last analyze
-  
-  \* Query optimization estimates
-  selectivityCache      \* [(Table, Predicate) -> Nat] - Cached selectivity estimates
+  tableStats,             \* [TableName -> TableStatistics]
+  columnStats,            \* [TableName -> [ColumnName -> ColumnStatistics]]
+  histograms,             \* [TableName -> [ColumnName -> Histogram]]
+  correlationStats,       \* [TableName -> [ColumnPair -> CorrelationStats]]
+  indexStats,             \* [IndexName -> IndexStatistics]
+  statisticsMetadata,     \* [TableName -> StatisticsMetadata]
+  pendingUpdates,         \* [TableName -> PendingUpdate]
+  samplingJobs,           \* [TableName -> SamplingJob]
+  costModel               \* CostModel
 
-statsVars == <<tableStats, columnStats, indexStats, hllSketches,
-               analyzeInProgress, sampleSize, sampledRows, statsVersion,
-               autoAnalyzeEnabled, modificationCount, selectivityCache>>
+statisticsMaintenanceVars == <<tableStats, columnStats, histograms, correlationStats, 
+                               indexStats, statisticsMetadata, pendingUpdates, 
+                               samplingJobs, costModel>>
+
+(* --------------------------------------------------------------------------
+   TYPE DEFINITIONS
+   -------------------------------------------------------------------------- *)
+
+\* Table-level statistics
+TableStatistics == [
+  tableName: STRING,
+  rowCount: Nat,
+  pageCount: Nat,
+  avgRowSize: Nat,
+  lastUpdated: Timestamp,
+  isStale: BOOLEAN,
+  sampleRate: Nat  \* Percentage of table sampled
+]
+
+\* Column-level statistics
+ColumnStatistics == [
+  columnName: STRING,
+  dataType: ValueType,
+  nullCount: Nat,
+  distinctCount: Nat,
+  minValue: Value,
+  maxValue: Value,
+  avgValue: Value,
+  stdDev: Nat,
+  skewness: Nat,
+  kurtosis: Nat,
+  lastUpdated: Timestamp
+]
+
+\* Histogram for column value distribution
+Histogram == [
+  columnName: STRING,
+  bucketCount: Nat,
+  buckets: Seq(HistogramBucket),
+  totalRows: Nat,
+  nullRows: Nat,
+  distinctValues: Nat,
+  lastUpdated: Timestamp
+]
+
+\* Individual histogram bucket
+HistogramBucket == [
+  bucketId: Nat,
+  lowerBound: Value,
+  upperBound: Value,
+  frequency: Nat,
+  distinctValues: Nat,
+  cumulativeFrequency: Nat
+]
+
+\* Correlation statistics between columns
+CorrelationStats == [
+  column1: STRING,
+  column2: STRING,
+  correlationCoeff: Nat,  \* -100 to 100 (scaled)
+  jointCardinality: Nat,
+  independenceFactor: Nat,
+  lastUpdated: Timestamp
+]
+
+\* Index statistics
+IndexStatistics == [
+  indexName: STRING,
+  tableName: STRING,
+  columnNames: Seq(STRING),
+  keyCount: Nat,
+  leafPages: Nat,
+  levels: Nat,
+  avgKeySize: Nat,
+  clusteringFactor: Nat,
+  selectivity: Nat,  \* 0-100
+  lastUpdated: Timestamp
+]
+
+\* Statistics metadata
+StatisticsMetadata == [
+  tableName: STRING,
+  lastFullScan: Timestamp,
+  lastSampleScan: Timestamp,
+  changeCount: Nat,
+  changeThreshold: Nat,
+  autoRefresh: BOOLEAN,
+  refreshStrategy: {"full", "sample", "incremental"}
+]
+
+\* Pending statistics update
+PendingUpdate == [
+  tableName: STRING,
+  updateType: {"full", "sample", "incremental"},
+  priority: Nat,  \* 1-10, higher = more urgent
+  submittedAt: Timestamp,
+  estimatedDuration: Nat,
+  affectedColumns: Seq(STRING)
+]
+
+\* Sampling job for statistics collection
+SamplingJob == [
+  tableName: STRING,
+  jobId: Nat,
+  status: {"pending", "running", "completed", "failed"},
+  startTime: Timestamp,
+  endTime: Timestamp,
+  sampleSize: Nat,
+  actualSampleSize: Nat,
+  progress: Nat,  \* 0-100
+  errorMessage: STRING
+]
+
+\* Cost model for query optimization
+CostModel == [
+  cpuCostPerTuple: Nat,
+  ioCostPerPage: Nat,
+  memoryCostPerMB: Nat,
+  networkCostPerMB: Nat,
+  selectivityFactors: [STRING -> Nat],  \* Column -> selectivity factor
+  joinCostFactors: [STRING -> Nat],     \* Join type -> cost factor
+  lastUpdated: Timestamp
+]
 
 (* --------------------------------------------------------------------------
    TYPE INVARIANT
    -------------------------------------------------------------------------- *)
 
-TypeOK_Stats ==
-  /\ tableStats \in [Tables -> TableStats]
-  /\ columnStats \in [Tables -> [Columns -> ColumnStats]]
-  /\ indexStats \in [STRING -> [distinctKeys: Nat, height: Nat, pages: Nat]]
-  /\ hllSketches \in [Tables -> [Columns -> HLLSketch]]
-  /\ analyzeInProgress \in [Tables -> BOOLEAN]
-  /\ sampleSize \in [Tables -> Nat]
-  /\ sampledRows \in [Tables -> Seq(Row)]
-  /\ statsVersion \in [Tables -> Nat]
-  /\ autoAnalyzeEnabled \in BOOLEAN
-  /\ modificationCount \in [Tables -> Nat]
-  /\ selectivityCache \in [(Tables \X STRING) -> Nat]
-
-(* --------------------------------------------------------------------------
-   HELPER OPERATORS
-   -------------------------------------------------------------------------- *)
-
-\* Calculate modification threshold for auto-analyze
-ModificationThreshold(table) ==
-  (tableStats[table].rowCount * STATS_THRESHOLD) \div 100
-
-\* Check if auto-analyze should trigger
-ShouldAutoAnalyze(table) ==
-  /\ autoAnalyzeEnabled
-  /\ ~analyzeInProgress[table]
-  /\ modificationCount[table] >= ModificationThreshold(table)
-
-\* Sample rows using reservoir sampling (simplified)
-ReservoirSample(allRows, n) ==
-  \* Simplified: just take first n rows
-  \* Real implementation: Vitter's Algorithm L
-  SubSeq(allRows, 1, Min({n, Len(allRows)}))
-
-\* Build equi-depth histogram
-BuildEquiDepthHistogram(values, numBuckets) ==
-  LET sortedValues == SortSeq(values, LAMBDA v1, v2: v1 < v2)
-      bucketSize == (Len(sortedValues) + numBuckets - 1) \div numBuckets
-  IN [i \in 1..numBuckets |->
-       LET startIdx == (i - 1) * bucketSize + 1
-           endIdx == Min({i * bucketSize, Len(sortedValues)})
-           bucketValues == SubSeq(sortedValues, startIdx, endIdx)
-       IN [minValue |-> bucketValues[1],
-           maxValue |-> bucketValues[Len(bucketValues)],
-           frequency |-> Len(bucketValues),
-           distinctValues |-> Cardinality(Range(bucketValues))]]
-
-\* Estimate selectivity using histogram
-EstimateSelectivity(colStats, predicate, value) ==
-  CASE predicate OF
-    "=" -> 
-      \* Check if in most common values
-      IF value \in Range(colStats.mostCommonValues)
-      THEN LET idx == CHOOSE i \in 1..Len(colStats.mostCommonValues):
-                        colStats.mostCommonValues[i] = value
-           IN colStats.mostCommonFreqs[idx]
-      ELSE \* Estimate from histogram
-        100 \div colStats.distinctValues
-    [] ">" -> 
-      \* Estimate rows greater than value using histogram
-      LET bucketsAfter == {b \in Range(colStats.histogram): b.minValue > value}
-          estimatedRows == FoldSeq(LAMBDA acc, b: acc + b.frequency, 0, bucketsAfter)
-      IN estimatedRows
-    [] "<" ->
-      \* Estimate rows less than value
-      LET bucketsBefore == {b \in Range(colStats.histogram): b.maxValue < value}
-          estimatedRows == FoldSeq(LAMBDA acc, b: acc + b.frequency, 0, bucketsBefore)
-      IN estimatedRows
-    [] OTHER -> 50  \* Default: assume 50% selectivity
-
-\* Update HyperLogLog sketch with new value
-UpdateHLL(sketch, value) ==
-  \* Simplified HLL update
-  LET hashValue == Hash(value)  \* Abstract hash function
-      bucketIdx == hashValue % (2^sketch.precision)
-      leadingZeros == CountLeadingZeros(hashValue)  \* Abstract
-  IN [sketch EXCEPT !.registers[bucketIdx] = Max({@, leadingZeros})]
-
-\* Estimate cardinality from HLL sketch
-EstimateCardinalityHLL(sketch) ==
-  LET m == 2^sketch.precision
-      alpha == 0.7213 / (1 + 1.079 / m)  \* HLL constant
-      rawEstimate == alpha * m^2 / FoldSeq(LAMBDA acc, r: acc + 2^(-r), 0, sketch.registers)
-  IN rawEstimate
+TypeOK_StatisticsMaintenance ==
+  /\ tableStats \in [STRING -> TableStatistics]
+  /\ columnStats \in [STRING -> [STRING -> ColumnStatistics]]
+  /\ histograms \in [STRING -> [STRING -> Histogram]]
+  /\ correlationStats \in [STRING -> [STRING -> CorrelationStats]]
+  /\ indexStats \in [STRING -> IndexStatistics]
+  /\ statisticsMetadata \in [STRING -> StatisticsMetadata]
+  /\ pendingUpdates \in [STRING -> PendingUpdate]
+  /\ samplingJobs \in [STRING -> SamplingJob]
+  /\ costModel \in CostModel
 
 (* --------------------------------------------------------------------------
    INITIAL STATE
    -------------------------------------------------------------------------- *)
 
-Init_Stats ==
-  /\ tableStats = [t \in Tables |-> 
-                    [rowCount |-> 0, pageCount |-> 0, tupleSize |-> 0,
-                     deadTuples |-> 0, lastAnalyzed |-> 0, modifications |-> 0]]
-  /\ columnStats = [t \in Tables |-> [c \in Columns |->
-                     [nullFraction |-> 0, distinctValues |-> 0, avgWidth |-> 0,
-                      mostCommonValues |-> <<>>, mostCommonFreqs |-> <<>>,
-                      histogram |-> <<>>, correlation |-> 0]]]
-  /\ indexStats = [idx \in {} |-> [distinctKeys |-> 0, height |-> 0, pages |-> 0]]
-  /\ hllSketches = [t \in Tables |-> [c \in Columns |->
-                     [precision |-> 12, registers |-> [i \in 1..4096 |-> 0],
-                      estimatedCardinality |-> 0]]]
-  /\ analyzeInProgress = [t \in Tables |-> FALSE]
-  /\ sampleSize = [t \in Tables |-> 300]  \* Default sample size: 300 blocks
-  /\ sampledRows = [t \in Tables |-> <<>>]
-  /\ statsVersion = [t \in Tables |-> 1]
-  /\ autoAnalyzeEnabled = TRUE
-  /\ modificationCount = [t \in Tables |-> 0]
-  /\ selectivityCache = [p \in {} |-> 0]
+Init ==
+  /\ tableStats = [t \in {} |-> [
+       tableName |-> "",
+       rowCount |-> 0,
+       pageCount |-> 0,
+       avgRowSize |-> 0,
+       lastUpdated |-> 0,
+       isStale |-> FALSE,
+       sampleRate |-> 0
+     ]]
+  /\ columnStats = [t \in {} |-> [c \in {} |-> [
+       columnName |-> "",
+       dataType |-> "int",
+       nullCount |-> 0,
+       distinctCount |-> 0,
+       minValue |-> [type |-> "int", val |-> 0],
+       maxValue |-> [type |-> "int", val |-> 0],
+       avgValue |-> [type |-> "int", val |-> 0],
+       stdDev |-> 0,
+       skewness |-> 0,
+       kurtosis |-> 0,
+       lastUpdated |-> 0
+     ]]]
+  /\ histograms = [t \in {} |-> [c \in {} |-> [
+       columnName |-> "",
+       bucketCount |-> 0,
+       buckets |-> <<>>,
+       totalRows |-> 0,
+       nullRows |-> 0,
+       distinctValues |-> 0,
+       lastUpdated |-> 0
+     ]]]
+  /\ correlationStats = [t \in {} |-> [p \in {} |-> [
+       column1 |-> "",
+       column2 |-> "",
+       correlationCoeff |-> 0,
+       jointCardinality |-> 0,
+       independenceFactor |-> 0,
+       lastUpdated |-> 0
+     ]]]
+  /\ indexStats = [i \in {} |-> [
+       indexName |-> "",
+       tableName |-> "",
+       columnNames |-> <<>>,
+       keyCount |-> 0,
+       leafPages |-> 0,
+       levels |-> 0,
+       avgKeySize |-> 0,
+       clusteringFactor |-> 0,
+       selectivity |-> 0,
+       lastUpdated |-> 0
+     ]]
+  /\ statisticsMetadata = [t \in {} |-> [
+       tableName |-> "",
+       lastFullScan |-> 0,
+       lastSampleScan |-> 0,
+       changeCount |-> 0,
+       changeThreshold |-> 1000,
+       autoRefresh |-> TRUE,
+       refreshStrategy |-> "sample"
+     ]]
+  /\ pendingUpdates = [t \in {} |-> [
+       tableName |-> "",
+       updateType |-> "sample",
+       priority |-> 5,
+       submittedAt |-> 0,
+       estimatedDuration |-> 0,
+       affectedColumns |-> <<>>
+     ]]
+  /\ samplingJobs = [t \in {} |-> [
+       tableName |-> "",
+       jobId |-> 0,
+       status |-> "pending",
+       startTime |-> 0,
+       endTime |-> 0,
+       sampleSize |-> 0,
+       actualSampleSize |-> 0,
+       progress |-> 0,
+       errorMessage |-> ""
+     ]]
+  /\ costModel = [
+       cpuCostPerTuple |-> 1,
+       ioCostPerPage |-> 10,
+       memoryCostPerMB |-> 100,
+       networkCostPerMB |-> 50,
+       selectivityFactors |-> [c \in {} |-> 10],
+       joinCostFactors |-> [j \in {} |-> 100],
+       lastUpdated |-> 0
+     ]
 
 (* --------------------------------------------------------------------------
-   DATA MODIFICATION TRACKING
+   OPERATIONS
    -------------------------------------------------------------------------- *)
 
-\* Record modification (INSERT, UPDATE, DELETE)
-RecordModification(table) ==
-  /\ modificationCount' = [modificationCount EXCEPT ![table] = @ + 1]
-  /\ tableStats' = [tableStats EXCEPT ![table].modifications = @ + 1]
-  /\ UNCHANGED <<columnStats, indexStats, hllSketches, analyzeInProgress,
-                sampleSize, sampledRows, statsVersion, autoAnalyzeEnabled,
-                selectivityCache>>
+\* Collect table statistics
+CollectTableStats(tableName, rowCount, pageCount, avgRowSize, sampleRate) ==
+  /\ LET tableStat == [
+       tableName |-> tableName,
+       rowCount |-> rowCount,
+       pageCount |-> pageCount,
+       avgRowSize |-> avgRowSize,
+       lastUpdated |-> globalTimestamp,
+       isStale |-> FALSE,
+       sampleRate |-> sampleRate
+     ]
+  IN /\ tableStats' = [tableStats EXCEPT ![tableName] = tableStat]
+     /\ statisticsMetadata' = [statisticsMetadata EXCEPT ![tableName] = 
+                              [statisticsMetadata[tableName] EXCEPT 
+                               !.lastFullScan = globalTimestamp,
+                               !.changeCount = 0]]
+     /\ UNCHANGED <<columnStats, histograms, correlationStats, indexStats, 
+                   pendingUpdates, samplingJobs, costModel>>
 
-\* Track row count changes
-UpdateRowCount(table, delta) ==
-  /\ tableStats' = [tableStats EXCEPT ![table].rowCount = @ + delta]
-  /\ UNCHANGED <<columnStats, indexStats, hllSketches, analyzeInProgress,
-                sampleSize, sampledRows, statsVersion, autoAnalyzeEnabled,
-                modificationCount, selectivityCache>>
+\* Collect column statistics
+CollectColumnStats(tableName, columnName, dataType, nullCount, distinctCount, 
+                   minValue, maxValue, avgValue, stdDev, skewness, kurtosis) ==
+  /\ LET columnStat == [
+       columnName |-> columnName,
+       dataType |-> dataType,
+       nullCount |-> nullCount,
+       distinctCount |-> distinctCount,
+       minValue |-> minValue,
+       maxValue |-> maxValue,
+       avgValue |-> avgValue,
+       stdDev |-> stdDev,
+       skewness |-> skewness,
+       kurtosis |-> kurtosis,
+       lastUpdated |-> globalTimestamp
+     ]
+  IN /\ columnStats' = [columnStats EXCEPT ![tableName] = 
+                       [columnStats[tableName] EXCEPT ![columnName] = columnStat]]
+     /\ UNCHANGED <<tableStats, histograms, correlationStats, indexStats, 
+                   statisticsMetadata, pendingUpdates, samplingJobs, costModel>>
+
+\* Generate histogram for column
+GenerateHistogram(tableName, columnName, buckets) ==
+  /\ LET histogram == [
+       columnName |-> columnName,
+       bucketCount |-> Len(buckets),
+       buckets |-> buckets,
+       totalRows |-> tableStats[tableName].rowCount,
+       nullRows |-> columnStats[tableName][columnName].nullCount,
+       distinctValues |-> columnStats[tableName][columnName].distinctCount,
+       lastUpdated |-> globalTimestamp
+     ]
+  IN /\ histograms' = [histograms EXCEPT ![tableName] = 
+                      [histograms[tableName] EXCEPT ![columnName] = histogram]]
+     /\ UNCHANGED <<tableStats, columnStats, correlationStats, indexStats, 
+                   statisticsMetadata, pendingUpdates, samplingJobs, costModel>>
+
+\* Update correlation statistics
+UpdateCorrelationStats(tableName, column1, column2, correlationCoeff, 
+                       jointCardinality, independenceFactor) ==
+  /\ LET correlationStat == [
+       column1 |-> column1,
+       column2 |-> column2,
+       correlationCoeff |-> correlationCoeff,
+       jointCardinality |-> jointCardinality,
+       independenceFactor |-> independenceFactor,
+       lastUpdated |-> globalTimestamp
+     ]
+  IN /\ correlationStats' = [correlationStats EXCEPT ![tableName] = 
+                            [correlationStats[tableName] EXCEPT 
+                             ![column1 || "_" || column2] = correlationStat]]
+     /\ UNCHANGED <<tableStats, columnStats, histograms, indexStats, 
+                   statisticsMetadata, pendingUpdates, samplingJobs, costModel>>
+
+\* Update index statistics
+UpdateIndexStats(indexName, tableName, columnNames, keyCount, leafPages, 
+                 levels, avgKeySize, clusteringFactor, selectivity) ==
+  /\ LET indexStat == [
+       indexName |-> indexName,
+       tableName |-> tableName,
+       columnNames |-> columnNames,
+       keyCount |-> keyCount,
+       leafPages |-> leafPages,
+       levels |-> levels,
+       avgKeySize |-> avgKeySize,
+       clusteringFactor |-> clusteringFactor,
+       selectivity |-> selectivity,
+       lastUpdated |-> globalTimestamp
+     ]
+  IN /\ indexStats' = [indexStats EXCEPT ![indexName] = indexStat]
+     /\ UNCHANGED <<tableStats, columnStats, histograms, correlationStats, 
+                   statisticsMetadata, pendingUpdates, samplingJobs, costModel>>
+
+\* Mark statistics as stale
+MarkStatisticsStale(tableName, affectedColumns) ==
+  /\ tableStats' = [tableStats EXCEPT ![tableName] = 
+                   [tableStats[tableName] EXCEPT !.isStale = TRUE]]
+  /\ statisticsMetadata' = [statisticsMetadata EXCEPT ![tableName] = 
+                           [statisticsMetadata[tableName] EXCEPT 
+                            !.changeCount = statisticsMetadata[tableName].changeCount + 1]]
+  /\ pendingUpdates' = [pendingUpdates EXCEPT ![tableName] = [
+       tableName |-> tableName,
+       updateType |-> "incremental",
+       priority |-> 5,
+       submittedAt |-> globalTimestamp,
+       estimatedDuration |-> 100,
+       affectedColumns |-> affectedColumns
+     ]]
+  /\ UNCHANGED <<columnStats, histograms, correlationStats, indexStats, 
+                samplingJobs, costModel>>
+
+\* Start sampling job
+StartSamplingJob(tableName, jobId, sampleSize) ==
+  /\ LET samplingJob == [
+       tableName |-> tableName,
+       jobId |-> jobId,
+       status |-> "running",
+       startTime |-> globalTimestamp,
+       endTime |-> 0,
+       sampleSize |-> sampleSize,
+       actualSampleSize |-> 0,
+       progress |-> 0,
+       errorMessage |-> ""
+     ]
+  IN /\ samplingJobs' = [samplingJobs EXCEPT ![tableName] = samplingJob]
+     /\ UNCHANGED <<tableStats, columnStats, histograms, correlationStats, 
+                   indexStats, statisticsMetadata, pendingUpdates, costModel>>
+
+\* Progress sampling job
+ProgressSamplingJob(tableName, progress, actualSampleSize) ==
+  /\ tableName \in DOMAIN samplingJobs
+  /\ LET currentJob == samplingJobs[tableName]
+       updatedJob == [currentJob EXCEPT 
+                     !.progress = progress,
+                     !.actualSampleSize = actualSampleSize]
+  IN /\ samplingJobs' = [samplingJobs EXCEPT ![tableName] = updatedJob]
+     /\ UNCHANGED <<tableStats, columnStats, histograms, correlationStats, 
+                   indexStats, statisticsMetadata, pendingUpdates, costModel>>
+
+\* Complete sampling job
+CompleteSamplingJob(tableName, success, errorMessage) ==
+  /\ tableName \in DOMAIN samplingJobs
+  /\ LET currentJob == samplingJobs[tableName]
+       completedJob == [currentJob EXCEPT 
+                       !.status = IF success THEN "completed" ELSE "failed",
+                       !.endTime = globalTimestamp,
+                       !.errorMessage = errorMessage]
+  IN /\ samplingJobs' = [samplingJobs EXCEPT ![tableName] = completedJob]
+     /\ statisticsMetadata' = [statisticsMetadata EXCEPT ![tableName] = 
+                              [statisticsMetadata[tableName] EXCEPT 
+                               !.lastSampleScan = globalTimestamp]]
+     /\ UNCHANGED <<tableStats, columnStats, histograms, correlationStats, 
+                   indexStats, pendingUpdates, costModel>>
+
+\* Update cost model
+UpdateCostModel(cpuCost, ioCost, memoryCost, networkCost, selectivityFactors, joinCostFactors) ==
+  /\ costModel' = [
+       cpuCostPerTuple |-> cpuCost,
+       ioCostPerPage |-> ioCost,
+       memoryCostPerMB |-> memoryCost,
+       networkCostPerMB |-> networkCost,
+       selectivityFactors |-> selectivityFactors,
+       joinCostFactors |-> joinCostFactors,
+       lastUpdated |-> globalTimestamp
+     ]
+  /\ UNCHANGED <<tableStats, columnStats, histograms, correlationStats, 
+                indexStats, statisticsMetadata, pendingUpdates, samplingJobs>>
+
+\* Estimate cardinality for predicate
+EstimateCardinality(tableName, columnName, predicate) ==
+  /\ tableName \in DOMAIN tableStats
+  /\ columnName \in DOMAIN columnStats[tableName]
+  /\ LET tableStat == tableStats[tableName]
+       columnStat == columnStats[tableName][columnName]
+       histogram == histograms[tableName][columnName]
+       estimatedCardinality == CalculateCardinality(tableStat, columnStat, histogram, predicate)
+  IN /\ UNCHANGED <<tableStats, columnStats, histograms, correlationStats, 
+                   indexStats, statisticsMetadata, pendingUpdates, samplingJobs, costModel>>
+
+\* Calculate selectivity for join
+CalculateJoinSelectivity(table1, column1, table2, column2, joinType) ==
+  /\ table1 \in DOMAIN tableStats
+  /\ table2 \in DOMAIN tableStats
+  /\ column1 \in DOMAIN columnStats[table1]
+  /\ column2 \in DOMAIN columnStats[table2]
+  /\ LET correlationStat == correlationStats[table1][column1 || "_" || column2]
+       selectivity == CalculateJoinSelectivityFromCorrelation(correlationStat, joinType)
+  IN /\ UNCHANGED <<tableStats, columnStats, histograms, correlationStats, 
+                   indexStats, statisticsMetadata, pendingUpdates, samplingJobs, costModel>>
 
 (* --------------------------------------------------------------------------
-   STATISTICS COLLECTION (ANALYZE)
+   HELPER FUNCTIONS
    -------------------------------------------------------------------------- *)
 
-\* Start ANALYZE on a table
-StartAnalyze(table) ==
-  /\ ~analyzeInProgress[table]
-  /\ analyzeInProgress' = [analyzeInProgress EXCEPT ![table] = TRUE]
-  /\ UNCHANGED <<tableStats, columnStats, indexStats, hllSketches,
-                sampleSize, sampledRows, statsVersion, autoAnalyzeEnabled,
-                modificationCount, selectivityCache>>
+\* Calculate cardinality from histogram and predicate
+CalculateCardinality(tableStat, columnStat, histogram, predicate) ==
+  IF histogram.bucketCount = 0 THEN tableStat.rowCount / 10  \* Default estimate
+  ELSE LET matchingBuckets == FilterBuckets(histogram.buckets, predicate)
+           totalFrequency == SumBucketFrequencies(matchingBuckets)
+       IN totalFrequency
 
-\* Sample rows from table
-SampleRows(table, allRows) ==
-  /\ analyzeInProgress[table]
-  /\ sampledRows' = [sampledRows EXCEPT ![table] = 
-                      ReservoirSample(allRows, sampleSize[table])]
-  /\ UNCHANGED <<tableStats, columnStats, indexStats, hllSketches,
-                analyzeInProgress, sampleSize, statsVersion, autoAnalyzeEnabled,
-                modificationCount, selectivityCache>>
+\* Filter histogram buckets based on predicate
+FilterBuckets(buckets, predicate) ==
+  <<bucket \in buckets : MatchesPredicate(bucket, predicate)>>
 
-\* Compute column statistics from sampled rows
-ComputeColumnStats(table, col) ==
-  /\ analyzeInProgress[table]
-  /\ LET samples == sampledRows[table]
-         values == [i \in 1..Len(samples) |-> samples[i].values[col]]
-         nullCount == Cardinality({v \in Range(values) : v = "NULL"})
-         nonNullValues == SelectSeq(values, LAMBDA v: v # "NULL")
-         distinctCount == Cardinality(Range(nonNullValues))
-         \* Build histogram
-         histogram == BuildEquiDepthHistogram(nonNullValues, MAX_HISTOGRAM_BUCKETS)
-         \* Find most common values (simplified)
-         valueCounts == [v \in Range(nonNullValues) |->
-                          Cardinality({i \in 1..Len(nonNullValues) : nonNullValues[i] = v})]
-         mcvs == <<>>  \* Simplified: top-N frequent values
-     IN /\ columnStats' = [columnStats EXCEPT ![table][col] =
-              [nullFraction |-> (nullCount * 100) \div Len(values),
-               distinctValues |-> distinctCount,
-               avgWidth |-> 10,  \* Simplified
-               mostCommonValues |-> mcvs,
-               mostCommonFreqs |-> <<>>,
-               histogram |-> histogram,
-               correlation |-> 0]]  \* Simplified
-        /\ UNCHANGED <<tableStats, indexStats, hllSketches, analyzeInProgress,
-                      sampleSize, sampledRows, statsVersion, autoAnalyzeEnabled,
-                      modificationCount, selectivityCache>>
+\* Check if bucket matches predicate
+MatchesPredicate(bucket, predicate) ==
+  CASE predicate.type
+    OF "equals" -> bucket.lowerBound = predicate.value /\ bucket.upperBound = predicate.value
+    [] "range" -> bucket.lowerBound >= predicate.minValue /\ bucket.upperBound <= predicate.maxValue
+    [] "greater_than" -> bucket.lowerBound > predicate.value
+    [] "less_than" -> bucket.upperBound < predicate.value
+    [] "like" -> TRUE  \* Simplified for TLA+
+  ENDCASE
 
-\* Update table-level statistics
-ComputeTableStats(table) ==
-  /\ analyzeInProgress[table]
-  /\ LET rowCount == tableStats[table].rowCount
-         pageCount == (rowCount + 99) \div 100  \* Simplified: 100 rows per page
-     IN /\ tableStats' = [tableStats EXCEPT ![table].pageCount = pageCount,
-                                            ![table].lastAnalyzed = 1,  \* Current timestamp
-                                            ![table].modifications = 0]
-        /\ UNCHANGED <<columnStats, indexStats, hllSketches, analyzeInProgress,
-                      sampleSize, sampledRows, statsVersion, autoAnalyzeEnabled,
-                      modificationCount, selectivityCache>>
+\* Sum frequencies of matching buckets
+SumBucketFrequencies(buckets) ==
+  IF Len(buckets) = 0 THEN 0
+  ELSE LET bucket == buckets[1]
+       IN bucket.frequency + SumBucketFrequencies(SubSeq(buckets, 2, Len(buckets)))
 
-\* Finish ANALYZE
-FinishAnalyze(table) ==
-  /\ analyzeInProgress[table]
-  /\ analyzeInProgress' = [analyzeInProgress EXCEPT ![table] = FALSE]
-  /\ statsVersion' = [statsVersion EXCEPT ![table] = @ + 1]
-  /\ modificationCount' = [modificationCount EXCEPT ![table] = 0]
-  /\ sampledRows' = [sampledRows EXCEPT ![table] = <<>>]
-  /\ UNCHANGED <<tableStats, columnStats, indexStats, hllSketches,
-                sampleSize, autoAnalyzeEnabled, selectivityCache>>
+\* Calculate join selectivity from correlation
+CalculateJoinSelectivityFromCorrelation(correlationStat, joinType) ==
+  CASE joinType
+    OF "inner" -> correlationStat.independenceFactor / 100
+    [] "left" -> 1
+    [] "right" -> 1
+    [] "full" -> 1
+  ENDCASE
+
+\* Check if statistics need refresh
+NeedsRefresh(tableName) ==
+  /\ tableName \in DOMAIN statisticsMetadata
+  /\ LET metadata == statisticsMetadata[tableName]
+       tableStat == tableStats[tableName]
+  IN \/ tableStat.isStale
+     \/ metadata.changeCount >= metadata.changeThreshold
+     \/ globalTimestamp - tableStat.lastUpdated > MaxStatisticsAge
+
+\* Get optimal sample size for table
+GetOptimalSampleSize(tableName) ==
+  IF tableName \in DOMAIN tableStats
+  THEN LET rowCount == tableStats[tableName].rowCount
+       IN IF rowCount <= SampleSize THEN rowCount ELSE SampleSize
+  ELSE SampleSize
 
 (* --------------------------------------------------------------------------
-   AUTO-ANALYZE
+   NEXT STATE RELATION
    -------------------------------------------------------------------------- *)
 
-\* Auto-analyze triggers automatically
-AutoAnalyzeTrigger(table) ==
-  /\ ShouldAutoAnalyze(table)
-  /\ StartAnalyze(table)
-
-\* Enable/disable auto-analyze
-SetAutoAnalyze(enabled) ==
-  /\ autoAnalyzeEnabled' = enabled
-  /\ UNCHANGED <<tableStats, columnStats, indexStats, hllSketches,
-                analyzeInProgress, sampleSize, sampledRows, statsVersion,
-                modificationCount, selectivityCache>>
-
-(* --------------------------------------------------------------------------
-   QUERY OPTIMIZATION USAGE
-   -------------------------------------------------------------------------- *)
-
-\* Query optimizer requests selectivity estimate
-EstimateQuerySelectivity(table, col, predicate, value) ==
-  /\ LET stats == columnStats[table][col]
-         estimate == EstimateSelectivity(stats, predicate, value)
-     IN /\ selectivityCache' = [selectivityCache EXCEPT ![(table, predicate)] = estimate]
-        /\ UNCHANGED <<tableStats, columnStats, indexStats, hllSketches,
-                      analyzeInProgress, sampleSize, sampledRows, statsVersion,
-                      autoAnalyzeEnabled, modificationCount>>
-
-(* --------------------------------------------------------------------------
-   NEXT STATE
-   -------------------------------------------------------------------------- *)
-
-Next_Stats ==
-  \/ \E table \in Tables: RecordModification(table)
-  \/ \E table \in Tables, delta \in Int: UpdateRowCount(table, delta)
-  \/ \E table \in Tables: StartAnalyze(table)
-  \/ \E table \in Tables, rows \in Seq(Row): SampleRows(table, rows)
-  \/ \E table \in Tables, col \in Columns: ComputeColumnStats(table, col)
-  \/ \E table \in Tables: ComputeTableStats(table)
-  \/ \E table \in Tables: FinishAnalyze(table)
-  \/ \E table \in Tables: AutoAnalyzeTrigger(table)
-  \/ \E enabled \in BOOLEAN: SetAutoAnalyze(enabled)
-  \/ \E table \in Tables, col \in Columns, pred \in STRING, val \in Value:
-       EstimateQuerySelectivity(table, col, pred, val)
-
-Spec_Stats == Init_Stats /\ [][Next_Stats]_statsVars
+Next ==
+  \/ \E tableName \in STRING, rowCount \in Nat, pageCount \in Nat, 
+       avgRowSize \in Nat, sampleRate \in Nat :
+       CollectTableStats(tableName, rowCount, pageCount, avgRowSize, sampleRate)
+  \/ \E tableName \in STRING, columnName \in STRING, dataType \in ValueType,
+       nullCount \in Nat, distinctCount \in Nat, minValue \in Value, 
+       maxValue \in Value, avgValue \in Value, stdDev \in Nat, 
+       skewness \in Nat, kurtosis \in Nat :
+       CollectColumnStats(tableName, columnName, dataType, nullCount, distinctCount,
+                         minValue, maxValue, avgValue, stdDev, skewness, kurtosis)
+  \/ \E tableName \in STRING, columnName \in STRING, buckets \in Seq(HistogramBucket) :
+       GenerateHistogram(tableName, columnName, buckets)
+  \/ \E tableName \in STRING, column1 \in STRING, column2 \in STRING,
+       correlationCoeff \in Nat, jointCardinality \in Nat, independenceFactor \in Nat :
+       UpdateCorrelationStats(tableName, column1, column2, correlationCoeff,
+                             jointCardinality, independenceFactor)
+  \/ \E indexName \in STRING, tableName \in STRING, columnNames \in Seq(STRING),
+       keyCount \in Nat, leafPages \in Nat, levels \in Nat, avgKeySize \in Nat,
+       clusteringFactor \in Nat, selectivity \in Nat :
+       UpdateIndexStats(indexName, tableName, columnNames, keyCount, leafPages,
+                       levels, avgKeySize, clusteringFactor, selectivity)
+  \/ \E tableName \in STRING, affectedColumns \in Seq(STRING) :
+       MarkStatisticsStale(tableName, affectedColumns)
+  \/ \E tableName \in STRING, jobId \in Nat, sampleSize \in Nat :
+       StartSamplingJob(tableName, jobId, sampleSize)
+  \/ \E tableName \in STRING, progress \in Nat, actualSampleSize \in Nat :
+       ProgressSamplingJob(tableName, progress, actualSampleSize)
+  \/ \E tableName \in STRING, success \in BOOLEAN, errorMessage \in STRING :
+       CompleteSamplingJob(tableName, success, errorMessage)
+  \/ \E cpuCost \in Nat, ioCost \in Nat, memoryCost \in Nat, networkCost \in Nat,
+       selectivityFactors \in [STRING -> Nat], joinCostFactors \in [STRING -> Nat] :
+       UpdateCostModel(cpuCost, ioCost, memoryCost, networkCost, 
+                      selectivityFactors, joinCostFactors)
+  \/ \E tableName \in STRING, columnName \in STRING, predicate \in [type: STRING, value: Value] :
+       EstimateCardinality(tableName, columnName, predicate)
+  \/ \E table1 \in STRING, column1 \in STRING, table2 \in STRING, column2 \in STRING,
+       joinType \in {"inner", "left", "right", "full"} :
+       CalculateJoinSelectivity(table1, column1, table2, column2, joinType)
 
 (* --------------------------------------------------------------------------
    INVARIANTS
    -------------------------------------------------------------------------- *)
 
-\* Invariant 1: Statistics version monotonically increases
-Inv_Stats_VersionMonotonic ==
-  \A table \in Tables:
-    statsVersion[table] >= 1
+\* Statistics are consistent with table data
+Inv_StatisticsMaintenance_Consistency ==
+  \A tableName \in DOMAIN tableStats :
+    /\ tableStats[tableName].rowCount >= 0
+    /\ tableStats[tableName].pageCount >= 0
+    /\ tableStats[tableName].avgRowSize >= 0
+    /\ tableStats[tableName].sampleRate >= 0 /\ tableStats[tableName].sampleRate <= 100
 
-\* Invariant 2: Modification count reset after ANALYZE
-Inv_Stats_ModificationReset ==
-  \A table \in Tables:
-    analyzeInProgress[table] => modificationCount[table] <= ModificationThreshold(table) + 10
+\* Column statistics are consistent
+Inv_StatisticsMaintenance_ColumnConsistency ==
+  \A tableName \in DOMAIN columnStats :
+    \A columnName \in DOMAIN columnStats[tableName] :
+      LET columnStat == columnStats[tableName][columnName]
+      IN /\ columnStat.nullCount >= 0
+         /\ columnStat.distinctCount >= 0
+         /\ columnStat.distinctCount <= tableStats[tableName].rowCount
+         /\ columnStat.nullCount <= tableStats[tableName].rowCount
 
-\* Invariant 3: Histogram buckets properly ordered
-Inv_Stats_HistogramOrdered ==
-  \A table \in Tables, col \in Columns:
-    LET histogram == columnStats[table][col].histogram
-    IN \A i \in 1..Len(histogram)-1:
-         histogram[i].maxValue <= histogram[i+1].minValue
+\* Histograms are valid
+Inv_StatisticsMaintenance_HistogramValidity ==
+  \A tableName \in DOMAIN histograms :
+    \A columnName \in DOMAIN histograms[tableName] :
+      LET histogram == histograms[tableName][columnName]
+      IN /\ histogram.bucketCount >= 0
+         /\ histogram.bucketCount <= MaxHistogramBuckets
+         /\ Len(histogram.buckets) = histogram.bucketCount
+         /\ histogram.totalRows >= 0
+         /\ histogram.nullRows >= 0
+         /\ histogram.distinctValues >= 0
 
-\* Invariant 4: Null fraction between 0 and 100
-Inv_Stats_NullFractionValid ==
-  \A table \in Tables, col \in Columns:
-    LET nullFrac == columnStats[table][col].nullFraction
-    IN nullFrac >= 0 /\ nullFrac <= 100
+\* Sampling jobs progress monotonically
+Inv_StatisticsMaintenance_SamplingProgress ==
+  \A tableName \in DOMAIN samplingJobs :
+    LET job == samplingJobs[tableName]
+    IN /\ job.progress >= 0 /\ job.progress <= 100
+       /\ job.actualSampleSize >= 0
+       /\ job.actualSampleSize <= job.sampleSize
 
-\* Invariant 5: Sample size doesn't exceed table size
-Inv_Stats_SampleSizeValid ==
-  \A table \in Tables:
-    Len(sampledRows[table]) <= tableStats[table].rowCount
+\* Pending updates have valid priorities
+Inv_StatisticsMaintenance_PendingUpdatePriorities ==
+  \A tableName \in DOMAIN pendingUpdates :
+    LET update == pendingUpdates[tableName]
+    IN /\ update.priority >= 1 /\ update.priority <= 10
+       /\ update.estimatedDuration >= 0
+
+\* Cost model values are positive
+Inv_StatisticsMaintenance_CostModelValidity ==
+  /\ costModel.cpuCostPerTuple > 0
+  /\ costModel.ioCostPerPage > 0
+  /\ costModel.memoryCostPerMB > 0
+  /\ costModel.networkCostPerMB > 0
+
+\* Statistics metadata is consistent
+Inv_StatisticsMaintenance_MetadataConsistency ==
+  \A tableName \in DOMAIN statisticsMetadata :
+    LET metadata == statisticsMetadata[tableName]
+    IN /\ metadata.changeCount >= 0
+       /\ metadata.changeThreshold > 0
+       /\ metadata.lastFullScan >= 0
+       /\ metadata.lastSampleScan >= 0
 
 (* --------------------------------------------------------------------------
    LIVENESS PROPERTIES
    -------------------------------------------------------------------------- *)
 
-\* Property 1: ANALYZE eventually completes
-Prop_Stats_AnalyzeCompletion ==
-  \A table \in Tables:
-    [](analyzeInProgress[table] => <>(~analyzeInProgress[table]))
+\* Stale statistics are eventually refreshed
+Liveness_StaleStatisticsRefreshed ==
+  \A tableName \in DOMAIN tableStats :
+    tableStats[tableName].isStale => <>~tableStats[tableName].isStale
 
-\* Property 2: Auto-analyze eventually triggers
-Prop_Stats_AutoAnalyzeTriggers ==
-  \A table \in Tables:
-    [](ShouldAutoAnalyze(table) => <>(analyzeInProgress[table]))
+\* Pending updates are eventually processed
+Liveness_PendingUpdatesProcessed ==
+  \A tableName \in DOMAIN pendingUpdates :
+    <>~(tableName \in DOMAIN pendingUpdates)
+
+\* Sampling jobs eventually complete
+Liveness_SamplingJobsComplete ==
+  \A tableName \in DOMAIN samplingJobs :
+    samplingJobs[tableName].status = "running" => 
+    <>samplingJobs[tableName].status \in {"completed", "failed"}
+
+\* Statistics are eventually collected for new tables
+Liveness_NewTableStatisticsCollected ==
+  \A tableName \in STRING :
+    tableName \in DOMAIN tableStats => 
+    tableStats[tableName].rowCount > 0 => 
+    tableStats[tableName].lastUpdated > 0
 
 (* --------------------------------------------------------------------------
    THEOREMS
    -------------------------------------------------------------------------- *)
 
-THEOREM Stats_Correctness ==
-  Spec_Stats => []Inv_Stats_HistogramOrdered
+\* Statistics accuracy improves with larger samples
+THEOREM StatisticsMaintenance_SampleAccuracy ==
+  \A tableName \in DOMAIN tableStats :
+    tableStats[tableName].sampleRate = 100 => 
+    ~tableStats[tableName].isStale
 
-THEOREM Stats_Progress ==
-  Spec_Stats => Prop_Stats_AnalyzeCompletion
+\* Histogram buckets are ordered
+THEOREM StatisticsMaintenance_HistogramOrdering ==
+  \A tableName \in DOMAIN histograms :
+    \A columnName \in DOMAIN histograms[tableName] :
+      LET histogram == histograms[tableName][columnName]
+      IN \A i \in 1..Len(histogram.buckets)-1 :
+        histogram.buckets[i].upperBound <= histogram.buckets[i+1].lowerBound
+
+\* Correlation statistics are symmetric
+THEOREM StatisticsMaintenance_CorrelationSymmetric ==
+  \A tableName \in DOMAIN correlationStats :
+    \A columnPair \in DOMAIN correlationStats[tableName] :
+      LET correlationStat == correlationStats[tableName][columnPair]
+      IN correlationStat.correlationCoeff >= -100 /\ correlationStat.correlationCoeff <= 100
 
 =============================================================================
 
 (*
-  REFERENCES:
+  REFINEMENT MAPPING:
   
-  [1] Ioannidis, Y. E. (2003). "The history of histograms (abridged)."
-      Proceedings of the 29th international conference on Very large data bases.
+  Swift implementation → TLA+ abstraction:
+  - StatisticsManager.tableStats (Dictionary<String, TableStatistics>) → tableStats
+  - StatisticsManager.columnStats (Dictionary<String, Dictionary<String, ColumnStatistics>>) → columnStats
+  - StatisticsManager.histograms (Dictionary<String, Dictionary<String, Histogram>>) → histograms
+  - StatisticsManager.samplingJobs (Dictionary<String, SamplingJob>) → samplingJobs
   
-  [2] Ioannidis, Y., & Poosala, V. (1995). "Balancing histogram optimality and
-      practicality for query result size estimation." ACM SIGMOD Record, 24(2).
+  USAGE:
   
-  [3] Flajolet, P., Fusy, É., Gandouet, O., & Meunier, F. (2007). "HyperLogLog:
-      the analysis of a near-optimal cardinality estimation algorithm." Analysis
-      of Algorithms (AofA) 2007.
+  This module should be used with QueryOptimizer and other ColibrìDB modules:
   
-  [4] Selinger, P. G., Astrahan, M. M., Chamberlin, D. D., Lorie, R. A., & Price,
-      T. G. (1979). "Access path selection in a relational database management
-      system." Proceedings of the 1979 ACM SIGMOD international conference.
-  
-  [5] Chaudhuri, S., & Narasayya, V. (2007). "Statistics on query expressions."
-      Proceedings of the 2007 ACM SIGMOD international conference.
-  
-  IMPLEMENTATION NOTES:
-  
-  - Equi-depth histograms: equal number of rows per bucket
-  - Most Common Values (MCVs) stored separately from histogram
-  - HyperLogLog provides approximate distinct count with 1-2% error
-  - Auto-analyze triggers after 20% modifications (default)
-  - Sample size typically 300 blocks (100MB for 8KB pages)
-  - Statistics used by query optimizer for cost estimation
-  - Similar to PostgreSQL ANALYZE, Oracle DBMS_STATS
+  ---- MODULE QueryOptimizer ----
+  EXTENDS StatisticsMaintenance
+  ...
+  ====================
 *)
-
