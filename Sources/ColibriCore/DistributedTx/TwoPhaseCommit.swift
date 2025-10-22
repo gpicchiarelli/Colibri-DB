@@ -53,8 +53,8 @@ public enum ParticipantState: String, Codable {
 
 // MARK: - Messages
 
-/// Message types (Gray 1978)
-public enum MessageType: String, Codable {
+/// Distributed transaction message types (Gray 1978)
+public enum DistributedTxMessageType: String, Codable {
     case prepare        // Coordinator -> Participant: prepare to commit
     case voteYes        // Participant -> Coordinator: prepared successfully
     case voteNo         // Participant -> Coordinator: cannot commit

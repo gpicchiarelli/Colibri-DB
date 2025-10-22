@@ -67,14 +67,14 @@ public enum RaftMessageType: String, Codable, Sendable, CaseIterable {
 /// RPC message
 /// Corresponds to TLA+: RPCMessage
 public struct RPCMessage: Codable, Sendable, Equatable {
-    public let messageType: MessageType
+    public let messageType: RaftMessageType
     public let from: ServerID
     public let to: ServerID
     public let term: Term
     public let data: Data
     public let timestamp: UInt64
     
-    public init(messageType: MessageType, from: ServerID, to: ServerID, term: Term, data: Data, timestamp: UInt64) {
+    public init(messageType: RaftMessageType, from: ServerID, to: ServerID, term: Term, data: Data, timestamp: UInt64) {
         self.messageType = messageType
         self.from = from
         self.to = to

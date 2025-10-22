@@ -31,7 +31,7 @@ import Foundation
 // MARK: - Message Types (TLA+: MessageTypes)
 
 /// Wire protocol message types (PostgreSQL-like)
-public enum MessageType: String, Codable {
+public enum WireProtocolMessageType: String, Codable {
     // Client -> Server
     case authRequest = "AUTH_REQUEST"
     case query = "QUERY"
