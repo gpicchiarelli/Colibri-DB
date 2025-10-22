@@ -14,6 +14,8 @@ theme: minima
 
 # GitHub Pages specific settings
 github: [metadata]
+
+# Plugins supportati da GitHub Pages
 plugins:
   - jekyll-feed
   - jekyll-sitemap
