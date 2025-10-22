@@ -214,12 +214,14 @@ public struct WALRecordHeader: Codable, Sendable {
     }
     
     public static var size: Int {
-        return MemoryLayout<UInt32>.size +  // crc32
-               MemoryLayout<UInt8>.size +    // type (enum)
-               MemoryLayout<LSN>.size +      // lsn
-               MemoryLayout<LSN>.size +      // prevLSN
-               MemoryLayout<PageID>.size +   // pageID
-               MemoryLayout<UInt32>.size     // length
+        let crc32Size = MemoryLayout<UInt32>.size
+        let typeSize = MemoryLayout<UInt8>.size
+        let lsnSize = MemoryLayout<LSN>.size
+        let prevLsnSize = MemoryLayout<LSN>.size
+        let pageIdSize = MemoryLayout<PageID>.size
+        let lengthSize = MemoryLayout<UInt32>.size
+        
+        return crc32Size + typeSize + lsnSize + prevLsnSize + pageIdSize + lengthSize
     }
 }
 
