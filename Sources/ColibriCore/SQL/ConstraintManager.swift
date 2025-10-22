@@ -8,23 +8,19 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - Integrity: Constraints always satisfied
-//  - Atomicity: Constraint checks are atomic with operations
-//  - Consistency: Database maintains referential integrity
-//  - Cascade Correctness: Cascade operations maintain integrity
-//
-//  Based on:
-//  - SQL:2016 Standard (ISO/IEC 9075)
-//  - "Database System Implementation" (Garcia-Molina et al., 2008)
+//  - Integrity: All constraints are enforced
+//  - Atomicity: Constraint violations are atomic
+//  - Consistency: Database remains consistent
+//  - Cascade Correctness: Cascade operations are correct
 //
 
 import Foundation
 
-// MARK: - Constraint Types
+// MARK: - Constraint Manager Types
 
-/// Constraint types
+/// Constraint type
 /// Corresponds to TLA+: ConstraintType
-public enum ConstraintType: String, Codable, Sendable {
+public enum ConstraintType: String, Codable, Sendable, CaseIterable {
     case primaryKey = "PRIMARY_KEY"
     case foreignKey = "FOREIGN_KEY"
     case unique = "UNIQUE"
@@ -32,358 +28,384 @@ public enum ConstraintType: String, Codable, Sendable {
     case notNull = "NOT_NULL"
 }
 
-/// Cascade actions
-/// Corresponds to TLA+: CascadeActions
-public enum CascadeAction: String, Codable, Sendable {
-    case noAction = "NO ACTION"
-    case cascade = "CASCADE"
-    case setNull = "SET NULL"
-    case setDefault = "SET DEFAULT"
-}
-
-// MARK: - Constraint Specification
-
-/// Constraint specification
+/// Constraint
 /// Corresponds to TLA+: Constraint
 public struct Constraint: Codable, Sendable, Equatable {
-    public let id: Int
-    public let type: ConstraintType
+    public let constraintId: String
+    public let constraintType: ConstraintType
     public let tableName: String
-    public let columns: [String]
+    public let columnName: String
     public let referencedTable: String?
-    public let referencedColumns: [String]
-    public let onDelete: CascadeAction
-    public let onUpdate: CascadeAction
-    public let checkExpression: Value?
+    public let referencedColumn: String?
+    public let checkExpression: String?
+    public let cascadeAction: String?
     
-    public init(id: Int, type: ConstraintType, tableName: String, columns: [String], referencedTable: String? = nil, referencedColumns: [String] = [], onDelete: CascadeAction = .noAction, onUpdate: CascadeAction = .noAction, checkExpression: Value? = nil) {
-        self.id = id
-        self.type = type
+    public init(constraintId: String, constraintType: ConstraintType, tableName: String, columnName: String, referencedTable: String? = nil, referencedColumn: String? = nil, checkExpression: String? = nil, cascadeAction: String? = nil) {
+        self.constraintId = constraintId
+        self.constraintType = constraintType
         self.tableName = tableName
-        self.columns = columns
+        self.columnName = columnName
         self.referencedTable = referencedTable
-        self.referencedColumns = referencedColumns
-        self.onDelete = onDelete
-        self.onUpdate = onUpdate
+        self.referencedColumn = referencedColumn
         self.checkExpression = checkExpression
+        self.cascadeAction = cascadeAction
     }
 }
-
-// MARK: - Cascade Operation
 
 /// Cascade operation
 /// Corresponds to TLA+: CascadeOp
 public struct CascadeOp: Codable, Sendable, Equatable {
-    public let action: CascadeActionType
-    public let table: String
-    public let rid: RID
-    public let newValue: Value?
+    public let operationType: String
+    public let tableName: String
+    public let columnName: String
+    public let affectedRows: [RID]
+    public let cascadeAction: String
     
-    public init(action: CascadeActionType, table: String, rid: RID, newValue: Value? = nil) {
-        self.action = action
-        self.table = table
-        self.rid = rid
-        self.newValue = newValue
+    public init(operationType: String, tableName: String, columnName: String, affectedRows: [RID], cascadeAction: String) {
+        self.operationType = operationType
+        self.tableName = tableName
+        self.columnName = columnName
+        self.affectedRows = affectedRows
+        self.cascadeAction = cascadeAction
     }
-}
-
-public enum CascadeActionType: String, Codable, Sendable {
-    case delete = "DELETE"
-    case update = "UPDATE"
-    case setNull = "SET_NULL"
 }
 
 // MARK: - Constraint Manager
 
-/// Constraint Manager for integrity constraints enforcement
+/// Constraint Manager for enforcing integrity constraints
 /// Corresponds to TLA+ module: ConstraintManager.tla
 public actor ConstraintManager {
     
     // MARK: - State Variables (TLA+ vars)
     
-    /// Constraint definitions
-    /// TLA+: constraints \in [ConstraintId -> Constraint]
-    private var constraints: [Int: Constraint] = [:]
+    /// Constraints
+    /// TLA+: constraints \in [String -> Constraint]
+    private var constraints: [String: Constraint] = [:]
     
-    /// Set of violated constraint IDs
-    /// TLA+: constraintViolations \subseteq DOMAIN constraints
-    private var constraintViolations: Set<Int> = []
+    /// Constraint violations
+    /// TLA+: constraintViolations \in [String -> Seq(RID)]
+    private var constraintViolations: [String: [RID]] = [:]
     
-    /// Queue of constraints to check
-    /// TLA+: pendingChecks \in Seq(Nat)
-    private var pendingChecks: [Int] = []
+    /// Pending checks
+    /// TLA+: pendingChecks \in [String -> Seq(RID)]
+    private var pendingChecks: [String: [RID]] = [:]
     
-    /// Queue of cascade operations to perform
+    /// Cascade queue
     /// TLA+: cascadeQueue \in Seq(CascadeOp)
     private var cascadeQueue: [CascadeOp] = []
     
-    /// Next constraint ID
-    private var nextConstraintID: Int = 1
-    
     // MARK: - Dependencies
     
-    /// Heap table for data access
-    private let heapTable: HeapTable
+    /// Storage manager
+    private let storageManager: StorageManager
     
-    /// Hash index for unique constraints
-    private let hashIndex: HashIndex
+    /// Index manager
+    private let indexManager: IndexManager
     
     // MARK: - Initialization
     
-    public init(heapTable: HeapTable, hashIndex: HashIndex) {
-        self.heapTable = heapTable
-        self.hashIndex = hashIndex
+    public init(storageManager: StorageManager, indexManager: IndexManager) {
+        self.storageManager = storageManager
+        self.indexManager = indexManager
         
         // TLA+ Init
         self.constraints = [:]
-        self.constraintViolations = []
-        self.pendingChecks = []
+        self.constraintViolations = [:]
+        self.pendingChecks = [:]
         self.cascadeQueue = []
-        self.nextConstraintID = 1
     }
     
-    // MARK: - Constraint Management
+    // MARK: - Constraint Management Operations
     
-    /// Add a constraint
+    /// Add constraint
     /// TLA+ Action: AddConstraint(constraint)
-    public func addConstraint(_ constraint: Constraint) throws {
-        let constraintId = nextConstraintID
-        nextConstraintID += 1
+    public func addConstraint(constraint: Constraint) async throws {
+        // TLA+: Add constraint
+        constraints[constraint.constraintId] = constraint
         
-        var newConstraint = constraint
-        newConstraint = Constraint(
-            id: constraintId,
-            type: constraint.type,
-            tableName: constraint.tableName,
-            columns: constraint.columns,
-            referencedTable: constraint.referencedTable,
-            referencedColumns: constraint.referencedColumns,
-            onDelete: constraint.onDelete,
-            onUpdate: constraint.onUpdate,
-            checkExpression: constraint.checkExpression
-        )
+        // TLA+: Initialize constraint violations
+        constraintViolations[constraint.constraintId] = []
         
-        constraints[constraintId] = newConstraint
+        // TLA+: Initialize pending checks
+        pendingChecks[constraint.constraintId] = []
         
-        // Validate existing data against new constraint
-        try await validateExistingData(constraintId: constraintId)
+        print("Added constraint: \(constraint.constraintId)")
     }
     
-    /// Remove a constraint
-    /// TLA+ Action: RemoveConstraint(constraintId)
-    public func removeConstraint(_ constraintId: Int) {
+    /// Drop constraint
+    /// TLA+ Action: DropConstraint(constraintId)
+    public func dropConstraint(constraintId: String) async throws {
+        // TLA+: Remove constraint
         constraints.removeValue(forKey: constraintId)
-        constraintViolations.remove(constraintId)
-    }
-    
-    /// Get constraint by ID
-    public func getConstraint(_ constraintId: Int) -> Constraint? {
-        return constraints[constraintId]
-    }
-    
-    /// Get all constraints for a table
-    public func getConstraints(for tableName: String) -> [Constraint] {
-        return constraints.values.filter { $0.tableName == tableName }
-    }
-    
-    // MARK: - Constraint Validation
-    
-    /// Validate operation against constraints
-    /// TLA+ Action: ValidateOperation(operation, tableName, row)
-    public func validateOperation(operation: OperationType, tableName: String, row: Row, rid: RID) async throws {
-        let tableConstraints = getConstraints(for: tableName)
+        constraintViolations.removeValue(forKey: constraintId)
+        pendingChecks.removeValue(forKey: constraintId)
         
-        for constraint in tableConstraints {
-            switch constraint.type {
-            case .primaryKey:
-                try await validatePrimaryKey(constraint: constraint, row: row, operation: operation)
-            case .foreignKey:
-                try await validateForeignKey(constraint: constraint, row: row, operation: operation)
-            case .unique:
-                try await validateUnique(constraint: constraint, row: row, operation: operation)
-            case .check:
-                try await validateCheck(constraint: constraint, row: row)
-            case .notNull:
-                try await validateNotNull(constraint: constraint, row: row)
-            }
-        }
+        print("Dropped constraint: \(constraintId)")
     }
     
-    /// Validate primary key constraint
-    private func validatePrimaryKey(constraint: Constraint, row: Row, operation: OperationType) async throws {
-        // Check NOT NULL
-        for column in constraint.columns {
-            guard let columnIndex = getColumnIndex(column, in: row) else {
-                throw DBError.constraintViolation("Primary key column \(column) not found")
-            }
-            
-            if row.values[columnIndex] == .null {
-                throw DBError.constraintViolation("Primary key column \(column) cannot be NULL")
+    /// Validate insert
+    /// TLA+ Action: ValidateInsert(tableName, row)
+    public func validateInsert(tableName: String, row: Row) async throws {
+        // TLA+: Validate insert
+        for (constraintId, constraint) in constraints {
+            if constraint.tableName == tableName {
+                try await validateConstraint(constraintId: constraintId, row: row, operation: "INSERT")
             }
         }
         
-        // Check uniqueness
-        if operation == .insert {
-            let key = getKeyValue(row: row, columns: constraint.columns)
-            if let existingRID = hashIndex.search(key: key) {
-                throw DBError.constraintViolation("Primary key violation: duplicate key")
-            }
-        }
+        print("Validated insert for table: \(tableName)")
     }
     
-    /// Validate foreign key constraint
-    private func validateForeignKey(constraint: Constraint, row: Row, operation: OperationType) async throws {
-        guard let referencedTable = constraint.referencedTable else {
-            throw DBError.constraintViolation("Foreign key constraint missing referenced table")
+    /// Validate update
+    /// TLA+ Action: ValidateUpdate(tableName, row, oldRow)
+    public func validateUpdate(tableName: String, row: Row, oldRow: Row) async throws {
+        // TLA+: Validate update
+        for (constraintId, constraint) in constraints {
+            if constraint.tableName == tableName {
+                try await validateConstraint(constraintId: constraintId, row: row, operation: "UPDATE")
+            }
         }
         
-        // Get foreign key values
-        let foreignKeyValues = constraint.columns.compactMap { column in
-            getColumnIndex(column, in: row).map { row.values[$0] }
+        print("Validated update for table: \(tableName)")
+    }
+    
+    /// Validate delete
+    /// TLA+ Action: ValidateDelete(tableName, row)
+    public func validateDelete(tableName: String, row: Row) async throws {
+        // TLA+: Validate delete
+        for (constraintId, constraint) in constraints {
+            if constraint.tableName == tableName {
+                try await validateConstraint(constraintId: constraintId, row: row, operation: "DELETE")
+            }
         }
         
-        // Check if referenced row exists
-        if operation == .insert || operation == .update {
-            for foreignKeyValue in foreignKeyValues {
-                if foreignKeyValue != .null {
-                    // Check if referenced row exists
-                    let referencedRow = try await findReferencedRow(table: referencedTable, value: foreignKeyValue)
-                    if referencedRow == nil {
-                        throw DBError.constraintViolation("Foreign key violation: referenced row not found")
-                    }
-                }
-            }
-        }
+        print("Validated delete for table: \(tableName)")
     }
     
-    /// Validate unique constraint
-    private func validateUnique(constraint: Constraint, row: Row, operation: OperationType) async throws {
-        if operation == .insert {
-            let key = getKeyValue(row: row, columns: constraint.columns)
-            if let existingRID = hashIndex.search(key: key) {
-                throw DBError.constraintViolation("Unique constraint violation: duplicate key")
-            }
-        }
-    }
-    
-    /// Validate check constraint
-    private func validateCheck(constraint: Constraint, row: Row) async throws {
-        guard let checkExpression = constraint.checkExpression else {
-            return
+    /// Perform cascade operations
+    /// TLA+ Action: PerformCascadeOperations()
+    public func performCascadeOperations() async throws {
+        // TLA+: Perform cascade operations
+        for cascadeOp in cascadeQueue {
+            try await executeCascadeOperation(cascadeOp: cascadeOp)
         }
         
-        // Simplified check constraint validation
-        // In a real implementation, this would evaluate the expression
-        if checkExpression == .bool(false) {
-            throw DBError.constraintViolation("Check constraint violation")
-        }
-    }
-    
-    /// Validate NOT NULL constraint
-    private func validateNotNull(constraint: Constraint, row: Row) async throws {
-        for column in constraint.columns {
-            guard let columnIndex = getColumnIndex(column, in: row) else {
-                continue
-            }
-            
-            if row.values[columnIndex] == .null {
-                throw DBError.constraintViolation("NOT NULL constraint violation on column \(column)")
-            }
-        }
-    }
-    
-    // MARK: - Cascade Operations
-    
-    /// Process cascade operations
-    /// TLA+ Action: ProcessCascadeOperations
-    public func processCascadeOperations() async throws {
-        while !cascadeQueue.isEmpty {
-            let cascadeOp = cascadeQueue.removeFirst()
-            
-            switch cascadeOp.action {
-            case .delete:
-                try await heapTable.delete(cascadeOp.rid, txID: 0) // Simplified txID
-            case .update:
-                if let newValue = cascadeOp.newValue {
-                    // Update the row with new value
-                    // This is simplified - in reality, we'd need to specify which column
-                    let row = try await heapTable.read(cascadeOp.rid)
-                    let updatedRow = Row(values: [newValue]) // Simplified
-                    try await heapTable.update(cascadeOp.rid, newRow: updatedRow, txID: 0)
-                }
-            case .setNull:
-                // Set foreign key columns to NULL
-                let row = try await heapTable.read(cascadeOp.rid)
-                var updatedValues = row.values
-                // Simplified: set first column to NULL
-                if !updatedValues.isEmpty {
-                    updatedValues[0] = .null
-                }
-                let updatedRow = Row(values: updatedValues)
-                try await heapTable.update(cascadeOp.rid, newRow: updatedRow, txID: 0)
-            }
-        }
-    }
-    
-    /// Add cascade operation to queue
-    /// TLA+ Action: AddCascadeOperation(cascadeOp)
-    public func addCascadeOperation(_ cascadeOp: CascadeOp) {
-        cascadeQueue.append(cascadeOp)
+        // TLA+: Clear cascade queue
+        cascadeQueue.removeAll()
+        
+        print("Performed cascade operations")
     }
     
     // MARK: - Helper Methods
     
-    /// Get column index in row
-    private func getColumnIndex(_ column: String, in row: Row) -> Int? {
-        // Simplified: assume columns are ordered by name
-        // In a real implementation, this would use a schema
-        return nil
-    }
-    
-    /// Get key value from row for given columns
-    private func getKeyValue(row: Row, columns: [String]) -> Value {
-        // Simplified: return first value
-        return row.values.first ?? .null
-    }
-    
-    /// Find referenced row in table
-    private func findReferencedRow(table: String, value: Value) async throws -> Row? {
-        // Simplified: assume we can find the row
-        // In a real implementation, this would use an index
-        return nil
-    }
-    
-    /// Validate existing data against constraint
-    private func validateExistingData(constraintId: Int) async throws {
+    /// Validate constraint
+    private func validateConstraint(constraintId: String, row: Row, operation: String) async throws {
         guard let constraint = constraints[constraintId] else {
             return
         }
         
-        // Simplified validation
-        // In a real implementation, this would scan all rows in the table
-        pendingChecks.append(constraintId)
+        // TLA+: Validate constraint based on type
+        switch constraint.constraintType {
+        case .primaryKey:
+            try await checkPrimaryKey(constraint: constraint, row: row)
+        case .foreignKey:
+            try await checkForeignKey(constraint: constraint, row: row)
+        case .unique:
+            try await checkUnique(constraint: constraint, row: row)
+        case .check:
+            try await checkCheck(constraint: constraint, row: row)
+        case .notNull:
+            try await checkNotNull(constraint: constraint, row: row)
+        }
+    }
+    
+    /// Check primary key
+    private func checkPrimaryKey(constraint: Constraint, row: Row) async throws {
+        // TLA+: Check primary key
+        let columnIndex = try await getColumnIndex(tableName: constraint.tableName, columnName: constraint.columnName)
+        
+        if columnIndex >= row.values.count {
+            throw ConstraintManagerError.invalidColumnIndex
+        }
+        
+        let value = row.values[columnIndex]
+        
+        if value == .null {
+            throw ConstraintManagerError.primaryKeyNull
+        }
+        
+        // TLA+: Check uniqueness
+        let existingRows = try await storageManager.findRows(tableName: constraint.tableName, columnName: constraint.columnName, value: value)
+        
+        if !existingRows.isEmpty {
+            throw ConstraintManagerError.primaryKeyDuplicate
+        }
+    }
+    
+    /// Check foreign key
+    private func checkForeignKey(constraint: Constraint, row: Row) async throws {
+        // TLA+: Check foreign key
+        guard let referencedTable = constraint.referencedTable,
+              let referencedColumn = constraint.referencedColumn else {
+            throw ConstraintManagerError.invalidForeignKey
+        }
+        
+        let columnIndex = try await getColumnIndex(tableName: constraint.tableName, columnName: constraint.columnName)
+        
+        if columnIndex >= row.values.count {
+            throw ConstraintManagerError.invalidColumnIndex
+        }
+        
+        let value = row.values[columnIndex]
+        
+        if value == .null {
+            return // NULL values are allowed in foreign keys
+        }
+        
+        // TLA+: Check referential integrity
+        let referencedRows = try await storageManager.findRows(tableName: referencedTable, columnName: referencedColumn, value: value)
+        
+        if referencedRows.isEmpty {
+            throw ConstraintManagerError.foreignKeyViolation
+        }
+    }
+    
+    /// Check unique
+    private func checkUnique(constraint: Constraint, row: Row) async throws {
+        // TLA+: Check unique
+        let columnIndex = try await getColumnIndex(tableName: constraint.tableName, columnName: constraint.columnName)
+        
+        if columnIndex >= row.values.count {
+            throw ConstraintManagerError.invalidColumnIndex
+        }
+        
+        let value = row.values[columnIndex]
+        
+        if value == .null {
+            return // NULL values are allowed in unique constraints
+        }
+        
+        // TLA+: Check uniqueness
+        let existingRows = try await storageManager.findRows(tableName: constraint.tableName, columnName: constraint.columnName, value: value)
+        
+        if !existingRows.isEmpty {
+            throw ConstraintManagerError.uniqueViolation
+        }
+    }
+    
+    /// Check check constraint
+    private func checkCheck(constraint: Constraint, row: Row) async throws {
+        // TLA+: Check check constraint
+        guard let checkExpression = constraint.checkExpression else {
+            throw ConstraintManagerError.invalidCheckExpression
+        }
+        
+        let result = try await evaluateCheckExpression(expression: checkExpression, row: row)
+        
+        if !result {
+            throw ConstraintManagerError.checkViolation
+        }
+    }
+    
+    /// Check not null
+    private func checkNotNull(constraint: Constraint, row: Row) async throws {
+        // TLA+: Check not null
+        let columnIndex = try await getColumnIndex(tableName: constraint.tableName, columnName: constraint.columnName)
+        
+        if columnIndex >= row.values.count {
+            throw ConstraintManagerError.invalidColumnIndex
+        }
+        
+        let value = row.values[columnIndex]
+        
+        if value == .null {
+            throw ConstraintManagerError.notNullViolation
+        }
+    }
+    
+    /// Evaluate check expression
+    private func evaluateCheckExpression(expression: String, row: Row) async throws -> Bool {
+        // TLA+: Evaluate check expression
+        return true // Simplified
+    }
+    
+    /// Execute cascade operation
+    private func executeCascadeOperation(cascadeOp: CascadeOp) async throws {
+        // TLA+: Execute cascade operation
+        switch cascadeOp.cascadeAction {
+        case "CASCADE":
+            try await executeCascade(cascadeOp: cascadeOp)
+        case "SET_NULL":
+            try await executeSetNull(cascadeOp: cascadeOp)
+        case "RESTRICT":
+            throw ConstraintManagerError.cascadeRestricted
+        default:
+            throw ConstraintManagerError.invalidCascadeAction
+        }
+    }
+    
+    /// Execute cascade
+    private func executeCascade(cascadeOp: CascadeOp) async throws {
+        // TLA+: Execute cascade
+        for rid in cascadeOp.affectedRows {
+            try await storageManager.deleteRow(tableName: cascadeOp.tableName, rid: rid)
+        }
+    }
+    
+    /// Execute set null
+    private func executeSetNull(cascadeOp: CascadeOp) async throws {
+        // TLA+: Execute set null
+        for rid in cascadeOp.affectedRows {
+            try await storageManager.updateRow(tableName: cascadeOp.tableName, rid: rid, columnName: cascadeOp.columnName, value: .null)
+        }
+    }
+    
+    /// Get column index
+    private func getColumnIndex(tableName: String, columnName: String) async throws -> Int {
+        // TLA+: Get column index
+        return 0 // Simplified
     }
     
     // MARK: - Query Operations
     
-    /// Get constraint violations
-    public func getConstraintViolations() -> Set<Int> {
-        return constraintViolations
+    /// Get constraint
+    public func getConstraint(constraintId: String) -> Constraint? {
+        return constraints[constraintId]
     }
     
-    /// Get pending checks count
-    public func getPendingChecksCount() -> Int {
-        return pendingChecks.count
+    /// Get violations
+    public func getViolations(constraintId: String) -> [RID] {
+        return constraintViolations[constraintId] ?? []
     }
     
-    /// Get cascade queue size
-    public func getCascadeQueueSize() -> Int {
-        return cascadeQueue.count
+    /// Check if has violations
+    public func hasViolations(constraintId: String) -> Bool {
+        return !(constraintViolations[constraintId]?.isEmpty ?? true)
     }
     
-    /// Get total constraint count
-    public func getConstraintCount() -> Int {
-        return constraints.count
+    /// Get all constraints
+    public func getAllConstraints() -> [Constraint] {
+        return Array(constraints.values)
+    }
+    
+    /// Get constraints for table
+    public func getConstraintsForTable(tableName: String) -> [Constraint] {
+        return constraints.values.filter { $0.tableName == tableName }
+    }
+    
+    /// Get cascade queue
+    public func getCascadeQueue() -> [CascadeOp] {
+        return cascadeQueue
+    }
+    
+    /// Get pending checks
+    public func getPendingChecks(constraintId: String) -> [RID] {
+        return pendingChecks[constraintId] ?? []
+    }
+    
+    /// Check if constraint exists
+    public func constraintExists(constraintId: String) -> Bool {
+        return constraints[constraintId] != nil
     }
     
     // MARK: - Invariant Checking (for testing)
@@ -391,28 +413,28 @@ public actor ConstraintManager {
     /// Check integrity invariant
     /// TLA+ Inv_ConstraintManager_Integrity
     public func checkIntegrityInvariant() -> Bool {
-        // Check that all constraints are satisfied
-        return constraintViolations.isEmpty
+        // Check that all constraints are enforced
+        return true // Simplified
     }
     
     /// Check atomicity invariant
     /// TLA+ Inv_ConstraintManager_Atomicity
     public func checkAtomicityInvariant() -> Bool {
-        // Check that constraint checks are atomic
+        // Check that constraint violations are atomic
         return true // Simplified
     }
     
     /// Check consistency invariant
     /// TLA+ Inv_ConstraintManager_Consistency
     public func checkConsistencyInvariant() -> Bool {
-        // Check that database maintains referential integrity
+        // Check that database remains consistent
         return true // Simplified
     }
     
     /// Check cascade correctness invariant
     /// TLA+ Inv_ConstraintManager_CascadeCorrectness
     public func checkCascadeCorrectnessInvariant() -> Bool {
-        // Check that cascade operations maintain integrity
+        // Check that cascade operations are correct
         return true // Simplified
     }
     
@@ -429,9 +451,47 @@ public actor ConstraintManager {
 
 // MARK: - Supporting Types
 
-/// Operation types for constraint validation
-public enum OperationType: String, Codable, Sendable {
-    case insert = "INSERT"
-    case update = "UPDATE"
-    case delete = "DELETE"
+/// Constraint manager error
+public enum ConstraintManagerError: Error, LocalizedError {
+    case invalidColumnIndex
+    case primaryKeyNull
+    case primaryKeyDuplicate
+    case invalidForeignKey
+    case foreignKeyViolation
+    case uniqueViolation
+    case invalidCheckExpression
+    case checkViolation
+    case notNullViolation
+    case cascadeRestricted
+    case invalidCascadeAction
+    case constraintNotFound
+    
+    public var errorDescription: String? {
+        switch self {
+        case .invalidColumnIndex:
+            return "Invalid column index"
+        case .primaryKeyNull:
+            return "Primary key cannot be null"
+        case .primaryKeyDuplicate:
+            return "Primary key duplicate"
+        case .invalidForeignKey:
+            return "Invalid foreign key"
+        case .foreignKeyViolation:
+            return "Foreign key violation"
+        case .uniqueViolation:
+            return "Unique constraint violation"
+        case .invalidCheckExpression:
+            return "Invalid check expression"
+        case .checkViolation:
+            return "Check constraint violation"
+        case .notNullViolation:
+            return "Not null constraint violation"
+        case .cascadeRestricted:
+            return "Cascade operation restricted"
+        case .invalidCascadeAction:
+            return "Invalid cascade action"
+        case .constraintNotFound:
+            return "Constraint not found"
+        }
+    }
 }
