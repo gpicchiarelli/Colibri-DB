@@ -19,27 +19,6 @@
 
 import Foundation
 
-/// Concrete WAL record implementation
-/// Corresponds to TLA+: ConcreteWALRecord
-public struct ConcreteWALRecord: WALRecord, Sendable {
-    public let lsn: LSN
-    public let prevLSN: LSN
-    public let kind: WALRecordKind
-    public let txID: TxID
-    public let pageID: PageID
-    public let undoNextLSN: LSN
-    public let payload: Data?
-    
-    public init(lsn: LSN, prevLSN: LSN, kind: WALRecordKind, txID: TxID, pageID: PageID, undoNextLSN: LSN, payload: Data?) {
-        self.lsn = lsn
-        self.prevLSN = prevLSN
-        self.kind = kind
-        self.txID = txID
-        self.pageID = pageID
-        self.undoNextLSN = undoNextLSN
-        self.payload = payload
-    }
-}
 
 
 

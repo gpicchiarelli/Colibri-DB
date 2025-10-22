@@ -453,8 +453,8 @@ public actor QueryExecutor {
         state.input = input
         
         // Sort tuples
-        let sortKeys = state.sortKeys
-        state.sorted = input.sorted { t1, t2 in
+        let sortKeys = Array(state.sortKeys)
+        state.sorted = input.sorted { @Sendable t1, t2 in
             for sortKey in sortKeys {
                 let v1 = t1.values[sortKey.column]
                 let v2 = t2.values[sortKey.column]

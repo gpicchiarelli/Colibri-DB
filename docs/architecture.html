@@ -1,192 +1,571 @@
 ---
 layout: default
-title: Architettura di Colibrì DB
-description: Architettura modulare derivata dai file Swift del progetto: storage, MVCC, query planner, distribuzione e observability collegati alle rispettive specifiche TLA+.
+title: Architettura - Colibrì DB
+description: Architettura modulare e design interno di Colibrì DB
 ---
 
-<section class="hero hero--sub">
-  <div class="shell hero__inner hero__inner--compact">
-    <span class="hero__eyebrow">Sorgenti Swift come blueprint</span>
-    <h1 class="hero__title">Architettura modulare, TLA+ allineata</h1>
-    <p class="hero__lede">
-      Il runtime descritto in <code>Sources/ColibriCore</code> separa chiaramente buffering, transazioni, query e
-      distribuzione. Ogni attore Swift rimanda al proprio modulo TLA+, permettendo di collegare invarianti formali e
-      comportamento concreto.
-    </p>
-  </div>
-</section>
-
-<section class="section">
-  <div class="shell">
-    <header class="section__header">
-      <span class="section__eyebrow">Layer principali</span>
-      <h2 class="section__title">Dal disco al consensus: blocchi indipendenti</h2>
-      <p class="section__lede">
-        Il repository modella ogni funzione vitale dentro un sotto-pacchetto. Navigare la cartella <code>Sources/ColibriCore</code>
-        equivale a seguire il percorso dei dati dopo un comando SQL.
+<!-- Hero Section -->
+<section class="hero hero-sub">
+  <div class="container">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-icon">🏗️</span>
+        <span>Architettura del Sistema</span>
+      </div>
+      <h1 class="hero-title">Design Interno</h1>
+      <p class="hero-description">
+        Colibrì DB utilizza un'architettura modulare con componenti indipendenti e verificabili. 
+        Ogni layer ha responsabilità specifiche e interfacce ben definite.
       </p>
-    </header>
-    <div class="layer-map">
-      <article class="layer-map__group">
-        <div class="layer-map__title">
-          <span>Storage &amp; Buffering</span>
-          <code>Storage</code>
-        </div>
-        <ul class="layer-map__list">
-          <li><code>BufferPool/BufferPool.swift</code> – cache clock-sweep con pin-count, dirty set e LSN.</li>
-          <li><code>Storage/HeapTable.swift</code> – pagine slotted, free list e gestione tombstone.</li>
-          <li><code>Storage/StorageManager.swift</code> – astrazione IO su file e page manager.</li>
-          <li><code>WAL/FileWAL.swift</code> – ARIES, prevLSN, dirty page table e group commit.</li>
-        </ul>
-      </article>
-      <article class="layer-map__group">
-        <div class="layer-map__title">
-          <span>Transazioni &amp; MVCC</span>
-          <code>Transaction</code>
-        </div>
-        <ul class="layer-map__list">
-          <li><code>Transaction/TransactionManager.swift</code> – lifecycle, commit, abort e log tail.</li>
-          <li><code>Transaction/LockManager.swift</code> – lock intent, wait-for graph e deadlock detection.</li>
-          <li><code>MVCC/MVCCManager.swift</code> – snapshot isolation, version chain, vacuum cooperativo.</li>
-          <li><code>TwoPhaseCommit/TwoPhaseCommitManager.swift</code> – coordinamento prepare/commit distribuito.</li>
-        </ul>
-      </article>
-      <article class="layer-map__group">
-        <div class="layer-map__title">
-          <span>Catalogo &amp; Query</span>
-          <code>SQL / Query</code>
-        </div>
-        <ul class="layer-map__list">
-          <li><code>SQL/SQLProcessor.swift</code> – parsing, rewrite e validazione DDL/DML.</li>
-          <li><code>Catalog/Catalog.swift</code> – metadati di tabelle, indici e constraint.</li>
-          <li><code>Planner/QueryPlanner.swift</code> – costruzione di piani logici.</li>
-          <li><code>Query/QueryExecutor.swift</code> – operatori fisici (scan, join hash/sort, aggregate).</li>
-          <li><code>Optimization/OptimizationManager.swift</code> – strategie cost-based e feedback runtime.</li>
-        </ul>
-      </article>
-      <article class="layer-map__group">
-        <div class="layer-map__title">
-          <span>Distribuzione</span>
-          <code>Distributed</code>
-        </div>
-        <ul class="layer-map__list">
-          <li><code>Consensus/RaftConsensusManager.swift</code> – log matching, election safety e heartbeat.</li>
-          <li><code>DistributedQuery/DistributedQuery.swift</code> – coordinamento federato delle query.</li>
-          <li><code>Sharding/ShardingManager.swift</code> – partizionamento logico e routing.</li>
-          <li><code>Replication/ReplicationManager.swift</code> – repliche calde e policy di sync.</li>
-          <li><code>DistributedTx</code> – protocolli per coordinare transazioni tra shard.</li>
-        </ul>
-      </article>
-      <article class="layer-map__group">
-        <div class="layer-map__title">
-          <span>Osservabilità &amp; Sicurezza</span>
-          <code>Monitoring / Security</code>
-        </div>
-        <ul class="layer-map__list">
-          <li><code>Monitoring/Monitor.swift</code> – metriche, threshold e health routing.</li>
-          <li><code>Performance/Benchmarking.swift</code> – profili di carico e analisi runtime.</li>
-          <li><code>Authentication/AuthenticationManager.swift</code> – hashing, sessioni e utente admin.</li>
-          <li><code>Security/RolesPermissions.swift</code> – ruoli, privilegi e policy row-level.</li>
-          <li><code>Policy/PolicyManager.swift</code> – quote, limiti e retention.</li>
-        </ul>
-      </article>
     </div>
   </div>
 </section>
 
-<section class="section section--muted">
-  <div class="shell">
-    <header class="section__header">
-      <span class="section__eyebrow">Lifecycle della query</span>
-      <h2 class="section__title">Sequenza di esecuzione secondo il codice Swift</h2>
-      <p class="section__lede">
-        Dalla connessione al commit, ogni passaggio è implementato in un attore o manager dedicato. I punti chiave sono
-        annotati con invarianti TLA+ direttamente nel file sorgente.
-      </p>
-    </header>
-    <ol class="timeline">
-      <li class="timeline__item">
-        <h3 class="timeline__title">Connessione e autenticazione</h3>
-        <p><code>MultiTenancy/ConnectionPooling.swift</code> consegna connessioni attive, mentre <code>Security/Authentication.swift</code> valida credenziali e sessioni.</p>
-      </li>
-      <li class="timeline__item">
-        <h3 class="timeline__title">Parsing e pianificazione</h3>
-        <p><code>SQL/SQLProcessor.swift</code> analizza la query, <code>Planner/QueryPlanner.swift</code> genera il piano logico e <code>Optimization/OptimizationManager.swift</code> sceglie strategie fisiche.</p>
-      </li>
-      <li class="timeline__item">
-        <h3 class="timeline__title">Esecuzione e accesso dati</h3>
-        <p><code>Query/QueryExecutor.swift</code> esegue operatori; si interfaccia con <code>BufferPool</code>, <code>HeapTable</code> e <code>IndexManager.swift</code> per scansioni ed accessi indicizzati.</p>
-      </li>
-      <li class="timeline__item">
-        <h3 class="timeline__title">Commit e replica</h3>
-        <p><code>TransactionManager</code> registra record nel WAL tramite <code>FileWAL.swift</code>; eventuali transazioni distribuite passano da <code>TwoPhaseCommitManager.swift</code>, con replica assicurata da <code>ReplicationManager.swift</code>.</p>
-      </li>
-      <li class="timeline__item">
-        <h3 class="timeline__title">Monitoraggio e feedback</h3>
-        <p><code>Monitoring/Monitor.swift</code> aggiorna metriche e stato, fornendo input a <code>Performance/Benchmarking.swift</code> e alle policy di tuning automatico.</p>
-      </li>
-    </ol>
-  </div>
-</section>
+<!-- Architecture Overview -->
+<section class="architecture">
+  <div class="container">
+    <div class="section-header">
+      <h2>Panoramica Architetturale</h2>
+      <p>Un sistema a 4 layer con separazione netta delle responsabilità</p>
+    </div>
+    
+    <div class="architecture-diagram">
+      <div class="arch-layer">
+        <div class="layer-header">
+          <div class="layer-icon">🌐</div>
+          <h3>Distributed Layer</h3>
+          <span class="layer-badge">Consenso & Replica</span>
+        </div>
+        <div class="layer-description">
+          <p>Gestisce la distribuzione, il consenso e la replica dei dati attraverso il cluster.</p>
+        </div>
+        <div class="layer-components">
+          <div class="component">
+            <div class="component-icon">🤝</div>
+            <div class="component-name">Raft Consensus</div>
+            <div class="component-desc">Elezione leader e log matching</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">🔄</div>
+            <div class="component-name">Two-Phase Commit</div>
+            <div class="component-desc">Transazioni distribuite atomiche</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">📊</div>
+            <div class="component-name">Sharding Manager</div>
+            <div class="component-desc">Partizionamento automatico</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">📡</div>
+            <div class="component-name">Replication</div>
+            <div class="component-desc">Replica sincrona/asincrona</div>
+          </div>
+        </div>
+      </div>
 
-<section class="section">
-  <div class="shell">
-    <header class="section__header">
-      <span class="section__eyebrow">Resilienza</span>
-      <h2 class="section__title">Recupero, backup e gestione errori interni</h2>
-      <p class="section__lede">
-        I componenti di protezione lavorano di concerto con WAL e storage. Il codice Swift implementa i passaggi REDO/UNDO
-        e i piani di backup integrandosi con il catalogo.
-      </p>
-    </header>
-    <div class="grid grid--three">
-      <article class="card">
-        <span class="badge">Recovery</span>
-        <h3 class="card__title">ARIES step-by-step</h3>
-        <p class="card__body">
-          <code>Recovery/ARIESRecovery.swift</code> definisce passaggi di analysis, redo e undo; le strutture DPT e transaction table
-          sono popolate tramite <code>FileWAL.swift</code> e <code>TransactionManager</code>.
-        </p>
-      </article>
-      <article class="card">
-        <span class="badge">Backup</span>
-        <h3 class="card__title">Snapshot e retention</h3>
-        <p class="card__body">
-          <code>Backup/BackupManager.swift</code> orchestra snapshot e restore; sincronizza il catalogo con <code>CatalogManager.swift</code>
-          e rispetta le policy definite in <code>Policy/PolicyManager.swift</code>.
-        </p>
-      </article>
-      <article class="card">
-        <span class="badge">Fault handling</span>
-        <h3 class="card__title">Controllo degli errori</h3>
-        <p class="card__body">
-          <code>ErrorRecovery</code> e <code>Utilities</code> includono circuit breaker, retry con backoff e strumenti di audit
-          usati da <code>ColibrìDB</code> per mantenere consistenza anche in presenza di crash.
-        </p>
-      </article>
+      <div class="arch-layer">
+        <div class="layer-header">
+          <div class="layer-icon">⚙️</div>
+          <h3>Query Layer</h3>
+          <span class="layer-badge">SQL & Ottimizzazione</span>
+        </div>
+        <div class="layer-description">
+          <p>Processa le query SQL, le ottimizza e le esegue utilizzando operatori fisici efficienti.</p>
+        </div>
+        <div class="layer-components">
+          <div class="component">
+            <div class="component-icon">📝</div>
+            <div class="component-name">SQL Parser</div>
+            <div class="component-desc">Parsing e validazione SQL</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">🧠</div>
+            <div class="component-name">Query Planner</div>
+            <div class="component-desc">Pianificazione logica</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">⚡</div>
+            <div class="component-name">Query Executor</div>
+            <div class="component-desc">Esecuzione operatori fisici</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">🎯</div>
+            <div class="component-name">Optimizer</div>
+            <div class="component-desc">Ottimizzazione cost-based</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-layer">
+        <div class="layer-header">
+          <div class="layer-icon">🔒</div>
+          <h3>Transaction Layer</h3>
+          <span class="layer-badge">ACID & Concorrenza</span>
+        </div>
+        <div class="layer-description">
+          <p>Garantisce le proprietà ACID e gestisce la concorrenza attraverso MVCC e lock management.</p>
+        </div>
+        <div class="layer-components">
+          <div class="component">
+            <div class="component-icon">📋</div>
+            <div class="component-name">Transaction Manager</div>
+            <div class="component-desc">Lifecycle transazioni</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">🔐</div>
+            <div class="component-name">Lock Manager</div>
+            <div class="component-desc">Gestione lock e deadlock</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">📸</div>
+            <div class="component-name">MVCC Manager</div>
+            <div class="component-desc">Snapshot isolation</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">🔄</div>
+            <div class="component-name">Recovery Manager</div>
+            <div class="component-desc">ARIES recovery</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="arch-layer">
+        <div class="layer-header">
+          <div class="layer-icon">💾</div>
+          <h3>Storage Layer</h3>
+          <span class="layer-badge">Persistenza & Indici</span>
+        </div>
+        <div class="layer-description">
+          <p>Gestisce la persistenza dei dati, il buffering in memoria e l'indicizzazione per accessi veloci.</p>
+        </div>
+        <div class="layer-components">
+          <div class="component">
+            <div class="component-icon">🧠</div>
+            <div class="component-name">Buffer Pool</div>
+            <div class="component-desc">Cache intelligente</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">📁</div>
+            <div class="component-name">Heap Storage</div>
+            <div class="component-desc">Storage slotted pages</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">📝</div>
+            <div class="component-name">WAL</div>
+            <div class="component-desc">Write-ahead logging</div>
+          </div>
+          <div class="component">
+            <div class="component-icon">🔍</div>
+            <div class="component-name">Index Manager</div>
+            <div class="component-desc">B-Tree, Hash, Bitmap</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<section class="section section--muted">
-  <div class="shell">
-    <header class="section__header section__header--center">
-      <span class="section__eyebrow">Collegamenti rapidi</span>
-      <h2 class="section__title">Passa dal diagramma al file concreto</h2>
-    </header>
-    <div class="highlight-grid">
-      <div class="highlight">
-        <strong>Schema completo</strong>
-        <p>Consulta il codice di <code>Sources/ColibriCore/Database/ColibrìDB.swift</code> per vedere come gli attori vengono istanziati e collegati.</p>
+<!-- Data Flow -->
+<section class="data-flow">
+  <div class="container">
+    <div class="section-header">
+      <h2>Flusso dei Dati</h2>
+      <p>Come una query attraversa i vari layer del sistema</p>
+    </div>
+    
+    <div class="flow-diagram">
+      <div class="flow-step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h4>SQL Input</h4>
+          <p>Query SQL ricevuta dal client</p>
+        </div>
       </div>
-      <div class="highlight">
-        <strong>Specifica formale</strong>
-        <p>I commenti nei file indicano il modulo TLA+ corrispondente: ad esempio <code>spec/WAL.tla</code> per il WAL e <code>spec/ConsensusProtocol.tla</code> per Raft.</p>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h4>Parsing</h4>
+          <p>Analisi sintattica e semantica</p>
+        </div>
       </div>
-      <div class="highlight">
-        <strong>Server esterno</strong>
-        <p><code>Sources/ColibriServer/Server.swift</code> integra il core in un listener HTTP con concurrency via <code>Network</code>.</p>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h4>Planning</h4>
+          <p>Generazione piano di esecuzione</p>
+        </div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="step-number">4</div>
+        <div class="step-content">
+          <h4>Optimization</h4>
+          <p>Ottimizzazione cost-based</p>
+        </div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step">
+        <div class="step-number">5</div>
+        <div class="step-content">
+          <h4>Execution</h4>
+          <p>Esecuzione operatori fisici</p>
+        </div>
       </div>
     </div>
   </div>
 </section>
+
+<!-- Performance Characteristics -->
+<section class="performance">
+  <div class="container">
+    <div class="section-header">
+      <h2>Caratteristiche di Performance</h2>
+      <p>Ottimizzazioni e algoritmi per massime prestazioni</p>
+    </div>
+    
+    <div class="performance-grid">
+      <div class="perf-card">
+        <div class="perf-icon">⚡</div>
+        <h3>Buffer Pool</h3>
+        <p>Algoritmo clock-sweep per gestione efficiente della memoria con pin-count e dirty set tracking.</p>
+        <ul>
+          <li>LRU eviction policy</li>
+          <li>Dirty page tracking</li>
+          <li>Prefetching intelligente</li>
+          <li>Memory pressure handling</li>
+        </ul>
+      </div>
+      
+      <div class="perf-card">
+        <div class="perf-icon">📝</div>
+        <h3>WAL Optimization</h3>
+        <p>Write-ahead logging ottimizzato con group commit e checkpointing efficiente.</p>
+        <ul>
+          <li>Group commit batching</li>
+          <li>Incremental checkpointing</li>
+          <li>Log compression</li>
+          <li>Parallel recovery</li>
+        </ul>
+      </div>
+      
+      <div class="perf-card">
+        <div class="perf-icon">🔍</div>
+        <h3>Query Optimization</h3>
+        <p>Ottimizzatore cost-based con statistiche runtime e feedback loop per query performance.</p>
+        <ul>
+          <li>Cost-based optimization</li>
+          <li>Runtime statistics</li>
+          <li>Adaptive query plans</li>
+          <li>Index selection</li>
+        </ul>
+      </div>
+      
+      <div class="perf-card">
+        <div class="perf-icon">🔒</div>
+        <h3>Concurrency Control</h3>
+        <p>MVCC con snapshot isolation per concorrenza senza blocchi e performance ottimali.</p>
+        <ul>
+          <li>Snapshot isolation</li>
+          <li>Version chain optimization</li>
+          <li>Garbage collection</li>
+          <li>Lock-free reads</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Scalability -->
+<section class="scalability">
+  <div class="container">
+    <div class="section-header">
+      <h2>Scalabilità e Distribuzione</h2>
+      <p>Architettura progettata per crescere da single-node a cluster enterprise</p>
+    </div>
+    
+    <div class="scalability-content">
+      <div class="scalability-text">
+        <h3>Sharding Automatico</h3>
+        <p>Il sistema partiziona automaticamente i dati basandosi su chiavi di sharding configurabili, garantendo distribuzione uniforme e performance lineari.</p>
+        
+        <h3>Consenso Raft</h3>
+        <p>Implementazione completa del protocollo Raft per elezione leader, log replication e gestione dei failure in modo deterministico.</p>
+        
+        <h3>Query Distribuite</h3>
+        <p>Esecuzione federata delle query che attraversa multiple shard, con merge intelligente dei risultati e ottimizzazione del network traffic.</p>
+      </div>
+      
+      <div class="scalability-visual">
+        <div class="cluster-diagram">
+          <div class="node leader">
+            <div class="node-icon">👑</div>
+            <div class="node-label">Leader</div>
+          </div>
+          <div class="node follower">
+            <div class="node-icon">📡</div>
+            <div class="node-label">Follower</div>
+          </div>
+          <div class="node follower">
+            <div class="node-icon">📡</div>
+            <div class="node-label">Follower</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+.hero-sub {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  padding: var(--space-20) 0;
+  text-align: center;
+}
+
+.layer-badge {
+  background: var(--accent);
+  color: white;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--border-radius);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.layer-description {
+  padding: var(--space-4) var(--space-6);
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.layer-description p {
+  margin: 0;
+  color: var(--gray-600);
+}
+
+.component {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-4);
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+}
+
+.component:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--primary);
+}
+
+.component-icon {
+  font-size: 2rem;
+  margin-bottom: var(--space-2);
+}
+
+.component-name {
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: var(--space-1);
+}
+
+.component-desc {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.data-flow {
+  padding: var(--space-24) 0;
+  background: white;
+}
+
+.flow-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.flow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 150px;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 1.25rem;
+  margin-bottom: var(--space-3);
+}
+
+.step-content h4 {
+  margin-bottom: var(--space-2);
+  color: var(--gray-900);
+}
+
+.step-content p {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: 0.875rem;
+}
+
+.flow-arrow {
+  font-size: 2rem;
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.performance {
+  padding: var(--space-24) 0;
+  background: var(--gray-50);
+}
+
+.performance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-8);
+}
+
+.perf-card {
+  padding: var(--space-8);
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+}
+
+.perf-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--primary);
+}
+
+.perf-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+}
+
+.perf-card h3 {
+  margin-bottom: var(--space-4);
+  color: var(--gray-900);
+}
+
+.perf-card p {
+  margin-bottom: var(--space-6);
+  color: var(--gray-600);
+}
+
+.perf-card ul {
+  list-style: none;
+}
+
+.perf-card li {
+  padding: var(--space-2) 0;
+  color: var(--gray-600);
+  position: relative;
+  padding-left: var(--space-6);
+}
+
+.perf-card li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.scalability {
+  padding: var(--space-24) 0;
+  background: white;
+}
+
+.scalability-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-16);
+  align-items: center;
+}
+
+.scalability h3 {
+  margin-bottom: var(--space-4);
+  color: var(--gray-900);
+}
+
+.scalability p {
+  margin-bottom: var(--space-6);
+  color: var(--gray-600);
+}
+
+.cluster-diagram {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-6);
+  background: var(--gray-50);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--border-radius-lg);
+  transition: var(--transition);
+}
+
+.node:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.node.leader {
+  border-color: var(--primary);
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.node-icon {
+  font-size: 2rem;
+  margin-bottom: var(--space-2);
+}
+
+.node-label {
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+@media (max-width: 768px) {
+  .scalability-content {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+  
+  .flow-diagram {
+    flex-direction: column;
+  }
+  
+  .flow-arrow {
+    transform: rotate(90deg);
+  }
+}
+</style>
