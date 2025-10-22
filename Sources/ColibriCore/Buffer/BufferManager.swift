@@ -555,24 +555,6 @@ public actor BufferManager {
 
 // MARK: - Supporting Types
 
-/// Buffer page
-public struct BufferPage: Codable, Sendable, Equatable {
-    public let pageId: PageID
-    public let data: Data
-    public let frameIndex: FrameIndex
-    public let isDirty: Bool
-    public let isPinned: Bool
-    public let timestamp: UInt64
-    
-    public init(pageId: PageID, data: Data, frameIndex: FrameIndex, isDirty: Bool, isPinned: Bool, timestamp: UInt64) {
-        self.pageId = pageId
-        self.data = data
-        self.frameIndex = frameIndex
-        self.isDirty = isDirty
-        self.isPinned = isPinned
-        self.timestamp = timestamp
-    }
-}
 
 /// Disk manager
 public protocol DiskManager: Sendable {
