@@ -172,11 +172,11 @@ public actor SQLProcessor {
     private let queryPlanner: SQLProcessorQueryPlanner
     
     /// Query executor
-    private let queryExecutor: QueryExecutor
+    private let queryExecutor: SQLProcessorQueryExecutor
     
     // MARK: - Initialization
     
-    public init(queryParser: QueryParser, queryPlanner: SQLProcessorQueryPlanner, queryExecutor: QueryExecutor) {
+    public init(queryParser: QueryParser, queryPlanner: SQLProcessorQueryPlanner, queryExecutor: SQLProcessorQueryExecutor) {
         self.queryParser = queryParser
         self.queryPlanner = queryPlanner
         self.queryExecutor = queryExecutor
