@@ -145,7 +145,7 @@ public actor ConnectionManager {
     private var busyThreads: Set<Int> = []
     
     // Session state
-    private var sessions: [Int: Session] = [:]
+    private var sessions: [Int: ConnectionSession] = [:]
     
     // Resource tracking
     private var activeCount: Int = 0
