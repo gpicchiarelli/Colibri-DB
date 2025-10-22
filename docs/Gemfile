@@ -1,18 +1,23 @@
-# Gemfile per GitHub Pages
+# Gemfile per GitHub Pages - Compatibile con Ruby 3.1+
 source "https://rubygems.org"
 
-# GitHub Pages specific gems
-gem "github-pages", group: :jekyll_plugins
+# Jekyll core
+gem "jekyll", "~> 4.3"
 
-# Jekyll plugins
+# Jekyll plugins supportati da GitHub Pages
 gem "jekyll-feed", "~> 0.12"
 gem "jekyll-sitemap", "~> 1.4"
 gem "jekyll-seo-tag", "~> 2.8"
 gem "jekyll-github-metadata", "~> 2.16"
 
-# Development gems (optional)
+# Markdown processor
+gem "kramdown-parser-gfm", "~> 1.1"
+
+# Syntax highlighting
+gem "rouge", "~> 4.0"
+
+# Development gems
 group :development do
-  gem "jekyll", "~> 4.3"
   gem "bundler", ">= 1.17"
 end
 
