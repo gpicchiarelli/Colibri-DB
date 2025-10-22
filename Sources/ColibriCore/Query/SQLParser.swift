@@ -15,20 +15,20 @@ public enum SQLToken {
     case asterisk, dot
 }
 
-public enum SQLStatement {
-    case select(columns: [String], table: String, whereClause: Expression?)
+public enum SQLParserStatement {
+    case select(columns: [String], table: String, whereClause: SQLParserExpression?)
     case insert(table: String, columns: [String], values: [Value])
-    case update(table: String, assignments: [(String, Value)], whereClause: Expression?)
-    case delete(table: String, whereClause: Expression?)
+    case update(table: String, assignments: [(String, Value)], whereClause: SQLParserExpression?)
+    case delete(table: String, whereClause: SQLParserExpression?)
     case createTable(name: String, columns: [ColumnDefinition])
     case dropTable(name: String)
 }
 
-public enum Expression {
+public enum SQLParserExpression {
     case column(String)
     case literal(Value)
-    case binaryOp(BinaryOperator, Expression, Expression)
-    case unaryOp(UnaryOperator, Expression)
+    case binaryOp(BinaryOperator, SQLParserExpression, SQLParserExpression)
+    case unaryOp(UnaryOperator, SQLParserExpression)
 }
 
 public enum BinaryOperator {
