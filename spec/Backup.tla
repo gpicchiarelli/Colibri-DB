@@ -1,592 +1,833 @@
--------------------------------- MODULE Backup --------------------------------
-(*****************************************************************************)
-(* Backup System for ColibrìDB                                              *)
-(*                                                                           *)
-(* This specification models a comprehensive backup system with:            *)
-(*   - Full backups (complete database snapshot)                            *)
-(*   - Incremental backups (changes since last backup)                      *)
-(*   - Differential backups (changes since last full backup)                *)
-(*   - Consistent snapshots (ACID-compliant)                                *)
-(*   - Backup catalog management                                            *)
-(*   - Backup verification and validation                                   *)
-(*   - Backup retention policies                                            *)
-(*   - Parallel backup streams                                              *)
-(*   - Backup compression and encryption                                    *)
-(*   - Hot backups (without stopping database)                              *)
-(*   - Restore operations                                                   *)
-(*                                                                           *)
-(* Based on:                                                                 *)
-(*   - Gray & Reuter (1993): "Transaction Processing" - Recovery            *)
-(*   - Oracle RMAN (Recovery Manager) architecture                          *)
-(*   - PostgreSQL pg_basebackup and WAL archiving                           *)
-(*   - MySQL Enterprise Backup documentation                                *)
-(*   - Verma & Kale (2016): "Cloud Backup and Recovery"                     *)
-(*   - Tang et al. (2012): "Incremental Backup Systems"                     *)
-(*   - Zhu et al. (2008): "Avoiding the Disk Bottleneck in Backup"         *)
-(*                                                                           *)
-(* Author: ColibrìDB Development Team                                        *)
-(* Date: 2025-10-19                                                          *)
-(*****************************************************************************)
+------------------------------- MODULE Backup -------------------------------
+(*
+  ColibrìDB Backup Specification
+  
+  Manages database backup including:
+  - Full and incremental backups
+  - Backup scheduling and retention
+  - Backup verification and integrity
+  - Compression and encryption
+  - Restore operations
+  - Backup monitoring and alerts
+  
+  Based on:
+  - PostgreSQL Backup and Recovery (2019)
+  - MySQL Backup and Recovery (2018)
+  - Oracle Backup and Recovery (2020)
+  - MongoDB Backup and Recovery (2021)
+  - AWS RDS Backup Best Practices
+  
+  Key Properties:
+  - Reliability: Backup data integrity
+  - Efficiency: Minimal performance impact
+  - Completeness: All data backed up
+  - Security: Encrypted backups
+  - Recoverability: Successful restore operations
+  
+  Author: ColibrìDB Team
+  Date: 2025-10-19
+  Version: 1.0.0
+*)
 
-EXTENDS Naturals, Sequences, FiniteSets, TLC, CORE, TLC
+EXTENDS CORE, INTERFACES, DISK_FORMAT, Naturals, Sequences, FiniteSets, TLC
 
 CONSTANTS
-    DatabaseObjects,    \* Set of all database objects (tables, indexes, etc.)
-    BackupDestinations, \* Set of backup storage locations
-    MaxBackups,         \* Maximum number of backups to retain
-    MaxParallelStreams, \* Maximum parallel backup streams
-    CompressionLevels,  \* Set of compression levels (0-9)
-    RetentionDays       \* Backup retention period in days
+  MaxBackupRetention,    \* Maximum backup retention days
+  BackupCompressionLevel, \* Compression level for backups
+  BackupEncryptionKey,   \* Encryption key for backups
+  MaxBackupSize,         \* Maximum backup size
+  BackupTimeout,         \* Timeout for backup operations
+  MaxConcurrentBackups   \* Maximum concurrent backup operations
 
 VARIABLES
-    databaseState,      \* Current state of database objects
-    backupCatalog,      \* Catalog of all backups
-    activeBackups,      \* Currently running backup operations
-    backupDestState,    \* State of backup destinations
-    walArchive,         \* Write-Ahead Log archive
-    restorePoints,      \* Named restore points
-    backupMetrics,      \* Performance metrics for backups
-    auditLog,           \* Audit trail of backup operations
-    currentTime,        \* Global clock
-    lastFullBackup,     \* Timestamp of last full backup
-    currentLSN          \* Current Log Sequence Number
+  backups,               \* [BackupId -> Backup]
+  backupJobs,            \* [JobId -> BackupJob]
+  backupSchedules,       \* [ScheduleId -> BackupSchedule]
+  restoreJobs,           \* [JobId -> RestoreJob]
+  backupPolicies,        \* [PolicyId -> BackupPolicy]
+  backupStorage,         \* [StorageId -> BackupStorage]
+  backupVerification,    \* [BackupId -> BackupVerification]
+  backupMonitoring       \* BackupMonitoring
 
-vars == <<databaseState, backupCatalog, activeBackups, backupDestState,
-          walArchive, restorePoints, backupMetrics, auditLog, currentTime,
-          lastFullBackup, currentLSN>>
+backupVars == <<backups, backupJobs, backupSchedules, restoreJobs, backupPolicies, 
+               backupStorage, backupVerification, backupMonitoring>>
 
---------------------------------------------------------------------------------
-(* Type Definitions *)
+(* --------------------------------------------------------------------------
+   TYPE DEFINITIONS
+   -------------------------------------------------------------------------- *)
 
-BackupId == Nat
-LSN == Nat  \* Log Sequence Number
-Timestamp == Nat
-
-(* Backup types *)
-BackupType == {"FULL", "INCREMENTAL", "DIFFERENTIAL", "ARCHIVE_LOG"}
-
-(* Backup status *)
-BackupStatus == {"RUNNING", "COMPLETED", "FAILED", "VALIDATED", "EXPIRED"}
-
-(* Backup method *)
-BackupMethod == {"HOT", "COLD", "WARM"}  \* Online, offline, or read-only
-
-(* Compression algorithms *)
-CompressionAlgorithm == {"NONE", "LZ4", "SNAPPY", "ZSTD", "GZIP"}
-
-(* Backup structure *)
+\* Backup record
 Backup == [
-    id: BackupId,
-    type: BackupType,
-    status: BackupStatus,
+  backupId: Nat,
+  backupType: {"full", "incremental", "differential"},
+  databaseName: STRING,
     startTime: Timestamp,
     endTime: Timestamp,
-    startLSN: LSN,
-    endLSN: LSN,
-    objects: SUBSET DatabaseObjects,
-    destination: BackupDestinations,
     size: Nat,
-    compressed: BOOLEAN,
-    compressionAlgo: CompressionAlgorithm,
-    compressionLevel: CompressionLevels,
-    encrypted: BOOLEAN,
-    checksum: STRING,
-    parentBackupId: BackupId \cup {0},  \* 0 = no parent
-    method: BackupMethod,
-    parallelStreams: Nat
+  compressedSize: Nat,
+  isEncrypted: BOOLEAN,
+  isCompressed: BOOLEAN,
+  status: {"pending", "running", "completed", "failed", "cancelled"},
+  storageLocation: STRING,
+  checksum: Nat,
+  isVerified: BOOLEAN,
+  retentionDate: Timestamp
 ]
 
-(* Restore point *)
-RestorePoint == [
-    name: STRING,
-    timestamp: Timestamp,
-    lsn: LSN,
-    description: STRING
+\* Backup job
+BackupJob == [
+  jobId: Nat,
+  backupId: Nat,
+  scheduleId: Nat,
+  priority: Nat,  \* 1-10
+  status: {"pending", "running", "completed", "failed", "cancelled"},
+  startTime: Timestamp,
+  endTime: Timestamp,
+  progress: Nat,  \* 0-100
+  errorMessage: STRING,
+  isScheduled: BOOLEAN
 ]
 
---------------------------------------------------------------------------------
-(* Initial State *)
+\* Backup schedule
+BackupSchedule == [
+  scheduleId: Nat,
+  scheduleName: STRING,
+  databaseName: STRING,
+  backupType: {"full", "incremental", "differential"},
+  frequency: {"hourly", "daily", "weekly", "monthly"},
+  startTime: Nat,  \* Hour of day
+  isEnabled: BOOLEAN,
+  retentionDays: Nat,
+  compressionEnabled: BOOLEAN,
+  encryptionEnabled: BOOLEAN,
+  lastRun: Timestamp,
+  nextRun: Timestamp
+]
+
+\* Restore job
+RestoreJob == [
+  jobId: Nat,
+  backupId: Nat,
+  targetDatabase: STRING,
+  restoreType: {"full", "partial", "point_in_time"},
+  startTime: Timestamp,
+  endTime: Timestamp,
+  status: {"pending", "running", "completed", "failed", "cancelled"},
+  progress: Nat,  \* 0-100
+  errorMessage: STRING,
+  isVerified: BOOLEAN
+]
+
+\* Backup policy
+BackupPolicy == [
+  policyId: Nat,
+  policyName: STRING,
+  databaseName: STRING,
+  fullBackupFrequency: {"daily", "weekly", "monthly"},
+  incrementalBackupFrequency: {"hourly", "daily"},
+  retentionDays: Nat,
+  compressionLevel: Nat,
+  encryptionEnabled: BOOLEAN,
+  verificationEnabled: BOOLEAN,
+  isActive: BOOLEAN
+]
+
+\* Backup storage
+BackupStorage == [
+  storageId: Nat,
+  storageName: STRING,
+  storageType: {"local", "network", "cloud"},
+  path: STRING,
+  maxCapacity: Nat,
+  usedCapacity: Nat,
+  availableCapacity: Nat,
+  isEncrypted: BOOLEAN,
+  isCompressed: BOOLEAN,
+  isActive: BOOLEAN
+]
+
+\* Backup verification
+BackupVerification == [
+  backupId: Nat,
+  verificationType: {"checksum", "restore_test", "integrity_check"},
+  status: {"pending", "running", "passed", "failed"},
+  startTime: Timestamp,
+  endTime: Timestamp,
+  errorMessage: STRING,
+  isVerified: BOOLEAN
+]
+
+\* Backup monitoring
+BackupMonitoring == [
+  totalBackups: Nat,
+  successfulBackups: Nat,
+  failedBackups: Nat,
+  totalSize: Nat,
+  averageBackupTime: Nat,
+  lastBackupTime: Timestamp,
+  nextScheduledBackup: Timestamp,
+  storageUtilization: Nat,  \* 0-100
+  isHealthy: BOOLEAN
+]
+
+(* --------------------------------------------------------------------------
+   TYPE INVARIANT
+   -------------------------------------------------------------------------- *)
+
+TypeOK_Backup ==
+  /\ backups \in [Nat -> Backup]
+  /\ backupJobs \in [Nat -> BackupJob]
+  /\ backupSchedules \in [Nat -> BackupSchedule]
+  /\ restoreJobs \in [Nat -> RestoreJob]
+  /\ backupPolicies \in [Nat -> BackupPolicy]
+  /\ backupStorage \in [Nat -> BackupStorage]
+  /\ backupVerification \in [Nat -> BackupVerification]
+  /\ backupMonitoring \in BackupMonitoring
+
+(* --------------------------------------------------------------------------
+   INITIAL STATE
+   -------------------------------------------------------------------------- *)
 
 Init ==
-    /\ databaseState = [obj \in DatabaseObjects |-> 
-         [data |-> <<>>, version |-> 0, lsn |-> 0]]
-    /\ backupCatalog = {}
-    /\ activeBackups = {}
-    /\ backupDestState = [dest \in BackupDestinations |->
-         [available |-> TRUE, freeSpace |-> 1000000, backups |-> {}]]
-    /\ walArchive = <<>>
-    /\ restorePoints = {}
-    /\ backupMetrics = [totalBackups |-> 0, totalSize |-> 0, 
-                       avgDuration |-> 0, lastBackupTime |-> 0]
-    /\ auditLog = <<>>
-    /\ currentTime = 0
-    /\ lastFullBackup = 0
-    /\ currentLSN = 0
+  /\ backups = [b \in {} |-> [
+       backupId |-> 0,
+       backupType |-> "full",
+       databaseName |-> "",
+       startTime |-> 0,
+       endTime |-> 0,
+       size |-> 0,
+       compressedSize |-> 0,
+       isEncrypted |-> FALSE,
+       isCompressed |-> FALSE,
+       status |-> "pending",
+       storageLocation |-> "",
+       checksum |-> 0,
+       isVerified |-> FALSE,
+       retentionDate |-> 0
+     ]]
+  /\ backupJobs = [j \in {} |-> [
+       jobId |-> 0,
+       backupId |-> 0,
+       scheduleId |-> 0,
+       priority |-> 5,
+       status |-> "pending",
+       startTime |-> 0,
+       endTime |-> 0,
+       progress |-> 0,
+       errorMessage |-> "",
+       isScheduled |-> FALSE
+     ]]
+  /\ backupSchedules = [s \in {} |-> [
+       scheduleId |-> 0,
+       scheduleName |-> "",
+       databaseName |-> "",
+       backupType |-> "full",
+       frequency |-> "daily",
+       startTime |-> 0,
+       isEnabled |-> FALSE,
+       retentionDays |-> 7,
+       compressionEnabled |-> TRUE,
+       encryptionEnabled |-> FALSE,
+       lastRun |-> 0,
+       nextRun |-> 0
+     ]]
+  /\ restoreJobs = [j \in {} |-> [
+       jobId |-> 0,
+       backupId |-> 0,
+       targetDatabase |-> "",
+       restoreType |-> "full",
+       startTime |-> 0,
+       endTime |-> 0,
+       status |-> "pending",
+       progress |-> 0,
+       errorMessage |-> "",
+       isVerified |-> FALSE
+     ]]
+  /\ backupPolicies = [p \in {} |-> [
+       policyId |-> 0,
+       policyName |-> "",
+       databaseName |-> "",
+       fullBackupFrequency |-> "daily",
+       incrementalBackupFrequency |-> "hourly",
+       retentionDays |-> 7,
+       compressionLevel |-> 6,
+       encryptionEnabled |-> FALSE,
+       verificationEnabled |-> TRUE,
+       isActive |-> FALSE
+     ]]
+  /\ backupStorage = [s \in {} |-> [
+       storageId |-> 0,
+       storageName |-> "",
+       storageType |-> "local",
+       path |-> "",
+       maxCapacity |-> 0,
+       usedCapacity |-> 0,
+       availableCapacity |-> 0,
+       isEncrypted |-> FALSE,
+       isCompressed |-> FALSE,
+       isActive |-> FALSE
+     ]]
+  /\ backupVerification = [v \in {} |-> [
+       backupId |-> 0,
+       verificationType |-> "checksum",
+       status |-> "pending",
+       startTime |-> 0,
+       endTime |-> 0,
+       errorMessage |-> "",
+       isVerified |-> FALSE
+     ]]
+  /\ backupMonitoring = [
+       totalBackups |-> 0,
+       successfulBackups |-> 0,
+       failedBackups |-> 0,
+       totalSize |-> 0,
+       averageBackupTime |-> 0,
+       lastBackupTime |-> 0,
+       nextScheduledBackup |-> 0,
+       storageUtilization |-> 0,
+       isHealthy |-> TRUE
+     ]
 
---------------------------------------------------------------------------------
-(* Helper Functions *)
+(* --------------------------------------------------------------------------
+   OPERATIONS
+   -------------------------------------------------------------------------- *)
 
-(* Generate unique backup ID *)
-GenerateBackupId ==
-    Cardinality(backupCatalog) + 1
-
-(* Calculate backup size based on type and objects *)
-CalculateBackupSize(backupType, objects, parentId) ==
-    CASE backupType = "FULL" -> Cardinality(objects) * 100
-      [] backupType = "INCREMENTAL" -> Cardinality(objects) * 10
-      [] backupType = "DIFFERENTIAL" -> Cardinality(objects) * 30
-      [] backupType = "ARCHIVE_LOG" -> 50
-      [] OTHER -> 0
-
-(* Apply compression ratio *)
-CompressedSize(size, algo, level) ==
-    CASE algo = "NONE" -> size
-      [] algo = "LZ4" -> size \div 2
-      [] algo = "SNAPPY" -> size \div 2
-      [] algo = "ZSTD" -> size \div 3
-      [] algo = "GZIP" -> size \div 4
-      [] OTHER -> size
-
-(* Check if destination has enough space *)
-HasEnoughSpace(destination, requiredSize) ==
-    backupDestState[destination].freeSpace >= requiredSize
-
-(* Get all objects modified since LSN *)
-ModifiedSince(lsn) ==
-    {obj \in DatabaseObjects : databaseState[obj].lsn > lsn}
-
-(* Find last full backup *)
-LastFullBackupId ==
-    IF \E b \in backupCatalog : b.type = "FULL" /\ b.status = "COMPLETED"
-    THEN CHOOSE b \in backupCatalog : 
-           b.type = "FULL" /\ b.status = "COMPLETED" /\
-           \A other \in backupCatalog :
-             (other.type = "FULL" /\ other.status = "COMPLETED") =>
-               other.endTime <= b.endTime
-    ELSE 0
-
-(* Find backup by ID *)
-FindBackup(backupId) ==
-    CHOOSE b \in backupCatalog : b.id = backupId
-
-(* Check if backup is valid for restore *)
-IsBackupValid(backup) ==
-    /\ backup.status \in {"COMPLETED", "VALIDATED"}
-    /\ backup.endTime + (RetentionDays * 86400) >= currentTime
-    /\ backup.destination \in BackupDestinations
-    /\ backupDestState[backup.destination].available
-
-(* Get backup chain for restore (parent backups) *)
-RECURSIVE GetBackupChain(_)
-GetBackupChain(backup) ==
-    IF backup.parentBackupId = 0 THEN <<backup>>
-    ELSE
-        LET parent == FindBackup(backup.parentBackupId)
-        IN Append(GetBackupChain(parent), backup)
-
-(* Calculate retention expiry *)
-IsExpired(backup) ==
-    currentTime > backup.endTime + (RetentionDays * 86400)
-
-(* Compute checksum (simulated) *)
-ComputeChecksum(backup) ==
-    CHOOSE cs \in STRING : TRUE  \* Simplified
-
---------------------------------------------------------------------------------
-(* Full Backup *)
-
-InitiateFullBackup(destination, method, compressed, compressionAlgo, 
-                   compressionLevel, encrypted, parallelStreams) ==
-    /\ Cardinality(activeBackups) < MaxParallelStreams
-    /\ parallelStreams <= MaxParallelStreams
-    /\ destination \in BackupDestinations
-    /\ backupDestState[destination].available
-    /\ LET backupId == GenerateBackupId
-           rawSize == CalculateBackupSize("FULL", DatabaseObjects, 0)
-           finalSize == IF compressed 
-                       THEN CompressedSize(rawSize, compressionAlgo, compressionLevel)
-                       ELSE rawSize
-       IN
-           /\ HasEnoughSpace(destination, finalSize)
+\* Start backup
+StartBackup(backupId, backupType, databaseName, isEncrypted, isCompressed) ==
+  /\ ~(backupId \in DOMAIN backups)
            /\ LET backup == [
-                    id |-> backupId,
-                    type |-> "FULL",
-                    status |-> "RUNNING",
-                    startTime |-> currentTime,
+       backupId |-> backupId,
+       backupType |-> backupType,
+       databaseName |-> databaseName,
+       startTime |-> globalTimestamp,
                     endTime |-> 0,
-                    startLSN |-> currentLSN,
-                    endLSN |-> 0,
-                    objects |-> DatabaseObjects,
-                    destination |-> destination,
-                    size |-> finalSize,
-                    compressed |-> compressed,
-                    compressionAlgo |-> compressionAlgo,
-                    compressionLevel |-> compressionLevel,
-                    encrypted |-> encrypted,
-                    checksum |-> <<>>,
-                    parentBackupId |-> 0,
-                    method |-> method,
-                    parallelStreams |-> parallelStreams
-              ]
-              IN
-                  /\ activeBackups' = activeBackups \cup {backup}
-                  /\ auditLog' = Append(auditLog,
-                       [event |-> "FULL_BACKUP_INITIATED",
-                        backupId |-> backupId,
-                        destination |-> destination,
-                        time |-> currentTime])
-    /\ UNCHANGED <<databaseState, backupCatalog, backupDestState, walArchive,
-                  restorePoints, backupMetrics, currentTime, lastFullBackup, currentLSN>>
+       size |-> 0,
+       compressedSize |-> 0,
+       isEncrypted |-> isEncrypted,
+       isCompressed |-> isCompressed,
+       status |-> "running",
+       storageLocation |-> "",
+       checksum |-> 0,
+       isVerified |-> FALSE,
+       retentionDate |-> globalTimestamp + (MaxBackupRetention * 24 * 3600)
+     ]
+  IN /\ backups' = [backups EXCEPT ![backupId] = backup]
+     /\ UNCHANGED <<backupJobs, backupSchedules, restoreJobs, backupPolicies, 
+                   backupStorage, backupVerification, backupMonitoring>>
 
-CompleteFullBackup(backupId) ==
-    /\ \E backup \in activeBackups :
-         /\ backup.id = backupId
-         /\ backup.type = "FULL"
-         /\ backup.status = "RUNNING"
-         /\ LET completedBackup == [backup EXCEPT
-                  !.status = "COMPLETED",
-                  !.endTime = currentTime,
-                  !.endLSN = currentLSN,
-                  !.checksum = ComputeChecksum(backup)]
-            IN
-                /\ activeBackups' = (activeBackups \ {backup}) \cup {completedBackup}
-                /\ backupCatalog' = backupCatalog \cup {completedBackup}
-                /\ backupDestState' = [backupDestState EXCEPT
-                     ![backup.destination].freeSpace = @ - backup.size,
-                     ![backup.destination].backups = @ \cup {backupId}]
-                /\ lastFullBackup' = currentTime
-                /\ backupMetrics' = [backupMetrics EXCEPT
-                     !.totalBackups = @ + 1,
-                     !.totalSize = @ + backup.size,
-                     !.lastBackupTime = currentTime]
-                /\ auditLog' = Append(auditLog,
-                     [event |-> "FULL_BACKUP_COMPLETED",
+\* Complete backup
+CompleteBackup(backupId, size, compressedSize, storageLocation, checksum, success, errorMessage) ==
+  /\ backupId \in DOMAIN backups
+  /\ LET backup == backups[backupId]
+       updatedBackup == [backup EXCEPT 
+                        !.endTime = globalTimestamp,
+                        !.size = size,
+                        !.compressedSize = compressedSize,
+                        !.storageLocation = storageLocation,
+                        !.checksum = checksum,
+                        !.status = IF success THEN "completed" ELSE "failed"]
+  IN /\ backups' = [backups EXCEPT ![backupId] = updatedBackup]
+     /\ backupMonitoring' = [backupMonitoring EXCEPT 
+                            !.totalBackups = backupMonitoring.totalBackups + 1,
+                            !.successfulBackups = IF success THEN backupMonitoring.successfulBackups + 1 
+                                                 ELSE backupMonitoring.successfulBackups,
+                            !.failedBackups = IF success THEN backupMonitoring.failedBackups 
+                                             ELSE backupMonitoring.failedBackups + 1,
+                            !.totalSize = backupMonitoring.totalSize + size,
+                            !.lastBackupTime = globalTimestamp]
+     /\ UNCHANGED <<backupJobs, backupSchedules, restoreJobs, backupPolicies, 
+                   backupStorage, backupVerification>>
+
+\* Start restore
+StartRestore(jobId, backupId, targetDatabase, restoreType) ==
+  /\ ~(jobId \in DOMAIN restoreJobs)
+  /\ backupId \in DOMAIN backups
+  /\ LET restoreJob == [
+       jobId |-> jobId,
                       backupId |-> backupId,
-                      size |-> backup.size,
-                      duration |-> currentTime - backup.startTime,
-                      time |-> currentTime])
-    /\ UNCHANGED <<databaseState, walArchive, restorePoints, currentTime, currentLSN>>
-
---------------------------------------------------------------------------------
-(* Incremental Backup *)
-
-InitiateIncrementalBackup(destination, compressed, compressionAlgo, 
-                          compressionLevel, encrypted) ==
-    /\ Cardinality(activeBackups) < MaxParallelStreams
-    /\ \E lastBackup \in backupCatalog :
-         /\ lastBackup.status = "COMPLETED"
-         /\ lastBackup.endTime = CHOOSE max \in Nat :
-              \E b \in backupCatalog : 
-                b.status = "COMPLETED" /\ b.endTime = max /\
-                \A other \in backupCatalog : 
-                  other.status = "COMPLETED" => other.endTime <= max
-         /\ LET backupId == GenerateBackupId
-                modifiedObjs == ModifiedSince(lastBackup.endLSN)
-                rawSize == CalculateBackupSize("INCREMENTAL", modifiedObjs, lastBackup.id)
-                finalSize == IF compressed 
-                            THEN CompressedSize(rawSize, compressionAlgo, compressionLevel)
-                            ELSE rawSize
-            IN
-                /\ HasEnoughSpace(destination, finalSize)
-                /\ LET backup == [
-                         id |-> backupId,
-                         type |-> "INCREMENTAL",
-                         status |-> "RUNNING",
-                         startTime |-> currentTime,
+       targetDatabase |-> targetDatabase,
+       restoreType |-> restoreType,
+       startTime |-> globalTimestamp,
                          endTime |-> 0,
-                         startLSN |-> lastBackup.endLSN,
-                         endLSN |-> 0,
-                         objects |-> modifiedObjs,
-                         destination |-> destination,
-                         size |-> finalSize,
-                         compressed |-> compressed,
-                         compressionAlgo |-> compressionAlgo,
-                         compressionLevel |-> compressionLevel,
-                         encrypted |-> encrypted,
-                         checksum |-> <<>>,
-                         parentBackupId |-> lastBackup.id,
-                         method |-> "HOT",
-                         parallelStreams |-> 1
-                   ]
-                   IN
-                       /\ activeBackups' = activeBackups \cup {backup}
-                       /\ auditLog' = Append(auditLog,
-                            [event |-> "INCREMENTAL_BACKUP_INITIATED",
-                             backupId |-> backupId,
-                             parentId |-> lastBackup.id,
-                             time |-> currentTime])
-    /\ UNCHANGED <<databaseState, backupCatalog, backupDestState, walArchive,
-                  restorePoints, backupMetrics, currentTime, lastFullBackup, currentLSN>>
+       status |-> "running",
+       progress |-> 0,
+       errorMessage |-> "",
+       isVerified |-> FALSE
+     ]
+  IN /\ restoreJobs' = [restoreJobs EXCEPT ![jobId] = restoreJob]
+     /\ UNCHANGED <<backups, backupJobs, backupSchedules, backupPolicies, 
+                   backupStorage, backupVerification, backupMonitoring>>
 
-CompleteIncrementalBackup(backupId) ==
-    /\ \E backup \in activeBackups :
-         /\ backup.id = backupId
-         /\ backup.type = "INCREMENTAL"
-         /\ LET completedBackup == [backup EXCEPT
-                  !.status = "COMPLETED",
-                  !.endTime = currentTime,
-                  !.endLSN = currentLSN,
-                  !.checksum = ComputeChecksum(backup)]
-            IN
-                /\ activeBackups' = (activeBackups \ {backup})
-                /\ backupCatalog' = backupCatalog \cup {completedBackup}
-                /\ backupDestState' = [backupDestState EXCEPT
-                     ![backup.destination].freeSpace = @ - backup.size,
-                     ![backup.destination].backups = @ \cup {backupId}]
-                /\ backupMetrics' = [backupMetrics EXCEPT
-                     !.totalBackups = @ + 1,
-                     !.totalSize = @ + backup.size]
-                /\ auditLog' = Append(auditLog,
-                     [event |-> "INCREMENTAL_BACKUP_COMPLETED",
+\* Complete restore
+CompleteRestore(jobId, success, errorMessage) ==
+  /\ jobId \in DOMAIN restoreJobs
+  /\ LET restoreJob == restoreJobs[jobId]
+       updatedRestoreJob == [restoreJob EXCEPT 
+                            !.endTime = globalTimestamp,
+                            !.status = IF success THEN "completed" ELSE "failed",
+                            !.errorMessage = errorMessage,
+                            !.isVerified = success]
+  IN /\ restoreJobs' = [restoreJobs EXCEPT ![jobId] = updatedRestoreJob]
+     /\ UNCHANGED <<backups, backupJobs, backupSchedules, backupPolicies, 
+                   backupStorage, backupVerification, backupMonitoring>>
+
+\* Verify backup
+VerifyBackup(backupId, verificationType, success, errorMessage) ==
+  /\ backupId \in DOMAIN backups
+  /\ LET verification == [
                       backupId |-> backupId,
-                      time |-> currentTime])
-    /\ UNCHANGED <<databaseState, walArchive, restorePoints, currentTime, 
-                  lastFullBackup, currentLSN>>
+       verificationType |-> verificationType,
+       status |-> IF success THEN "passed" ELSE "failed",
+       startTime |-> globalTimestamp,
+       endTime |-> globalTimestamp,
+       errorMessage |-> errorMessage,
+       isVerified |-> success
+     ]
+  IN /\ backupVerification' = [backupVerification EXCEPT ![backupId] = verification]
+     /\ backups' = [backups EXCEPT ![backupId] = [backups[backupId] EXCEPT 
+                   !.isVerified = success]]
+     /\ UNCHANGED <<backupJobs, backupSchedules, restoreJobs, backupPolicies, 
+                   backupStorage, backupMonitoring>>
 
---------------------------------------------------------------------------------
-(* WAL Archive *)
+\* Schedule backup
+ScheduleBackup(scheduleId, scheduleName, databaseName, backupType, frequency, 
+               startTime, retentionDays, compressionEnabled, encryptionEnabled) ==
+  /\ ~(scheduleId \in DOMAIN backupSchedules)
+  /\ LET schedule == [
+       scheduleId |-> scheduleId,
+       scheduleName |-> scheduleName,
+       databaseName |-> databaseName,
+       backupType |-> backupType,
+       frequency |-> frequency,
+       startTime |-> startTime,
+       isEnabled |-> TRUE,
+       retentionDays |-> retentionDays,
+       compressionEnabled |-> compressionEnabled,
+       encryptionEnabled |-> encryptionEnabled,
+       lastRun |-> 0,
+       nextRun |-> CalculateNextRunTime(frequency, startTime)
+     ]
+  IN /\ backupSchedules' = [backupSchedules EXCEPT ![scheduleId] = schedule]
+     /\ UNCHANGED <<backups, backupJobs, restoreJobs, backupPolicies, 
+                   backupStorage, backupVerification, backupMonitoring>>
 
-ArchiveWAL(walSegment) ==
-    /\ walArchive' = Append(walArchive, 
-         [segment |-> walSegment, 
-          lsn |-> currentLSN, 
-          timestamp |-> currentTime,
-          archived |-> TRUE])
-    /\ auditLog' = Append(auditLog,
-         [event |-> "WAL_ARCHIVED",
-          lsn |-> currentLSN,
-          time |-> currentTime])
-    /\ UNCHANGED <<databaseState, backupCatalog, activeBackups, backupDestState,
-                  restorePoints, backupMetrics, currentTime, lastFullBackup, currentLSN>>
+\* Create backup policy
+CreateBackupPolicy(policyId, policyName, databaseName, fullBackupFrequency, 
+                  incrementalBackupFrequency, retentionDays, compressionLevel, 
+                  encryptionEnabled, verificationEnabled) ==
+  /\ ~(policyId \in DOMAIN backupPolicies)
+  /\ LET policy == [
+       policyId |-> policyId,
+       policyName |-> policyName,
+       databaseName |-> databaseName,
+       fullBackupFrequency |-> fullBackupFrequency,
+       incrementalBackupFrequency |-> incrementalBackupFrequency,
+       retentionDays |-> retentionDays,
+       compressionLevel |-> compressionLevel,
+       encryptionEnabled |-> encryptionEnabled,
+       verificationEnabled |-> verificationEnabled,
+       isActive |-> TRUE
+     ]
+  IN /\ backupPolicies' = [backupPolicies EXCEPT ![policyId] = policy]
+     /\ UNCHANGED <<backups, backupJobs, backupSchedules, restoreJobs, 
+                   backupStorage, backupVerification, backupMonitoring>>
 
---------------------------------------------------------------------------------
-(* Restore Points *)
+\* Add backup storage
+AddBackupStorage(storageId, storageName, storageType, path, maxCapacity, 
+                isEncrypted, isCompressed) ==
+  /\ ~(storageId \in DOMAIN backupStorage)
+  /\ LET storage == [
+       storageId |-> storageId,
+       storageName |-> storageName,
+       storageType |-> storageType,
+       path |-> path,
+       maxCapacity |-> maxCapacity,
+       usedCapacity |-> 0,
+       availableCapacity |-> maxCapacity,
+       isEncrypted |-> isEncrypted,
+       isCompressed |-> isCompressed,
+       isActive |-> TRUE
+     ]
+  IN /\ backupStorage' = [backupStorage EXCEPT ![storageId] = storage]
+     /\ UNCHANGED <<backups, backupJobs, backupSchedules, restoreJobs, 
+                   backupPolicies, backupVerification, backupMonitoring>>
 
-CreateRestorePoint(name, description) ==
-    /\ ~\E rp \in restorePoints : rp.name = name
-    /\ LET restorePoint == [
-             name |-> name,
-             timestamp |-> currentTime,
-             lsn |-> currentLSN,
-             description |-> description
+\* Update backup monitoring
+UpdateBackupMonitoring() ==
+  /\ LET totalBackups == Len(DOMAIN backups)
+       successfulBackups == Len({backupId \in DOMAIN backups : backups[backupId].status = "completed"})
+       failedBackups == Len({backupId \in DOMAIN backups : backups[backupId].status = "failed"})
+       totalSize == SumBackupSizes()
+       averageBackupTime == CalculateAverageBackupTime()
+       lastBackupTime == GetLastBackupTime()
+       nextScheduledBackup == GetNextScheduledBackup()
+       storageUtilization == CalculateStorageUtilization()
+       isHealthy == successfulBackups > 0 /\ failedBackups < totalBackups / 2
+       monitoring == [
+         totalBackups |-> totalBackups,
+         successfulBackups |-> successfulBackups,
+         failedBackups |-> failedBackups,
+         totalSize |-> totalSize,
+         averageBackupTime |-> averageBackupTime,
+         lastBackupTime |-> lastBackupTime,
+         nextScheduledBackup |-> nextScheduledBackup,
+         storageUtilization |-> storageUtilization,
+         isHealthy |-> isHealthy
        ]
-       IN
-           /\ restorePoints' = restorePoints \cup {restorePoint}
-           /\ auditLog' = Append(auditLog,
-                [event |-> "RESTORE_POINT_CREATED",
-                 name |-> name,
-                 lsn |-> currentLSN,
-                 time |-> currentTime])
-    /\ UNCHANGED <<databaseState, backupCatalog, activeBackups, backupDestState,
-                  walArchive, backupMetrics, currentTime, lastFullBackup, currentLSN>>
+  IN /\ backupMonitoring' = monitoring
+     /\ UNCHANGED <<backups, backupJobs, backupSchedules, restoreJobs, 
+                   backupPolicies, backupStorage, backupVerification>>
 
---------------------------------------------------------------------------------
-(* Backup Validation *)
+\* Cleanup expired backups
+CleanupExpiredBackups() ==
+  /\ LET currentTime == globalTimestamp
+       expiredBackups == {backupId \in DOMAIN backups : 
+                         backups[backupId].retentionDate < currentTime}
+  IN /\ backups' = [b \in DOMAIN backups \ expiredBackups |-> backups[b]]
+     /\ UNCHANGED <<backupJobs, backupSchedules, restoreJobs, backupPolicies, 
+                   backupStorage, backupVerification, backupMonitoring>>
 
-ValidateBackup(backupId) ==
-    /\ \E backup \in backupCatalog :
-         /\ backup.id = backupId
-         /\ backup.status = "COMPLETED"
-         /\ LET verified == (ComputeChecksum(backup) = backup.checksum)
-            IN
-                /\ verified
-                /\ backupCatalog' = (backupCatalog \ {backup}) \cup
-                     {[backup EXCEPT !.status = "VALIDATED"]}
-                /\ auditLog' = Append(auditLog,
-                     [event |-> "BACKUP_VALIDATED",
-                      backupId |-> backupId,
-                      result |-> "SUCCESS",
-                      time |-> currentTime])
-    /\ UNCHANGED <<databaseState, activeBackups, backupDestState, walArchive,
-                  restorePoints, backupMetrics, currentTime, lastFullBackup, currentLSN>>
+(* --------------------------------------------------------------------------
+   HELPER FUNCTIONS
+   -------------------------------------------------------------------------- *)
 
---------------------------------------------------------------------------------
-(* Backup Retention and Cleanup *)
+\* Calculate next run time for schedule
+CalculateNextRunTime(frequency, startTime) ==
+  CASE frequency
+    OF "hourly" -> globalTimestamp + 3600
+    [] "daily" -> globalTimestamp + (24 * 3600)
+    [] "weekly" -> globalTimestamp + (7 * 24 * 3600)
+    [] "monthly" -> globalTimestamp + (30 * 24 * 3600)
+  ENDCASE
 
-ExpireOldBackups ==
-    /\ \E backup \in backupCatalog :
-         /\ IsExpired(backup)
-         /\ backupCatalog' = backupCatalog \ {backup}
-         /\ backupDestState' = [backupDestState EXCEPT
-              ![backup.destination].freeSpace = @ + backup.size,
-              ![backup.destination].backups = @ \ {backup.id}]
-         /\ auditLog' = Append(auditLog,
-              [event |-> "BACKUP_EXPIRED",
-               backupId |-> backup.id,
-               reason |-> "RETENTION_POLICY",
-               time |-> currentTime])
-    /\ UNCHANGED <<databaseState, activeBackups, walArchive, restorePoints,
-                  backupMetrics, currentTime, lastFullBackup, currentLSN>>
+\* Sum backup sizes
+SumBackupSizes() ==
+  IF DOMAIN backups = {} THEN 0
+  ELSE LET backupId == CHOOSE b \in DOMAIN backups : TRUE
+           backup == backups[backupId]
+           restBackups == [b \in DOMAIN backups \ {backupId} |-> backups[b]]
+       IN backup.size + SumBackupSizes()
 
---------------------------------------------------------------------------------
-(* Restore Operation *)
+\* Calculate average backup time
+CalculateAverageBackupTime() ==
+  IF DOMAIN backups = {} THEN 0
+  ELSE LET totalTime == SumBackupTimes()
+           backupCount == Len(DOMAIN backups)
+       IN totalTime / backupCount
 
-InitiateRestore(backupId, targetTime) ==
-    /\ \E backup \in backupCatalog :
-         /\ backup.id = backupId
-         /\ IsBackupValid(backup)
-         /\ LET backupChain == GetBackupChain(backup)
-            IN
-                /\ auditLog' = Append(auditLog,
-                     [event |-> "RESTORE_INITIATED",
-                      backupId |-> backupId,
-                      targetTime |-> targetTime,
-                      chainLength |-> Len(backupChain),
-                      time |-> currentTime])
-    /\ UNCHANGED <<databaseState, backupCatalog, activeBackups, backupDestState,
-                  walArchive, restorePoints, backupMetrics, currentTime, 
-                  lastFullBackup, currentLSN>>
+\* Sum backup times
+SumBackupTimes() ==
+  IF DOMAIN backups = {} THEN 0
+  ELSE LET backupId == CHOOSE b \in DOMAIN backups : TRUE
+           backup == backups[backupId]
+           restBackups == [b \in DOMAIN backups \ {backupId} |-> backups[b]]
+       IN (backup.endTime - backup.startTime) + SumBackupTimes()
 
-CompleteRestore(backupId) ==
-    /\ auditLog' = Append(auditLog,
-         [event |-> "RESTORE_COMPLETED",
-          backupId |-> backupId,
-          time |-> currentTime])
-    /\ UNCHANGED <<databaseState, backupCatalog, activeBackups, backupDestState,
-                  walArchive, restorePoints, backupMetrics, currentTime, 
-                  lastFullBackup, currentLSN>>
+\* Get last backup time
+GetLastBackupTime() ==
+  IF DOMAIN backups = {} THEN 0
+  ELSE LET backupTimes == {backups[backupId].endTime : backupId \in DOMAIN backups}
+       IN Max(backupTimes)
 
---------------------------------------------------------------------------------
-(* Database Updates *)
+\* Get next scheduled backup
+GetNextScheduledBackup() ==
+  IF DOMAIN backupSchedules = {} THEN 0
+  ELSE LET scheduleTimes == {backupSchedules[scheduleId].nextRun : scheduleId \in DOMAIN backupSchedules}
+       IN Min(scheduleTimes)
 
-UpdateDatabaseObject(obj) ==
-    /\ obj \in DatabaseObjects
-    /\ currentLSN' = currentLSN + 1
-    /\ databaseState' = [databaseState EXCEPT
-         ![obj].version = @ + 1,
-         ![obj].lsn = currentLSN + 1]
-    /\ UNCHANGED <<backupCatalog, activeBackups, backupDestState, walArchive,
-                  restorePoints, backupMetrics, auditLog, currentTime, lastFullBackup>>
+\* Calculate storage utilization
+CalculateStorageUtilization() ==
+  IF DOMAIN backupStorage = {} THEN 0
+  ELSE LET totalUsed == SumStorageUsed()
+           totalCapacity == SumStorageCapacity()
+       IN IF totalCapacity = 0 THEN 0
+          ELSE (totalUsed * 100) / totalCapacity
 
---------------------------------------------------------------------------------
-(* Time Progress *)
+\* Sum storage used capacity
+SumStorageUsed() ==
+  IF DOMAIN backupStorage = {} THEN 0
+  ELSE LET storageId == CHOOSE s \in DOMAIN backupStorage : TRUE
+           storage == backupStorage[storageId]
+           restStorage == [s \in DOMAIN backupStorage \ {storageId} |-> backupStorage[s]]
+       IN storage.usedCapacity + SumStorageUsed()
 
-Tick ==
-    /\ currentTime' = currentTime + 1
-    /\ UNCHANGED <<databaseState, backupCatalog, activeBackups, backupDestState,
-                  walArchive, restorePoints, backupMetrics, auditLog, 
-                  lastFullBackup, currentLSN>>
+\* Sum storage total capacity
+SumStorageCapacity() ==
+  IF DOMAIN backupStorage = {} THEN 0
+  ELSE LET storageId == CHOOSE s \in DOMAIN backupStorage : TRUE
+           storage == backupStorage[storageId]
+           restStorage == [s \in DOMAIN backupStorage \ {storageId} |-> backupStorage[s]]
+       IN storage.maxCapacity + SumStorageCapacity()
 
---------------------------------------------------------------------------------
-(* Next State *)
+\* Check if backup is valid
+IsBackupValid(backupId) ==
+  backupId \in DOMAIN backups /\ 
+  backups[backupId].status = "completed" /\ 
+  backups[backupId].isVerified
+
+\* Check if restore is possible
+IsRestorePossible(backupId) ==
+  IsBackupValid(backupId) /\ 
+  backups[backupId].retentionDate > globalTimestamp
+
+\* Get backup by type
+GetBackupsByType(backupType) ==
+  {backupId \in DOMAIN backups : backups[backupId].backupType = backupType}
+
+\* Check if storage has capacity
+HasStorageCapacity(storageId, requiredSize) ==
+  storageId \in DOMAIN backupStorage /\ 
+  backupStorage[storageId].availableCapacity >= requiredSize
+
+\* Calculate backup priority
+CalculateBackupPriority(backupType, isScheduled) ==
+  CASE backupType
+    OF "full" -> IF isScheduled THEN 8 ELSE 10
+    [] "incremental" -> IF isScheduled THEN 6 ELSE 8
+    [] "differential" -> IF isScheduled THEN 7 ELSE 9
+  ENDCASE
+
+(* --------------------------------------------------------------------------
+   NEXT STATE RELATION
+   -------------------------------------------------------------------------- *)
 
 Next ==
-    \/ \E dest \in BackupDestinations, method \in BackupMethod, 
-          comp \in BOOLEAN, algo \in CompressionAlgorithm, 
-          level \in CompressionLevels, enc \in BOOLEAN, streams \in 1..MaxParallelStreams :
-         InitiateFullBackup(dest, method, comp, algo, level, enc, streams)
-    \/ \E bid \in BackupId : CompleteFullBackup(bid)
-    \/ \E dest \in BackupDestinations, comp \in BOOLEAN, 
-          algo \in CompressionAlgorithm, level \in CompressionLevels, enc \in BOOLEAN :
-         InitiateIncrementalBackup(dest, comp, algo, level, enc)
-    \/ \E bid \in BackupId : CompleteIncrementalBackup(bid)
-    \/ \E wal \in STRING : ArchiveWAL(wal)
-    \/ \E name, desc \in STRING : CreateRestorePoint(name, desc)
-    \/ \E bid \in BackupId : ValidateBackup(bid)
-    \/ ExpireOldBackups
-    \/ \E bid \in BackupId, tt \in Timestamp : InitiateRestore(bid, tt)
-    \/ \E bid \in BackupId : CompleteRestore(bid)
-    \/ \E obj \in DatabaseObjects : UpdateDatabaseObject(obj)
-    \/ Tick
+  \/ \E backupId \in Nat, backupType \in {"full", "incremental", "differential"},
+       databaseName \in STRING, isEncrypted \in BOOLEAN, isCompressed \in BOOLEAN :
+       StartBackup(backupId, backupType, databaseName, isEncrypted, isCompressed)
+  \/ \E backupId \in Nat, size \in Nat, compressedSize \in Nat, storageLocation \in STRING,
+       checksum \in Nat, success \in BOOLEAN, errorMessage \in STRING :
+       CompleteBackup(backupId, size, compressedSize, storageLocation, checksum, success, errorMessage)
+  \/ \E jobId \in Nat, backupId \in Nat, targetDatabase \in STRING, 
+       restoreType \in {"full", "partial", "point_in_time"} :
+       StartRestore(jobId, backupId, targetDatabase, restoreType)
+  \/ \E jobId \in Nat, success \in BOOLEAN, errorMessage \in STRING :
+       CompleteRestore(jobId, success, errorMessage)
+  \/ \E backupId \in Nat, verificationType \in {"checksum", "restore_test", "integrity_check"},
+       success \in BOOLEAN, errorMessage \in STRING :
+       VerifyBackup(backupId, verificationType, success, errorMessage)
+  \/ \E scheduleId \in Nat, scheduleName \in STRING, databaseName \in STRING,
+       backupType \in {"full", "incremental", "differential"}, 
+       frequency \in {"hourly", "daily", "weekly", "monthly"}, startTime \in Nat,
+       retentionDays \in Nat, compressionEnabled \in BOOLEAN, encryptionEnabled \in BOOLEAN :
+       ScheduleBackup(scheduleId, scheduleName, databaseName, backupType, frequency,
+                     startTime, retentionDays, compressionEnabled, encryptionEnabled)
+  \/ \E policyId \in Nat, policyName \in STRING, databaseName \in STRING,
+       fullBackupFrequency \in {"daily", "weekly", "monthly"},
+       incrementalBackupFrequency \in {"hourly", "daily"}, retentionDays \in Nat,
+       compressionLevel \in Nat, encryptionEnabled \in BOOLEAN, verificationEnabled \in BOOLEAN :
+       CreateBackupPolicy(policyId, policyName, databaseName, fullBackupFrequency,
+                         incrementalBackupFrequency, retentionDays, compressionLevel,
+                         encryptionEnabled, verificationEnabled)
+  \/ \E storageId \in Nat, storageName \in STRING, storageType \in {"local", "network", "cloud"},
+       path \in STRING, maxCapacity \in Nat, isEncrypted \in BOOLEAN, isCompressed \in BOOLEAN :
+       AddBackupStorage(storageId, storageName, storageType, path, maxCapacity,
+                       isEncrypted, isCompressed)
+  \/ UpdateBackupMonitoring()
+  \/ CleanupExpiredBackups()
 
-Spec == Init /\ [][Next]_vars
+(* --------------------------------------------------------------------------
+   INVARIANTS
+   -------------------------------------------------------------------------- *)
 
---------------------------------------------------------------------------------
-(* Invariants *)
+\* Backup constraints
+Inv_Backup_BackupConstraints ==
+  \A backupId \in DOMAIN backups :
+    LET backup == backups[backupId]
+    IN /\ backup.size >= 0
+       /\ backup.compressedSize >= 0
+       /\ backup.startTime >= 0
+       /\ backup.endTime >= backup.startTime
+       /\ backup.retentionDate >= backup.startTime
+       /\ backup.status \in {"pending", "running", "completed", "failed", "cancelled"}
 
-(* INV1: Active backups have valid status *)
-ActiveBackupsValid ==
-    \A backup \in activeBackups :
-        backup.status = "RUNNING"
+\* Backup job constraints
+Inv_Backup_JobConstraints ==
+  \A jobId \in DOMAIN backupJobs :
+    LET job == backupJobs[jobId]
+    IN /\ job.priority >= 1 /\ job.priority <= 10
+       /\ job.startTime >= 0
+       /\ job.endTime >= job.startTime
+       /\ job.progress >= 0 /\ job.progress <= 100
+       /\ job.status \in {"pending", "running", "completed", "failed", "cancelled"}
 
-(* INV2: Completed backups are in catalog *)
-CompletedBackupsInCatalog ==
-    \A backup \in backupCatalog :
-        backup.status \in {"COMPLETED", "VALIDATED", "FAILED", "EXPIRED"}
+\* Restore job constraints
+Inv_Backup_RestoreJobConstraints ==
+  \A jobId \in DOMAIN restoreJobs :
+    LET job == restoreJobs[jobId]
+    IN /\ job.startTime >= 0
+       /\ job.endTime >= job.startTime
+       /\ job.progress >= 0 /\ job.progress <= 100
+       /\ job.status \in {"pending", "running", "completed", "failed", "cancelled"}
 
-(* INV3: Backup IDs are unique *)
-UniqueBackupIds ==
-    \A b1, b2 \in backupCatalog :
-        b1.id = b2.id => b1 = b2
+\* Backup schedule constraints
+Inv_Backup_ScheduleConstraints ==
+  \A scheduleId \in DOMAIN backupSchedules :
+    LET schedule == backupSchedules[scheduleId]
+    IN /\ schedule.startTime >= 0 /\ schedule.startTime <= 23
+       /\ schedule.retentionDays > 0
+       /\ schedule.frequency \in {"hourly", "daily", "weekly", "monthly"}
+       /\ schedule.lastRun >= 0
+       /\ schedule.nextRun >= schedule.lastRun
 
-(* INV4: Incremental backups have valid parents *)
-IncrementalBackupsHaveParents ==
-    \A backup \in backupCatalog :
-        backup.type = "INCREMENTAL" =>
-            /\ backup.parentBackupId # 0
-            /\ \E parent \in backupCatalog : parent.id = backup.parentBackupId
+\* Backup policy constraints
+Inv_Backup_PolicyConstraints ==
+  \A policyId \in DOMAIN backupPolicies :
+    LET policy == backupPolicies[policyId]
+    IN /\ policy.retentionDays > 0
+       /\ policy.compressionLevel >= 1 /\ policy.compressionLevel <= 22
+       /\ policy.fullBackupFrequency \in {"daily", "weekly", "monthly"}
+       /\ policy.incrementalBackupFrequency \in {"hourly", "daily"}
 
-(* INV5: Backup sizes are consistent *)
-BackupSizesConsistent ==
-    \A backup \in backupCatalog :
-        backup.size > 0
+\* Backup storage constraints
+Inv_Backup_StorageConstraints ==
+  \A storageId \in DOMAIN backupStorage :
+    LET storage == backupStorage[storageId]
+    IN /\ storage.maxCapacity > 0
+       /\ storage.usedCapacity >= 0
+       /\ storage.availableCapacity >= 0
+       /\ storage.usedCapacity + storage.availableCapacity = storage.maxCapacity
+       /\ storage.storageType \in {"local", "network", "cloud"}
 
-(* INV6: Destination space is non-negative *)
-DestinationSpaceValid ==
-    \A dest \in BackupDestinations :
-        backupDestState[dest].freeSpace >= 0
+\* Backup verification constraints
+Inv_Backup_VerificationConstraints ==
+  \A backupId \in DOMAIN backupVerification :
+    LET verification == backupVerification[backupId]
+    IN /\ verification.startTime >= 0
+       /\ verification.endTime >= verification.startTime
+       /\ verification.status \in {"pending", "running", "passed", "failed"}
 
-(* INV7: Parallel streams don't exceed limit *)
-ParallelStreamsLimit ==
-    Cardinality(activeBackups) <= MaxParallelStreams
+\* Backup monitoring constraints
+Inv_Backup_MonitoringConstraints ==
+  /\ backupMonitoring.totalBackups >= 0
+  /\ backupMonitoring.successfulBackups >= 0
+  /\ backupMonitoring.failedBackups >= 0
+  /\ backupMonitoring.totalSize >= 0
+  /\ backupMonitoring.averageBackupTime >= 0
+  /\ backupMonitoring.storageUtilization >= 0 /\ backupMonitoring.storageUtilization <= 100
+  /\ backupMonitoring.successfulBackups + backupMonitoring.failedBackups <= backupMonitoring.totalBackups
 
-(* INV8: LSN monotonically increases *)
-LSNMonotonic ==
-    /\ currentLSN >= 0
-    /\ \A obj \in DatabaseObjects : databaseState[obj].lsn <= currentLSN
+\* Backup integrity
+Inv_Backup_Integrity ==
+  \A backupId \in DOMAIN backups :
+    LET backup == backups[backupId]
+    IN backup.status = "completed" => backup.isVerified
 
-(* INV9: Backup catalog size doesn't exceed limit *)
-BackupCatalogLimit ==
-    Cardinality(backupCatalog) <= MaxBackups
+\* Backup retention
+Inv_Backup_Retention ==
+  \A backupId \in DOMAIN backups :
+    LET backup == backups[backupId]
+    IN backup.retentionDate > backup.startTime
 
-TypeInvariant ==
-    /\ DOMAIN databaseState = DatabaseObjects
-    /\ DOMAIN backupDestState = BackupDestinations
-    /\ currentTime \in Nat
-    /\ currentLSN \in Nat
-    /\ lastFullBackup \in Nat
+\* Storage capacity
+Inv_Backup_StorageCapacity ==
+  \A storageId \in DOMAIN backupStorage :
+    LET storage == backupStorage[storageId]
+    IN storage.usedCapacity <= storage.maxCapacity
 
---------------------------------------------------------------------------------
-(* Safety Properties *)
+(* --------------------------------------------------------------------------
+   LIVENESS PROPERTIES
+   -------------------------------------------------------------------------- *)
 
-(* SAFE1: No overlapping backup IDs *)
-NoOverlappingIds ==
-    \A b1 \in activeBackups, b2 \in backupCatalog :
-        b1.id # b2.id
+\* Backup jobs eventually complete
+Liveness_BackupJobsComplete ==
+  \A jobId \in DOMAIN backupJobs :
+    backupJobs[jobId].status = "running" => 
+    <>backupJobs[jobId].status \in {"completed", "failed", "cancelled"}
 
-(* SAFE2: Validated backups are restorable *)
-ValidatedBackupsRestorable ==
-    \A backup \in backupCatalog :
-        backup.status = "VALIDATED" => IsBackupValid(backup)
+\* Restore jobs eventually complete
+Liveness_RestoreJobsComplete ==
+  \A jobId \in DOMAIN restoreJobs :
+    restoreJobs[jobId].status = "running" => 
+    <>restoreJobs[jobId].status \in {"completed", "failed", "cancelled"}
 
---------------------------------------------------------------------------------
-(* Liveness Properties *)
+\* Backup verification eventually completes
+Liveness_BackupVerificationComplete ==
+  \A backupId \in DOMAIN backupVerification :
+    backupVerification[backupId].status = "running" => 
+    <>backupVerification[backupId].status \in {"passed", "failed"}
 
-(* LIVE1: Running backups eventually complete or fail *)
-BackupsEventuallyComplete ==
-    \A backup \in activeBackups :
-        backup.status = "RUNNING" ~>
-            \E completed \in backupCatalog : completed.id = backup.id
+\* Expired backups are eventually cleaned up
+Liveness_ExpiredBackupsCleanedUp ==
+  \A backupId \in DOMAIN backups :
+    backups[backupId].retentionDate < globalTimestamp => 
+    <>~(backupId \in DOMAIN backups)
 
-(* LIVE2: Expired backups are eventually removed *)
-ExpiredBackupsRemoved ==
-    \A backup \in backupCatalog :
-        IsExpired(backup) ~> (backup \notin backupCatalog)
+\* Backup monitoring is eventually updated
+Liveness_BackupMonitoringUpdated ==
+  backupMonitoring.lastBackupTime < globalTimestamp - 3600 => 
+  <>backupMonitoring.lastBackupTime >= globalTimestamp - 3600
 
---------------------------------------------------------------------------------
-(* Theorems *)
+\* Scheduled backups eventually run
+Liveness_ScheduledBackupsRun ==
+  \A scheduleId \in DOMAIN backupSchedules :
+    LET schedule == backupSchedules[scheduleId]
+    IN schedule.isEnabled /\ schedule.nextRun <= globalTimestamp => 
+       <>schedule.lastRun >= schedule.nextRun
 
-THEOREM BackupIntegrity ==
-    Spec => [](UniqueBackupIds /\ CompletedBackupsInCatalog)
+(* --------------------------------------------------------------------------
+   THEOREMS
+   -------------------------------------------------------------------------- *)
 
-THEOREM BackupConsistency ==
-    Spec => [](IncrementalBackupsHaveParents /\ BackupSizesConsistent)
+\* Backup size is bounded
+THEOREM Backup_SizeBounded ==
+  \A backupId \in DOMAIN backups :
+    backups[backupId].size <= MaxBackupSize
 
-THEOREM ResourceLimits ==
-    Spec => [](ParallelStreamsLimit /\ BackupCatalogLimit)
+\* Backup retention is respected
+THEOREM Backup_RetentionRespected ==
+  \A backupId \in DOMAIN backups :
+    backups[backupId].retentionDate >= backups[backupId].startTime
 
-THEOREM LSNSafety ==
-    Spec => []LSNMonotonic
+\* Storage utilization is bounded
+THEOREM Backup_StorageUtilizationBounded ==
+  backupMonitoring.storageUtilization <= 100
 
-================================================================================
+\* Backup verification is reliable
+THEOREM Backup_VerificationReliable ==
+  \A backupId \in DOMAIN backups :
+    backups[backupId].isVerified => 
+    backupId \in DOMAIN backupVerification
 
+\* Restore is possible for valid backups
+THEOREM Backup_RestorePossible ==
+  \A backupId \in DOMAIN backups :
+    IsBackupValid(backupId) => IsRestorePossible(backupId)
+
+\* Backup monitoring is consistent
+THEOREM Backup_MonitoringConsistent ==
+  backupMonitoring.successfulBackups + backupMonitoring.failedBackups <= backupMonitoring.totalBackups
+
+\* Storage capacity is respected
+THEOREM Backup_StorageCapacityRespected ==
+  \A storageId \in DOMAIN backupStorage :
+    backupStorage[storageId].usedCapacity <= backupStorage[storageId].maxCapacity
+
+\* Backup compression is beneficial
+THEOREM Backup_CompressionBeneficial ==
+  \A backupId \in DOMAIN backups :
+    LET backup == backups[backupId]
+    IN backup.isCompressed => backup.compressedSize < backup.size
+
+=============================================================================
+
+(*
+  REFINEMENT MAPPING:
+  
+  Swift implementation → TLA+ abstraction:
+  - BackupManager.backups (Dictionary<UInt64, Backup>) → backups
+  - BackupManager.backupJobs (Dictionary<UInt64, BackupJob>) → backupJobs
+  - BackupManager.backupSchedules (Dictionary<UInt64, BackupSchedule>) → backupSchedules
+  - BackupManager.restoreJobs (Dictionary<UInt64, RestoreJob>) → restoreJobs
+  - BackupManager.backupPolicies (Dictionary<UInt64, BackupPolicy>) → backupPolicies
+  - BackupManager.backupStorage (Dictionary<UInt64, BackupStorage>) → backupStorage
+  
+  USAGE:
+  
+  This module should be used with Recovery and other ColibrìDB modules:
+  
+  ---- MODULE Recovery ----
+  EXTENDS Backup
+  ...
+  ====================
+*)
