@@ -1,12 +1,13 @@
 //
 //  Package.swift
-//  ColibrDB
+//  ColibrìDB
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
+//  A high-performance relational database management system written in Swift 6.2
+//  with formal verification using TLA+ specifications.
+//
 // swift-tools-version: 6.0
-
-// Theme: Manifest conductor orchestrating modules and dependencies.
 
 import PackageDescription
 

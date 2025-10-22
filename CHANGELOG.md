@@ -1,40 +1,44 @@
-Changelog
-=========
+# Changelog
 
-Tutte le modifiche note a ColibrìDB.
+All notable changes to ColibrìDB will be documented in this file.
 
-## v1.0.0 - Performance & Stability Release (2025-01-02)
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### 🚀 **Ottimizzazioni Performance**
-- **Lock Striping**: Implementato lock striping con 64 stripe per ridurre contention (5-10x miglioramento concorrenza)
-- **Serializzazione Binaria**: Nuovo formato binario custom per Row data (3-5x più veloce di JSON)
-- **B-Tree Caching**: Page cache intelligente con LRU eviction e prefetching
-- **Query Plan Cache**: Caching dei piani di esecuzione per query frequenti (10-50x più veloce)
-- **Adaptive Algorithms**: Split points adattivi basati su distribuzione chiavi
+## [1.0.0] - 2025-01-02
 
-### 🔧 **Fix Critici**
-- **Memory Leaks**: Risolti leak in transaction management e global state
-- **Race Conditions**: Implementato fine-grained locking in MVCC
-- **Resource Leaks**: Proper cleanup di file handles in FileHeapTable
-- **WAL Error Handling**: Migliorata resilienza durante inizializzazione e recovery
-- **SQL Injection**: Implementata validazione e sanitizzazione input completa
+### Added
 
-### 🏗️ **Architettura**
-- **Fine-grained Locking**: Sostituiti lock globali con lock granulari
-- **Periodic Cleanup**: Sistema automatico di pulizia memoria
-- **Enhanced Error Handling**: Gestione errori robusta in tutti i componenti
-- **Performance Monitoring**: Metriche integrate per monitoraggio performance
+- **Lock Striping**: Implemented lock striping with 64 stripes to reduce contention (5-10x concurrency improvement)
+- **Binary Serialization**: New custom binary format for Row data (3-5x faster than JSON)
+- **B-Tree Caching**: Intelligent page cache with LRU eviction and prefetching
+- **Query Plan Cache**: Execution plan caching for frequent queries (10-50x faster)
+- **Adaptive Algorithms**: Adaptive split points based on key distribution
 
-### 📚 **Documentazione**
-- Aggiornato README con nuove ottimizzazioni
-- Documentazione completa delle performance improvements
-- Guide per utilizzo delle nuove funzionalità
+### Changed
+- **Fine-grained Locking**: Replaced global locks with granular locks
+- **Periodic Cleanup**: Automatic memory cleanup system
+- **Enhanced Error Handling**: Robust error handling in all components
+- **Performance Monitoring**: Integrated metrics for performance monitoring
 
-Unreleased
---
-- B+Tree persistente su disco (insert/split/range/equality, chiavi multi-tipo)
-- Indici Hash/ART in-memory
-- CLI `coldb` con comandi indici, policy, insert/scan
-- Storage heap file-backed (insert/scan) e WAL minimo
-- Catalogo indici persistente e ripristino
-- Documentazione allineata (README, indice docs, moduli storage/indici/WAL/concorrenza, guida CLI)
+### Fixed
+- **Memory Leaks**: Fixed leaks in transaction management and global state
+- **Race Conditions**: Implemented fine-grained locking in MVCC
+- **Resource Leaks**: Proper cleanup of file handles in FileHeapTable
+- **WAL Error Handling**: Improved resilience during initialization and recovery
+- **SQL Injection**: Implemented complete input validation and sanitization
+
+### Documentation
+- Updated README with new optimizations
+- Complete documentation of performance improvements
+- Guides for using new features
+
+## [Unreleased]
+
+### Added
+- Persistent B+Tree on disk (insert/split/range/equality, multi-type keys)
+- Hash/ART in-memory indexes
+- CLI `coldb` with index, policy, insert/scan commands
+- File-backed heap storage (insert/scan) and minimal WAL
+- Persistent index catalog and recovery
+- Aligned documentation (README, index docs, storage/indexes/WAL/concurrency modules, CLI guide)

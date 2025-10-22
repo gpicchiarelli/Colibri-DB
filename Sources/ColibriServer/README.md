@@ -1,13 +1,51 @@
-coldb-server — Server
-=====================
+# ColibriServer — Database Server
 
-Contenuto
----------
-- `ConnectionManager.swift` — gestione connessioni, transazioni e code dedicate.
-- `ServerConfig.swift` — configurazione server.
-- `WireProtocol.swift` — protocollo di rete e messaggi.
+The network server component for ColibrìDB, providing client connectivity and request handling.
 
-Riferimenti
------------
-Vedi il capitolo "10 — Server" in `Libro/10-Server.md` e `docs/overview.md`.
+## Components
+
+### Core Server
+- **`Server.swift`** — Main server implementation with connection management
+- **`ConnectionManager.swift`** — Connection pooling and transaction management
+- **`WireProtocol.swift`** — Network protocol and message handling
+
+## Features
+
+- **Connection Management**: Efficient connection pooling and lifecycle management
+- **Request Processing**: SQL query parsing and execution pipeline
+- **Security**: TLS support and authentication integration
+- **Monitoring**: Built-in metrics and health checks
+- **Scalability**: Multi-threaded request handling
+
+## Architecture
+
+The server follows a modular design:
+
+```
+Client Request → Wire Protocol → Connection Manager → Query Processor → ColibriCore
+```
+
+## Configuration
+
+Server settings can be configured through:
+- Command-line arguments
+- Configuration file (`colibridb.conf.json`)
+- Environment variables
+
+## Usage
+
+```bash
+# Start the server
+coldb-server --config colibridb.conf.json
+
+# Start with custom port
+coldb-server --port 5432 --host 0.0.0.0
+```
+
+## Documentation
+
+For detailed information, see:
+- **Server Architecture**: `docs/wiki/Part-05-Server/`
+- **Configuration Guide**: `docs/wiki/Appendices/02-Configurazione.md`
+- **API Reference**: Inline documentation in source files
 
