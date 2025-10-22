@@ -11,6 +11,7 @@
 //  - Structure Invariant: All nodes satisfy B+Tree properties
 //  - Key Order: Keys maintain sorted order
 //  - Balanced Height: All leaves at same height
+//  - Search Correctness: Search finds key if present
 //  - Link Consistency: Leaf sibling pointers correct
 //
 //  Based on: "The Ubiquitous B-Tree" (Comer, 1979)
@@ -29,9 +30,11 @@ private class BTreeNode {
     var isLeaf: Bool
     var next: BTreeNode?  // Next leaf pointer
     weak var parent: BTreeNode?
+    var nodeID: PageID  // Unique node identifier
     
-    init(isLeaf: Bool) {
+    init(isLeaf: Bool, nodeID: PageID) {
         self.isLeaf = isLeaf
+        self.nodeID = nodeID
     }
     
     var isFull: Bool {
@@ -56,9 +59,13 @@ public actor BTreeIndex {
     
     // MARK: - State Variables (TLA+ vars)
     
-    /// Root node
+    /// Root node ID
     /// TLA+: root \in PageIds
-    private var root: BTreeNode
+    private var root: PageID
+    
+    /// All nodes in the tree
+    /// TLA+: nodes \in [PageIds -> Node]
+    private var nodes: [PageID: BTreeNode] = [:]
     
     /// Tree height
     /// TLA+: height \in Nat
@@ -66,15 +73,19 @@ public actor BTreeIndex {
     
     /// Next node ID (for tracking)
     /// TLA+: nextNodeId \in PageIds
-    private var nextNodeId: Int
+    private var nextNodeId: PageID
     
     // MARK: - Initialization
     
     public init() {
         // TLA+ Init
-        self.root = BTreeNode(isLeaf: true)
+        self.root = 1
         self.height = 1
         self.nextNodeId = 2
+        
+        // Create initial root node
+        let rootNode = BTreeNode(isLeaf: true, nodeID: root)
+        nodes[root] = rootNode
     }
     
     // MARK: - Core Operations
@@ -84,18 +95,17 @@ public actor BTreeIndex {
     /// Precondition: key and rid are valid
     /// Postcondition: key inserted, tree remains balanced
     public func insert(key: Value, rid: RID) throws {
+        guard let rootNode = nodes[root] else {
+            throw DBError.internalError("Root node not found")
+        }
+        
         // If root is full, split it
-        if root.isFull {
-            let newRoot = BTreeNode(isLeaf: false)
-            newRoot.children.append(root)
-            root.parent = newRoot
-            try splitChild(parent: newRoot, index: 0)
-            root = newRoot
-            height += 1
+        if rootNode.isFull {
+            try splitRoot()
         }
         
         // Insert into non-full root
-        try insertNonFull(node: root, key: key, rid: rid)
+        try insertNonFull(nodeID: root, key: key, rid: rid)
     }
     
     /// Search for a key in B+Tree
@@ -103,7 +113,7 @@ public actor BTreeIndex {
     /// Precondition: key is valid
     /// Postcondition: returns RIDs if found, nil otherwise
     public func search(key: Value) -> [RID]? {
-        return searchNode(node: root, key: key)
+        return searchNode(nodeID: root, key: key)
     }
     
     /// Delete a key from B+Tree
@@ -111,13 +121,13 @@ public actor BTreeIndex {
     /// Precondition: key exists in tree
     /// Postcondition: key deleted, tree remains balanced
     public func delete(key: Value) throws {
-        try deleteFromNode(node: root, key: key)
+        try deleteFromNode(nodeID: root, key: key)
         
         // If root is empty and has children, make first child the new root
-        if !root.isLeaf && root.keys.isEmpty {
-            if !root.children.isEmpty {
-                root = root.children[0]
-                root.parent = nil
+        if let rootNode = nodes[root], !rootNode.isLeaf && rootNode.keys.isEmpty {
+            if !rootNode.children.isEmpty {
+                let newRootID = rootNode.children[0].nodeID
+                root = newRootID
                 height -= 1
             }
         }
@@ -131,17 +141,17 @@ public actor BTreeIndex {
         var results: [(Value, [RID])] = []
         
         // Find leftmost leaf containing minKey or greater
-        guard let leafNode = findLeafNode(forKey: minKey) else {
+        guard let leafNodeID = findLeafNode(forKey: minKey) else {
             return results
         }
         
         // Scan through leaves following next pointers
-        var currentLeaf: BTreeNode? = leafNode
+        var currentLeafID: PageID? = leafNodeID
         
-        while let leaf = currentLeaf {
-            for (index, key) in leaf.keys.enumerated() {
+        while let leafID = currentLeafID, let leafNode = nodes[leafID] {
+            for (index, key) in leafNode.keys.enumerated() {
                 if key >= minKey && key <= maxKey {
-                    results.append((key, leaf.rids[index]))
+                    results.append((key, leafNode.rids[index]))
                 } else if key > maxKey {
                     // We've passed the range
                     return results
@@ -149,7 +159,7 @@ public actor BTreeIndex {
             }
             
             // Move to next leaf
-            currentLeaf = leaf.next
+            currentLeafID = leafNode.next?.nodeID
         }
         
         return results
@@ -157,8 +167,38 @@ public actor BTreeIndex {
     
     // MARK: - Private Helper Methods
     
+    /// Split root node when it's full
+    /// TLA+: SplitRoot
+    private func splitRoot() throws {
+        guard let oldRoot = nodes[root] else {
+            throw DBError.internalError("Root node not found")
+        }
+        
+        // Create new root
+        let newRootID = nextNodeId
+        nextNodeId += 1
+        let newRoot = BTreeNode(isLeaf: false, nodeID: newRootID)
+        nodes[newRootID] = newRoot
+        
+        // Add old root as child
+        newRoot.children.append(oldRoot)
+        oldRoot.parent = newRoot
+        
+        // Split the old root
+        try splitChild(parentID: newRootID, childIndex: 0)
+        
+        // Update root and height
+        root = newRootID
+        height += 1
+    }
+    
     /// Insert into a non-full node
-    private func insertNonFull(node: BTreeNode, key: Value, rid: RID) throws {
+    /// TLA+: InsertNonFull(nid, key, rid)
+    private func insertNonFull(nodeID: PageID, key: Value, rid: RID) throws {
+        guard let node = nodes[nodeID] else {
+            throw DBError.internalError("Node not found")
+        }
+        
         if node.isLeaf {
             // Insert key into leaf node
             let pos = findInsertPosition(keys: node.keys, key: key)
@@ -171,29 +211,36 @@ public actor BTreeIndex {
             
             // Split child if full
             if child.isFull {
-                try splitChild(parent: node, index: pos)
+                try splitChild(parentID: nodeID, childIndex: pos)
                 
                 // After split, determine which child to recurse into
                 if key > node.keys[pos] {
-                    try insertNonFull(node: node.children[pos + 1], key: key, rid: rid)
+                    try insertNonFull(nodeID: node.children[pos + 1].nodeID, key: key, rid: rid)
                 } else {
-                    try insertNonFull(node: node.children[pos], key: key, rid: rid)
+                    try insertNonFull(nodeID: node.children[pos].nodeID, key: key, rid: rid)
                 }
             } else {
-                try insertNonFull(node: child, key: key, rid: rid)
+                try insertNonFull(nodeID: child.nodeID, key: key, rid: rid)
             }
         }
     }
     
     /// Split a full child node
     /// TLA+: SplitNode(nid)
-    private func splitChild(parent: BTreeNode, index: Int) throws {
-        let child = parent.children[index]
+    private func splitChild(parentID: PageID, childIndex: Int) throws {
+        guard let parent = nodes[parentID] else {
+            throw DBError.internalError("Parent node not found")
+        }
+        
+        let child = parent.children[childIndex]
         let mid = Self.minDegree
         
         // Create new node
-        let newNode = BTreeNode(isLeaf: child.isLeaf)
+        let newNodeID = nextNodeId
+        nextNodeId += 1
+        let newNode = BTreeNode(isLeaf: child.isLeaf, nodeID: newNodeID)
         newNode.parent = parent
+        nodes[newNodeID] = newNode
         
         // Split keys
         let promotedKey = child.keys[mid - 1]
@@ -220,14 +267,17 @@ public actor BTreeIndex {
         }
         
         // Insert promoted key and new child into parent
-        parent.keys.insert(promotedKey, at: index)
-        parent.children.insert(newNode, at: index + 1)
-        
-        nextNodeId += 1
+        parent.keys.insert(promotedKey, at: childIndex)
+        parent.children.insert(newNode, at: childIndex + 1)
     }
     
     /// Search for a key in a subtree
-    private func searchNode(node: BTreeNode, key: Value) -> [RID]? {
+    /// TLA+: SearchNode(nid, key)
+    private func searchNode(nodeID: PageID, key: Value) -> [RID]? {
+        guard let node = nodes[nodeID] else {
+            return nil
+        }
+        
         if node.isLeaf {
             // Search in leaf
             if let index = node.keys.firstIndex(of: key) {
@@ -237,12 +287,17 @@ public actor BTreeIndex {
         } else {
             // Search in internal node
             let childIndex = findChildIndex(keys: node.keys, key: key)
-            return searchNode(node: node.children[childIndex], key: key)
+            return searchNode(nodeID: node.children[childIndex].nodeID, key: key)
         }
     }
     
     /// Delete a key from a subtree
-    private func deleteFromNode(node: BTreeNode, key: Value) throws {
+    /// TLA+: DeleteFromNode(nid, key)
+    private func deleteFromNode(nodeID: PageID, key: Value) throws {
+        guard let node = nodes[nodeID] else {
+            throw DBError.internalError("Node not found")
+        }
+        
         if node.isLeaf {
             // Delete from leaf
             if let index = node.keys.firstIndex(of: key) {
@@ -258,45 +313,53 @@ public actor BTreeIndex {
             
             // Ensure child has at least minDegree keys
             if child.keys.count < Self.minDegree {
-                try rebalanceChild(parent: node, index: childIndex)
+                try rebalanceChild(parentID: nodeID, childIndex: childIndex)
             }
             
-            try deleteFromNode(node: child, key: key)
+            try deleteFromNode(nodeID: child.nodeID, key: key)
         }
     }
     
     /// Rebalance a child that has too few keys
-    private func rebalanceChild(parent: BTreeNode, index: Int) throws {
-        let child = parent.children[index]
+    private func rebalanceChild(parentID: PageID, childIndex: Int) throws {
+        guard let parent = nodes[parentID] else {
+            throw DBError.internalError("Parent node not found")
+        }
+        
+        let child = parent.children[childIndex]
         
         // Try borrowing from left sibling
-        if index > 0 {
-            let leftSibling = parent.children[index - 1]
+        if childIndex > 0 {
+            let leftSibling = parent.children[childIndex - 1]
             if leftSibling.keys.count >= Self.minDegree {
-                try borrowFromLeft(parent: parent, childIndex: index)
+                try borrowFromLeft(parentID: parentID, childIndex: childIndex)
                 return
             }
         }
         
         // Try borrowing from right sibling
-        if index < parent.children.count - 1 {
-            let rightSibling = parent.children[index + 1]
+        if childIndex < parent.children.count - 1 {
+            let rightSibling = parent.children[childIndex + 1]
             if rightSibling.keys.count >= Self.minDegree {
-                try borrowFromRight(parent: parent, childIndex: index)
+                try borrowFromRight(parentID: parentID, childIndex: childIndex)
                 return
             }
         }
         
         // Merge with sibling
-        if index > 0 {
-            try mergeWithLeft(parent: parent, childIndex: index)
-        } else if index < parent.children.count - 1 {
-            try mergeWithRight(parent: parent, childIndex: index)
+        if childIndex > 0 {
+            try mergeWithLeft(parentID: parentID, childIndex: childIndex)
+        } else if childIndex < parent.children.count - 1 {
+            try mergeWithRight(parentID: parentID, childIndex: childIndex)
         }
     }
     
     /// Borrow a key from left sibling
-    private func borrowFromLeft(parent: BTreeNode, childIndex: Int) throws {
+    private func borrowFromLeft(parentID: PageID, childIndex: Int) throws {
+        guard let parent = nodes[parentID] else {
+            throw DBError.internalError("Parent node not found")
+        }
+        
         let child = parent.children[childIndex]
         let leftSibling = parent.children[childIndex - 1]
         
@@ -315,7 +378,11 @@ public actor BTreeIndex {
     }
     
     /// Borrow a key from right sibling
-    private func borrowFromRight(parent: BTreeNode, childIndex: Int) throws {
+    private func borrowFromRight(parentID: PageID, childIndex: Int) throws {
+        guard let parent = nodes[parentID] else {
+            throw DBError.internalError("Parent node not found")
+        }
+        
         let child = parent.children[childIndex]
         let rightSibling = parent.children[childIndex + 1]
         
@@ -334,7 +401,11 @@ public actor BTreeIndex {
     }
     
     /// Merge child with left sibling
-    private func mergeWithLeft(parent: BTreeNode, childIndex: Int) throws {
+    private func mergeWithLeft(parentID: PageID, childIndex: Int) throws {
+        guard let parent = nodes[parentID] else {
+            throw DBError.internalError("Parent node not found")
+        }
+        
         let child = parent.children[childIndex]
         let leftSibling = parent.children[childIndex - 1]
         
@@ -357,10 +428,17 @@ public actor BTreeIndex {
         // Remove key and child from parent
         parent.keys.remove(at: childIndex - 1)
         parent.children.remove(at: childIndex)
+        
+        // Remove child from nodes
+        nodes.removeValue(forKey: child.nodeID)
     }
     
     /// Merge child with right sibling
-    private func mergeWithRight(parent: BTreeNode, childIndex: Int) throws {
+    private func mergeWithRight(parentID: PageID, childIndex: Int) throws {
+        guard let parent = nodes[parentID] else {
+            throw DBError.internalError("Parent node not found")
+        }
+        
         let child = parent.children[childIndex]
         let rightSibling = parent.children[childIndex + 1]
         
@@ -383,18 +461,22 @@ public actor BTreeIndex {
         // Remove key and child from parent
         parent.keys.remove(at: childIndex)
         parent.children.remove(at: childIndex + 1)
+        
+        // Remove right sibling from nodes
+        nodes.removeValue(forKey: rightSibling.nodeID)
     }
     
     /// Find leaf node that should contain key
-    private func findLeafNode(forKey key: Value) -> BTreeNode? {
-        var current = root
+    /// TLA+: FindLeafNode(key)
+    private func findLeafNode(forKey key: Value) -> PageID? {
+        var currentID = root
         
-        while !current.isLeaf {
-            let childIndex = findChildIndex(keys: current.keys, key: key)
-            current = current.children[childIndex]
+        while let currentNode = nodes[currentID], !currentNode.isLeaf {
+            let childIndex = findChildIndex(keys: currentNode.keys, key: key)
+            currentID = currentNode.children[childIndex].nodeID
         }
         
-        return current
+        return currentID
     }
     
     /// Find insert position for key in sorted array
@@ -422,16 +504,35 @@ public actor BTreeIndex {
     
     /// Get total number of keys (for statistics)
     public func getKeyCount() -> Int {
-        return countKeys(node: root)
+        return countKeys(nodeID: root)
     }
     
-    private func countKeys(node: BTreeNode) -> Int {
+    /// Get root node ID
+    public func getRootID() -> PageID {
+        return root
+    }
+    
+    /// Get next node ID
+    public func getNextNodeID() -> PageID {
+        return nextNodeId
+    }
+    
+    /// Get node count
+    public func getNodeCount() -> Int {
+        return nodes.count
+    }
+    
+    private func countKeys(nodeID: PageID) -> Int {
+        guard let node = nodes[nodeID] else {
+            return 0
+        }
+        
         if node.isLeaf {
             return node.keys.count
         } else {
             var count = node.keys.count
             for child in node.children {
-                count += countKeys(node: child)
+                count += countKeys(nodeID: child.nodeID)
             }
             return count
         }
@@ -442,10 +543,14 @@ public actor BTreeIndex {
     /// Check key order invariant
     /// TLA+: Inv_BTree_KeyOrder
     public func checkKeyOrderInvariant() -> Bool {
-        return checkKeyOrderInNode(node: root)
+        return checkKeyOrderInNode(nodeID: root)
     }
     
-    private func checkKeyOrderInNode(node: BTreeNode) -> Bool {
+    private func checkKeyOrderInNode(nodeID: PageID) -> Bool {
+        guard let node = nodes[nodeID] else {
+            return false
+        }
+        
         // Check keys are sorted
         for i in 0..<(node.keys.count - 1) {
             if node.keys[i] >= node.keys[i + 1] {
@@ -456,7 +561,7 @@ public actor BTreeIndex {
         // Recurse into children
         if !node.isLeaf {
             for child in node.children {
-                if !checkKeyOrderInNode(node: child) {
+                if !checkKeyOrderInNode(nodeID: child.nodeID) {
                     return false
                 }
             }
@@ -468,21 +573,88 @@ public actor BTreeIndex {
     /// Check balanced height invariant
     /// TLA+: Inv_BTree_BalancedHeight
     public func checkBalancedHeightInvariant() -> Bool {
-        let leafDepths = collectLeafDepths(node: root, depth: 0)
+        let leafDepths = collectLeafDepths(nodeID: root, depth: 0)
         let uniqueDepths = Set(leafDepths)
         return uniqueDepths.count == 1
     }
     
-    private func collectLeafDepths(node: BTreeNode, depth: Int) -> [Int] {
+    private func collectLeafDepths(nodeID: PageID, depth: Int) -> [Int] {
+        guard let node = nodes[nodeID] else {
+            return []
+        }
+        
         if node.isLeaf {
             return [depth]
         } else {
             var depths: [Int] = []
             for child in node.children {
-                depths.append(contentsOf: collectLeafDepths(node: child, depth: depth + 1))
+                depths.append(contentsOf: collectLeafDepths(nodeID: child.nodeID, depth: depth + 1))
             }
             return depths
         }
+    }
+    
+    /// Check structure invariant
+    /// TLA+: Inv_BTree_StructureInvariant
+    public func checkStructureInvariant() -> Bool {
+        return checkStructureInNode(nodeID: root)
+    }
+    
+    private func checkStructureInNode(nodeID: PageID) -> Bool {
+        guard let node = nodes[nodeID] else {
+            return false
+        }
+        
+        // Check node capacity constraints
+        if nodeID != root && node.keys.count < Self.minDegree - 1 {
+            return false  // Non-root node has too few keys
+        }
+        
+        if node.keys.count > 2 * Self.minDegree - 1 {
+            return false  // Node has too many keys
+        }
+        
+        // Check internal node structure
+        if !node.isLeaf {
+            if node.children.count != node.keys.count + 1 {
+                return false  // Internal node should have keys+1 children
+            }
+            
+            // Recurse into children
+            for child in node.children {
+                if !checkStructureInNode(nodeID: child.nodeID) {
+                    return false
+                }
+            }
+        }
+        
+        return true
+    }
+    
+    /// Check leaf links invariant
+    /// TLA+: Inv_BTree_LeafLinks
+    public func checkLeafLinksInvariant() -> Bool {
+        // Find leftmost leaf
+        var currentID = root
+        while let node = nodes[currentID], !node.isLeaf {
+            currentID = node.children[0].nodeID
+        }
+        
+        // Traverse leaf chain
+        var leafIDs: [PageID] = []
+        var currentLeafID: PageID? = currentID
+        
+        while let leafID = currentLeafID, let leaf = nodes[leafID] {
+            leafIDs.append(leafID)
+            currentLeafID = leaf.next?.nodeID
+        }
+        
+        // Check that all leaves are reachable
+        let allLeafIDs = nodes.compactMap { (id, node) in
+            node.isLeaf ? id : nil
+        }
+        
+        return Set(leafIDs) == Set(allLeafIDs)
     }
 }
 
