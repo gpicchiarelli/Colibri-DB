@@ -267,21 +267,21 @@ public actor QueryOptimizerManager {
     
     /// Generate initial plan
     /// TLA+ Function: GenerateInitialPlan(parsedQuery)
-    private func generateInitialPlan(parsedQuery: [String: Any]) async throws -> [PlanNode] {
+    private func generateInitialPlan(parsedQuery: [String: Any]) async throws -> [QueryNode] {
         let tables = parsedQuery["tables"] as? [String] ?? []
-        var plan: [PlanNode] = []
+        var plan: [QueryNode] = []
         
         for (index, table) in tables.enumerated() {
-            let node = PlanNode(
+            let node = QueryNode(
                 nodeId: "node_\(index)",
-                operatorType: "scan",
-                tableName: table,
-                columns: [],
-                predicate: "",
-                cost: 0,
-                cardinality: 0,
-                selectivity: 1.0,
-                timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+                nodeType: "scan",
+                children: [],
+                properties: [
+                    "tableName": table,
+                    "cost": "0",
+                    "cardinality": "0",
+                    "selectivity": "1.0"
+                ]
             )
             plan.append(node)
         }
@@ -291,21 +291,21 @@ public actor QueryOptimizerManager {
     
     /// Generate all join orders
     /// TLA+ Function: GenerateAllJoinOrders(tables)
-    private func generateAllJoinOrders(tables: [String]) async throws -> [[PlanNode]] {
+    private func generateAllJoinOrders(tables: [String]) async throws -> [[QueryNode]] {
         // Simplified join order generation
-        var orders: [[PlanNode]] = []
+        var orders: [[QueryNode]] = []
         
         for table in tables {
-            let node = PlanNode(
+            let node = QueryNode(
                 nodeId: "node_\(table)",
-                operatorType: "scan",
-                tableName: table,
-                columns: [],
-                predicate: "",
-                cost: 0,
-                cardinality: 0,
-                selectivity: 1.0,
-                timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+                nodeType: "scan",
+                children: [],
+                properties: [
+                    "tableName": table,
+                    "cost": "0",
+                    "cardinality": "0",
+                    "selectivity": "1.0"
+                ]
             )
             orders.append([node])
         }
@@ -348,9 +348,9 @@ public actor QueryOptimizerManager {
     
     /// Calculate node cost
     /// TLA+ Function: CalculateNodeCost(node)
-    private func calculateNodeCost(node: PlanNode) async throws -> Double {
+    private func calculateNodeCost(node: QueryNode) async throws -> Double {
         // TLA+: Calculate cost based on node type
-        switch node.operatorType {
+        switch node.nodeType {
         case "scan":
             return try await calculateScanCost(node: node)
         case "join":
