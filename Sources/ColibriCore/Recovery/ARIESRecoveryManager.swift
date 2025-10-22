@@ -104,20 +104,6 @@ public struct ConcreteWALRecord: WALRecord, Codable, Sendable, Equatable {
     }
 }
 
-/// Checkpoint record
-public struct CheckpointRecord: Codable, Sendable, Equatable {
-    public let lsn: LSN
-    public let timestamp: UInt64
-    public let activeTransactions: [TxID]
-    public let dirtyPages: [PageID]
-    
-    public init(lsn: LSN, timestamp: UInt64, activeTransactions: [TxID], dirtyPages: [PageID]) {
-        self.lsn = lsn
-        self.timestamp = timestamp
-        self.activeTransactions = activeTransactions
-        self.dirtyPages = dirtyPages
-    }
-}
 
 
 

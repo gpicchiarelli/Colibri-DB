@@ -41,19 +41,6 @@ public struct ConcreteWALRecord: WALRecord, Sendable {
     }
 }
 
-/// Checkpoint record data
-/// Corresponds to TLA+: CheckpointRecord
-public struct CheckpointRecord: Codable, Sendable {
-    public let checkpointLSN: LSN
-    public let dirtyPageTable: [PageID: LSN]
-    public let activeTransactionTable: [TxID: LSN]
-    
-    public init(checkpointLSN: LSN, dirtyPageTable: [PageID: LSN], activeTransactionTable: [TxID: LSN]) {
-        self.checkpointLSN = checkpointLSN
-        self.dirtyPageTable = dirtyPageTable
-        self.activeTransactionTable = activeTransactionTable
-    }
-}
 
 
 
