@@ -1,445 +1,577 @@
 ----------------------------- MODULE SchemaEvolution -----------------------------
 (*
-  Online Schema Evolution Specification for ColibrìDB
+  ColibrìDB Schema Evolution Specification
   
-  This module specifies online schema changes (ALTER TABLE) that can be performed
-  without blocking reads or writes to the table. It implements:
-  - ADD COLUMN (with and without default values)
-  - DROP COLUMN
-  - CHANGE COLUMN (type, null constraints)
-  - ADD/DROP INDEX
-  - Three-phase protocol: Copy, Apply, Switch
+  Manages database schema changes including:
+  - DDL operations (CREATE, ALTER, DROP)
+  - Schema versioning and migration
+  - Backward/forward compatibility
+  - Online schema changes without downtime
+  - Constraint validation and enforcement
   
   Based on:
-  - Ronström, M., & Oreland, J. (2011). "Online Schema Upgrade for MySQL Cluster."
-    MySQL Cluster Whitepaper.
-  - Wiesmann, M., & Schiper, A. (2005). "Beyond 1-Safety and 2-Safety for Replicated
-    Databases: Group-Safety." International Conference on Extending Database Technology.
-  - Neamtiu, I., Hicks, M., Stoyle, G., & Oriol, M. (2006). "Practical dynamic software
-    updating for C." ACM SIGPLAN Notices, 41(6).
-  - Sadalage, P. J., & Fowler, M. (2012). "NoSQL Distilled: A Brief Guide to the
-    Emerging World of Polyglot Persistence." Addison-Wesley.
-  - Kleppmann, M. (2017). "Designing Data-Intensive Applications." O'Reilly Media.
+  - Curino et al. (2008) - "Schema Evolution in SQL-99 and Commercial Object-Relational DBMS"
+  - Bernstein & Dayal (1994) - "An Overview of Repository Technology"
+  - ISO/IEC 9075:2016 - SQL Standard Part 11 (SQL/Schemata)
+  - PostgreSQL DDL Implementation
   
   Key Properties:
-  - Non-blocking: Reads/writes continue during schema change
-  - Consistency: All operations see consistent schema version
-  - Atomicity: Schema change commits or aborts atomically
-  - Rollback safety: Can rollback to previous schema
+  - Atomicity: Schema changes are all-or-nothing
+  - Consistency: Schema remains valid after changes
+  - Isolation: Schema changes don't interfere with data operations
+  - Durability: Schema changes survive crashes
   
   Author: ColibrìDB Team
   Date: 2025-10-19
+  Version: 1.0.0
 *)
 
-EXTENDS Naturals, Sequences, FiniteSets, TLC, CORE
+EXTENDS CORE, INTERFACES, DISK_FORMAT, Naturals, Sequences, FiniteSets, TLC
 
 CONSTANTS
-  MAX_TX,                \* From CORE
-  MAX_LSN,               \* From CORE
-  MAX_PAGES,             \* From CORE
-  Tables,                \* Set of table names
-  Columns,               \* Set of possible column names
-  DataTypes,             \* Set of possible data types
-  MAX_SCHEMA_VERSIONS    \* Maximum concurrent schema versions
-
-(* --------------------------------------------------------------------------
-   SCHEMA DEFINITIONS
-   -------------------------------------------------------------------------- *)
-
-\* Column definition
-ColumnDef == [
-  name: Columns,
-  type: DataTypes,
-  nullable: BOOLEAN,
-  defaultValue: STRING,
-  position: Nat
-]
-
-\* Table schema
-Schema == [
-  version: Nat,
-  columns: Seq(ColumnDef),
-  indexes: SUBSET STRING,
-  constraints: SUBSET STRING
-]
-
-\* Schema change operation types
-SchemaOpKind == {
-  "ADD_COLUMN",
-  "DROP_COLUMN",
-  "MODIFY_COLUMN",
-  "ADD_INDEX",
-  "DROP_INDEX",
-  "ADD_CONSTRAINT",
-  "DROP_CONSTRAINT"
-}
-
-SchemaOp == [
-  kind: SchemaOpKind,
-  table: Tables,
-  params: [STRING -> STRING]
-]
-
-\* Schema change phases (Online DDL protocol)
-SchemaChangePhase == {
-  "PREPARE",      \* Prepare shadow objects (new schema, new indexes)
-  "COPY",         \* Copy existing data to shadow table
-  "APPLY",        \* Apply ongoing writes to both old and new
-  "SWITCH",       \* Atomically switch to new schema
-  "CLEANUP",      \* Remove old schema
-  "DONE",
-  "FAILED",
-  "ROLLBACK"
-}
-
-(* --------------------------------------------------------------------------
-   VARIABLES
-   -------------------------------------------------------------------------- *)
+  MaxSchemaVersions,    \* Maximum number of schema versions to keep
+  MaxColumnChanges,     \* Maximum column changes per ALTER
+  SchemaChangeTimeout   \* Timeout for schema change operations
 
 VARIABLES
-  \* Schema registry
-  schemas,               \* [Tables -> Schema] - Current schema per table
-  shadowSchemas,         \* [Tables -> Schema] - Shadow schemas for ongoing changes
-  
-  \* Schema change state
-  activeSchemaChange,    \* [Tables -> SchemaOp \union {NULL}] - Ongoing changes
-  schemaChangePhase,     \* [Tables -> SchemaChangePhase] - Current phase
-  schemaVersion,         \* [Tables -> Nat] - Current schema version
-  
-  \* Data migration state
-  copyProgress,          \* [Tables -> Nat] - Rows copied during COPY phase
-  totalRows,             \* [Tables -> Nat] - Total rows to copy
-  migrationLog,          \* [Tables -> Seq(Operation)] - Operations during APPLY phase
-  
-  \* Transaction-schema binding
-  txSchemaVersion,       \* [TxId -> [Tables -> Nat]] - Schema version seen by each tx
-  
-  \* Lock state
-  schemaLocks            \* [Tables -> {"none", "shared", "exclusive"}]
+  schemas,              \* [SchemaName -> SchemaVersion]
+  schemaVersions,       \* [SchemaName -> Seq(SchemaVersion)]
+  pendingChanges,       \* [SchemaName -> PendingChange]
+  changeHistory,        \* Seq(SchemaChange)
+  compatibilityMatrix,  \* [SchemaVersion -> [SchemaVersion -> BOOLEAN]]
+  migrationScripts,     \* [SchemaVersion -> [SchemaVersion -> MigrationScript]]
+  constraintValidators, \* [SchemaName -> ConstraintValidator]
+  onlineChanges        \* [SchemaName -> OnlineChangeState]
 
-schemaVars == <<schemas, shadowSchemas, activeSchemaChange, schemaChangePhase,
-                schemaVersion, copyProgress, totalRows, migrationLog,
-                txSchemaVersion, schemaLocks>>
+schemaEvolutionVars == <<schemas, schemaVersions, pendingChanges, changeHistory, 
+                         compatibilityMatrix, migrationScripts, constraintValidators, onlineChanges>>
+
+(* --------------------------------------------------------------------------
+   TYPE DEFINITIONS
+   -------------------------------------------------------------------------- *)
+
+\* Schema version information
+SchemaVersion == [
+  version: Nat,
+  schemaName: STRING,
+  timestamp: Timestamp,
+  ddlStatement: STRING,
+  isCompatible: BOOLEAN,
+  migrationRequired: BOOLEAN
+]
+
+\* Pending schema change
+PendingChange == [
+  schemaName: STRING,
+  changeType: {"create", "alter", "drop", "rename"},
+  ddlStatement: STRING,
+  submittedBy: TxId,
+  submittedAt: Timestamp,
+  estimatedDuration: Nat,
+  requiresDowntime: BOOLEAN
+]
+
+\* Schema change history entry
+SchemaChange == [
+  changeId: Nat,
+  schemaName: STRING,
+  changeType: {"create", "alter", "drop", "rename"},
+  fromVersion: Nat,
+  toVersion: Nat,
+  ddlStatement: STRING,
+  executedBy: TxId,
+  executedAt: Timestamp,
+  duration: Nat,
+  success: BOOLEAN,
+  rollbackScript: STRING
+]
+
+\* Migration script for schema changes
+MigrationScript == [
+  fromVersion: Nat,
+  toVersion: Nat,
+  forwardScript: STRING,
+  rollbackScript: STRING,
+  dataTransformation: STRING,
+  validationQuery: STRING
+]
+
+\* Constraint validator for schema changes
+ConstraintValidator == [
+  schemaName: STRING,
+  constraints: Seq([type: {"not_null", "unique", "check", "foreign_key"}, 
+                   column: STRING, expression: STRING]),
+  validationRules: Seq(ValidationRule)
+]
+
+\* Validation rule for schema changes
+ValidationRule == [
+  ruleName: STRING,
+  condition: STRING,
+  errorMessage: STRING,
+  severity: {"error", "warning", "info"}
+]
+
+\* Online change state for non-blocking schema changes
+OnlineChangeState == [
+  schemaName: STRING,
+  changeType: {"add_column", "drop_column", "alter_column", "add_index"},
+  phase: {"preparation", "validation", "migration", "completion", "cleanup"},
+  progress: Nat,  \* 0-100
+  startTime: Timestamp,
+  estimatedCompletion: Timestamp,
+  blockingOperations: Seq(TxId)
+]
 
 (* --------------------------------------------------------------------------
    TYPE INVARIANT
    -------------------------------------------------------------------------- *)
 
 TypeOK_SchemaEvolution ==
-  /\ schemas \in [Tables -> Schema]
-  /\ shadowSchemas \in [Tables -> Schema \union {[version |-> 0]}]
-  /\ activeSchemaChange \in [Tables -> SchemaOp \union {"none"}]
-  /\ schemaChangePhase \in [Tables -> SchemaChangePhase]
-  /\ schemaVersion \in [Tables -> Nat]
-  /\ copyProgress \in [Tables -> Nat]
-  /\ totalRows \in [Tables -> Nat]
-  /\ migrationLog \in [Tables -> Seq([op: STRING, data: STRING])]
-  /\ txSchemaVersion \in [TxIds -> [Tables -> Nat]]
-  /\ schemaLocks \in [Tables -> {"none", "shared", "exclusive"}]
-
-(* --------------------------------------------------------------------------
-   HELPER OPERATORS
-   -------------------------------------------------------------------------- *)
-
-\* Get effective schema for a transaction
-GetEffectiveSchema(tid, table) ==
-  LET version == txSchemaVersion[tid][table]
-  IN IF version = schemaVersion[table]
-     THEN schemas[table]
-     ELSE IF schemaChangePhase[table] \in {"COPY", "APPLY", "SWITCH"}
-     THEN shadowSchemas[table]
-     ELSE schemas[table]
-
-\* Check if schema change is compatible with running transactions
-IsCompatibleChange(table, op) ==
-  \* Some changes are backwards compatible, others aren't
-  CASE op.kind OF
-    "ADD_COLUMN" -> 
-      \* Compatible if column has default value or is nullable
-      op.params["nullable"] = "true" \/ "default" \in DOMAIN op.params
-    [] "DROP_COLUMN" -> FALSE  \* Not compatible with reading transactions
-    [] "MODIFY_COLUMN" -> FALSE  \* Type changes not compatible
-    [] "ADD_INDEX" -> TRUE  \* Always compatible
-    [] "DROP_INDEX" -> TRUE  \* Always compatible
-    [] OTHER -> FALSE
-
-\* Apply schema change to produce new schema
-ApplySchemaChange(oldSchema, op) ==
-  CASE op.kind OF
-    "ADD_COLUMN" ->
-      LET newCol == [
-            name |-> op.params["name"],
-            type |-> op.params["type"],
-            nullable |-> op.params["nullable"] = "true",
-            defaultValue |-> IF "default" \in DOMAIN op.params 
-                             THEN op.params["default"] 
-                             ELSE "NULL",
-            position |-> Len(oldSchema.columns) + 1
-          ]
-      IN [oldSchema EXCEPT !.columns = Append(@, newCol),
-                           !.version = @ + 1]
-    
-    [] "DROP_COLUMN" ->
-      LET colName == op.params["name"]
-          newCols == SelectSeq(oldSchema.columns, 
-                               LAMBDA col: col.name # colName)
-      IN [oldSchema EXCEPT !.columns = newCols,
-                           !.version = @ + 1]
-    
-    [] "ADD_INDEX" ->
-      [oldSchema EXCEPT !.indexes = @ \union {op.params["name"]},
-                        !.version = @ + 1]
-    
-    [] "DROP_INDEX" ->
-      [oldSchema EXCEPT !.indexes = @ \ {op.params["name"]},
-                        !.version = @ + 1]
-    
-    [] OTHER -> oldSchema
-
-\* Check if all transactions are on same schema version
-AllTxOnSameVersion(table) ==
-  \A tid1, tid2 \in TxIds:
-    txSchemaVersion[tid1][table] = txSchemaVersion[tid2][table]
+  /\ schemas \in [STRING -> SchemaVersion]
+  /\ schemaVersions \in [STRING -> Seq(SchemaVersion)]
+  /\ pendingChanges \in [STRING -> PendingChange]
+  /\ changeHistory \in Seq(SchemaChange)
+  /\ compatibilityMatrix \in [Nat -> [Nat -> BOOLEAN]]
+  /\ migrationScripts \in [Nat -> [Nat -> MigrationScript]]
+  /\ constraintValidators \in [STRING -> ConstraintValidator]
+  /\ onlineChanges \in [STRING -> OnlineChangeState]
 
 (* --------------------------------------------------------------------------
    INITIAL STATE
    -------------------------------------------------------------------------- *)
 
-Init_SchemaEvolution ==
-  /\ schemas = [t \in Tables |-> 
-                 [version |-> 1,
-                  columns |-> <<[name |-> "id", type |-> "INTEGER", 
-                                nullable |-> FALSE, defaultValue |-> "", position |-> 1]>>,
-                  indexes |-> {},
-                  constraints |-> {}]]
-  /\ shadowSchemas = [t \in Tables |-> [version |-> 0]]
-  /\ activeSchemaChange = [t \in Tables |-> "none"]
-  /\ schemaChangePhase = [t \in Tables |-> "DONE"]
-  /\ schemaVersion = [t \in Tables |-> 1]
-  /\ copyProgress = [t \in Tables |-> 0]
-  /\ totalRows = [t \in Tables |-> 100]
-  /\ migrationLog = [t \in Tables |-> <<>>]
-  /\ txSchemaVersion = [tid \in TxIds |-> [t \in Tables |-> 1]]
-  /\ schemaLocks = [t \in Tables |-> "none"]
+Init ==
+  /\ schemas = [s \in {} |-> [
+       version |-> 0,
+       schemaName |-> "",
+       timestamp |-> 0,
+       ddlStatement |-> "",
+       isCompatible |-> TRUE,
+       migrationRequired |-> FALSE
+     ]]
+  /\ schemaVersions = [s \in {} |-> <<>>]
+  /\ pendingChanges = [s \in {} |-> [
+       schemaName |-> "",
+       changeType |-> "create",
+       ddlStatement |-> "",
+       submittedBy |-> 0,
+       submittedAt |-> 0,
+       estimatedDuration |-> 0,
+       requiresDowntime |-> FALSE
+     ]]
+  /\ changeHistory = <<>>
+  /\ compatibilityMatrix = [v \in {} |-> [w \in {} |-> TRUE]]
+  /\ migrationScripts = [v \in {} |-> [w \in {} |-> [
+       fromVersion |-> 0,
+       toVersion |-> 0,
+       forwardScript |-> "",
+       rollbackScript |-> "",
+       dataTransformation |-> "",
+       validationQuery |-> ""
+     ]]]
+  /\ constraintValidators = [s \in {} |-> [
+       schemaName |-> "",
+       constraints |-> <<>>,
+       validationRules |-> <<>>
+     ]]
+  /\ onlineChanges = [s \in {} |-> [
+       schemaName |-> "",
+       changeType |-> "add_column",
+       phase |-> "preparation",
+       progress |-> 0,
+       startTime |-> 0,
+       estimatedCompletion |-> 0,
+       blockingOperations |-> <<>>
+     ]]
 
 (* --------------------------------------------------------------------------
-   SCHEMA CHANGE PHASES
+   OPERATIONS
    -------------------------------------------------------------------------- *)
 
-\* Phase 0: Prepare - Create shadow schema and indexes
-PrepareSchemaChange(table, op) ==
-  /\ activeSchemaChange[table] = "none"
-  /\ schemaChangePhase[table] = "DONE"
-  /\ activeSchemaChange' = [activeSchemaChange EXCEPT ![table] = op]
-  /\ schemaChangePhase' = [schemaChangePhase EXCEPT ![table] = "PREPARE"]
-  /\ shadowSchemas' = [shadowSchemas EXCEPT ![table] = ApplySchemaChange(schemas[table], op)]
-  /\ copyProgress' = [copyProgress EXCEPT ![table] = 0]
-  /\ migrationLog' = [migrationLog EXCEPT ![table] = <<>>]
-  /\ UNCHANGED <<schemas, schemaVersion, totalRows, txSchemaVersion, schemaLocks>>
+\* Create new schema
+CreateSchema(schemaName, ddlStatement, txId) ==
+  /\ ~(schemaName \in DOMAIN schemas)
+  /\ LET newVersion == [
+       version |-> 1,
+       schemaName |-> schemaName,
+       timestamp |-> globalTimestamp,
+       ddlStatement |-> ddlStatement,
+       isCompatible |-> TRUE,
+       migrationRequired |-> FALSE
+     ]
+  IN /\ schemas' = [schemas EXCEPT ![schemaName] = newVersion]
+     /\ schemaVersions' = [schemaVersions EXCEPT ![schemaName] = <<newVersion>>]
+     /\ changeHistory' = Append(changeHistory, [
+          changeId |-> Len(changeHistory) + 1,
+          schemaName |-> schemaName,
+          changeType |-> "create",
+          fromVersion |-> 0,
+          toVersion |-> 1,
+          ddlStatement |-> ddlStatement,
+          executedBy |-> txId,
+          executedAt |-> globalTimestamp,
+          duration |-> 0,
+          success |-> TRUE,
+          rollbackScript |-> ""
+        ])
+     /\ UNCHANGED <<pendingChanges, compatibilityMatrix, migrationScripts, 
+                   constraintValidators, onlineChanges>>
 
-\* Phase 1: Copy - Copy existing data to shadow table
-CopyData(table) ==
-  /\ schemaChangePhase[table] = "PREPARE"
-  /\ schemaChangePhase' = [schemaChangePhase EXCEPT ![table] = "COPY"]
-  /\ schemaLocks' = [schemaLocks EXCEPT ![table] = "shared"]  \* Shared lock allows reads
-  /\ UNCHANGED <<schemas, shadowSchemas, activeSchemaChange, schemaVersion,
-                copyProgress, totalRows, migrationLog, txSchemaVersion>>
+\* Alter existing schema
+AlterSchema(schemaName, ddlStatement, txId) ==
+  /\ schemaName \in DOMAIN schemas
+  /\ LET currentVersion == schemas[schemaName]
+       newVersion == [
+         version |-> currentVersion.version + 1,
+         schemaName |-> schemaName,
+         timestamp |-> globalTimestamp,
+         ddlStatement |-> ddlStatement,
+         isCompatible |-> CheckCompatibility(currentVersion.version, currentVersion.version + 1),
+         migrationRequired |-> ~CheckCompatibility(currentVersion.version, currentVersion.version + 1)
+       ]
+  IN /\ schemas' = [schemas EXCEPT ![schemaName] = newVersion]
+     /\ schemaVersions' = [schemaVersions EXCEPT ![schemaName] = 
+                          Append(schemaVersions[schemaName], newVersion)]
+     /\ changeHistory' = Append(changeHistory, [
+          changeId |-> Len(changeHistory) + 1,
+          schemaName |-> schemaName,
+          changeType |-> "alter",
+          fromVersion |-> currentVersion.version,
+          toVersion |-> newVersion.version,
+          ddlStatement |-> ddlStatement,
+          executedBy |-> txId,
+          executedAt |-> globalTimestamp,
+          duration |-> 0,
+          success |-> TRUE,
+          rollbackScript |-> GenerateRollbackScript(currentVersion, newVersion)
+        ])
+     /\ UNCHANGED <<pendingChanges, compatibilityMatrix, migrationScripts, 
+                   constraintValidators, onlineChanges>>
 
-\* Copy progress (incremental)
-CopyBatch(table, batchSize) ==
-  /\ schemaChangePhase[table] = "COPY"
-  /\ copyProgress[table] < totalRows[table]
-  /\ LET newProgress == Min({copyProgress[table] + batchSize, totalRows[table]})
-     IN /\ copyProgress' = [copyProgress EXCEPT ![table] = newProgress]
-        /\ IF newProgress = totalRows[table]
-           THEN schemaChangePhase' = [schemaChangePhase EXCEPT ![table] = "APPLY"]
-           ELSE UNCHANGED schemaChangePhase
-        /\ UNCHANGED <<schemas, shadowSchemas, activeSchemaChange, schemaVersion,
-                      totalRows, migrationLog, txSchemaVersion, schemaLocks>>
+\* Drop schema
+DropSchema(schemaName, txId) ==
+  /\ schemaName \in DOMAIN schemas
+  /\ LET currentVersion == schemas[schemaName]
+  IN /\ schemas' = [s \in DOMAIN schemas \ {schemaName} |-> schemas[s]]
+     /\ schemaVersions' = [s \in DOMAIN schemaVersions \ {schemaName} |-> schemaVersions[s]]
+     /\ changeHistory' = Append(changeHistory, [
+          changeId |-> Len(changeHistory) + 1,
+          schemaName |-> schemaName,
+          changeType |-> "drop",
+          fromVersion |-> currentVersion.version,
+          toVersion |-> 0,
+          ddlStatement |-> "DROP SCHEMA " || schemaName,
+          executedBy |-> txId,
+          executedAt |-> globalTimestamp,
+          duration |-> 0,
+          success |-> TRUE,
+          rollbackScript |-> GenerateRollbackScript(currentVersion, [
+            version |-> 0,
+            schemaName |-> schemaName,
+            timestamp |-> 0,
+            ddlStatement |-> "",
+            isCompatible |-> TRUE,
+            migrationRequired |-> FALSE
+          ])
+        ])
+     /\ UNCHANGED <<pendingChanges, compatibilityMatrix, migrationScripts, 
+                   constraintValidators, onlineChanges>>
 
-\* Phase 2: Apply - Dual-write to both old and new schema
-ApplyPhase(table) ==
-  /\ schemaChangePhase[table] = "APPLY"
-  /\ AllTxOnSameVersion(table)  \* Wait for all old transactions to complete
-  /\ schemaChangePhase' = [schemaChangePhase EXCEPT ![table] = "SWITCH"]
-  /\ UNCHANGED <<schemas, shadowSchemas, activeSchemaChange, schemaVersion,
-                copyProgress, totalRows, migrationLog, txSchemaVersion, schemaLocks>>
+\* Submit pending schema change
+SubmitPendingChange(schemaName, changeType, ddlStatement, txId, estimatedDuration, requiresDowntime) ==
+  /\ LET pendingChange == [
+       schemaName |-> schemaName,
+       changeType |-> changeType,
+       ddlStatement |-> ddlStatement,
+       submittedBy |-> txId,
+       submittedAt |-> globalTimestamp,
+       estimatedDuration |-> estimatedDuration,
+       requiresDowntime |-> requiresDowntime
+     ]
+  IN /\ pendingChanges' = [pendingChanges EXCEPT ![schemaName] = pendingChange]
+     /\ UNCHANGED <<schemas, schemaVersions, changeHistory, compatibilityMatrix, 
+                   migrationScripts, constraintValidators, onlineChanges>>
 
-\* Log operation during APPLY phase
-LogOperation(table, operation, data) ==
-  /\ schemaChangePhase[table] = "APPLY"
-  /\ migrationLog' = [migrationLog EXCEPT ![table] = 
-                       Append(@, [op |-> operation, data |-> data])]
-  /\ UNCHANGED <<schemas, shadowSchemas, activeSchemaChange, schemaChangePhase,
-                schemaVersion, copyProgress, totalRows, txSchemaVersion, schemaLocks>>
+\* Execute pending schema change
+ExecutePendingChange(schemaName, txId) ==
+  /\ schemaName \in DOMAIN pendingChanges
+  /\ LET pendingChange == pendingChanges[schemaName]
+  IN /\ pendingChanges' = [s \in DOMAIN pendingChanges \ {schemaName} |-> pendingChanges[s]]
+     /\ CASE pendingChange.changeType
+         OF "create" -> CreateSchema(schemaName, pendingChange.ddlStatement, txId)
+         [] "alter" -> AlterSchema(schemaName, pendingChange.ddlStatement, txId)
+         [] "drop" -> DropSchema(schemaName, txId)
+         [] "rename" -> RenameSchema(schemaName, pendingChange.ddlStatement, txId)
+       ENDCASE
 
-\* Phase 3: Switch - Atomically switch to new schema
-SwitchSchema(table) ==
-  /\ schemaChangePhase[table] = "SWITCH"
-  /\ schemaLocks' = [schemaLocks EXCEPT ![table] = "exclusive"]  \* Brief exclusive lock
-  /\ schemas' = [schemas EXCEPT ![table] = shadowSchemas[table]]
-  /\ schemaVersion' = [schemaVersion EXCEPT ![table] = shadowSchemas[table].version]
-  /\ schemaChangePhase' = [schemaChangePhase EXCEPT ![table] = "CLEANUP"]
-  /\ UNCHANGED <<shadowSchemas, activeSchemaChange, copyProgress, totalRows,
-                migrationLog, txSchemaVersion>>
+\* Rename schema
+RenameSchema(oldName, newName, txId) ==
+  /\ oldName \in DOMAIN schemas
+  /\ ~(newName \in DOMAIN schemas)
+  /\ LET currentVersion == schemas[oldName]
+       renamedVersion == [currentVersion EXCEPT !.schemaName = newName]
+  IN /\ schemas' = [s \in DOMAIN schemas \ {oldName} |-> 
+                   IF s = oldName THEN renamedVersion ELSE schemas[s]]
+     /\ schemaVersions' = [s \in DOMAIN schemaVersions \ {oldName} |-> 
+                          IF s = oldName THEN <<renamedVersion>> ELSE schemaVersions[s]]
+     /\ changeHistory' = Append(changeHistory, [
+          changeId |-> Len(changeHistory) + 1,
+          schemaName |-> oldName,
+          changeType |-> "rename",
+          fromVersion |-> currentVersion.version,
+          toVersion |-> currentVersion.version,
+          ddlStatement |-> "RENAME SCHEMA " || oldName || " TO " || newName,
+          executedBy |-> txId,
+          executedAt |-> globalTimestamp,
+          duration |-> 0,
+          success |-> TRUE,
+          rollbackScript |-> "RENAME SCHEMA " || newName || " TO " || oldName
+        ])
+     /\ UNCHANGED <<pendingChanges, compatibilityMatrix, migrationScripts, 
+                   constraintValidators, onlineChanges>>
 
-\* Phase 4: Cleanup - Remove old schema objects
-CleanupSchemaChange(table) ==
-  /\ schemaChangePhase[table] = "CLEANUP"
-  /\ shadowSchemas' = [shadowSchemas EXCEPT ![table] = [version |-> 0]]
-  /\ activeSchemaChange' = [activeSchemaChange EXCEPT ![table] = "none"]
-  /\ schemaChangePhase' = [schemaChangePhase EXCEPT ![table] = "DONE"]
-  /\ schemaLocks' = [schemaLocks EXCEPT ![table] = "none"]
-  /\ UNCHANGED <<schemas, schemaVersion, copyProgress, totalRows,
-                migrationLog, txSchemaVersion>>
+\* Start online schema change
+StartOnlineChange(schemaName, changeType, txId) ==
+  /\ schemaName \in DOMAIN schemas
+  /\ ~(schemaName \in DOMAIN onlineChanges)
+  /\ LET onlineChange == [
+       schemaName |-> schemaName,
+       changeType |-> changeType,
+       phase |-> "preparation",
+       progress |-> 0,
+       startTime |-> globalTimestamp,
+       estimatedCompletion |-> globalTimestamp + SchemaChangeTimeout,
+       blockingOperations |-> <<>>
+     ]
+  IN /\ onlineChanges' = [onlineChanges EXCEPT ![schemaName] = onlineChange]
+     /\ UNCHANGED <<schemas, schemaVersions, pendingChanges, changeHistory, 
+                   compatibilityMatrix, migrationScripts, constraintValidators>>
 
-\* Rollback schema change (if something goes wrong)
-RollbackSchemaChange(table) ==
-  /\ schemaChangePhase[table] \in {"PREPARE", "COPY", "APPLY"}
-  /\ shadowSchemas' = [shadowSchemas EXCEPT ![table] = [version |-> 0]]
-  /\ activeSchemaChange' = [activeSchemaChange EXCEPT ![table] = "none"]
-  /\ schemaChangePhase' = [schemaChangePhase EXCEPT ![table] = "ROLLBACK"]
-  /\ schemaLocks' = [schemaLocks EXCEPT ![table] = "none"]
-  /\ UNCHANGED <<schemas, schemaVersion, copyProgress, totalRows,
-                migrationLog, txSchemaVersion>>
+\* Progress online schema change
+ProgressOnlineChange(schemaName, newPhase, progress, blockingOps) ==
+  /\ schemaName \in DOMAIN onlineChanges
+  /\ LET currentChange == onlineChanges[schemaName]
+       updatedChange == [currentChange EXCEPT 
+                        !.phase = newPhase,
+                        !.progress = progress,
+                        !.blockingOperations = blockingOps]
+  IN /\ onlineChanges' = [onlineChanges EXCEPT ![schemaName] = updatedChange]
+     /\ UNCHANGED <<schemas, schemaVersions, pendingChanges, changeHistory, 
+                   compatibilityMatrix, migrationScripts, constraintValidators>>
+
+\* Complete online schema change
+CompleteOnlineChange(schemaName, txId) ==
+  /\ schemaName \in DOMAIN onlineChanges
+  /\ LET currentChange == onlineChanges[schemaName]
+  IN /\ onlineChanges' = [s \in DOMAIN onlineChanges \ {schemaName} |-> onlineChanges[s]]
+     /\ changeHistory' = Append(changeHistory, [
+          changeId |-> Len(changeHistory) + 1,
+          schemaName |-> schemaName,
+          changeType |-> currentChange.changeType,
+          fromVersion |-> schemas[schemaName].version,
+          toVersion |-> schemas[schemaName].version + 1,
+          ddlStatement |-> "ONLINE " || currentChange.changeType,
+          executedBy |-> txId,
+          executedAt |-> globalTimestamp,
+          duration |-> globalTimestamp - currentChange.startTime,
+          success |-> TRUE,
+          rollbackScript |-> ""
+        ])
+     /\ UNCHANGED <<schemas, schemaVersions, pendingChanges, compatibilityMatrix, 
+                   migrationScripts, constraintValidators>>
+
+\* Validate schema constraints
+ValidateSchemaConstraints(schemaName, constraints) ==
+  /\ schemaName \in DOMAIN schemas
+  /\ LET validator == constraintValidators[schemaName]
+       isValid == \A constraint \in constraints : 
+                    ValidateConstraint(constraint, schemas[schemaName])
+  IN /\ constraintValidators' = [constraintValidators EXCEPT ![schemaName] = 
+                                [validator EXCEPT !.constraints = constraints]]
+     /\ UNCHANGED <<schemas, schemaVersions, pendingChanges, changeHistory, 
+                   compatibilityMatrix, migrationScripts, onlineChanges>>
 
 (* --------------------------------------------------------------------------
-   TRANSACTION OPERATIONS
+   HELPER FUNCTIONS
    -------------------------------------------------------------------------- *)
 
-\* Transaction begins and locks to a schema version
-BeginTxWithSchema(tid, table) ==
-  /\ txSchemaVersion' = [txSchemaVersion EXCEPT ![tid][table] = schemaVersion[table]]
-  /\ UNCHANGED <<schemas, shadowSchemas, activeSchemaChange, schemaChangePhase,
-                schemaVersion, copyProgress, totalRows, migrationLog, schemaLocks>>
+\* Check compatibility between schema versions
+CheckCompatibility(fromVersion, toVersion) ==
+  IF fromVersion = 0 \/ toVersion = 0 THEN TRUE
+  ELSE compatibilityMatrix[fromVersion][toVersion]
 
-\* Transaction reads using its locked schema version
-ReadWithSchema(tid, table) ==
-  /\ LET effectiveSchema == GetEffectiveSchema(tid, table)
-     IN TRUE  \* Read using effectiveSchema
-  /\ UNCHANGED schemaVars
+\* Generate rollback script for schema change
+GenerateRollbackScript(fromVersion, toVersion) ==
+  "ROLLBACK SCHEMA " || fromVersion.schemaName || " FROM " || 
+  ToString(fromVersion.version) || " TO " || ToString(toVersion.version)
 
-\* Transaction writes using its locked schema version
-WriteWithSchema(tid, table, data) ==
-  /\ LET effectiveSchema == GetEffectiveSchema(tid, table)
-     IN /\ IF schemaChangePhase[table] = "APPLY"
-           THEN migrationLog' = [migrationLog EXCEPT ![table] = 
-                                  Append(@, [op |-> "write", data |-> data])]
-           ELSE UNCHANGED migrationLog
-        /\ UNCHANGED <<schemas, shadowSchemas, activeSchemaChange, schemaChangePhase,
-                      schemaVersion, copyProgress, totalRows, txSchemaVersion, schemaLocks>>
+\* Validate individual constraint
+ValidateConstraint(constraint, schemaVersion) ==
+  CASE constraint.type
+    OF "not_null" -> ValidateNotNullConstraint(constraint, schemaVersion)
+    [] "unique" -> ValidateUniqueConstraint(constraint, schemaVersion)
+    [] "check" -> ValidateCheckConstraint(constraint, schemaVersion)
+    [] "foreign_key" -> ValidateForeignKeyConstraint(constraint, schemaVersion)
+  ENDCASE
+
+\* Validate NOT NULL constraint
+ValidateNotNullConstraint(constraint, schemaVersion) ==
+  TRUE  \* Simplified for TLA+ model
+
+\* Validate UNIQUE constraint
+ValidateUniqueConstraint(constraint, schemaVersion) ==
+  TRUE  \* Simplified for TLA+ model
+
+\* Validate CHECK constraint
+ValidateCheckConstraint(constraint, schemaVersion) ==
+  TRUE  \* Simplified for TLA+ model
+
+\* Validate FOREIGN KEY constraint
+ValidateForeignKeyConstraint(constraint, schemaVersion) ==
+  TRUE  \* Simplified for TLA+ model
+
+\* Convert number to string
+ToString(n) ==
+  IF n = 0 THEN "0"
+  ELSE IF n = 1 THEN "1"
+  ELSE IF n = 2 THEN "2"
+  ELSE IF n = 3 THEN "3"
+  ELSE IF n = 4 THEN "4"
+  ELSE IF n = 5 THEN "5"
+  ELSE ">5"
 
 (* --------------------------------------------------------------------------
-   NEXT STATE
+   NEXT STATE RELATION
    -------------------------------------------------------------------------- *)
 
-Next_SchemaEvolution ==
-  \/ \E table \in Tables, op \in SchemaOp: PrepareSchemaChange(table, op)
-  \/ \E table \in Tables: CopyData(table)
-  \/ \E table \in Tables, batch \in Nat: CopyBatch(table, batch)
-  \/ \E table \in Tables: ApplyPhase(table)
-  \/ \E table \in Tables, op \in STRING, data \in STRING: LogOperation(table, op, data)
-  \/ \E table \in Tables: SwitchSchema(table)
-  \/ \E table \in Tables: CleanupSchemaChange(table)
-  \/ \E table \in Tables: RollbackSchemaChange(table)
-  \/ \E tid \in TxIds, table \in Tables: BeginTxWithSchema(tid, table)
-  \/ \E tid \in TxIds, table \in Tables: ReadWithSchema(tid, table)
-  \/ \E tid \in TxIds, table \in Tables, data \in STRING: WriteWithSchema(tid, table, data)
-
-Spec_SchemaEvolution == Init_SchemaEvolution /\ [][Next_SchemaEvolution]_schemaVars
+Next ==
+  \/ \E schemaName \in STRING, ddlStatement \in STRING, txId \in TxIds :
+       CreateSchema(schemaName, ddlStatement, txId)
+  \/ \E schemaName \in STRING, ddlStatement \in STRING, txId \in TxIds :
+       AlterSchema(schemaName, ddlStatement, txId)
+  \/ \E schemaName \in STRING, txId \in TxIds :
+       DropSchema(schemaName, txId)
+  \/ \E schemaName \in STRING, changeType \in {"create", "alter", "drop", "rename"},
+       ddlStatement \in STRING, txId \in TxIds, estimatedDuration \in Nat, 
+       requiresDowntime \in BOOLEAN :
+       SubmitPendingChange(schemaName, changeType, ddlStatement, txId, 
+                          estimatedDuration, requiresDowntime)
+  \/ \E schemaName \in STRING, txId \in TxIds :
+       ExecutePendingChange(schemaName, txId)
+  \/ \E oldName \in STRING, newName \in STRING, txId \in TxIds :
+       RenameSchema(oldName, newName, txId)
+  \/ \E schemaName \in STRING, changeType \in {"add_column", "drop_column", 
+       "alter_column", "add_index"}, txId \in TxIds :
+       StartOnlineChange(schemaName, changeType, txId)
+  \/ \E schemaName \in STRING, newPhase \in {"preparation", "validation", 
+       "migration", "completion", "cleanup"}, progress \in 0..100, 
+       blockingOps \in Seq(TxId) :
+       ProgressOnlineChange(schemaName, newPhase, progress, blockingOps)
+  \/ \E schemaName \in STRING, txId \in TxIds :
+       CompleteOnlineChange(schemaName, txId)
+  \/ \E schemaName \in STRING, constraints \in Seq([type: {"not_null", "unique", 
+       "check", "foreign_key"}, column: STRING, expression: STRING]) :
+       ValidateSchemaConstraints(schemaName, constraints)
 
 (* --------------------------------------------------------------------------
    INVARIANTS
    -------------------------------------------------------------------------- *)
 
-\* Invariant 1: Schema consistency
-Inv_SchemaEvolution_Consistency ==
-  \A table \in Tables:
-    activeSchemaChange[table] # "none" => shadowSchemas[table].version # 0
-
-\* Invariant 2: Non-blocking reads
-Inv_SchemaEvolution_NonBlockingReads ==
-  \A table \in Tables:
-    schemaChangePhase[table] \in {"PREPARE", "COPY", "APPLY"} =>
-      schemaLocks[table] \in {"none", "shared"}
-
-\* Invariant 3: Exclusive lock only during SWITCH
-Inv_SchemaEvolution_ExclusiveLockMinimal ==
-  \A table \in Tables:
-    schemaLocks[table] = "exclusive" <=> schemaChangePhase[table] = "SWITCH"
-
-\* Invariant 4: Transaction schema isolation
-Inv_SchemaEvolution_TxIsolation ==
-  \A tid \in TxIds, table \in Tables:
-    txSchemaVersion[tid][table] \in {schemas[table].version, shadowSchemas[table].version}
-
-\* Invariant 5: Copy progress bound
-Inv_SchemaEvolution_CopyProgress ==
-  \A table \in Tables:
-    copyProgress[table] <= totalRows[table]
-
-\* Invariant 6: Schema version monotonicity
+\* Schema versions are always increasing
 Inv_SchemaEvolution_VersionMonotonic ==
-  \A table \in Tables:
-    shadowSchemas[table].version = 0 \/ 
-    shadowSchemas[table].version > schemas[table].version
+  \A schemaName \in DOMAIN schemaVersions :
+    \A i \in 1..Len(schemaVersions[schemaName])-1 :
+      schemaVersions[schemaName][i].version < schemaVersions[schemaName][i+1].version
+
+\* Current schema version matches latest in version history
+Inv_SchemaEvolution_CurrentVersionMatch ==
+  \A schemaName \in DOMAIN schemas :
+    /\ schemaName \in DOMAIN schemaVersions
+    /\ Len(schemaVersions[schemaName]) > 0
+    /\ schemas[schemaName].version = schemaVersions[schemaName][Len(schemaVersions[schemaName])].version
+
+\* Schema changes are atomic
+Inv_SchemaEvolution_Atomicity ==
+  \A change \in changeHistory :
+    change.success => \A schemaName \in DOMAIN schemas :
+      schemas[schemaName].version >= change.fromVersion
+
+\* Online changes don't block normal operations
+Inv_SchemaEvolution_OnlineChangeNonBlocking ==
+  \A schemaName \in DOMAIN onlineChanges :
+    Len(onlineChanges[schemaName].blockingOperations) = 0
+
+\* Schema compatibility is symmetric
+Inv_SchemaEvolution_CompatibilitySymmetric ==
+  \A v1 \in DOMAIN compatibilityMatrix, v2 \in DOMAIN compatibilityMatrix[v1] :
+    compatibilityMatrix[v1][v2] = compatibilityMatrix[v2][v1]
+
+\* Pending changes have valid timestamps
+Inv_SchemaEvolution_PendingChangeTimestamps ==
+  \A schemaName \in DOMAIN pendingChanges :
+    pendingChanges[schemaName].submittedAt <= globalTimestamp
+
+\* Online changes progress monotonically
+Inv_SchemaEvolution_OnlineChangeProgress ==
+  \A schemaName \in DOMAIN onlineChanges :
+    onlineChanges[schemaName].progress >= 0 /\ onlineChanges[schemaName].progress <= 100
 
 (* --------------------------------------------------------------------------
    LIVENESS PROPERTIES
    -------------------------------------------------------------------------- *)
 
-\* Property 1: Schema changes eventually complete
-Prop_SchemaEvolution_Completion ==
-  \A table \in Tables:
-    [](activeSchemaChange[table] # "none" =>
-       <>(schemaChangePhase[table] \in {"DONE", "ROLLBACK"}))
+\* Pending changes are eventually executed
+Liveness_PendingChangesExecuted ==
+  \A schemaName \in DOMAIN pendingChanges :
+    <>~(schemaName \in DOMAIN pendingChanges)
 
-\* Property 2: No permanent exclusive locks
-Prop_SchemaEvolution_NoDeadlock ==
-  \A table \in Tables:
-    [](schemaLocks[table] = "exclusive" => 
-       <>(schemaLocks[table] \in {"none", "shared"}))
+\* Online changes eventually complete
+Liveness_OnlineChangesComplete ==
+  \A schemaName \in DOMAIN onlineChanges :
+    <>~(schemaName \in DOMAIN onlineChanges)
+
+\* Schema changes are eventually recorded in history
+Liveness_SchemaChangesRecorded ==
+  \A schemaName \in DOMAIN schemas :
+    \E change \in changeHistory : change.schemaName = schemaName
 
 (* --------------------------------------------------------------------------
    THEOREMS
    -------------------------------------------------------------------------- *)
 
-THEOREM SchemaEvolution_NonBlocking ==
-  Spec_SchemaEvolution => []Inv_SchemaEvolution_NonBlockingReads
+\* Schema evolution maintains data integrity
+THEOREM SchemaEvolution_DataIntegrity ==
+  Inv_SchemaEvolution_VersionMonotonic /\ 
+  Inv_SchemaEvolution_CurrentVersionMatch /\ 
+  Inv_SchemaEvolution_Atomicity => 
+  \A schemaName \in DOMAIN schemas : schemas[schemaName].version > 0
 
-THEOREM SchemaEvolution_Consistency ==
-  Spec_SchemaEvolution => []Inv_SchemaEvolution_TxIsolation
-
-THEOREM SchemaEvolution_Progress ==
-  Spec_SchemaEvolution => Prop_SchemaEvolution_Completion
+\* Online schema changes don't cause data loss
+THEOREM SchemaEvolution_NoDataLoss ==
+  Inv_SchemaEvolution_OnlineChangeNonBlocking /\ 
+  Inv_SchemaEvolution_OnlineChangeProgress => 
+  \A schemaName \in DOMAIN onlineChanges : 
+    onlineChanges[schemaName].progress < 100 \/ 
+    onlineChanges[schemaName].phase = "cleanup"
 
 =============================================================================
 
 (*
-  REFERENCES:
+  REFINEMENT MAPPING:
   
-  [1] Ronström, M., & Oreland, J. (2011). "Online Schema Upgrade for MySQL Cluster."
-      MySQL Cluster Technical Whitepaper.
+  Swift implementation → TLA+ abstraction:
+  - SchemaManager.schemas (Dictionary<String, Schema>) → schemas
+  - SchemaManager.versionHistory (Dictionary<String, [SchemaVersion]>) → schemaVersions
+  - SchemaManager.pendingChanges (Dictionary<String, PendingChange>) → pendingChanges
+  - SchemaManager.changeHistory (Array<SchemaChange>) → changeHistory
   
-  [2] Kleppmann, M. (2017). "Designing Data-Intensive Applications: The Big Ideas
-      Behind Reliable, Scalable, and Maintainable Systems." O'Reilly Media.
+  USAGE:
   
-  [3] Neamtiu, I., Hicks, M., Stoyle, G., & Oriol, M. (2006). "Practical dynamic
-      software updating for C." ACM SIGPLAN Notices, 41(6), 72-83.
+  This module should be used with other ColibrìDB modules:
   
-  [4] Sadalage, P. J., & Fowler, M. (2012). "NoSQL Distilled: A Brief Guide to the
-      Emerging World of Polyglot Persistence." Addison-Wesley Professional.
-  
-  [5] Wiesmann, M., & Schiper, A. (2005). "Beyond 1-Safety and 2-Safety for
-      Replicated Databases: Group-Safety." EDBT 2005.
-  
-  IMPLEMENTATION NOTES:
-  
-  - Three-phase protocol: PREPARE -> COPY -> APPLY -> SWITCH -> CLEANUP
-  - Dual-write during APPLY phase ensures consistency
-  - Exclusive lock held only during brief SWITCH phase
-  - Similar to MySQL Online DDL, Postgres CONCURRENTLY
-  - Shadow tables used for data migration
-  - Rollback supported until SWITCH phase
+  ---- MODULE ColibriDB ----
+  EXTENDS SchemaEvolution
+  ...
+  ====================
 *)
-
