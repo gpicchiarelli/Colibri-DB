@@ -27,10 +27,10 @@
         </a>
         <nav class="site-nav" data-site-nav>
           <ul class="site-nav__list">
-            <li><a class="site-nav__link{% if page.url == '/' %} site-nav__link--active{% endif %}" href="{{ '/' | relative_url }}">Panoramica</a></li>
+            <li><a class="site-nav__link{% if page.url == '/' %} site-nav__link--active{% endif %}" href="{{ '/' | relative_url }}">Home</a></li>
             <li><a class="site-nav__link{% if page.url contains 'architecture' %} site-nav__link--active{% endif %}" href="{{ '/architecture.html' | relative_url }}">Architettura</a></li>
-            <li><a class="site-nav__link{% if page.url contains 'tla-specifications' %} site-nav__link--active{% endif %}" href="{{ '/tla-specifications.html' | relative_url }}">Specifiche TLA+</a></li>
-            <li><a class="site-nav__link" href="{{ '/wiki/Home.html' | relative_url }}">Wiki</a></li>
+            <li><a class="site-nav__link{% if page.url contains 'tla-specifications' %} site-nav__link--active{% endif %}" href="{{ '/tla-specifications.html' | relative_url }}">TLA+</a></li>
+            <li><a class="site-nav__link{% if page.url contains 'wiki' %} site-nav__link--active{% endif %}" href="{{ '/wiki/Home.html' | relative_url }}">Docs</a></li>
             <li><a class="site-nav__link site-nav__link--external" href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank" rel="noreferrer">GitHub ↗</a></li>
           </ul>
         </nav>
@@ -42,10 +42,10 @@
       </div>
       <nav class="site-nav site-nav--mobile" data-site-nav-mobile>
         <ul class="site-nav__list">
-          <li><a class="site-nav__link" href="{{ '/' | relative_url }}">Panoramica</a></li>
+          <li><a class="site-nav__link" href="{{ '/' | relative_url }}">Home</a></li>
           <li><a class="site-nav__link" href="{{ '/architecture.html' | relative_url }}">Architettura</a></li>
-          <li><a class="site-nav__link" href="{{ '/tla-specifications.html' | relative_url }}">Specifiche TLA+</a></li>
-          <li><a class="site-nav__link" href="{{ '/wiki/Home.html' | relative_url }}">Wiki</a></li>
+          <li><a class="site-nav__link" href="{{ '/tla-specifications.html' | relative_url }}">TLA+</a></li>
+          <li><a class="site-nav__link" href="{{ '/wiki/Home.html' | relative_url }}">Docs</a></li>
           <li><a class="site-nav__link site-nav__link--external" href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank" rel="noreferrer">GitHub ↗</a></li>
         </ul>
       </nav>

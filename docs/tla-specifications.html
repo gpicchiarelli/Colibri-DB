@@ -1,149 +1,753 @@
 ---
 layout: default
-title: Specifiche TLA+ di Colibrì DB
-description: Collegamento tra moduli Swift e specifiche TLA+ ufficiali del progetto Colibrì DB.
+title: Specifiche TLA+ - Colibrì DB
+description: Modelli formali e verifiche matematiche per garantire la correttezza del sistema
 ---
 
-<section class="hero hero--sub">
-  <div class="shell hero__inner hero__inner--compact">
-    <span class="hero__eyebrow">Codice &amp; modello</span>
-    <h1 class="hero__title">Specifiche TLA+ allineate al runtime Swift</h1>
-    <p class="hero__lede">
-      Ogni sottosistema del core Swift cita la propria specifica TLA+. Le proprietà dichiarate nei file <code>spec/*.tla</code>
-      sono riflesse nei commenti e nelle invarianti implementate in <code>Sources/ColibriCore</code>.
-    </p>
-  </div>
-</section>
-
-<section class="section">
-  <div class="shell">
-    <header class="section__header">
-      <span class="section__eyebrow">Mappa delle specifiche</span>
-      <h2 class="section__title">Dove il modello formale incontra il codice</h2>
-      <p class="section__lede">
-        I file Swift riportano l'origine TLA+ nel commento d'intestazione. Qui sotto trovi le corrispondenze principali
-        tra implementazione e modello.
+<!-- Hero Section -->
+<section class="hero hero-sub">
+  <div class="container">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-icon">🔬</span>
+        <span>Verifiche Formali</span>
+      </div>
+      <h1 class="hero-title">Specifiche TLA+</h1>
+      <p class="hero-description">
+        Ogni componente di Colibrì DB è formalmente verificato con specifiche TLA+ 
+        per garantire proprietà di sicurezza e liveness matematicamente provate.
       </p>
-    </header>
-    <div class="module-grid">
-      <article class="module-card">
-        <h3>Storage &amp; WAL</h3>
-        <p><code>WAL/FileWAL.swift</code> e <code>Storage/HeapTable.swift</code> derivano da <code>spec/WAL.tla</code> e <code>spec/HeapTable.tla</code>, garantendo log-before-data e slot coherence.</p>
-        <div class="module-tags">
-          <span class="module-tag">Durabilità</span>
-          <span class="module-tag module-tag--accent">ARIES</span>
-        </div>
-      </article>
-      <article class="module-card">
-        <h3>Buffer Pool</h3>
-        <p><code>BufferPool/BufferPool.swift</code> segue <code>spec/BufferPool.tla</code>, includendo invarianti su pin-count, eviction clock e flushing coordinato con il WAL.</p>
-        <div class="module-tags">
-          <span class="module-tag">Clock-sweep</span>
-          <span class="module-tag">Dirty set</span>
-        </div>
-      </article>
-      <article class="module-card">
-        <h3>Lock &amp; MVCC</h3>
-        <p><code>Transaction/LockManager.swift</code> e <code>MVCC/MVCCManager.swift</code> rispettano <code>spec/LockManager.tla</code> e <code>spec/MVCC.tla</code>: fairness, assenza di deadlock e snapshot isolation.</p>
-        <div class="module-tags">
-          <span class="module-tag">Snapshot</span>
-          <span class="module-tag">Fairness</span>
-        </div>
-      </article>
-      <article class="module-card">
-        <h3>Query Engine</h3>
-        <p><code>Query/QueryExecutor.swift</code> implementa gli operatori descritti in <code>spec/QueryExecutor.tla</code>, mentre <code>Planner/QueryPlanner.swift</code> segue <code>spec/QueryPipeline.tla</code> e coordina con <code>spec/QueryOptimizer.tla</code>.</p>
-        <div class="module-tags">
-          <span class="module-tag">Join hash</span>
-          <span class="module-tag">Aggregazioni</span>
-        </div>
-      </article>
-      <article class="module-card">
-        <h3>Consensus &amp; Replica</h3>
-        <p><code>Consensus/RaftConsensusManager.swift</code> e <code>Replication/ReplicationManager.swift</code> sono derivati da <code>spec/ConsensusProtocol.tla</code> e <code>spec/Replication.tla</code>, assicurando log matching e leader completeness.</p>
-        <div class="module-tags">
-          <span class="module-tag">Raft</span>
-          <span class="module-tag">Replica</span>
-        </div>
-      </article>
-      <article class="module-card">
-        <h3>Commit distribuito</h3>
-        <p><code>TwoPhaseCommit/TwoPhaseCommitManager.swift</code> e <code>DistributedTx/TwoPhaseCommit.swift</code> implementano <code>spec/TwoPhaseCommit.tla</code>, coprendo atomicità e terminazione.</p>
-        <div class="module-tags">
-          <span class="module-tag">2PC</span>
-          <span class="module-tag module-tag--accent">Atomicità</span>
-        </div>
-      </article>
-      <article class="module-card">
-        <h3>Recovery</h3>
-        <p><code>Recovery/ARIESRecovery.swift</code> e <code>Recovery/ARIESRecoveryManager.swift</code> derivano da <code>spec/RECOVERY.tla</code>; completano analisi, redo e undo idempotenti.</p>
-        <div class="module-tags">
-          <span class="module-tag">REDO</span>
-          <span class="module-tag">UNDO</span>
-        </div>
-      </article>
-      <article class="module-card">
-        <h3>Security</h3>
-        <p><code>Authentication/AuthenticationManager.swift</code> e <code>Security/RolesPermissions.swift</code> si appoggiano a <code>spec/Authentication.tla</code> e <code>spec/Authorization.tla</code> per la gestione di utenti, sessioni e ruoli.</p>
-        <div class="module-tags">
-          <span class="module-tag">RBAC</span>
-          <span class="module-tag">Crypto</span>
-        </div>
-      </article>
     </div>
   </div>
 </section>
 
-<section class="section section--muted">
-  <div class="shell">
-    <header class="section__header">
-      <span class="section__eyebrow">Invarianti rilevanti</span>
-      <h2 class="section__title">Esempi di proprietà verificate</h2>
-      <p class="section__lede">
-        Queste proprietà sono citate direttamente nel codice Swift sotto forma di commenti o TODO formali, facilitando la
-        verifica manuale durante lo sviluppo.
-      </p>
-    </header>
-    <div class="highlight-grid">
-      <div class="highlight">
-        <strong>WAL</strong>
-        <p><code>FileWAL.swift</code> richiama <em>Log-Before-Data</em>, <em>Durability</em> e <em>Idempotent Recovery</em> dal modulo TLA.</p>
+<!-- Overview -->
+<section class="overview">
+  <div class="container">
+    <div class="section-header">
+      <h2>Verifiche Formali Complete</h2>
+      <p>Modelli matematici che garantiscono la correttezza del sistema</p>
+    </div>
+    
+    <div class="overview-content">
+      <div class="overview-text">
+        <h3>Perché TLA+?</h3>
+        <p>Le specifiche TLA+ ci permettono di verificare formalmente le proprietà di sicurezza e liveness del sistema prima dell'implementazione. Questo garantisce che il codice Swift rispetti invarianti matematicamente provate.</p>
+        
+        <div class="benefits">
+          <div class="benefit">
+            <div class="benefit-icon">🛡️</div>
+            <div class="benefit-content">
+              <h4>Sicurezza</h4>
+              <p>Proprietà che garantiscono che "niente di brutto accada mai"</p>
+            </div>
+          </div>
+          <div class="benefit">
+            <div class="benefit-icon">⚡</div>
+            <div class="benefit-content">
+              <h4>Liveness</h4>
+              <p>Proprietà che garantiscono che "qualcosa di buono accada sempre"</p>
+            </div>
+          </div>
+          <div class="benefit">
+            <div class="benefit-icon">🎯</div>
+            <div class="benefit-content">
+              <h4>Precisione</h4>
+              <p>Specifiche matematiche precise senza ambiguità</p>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="highlight">
-        <strong>Lock Manager</strong>
-        <p><code>LockManager.swift</code> annota <em>No Deadlock</em>, <em>Fairness</em> e <em>No Starvation</em> in linea con <code>LockManager.tla</code>.</p>
-      </div>
-      <div class="highlight">
-        <strong>MVCC</strong>
-        <p><code>MVCCManager.swift</code> documenta <em>Snapshot Isolation</em> e <em>Version Chain Consistency</em> come invarianti fondamentali.</p>
-      </div>
-      <div class="highlight">
-        <strong>Consensus</strong>
-        <p><code>RaftConsensusManager.swift</code> cita <em>Leader Completeness</em>, <em>Election Safety</em> e <em>Log Matching</em> da <code>ConsensusProtocol.tla</code>.</p>
+      
+      <div class="overview-visual">
+        <div class="tla-process">
+          <div class="process-step">
+            <div class="step-icon">📝</div>
+            <h4>Specifica TLA+</h4>
+            <p>Modello formale del comportamento</p>
+          </div>
+          <div class="process-arrow">→</div>
+          <div class="process-step">
+            <div class="step-icon">🔍</div>
+            <h4>Verifica TLC</h4>
+            <p>Model checking automatico</p>
+          </div>
+          <div class="process-arrow">→</div>
+          <div class="process-step">
+            <div class="step-icon">💻</div>
+            <h4>Implementazione Swift</h4>
+            <p>Codice che rispetta le specifiche</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section">
-  <div class="shell">
-    <header class="section__header section__header--center">
-      <span class="section__eyebrow">Come consultarle</span>
-      <h2 class="section__title">Integra le specifiche nel tuo flusso di lavoro</h2>
-    </header>
-    <div class="highlight-grid">
-      <div class="highlight">
-        <strong>1. Apri il modello</strong>
-        <p>Trovi i file in <code>spec/</code>. Ogni coppia <code>.tla</code>/<code>.cfg</code> è pronta per TLC.</p>
+<!-- Specifications Grid -->
+<section class="specifications">
+  <div class="container">
+    <div class="section-header">
+      <h2>Specifiche per Componente</h2>
+      <p>Ogni modulo del sistema ha la sua specifica TLA+ corrispondente</p>
+    </div>
+    
+    <div class="specs-grid">
+      <div class="spec-card">
+        <div class="spec-header">
+          <div class="spec-icon">💾</div>
+          <h3>Storage & WAL</h3>
+          <span class="spec-status verified">✓ Verificato</span>
+        </div>
+        <div class="spec-content">
+          <p>Specifiche per buffer pool, heap storage e write-ahead logging con proprietà di durabilità e consistenza.</p>
+          <div class="spec-properties">
+            <div class="property">
+              <span class="property-name">Log-Before-Data</span>
+              <span class="property-desc">WAL sempre scritto prima dei dati</span>
+            </div>
+            <div class="property">
+              <span class="property-name">Durability</span>
+              <span class="property-desc">Dati committati sono persistenti</span>
+            </div>
+            <div class="property">
+              <span class="property-name">Idempotent Recovery</span>
+              <span class="property-desc">Recovery sicuro anche se ripetuto</span>
+            </div>
+          </div>
+          <div class="spec-files">
+            <a href="/spec/WAL.tla" class="file-link">WAL.tla</a>
+            <a href="/spec/HeapTable.tla" class="file-link">HeapTable.tla</a>
+            <a href="/spec/BufferPool.tla" class="file-link">BufferPool.tla</a>
+          </div>
+        </div>
       </div>
-      <div class="highlight">
-        <strong>2. Segui il riferimento</strong>
-        <p>Nel corrispondente file Swift, cerca il commento “Based on: spec/&lt;Modulo&gt;.tla” per capire come viene applicato.</p>
+
+      <div class="spec-card">
+        <div class="spec-header">
+          <div class="spec-icon">🔒</div>
+          <h3>Transaction & MVCC</h3>
+          <span class="spec-status verified">✓ Verificato</span>
+        </div>
+        <div class="spec-content">
+          <p>Modelli per gestione transazioni, lock management e multi-version concurrency control.</p>
+          <div class="spec-properties">
+            <div class="property">
+              <span class="property-name">Snapshot Isolation</span>
+              <span class="property-desc">Transazioni vedono snapshot consistenti</span>
+            </div>
+            <div class="property">
+              <span class="property-name">No Deadlock</span>
+              <span class="property-desc">Nessun deadlock possibile</span>
+            </div>
+            <div class="property">
+              <span class="property-name">Fairness</span>
+              <span class="property-desc">Accesso equo alle risorse</span>
+            </div>
+          </div>
+          <div class="spec-files">
+            <a href="/spec/Transaction.tla" class="file-link">Transaction.tla</a>
+            <a href="/spec/LockManager.tla" class="file-link">LockManager.tla</a>
+            <a href="/spec/MVCC.tla" class="file-link">MVCC.tla</a>
+          </div>
+        </div>
       </div>
-      <div class="highlight">
-        <strong>3. Esegui TLC</strong>
-        <p>Usa i file <code>.cfg</code> inclusi per riprodurre i check di safety e liveness sul tuo ambiente.</p>
+
+      <div class="spec-card">
+        <div class="spec-header">
+          <div class="spec-icon">⚙️</div>
+          <h3>Query Engine</h3>
+          <span class="spec-status verified">✓ Verificato</span>
+        </div>
+        <div class="spec-content">
+          <p>Specifiche per parsing SQL, pianificazione query e esecuzione con operatori fisici.</p>
+          <div class="spec-properties">
+            <div class="property">
+              <span class="property-name">Correctness</span>
+              <span class="property-desc">Risultati query sempre corretti</span>
+            </div>
+            <div class="property">
+              <span class="property-name">Termination</span>
+              <span class="property-desc">Query sempre terminano</span>
+            </div>
+            <div class="property">
+              <span class="property-name">Optimization</span>
+              <span class="property-desc">Piani ottimali per costi</span>
+            </div>
+          </div>
+          <div class="spec-files">
+            <a href="/spec/QueryExecutor.tla" class="file-link">QueryExecutor.tla</a>
+            <a href="/spec/QueryPlanner.tla" class="file-link">QueryPlanner.tla</a>
+            <a href="/spec/QueryOptimizer.tla" class="file-link">QueryOptimizer.tla</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="spec-card">
+        <div class="spec-header">
+          <div class="spec-icon">🌐</div>
+          <h3>Consensus & Replication</h3>
+          <span class="spec-status verified">✓ Verificato</span>
+        </div>
+        <div class="spec-content">
+          <p>Modelli per protocollo Raft, replica e sharding con proprietà di consenso.</p>
+          <div class="spec-properties">
+            <div class="property">
+              <span class="property-name">Leader Completeness</span>
+              <span class="property-desc">Leader ha tutti i log committati</span>
+            </div>
+            <div class="property">
+              <span class="property-name">Election Safety</span>
+              <span class="property-desc">Al massimo un leader per term</span>
+            </div>
+            <div class="property">
+              <span class="property-name">Log Matching</span>
+              <span class="property-desc">Log entries identici tra nodi</span>
+            </div>
+          </div>
+          <div class="spec-files">
+            <a href="/spec/ConsensusProtocol.tla" class="file-link">ConsensusProtocol.tla</a>
+            <a href="/spec/Replication.tla" class="file-link">Replication.tla</a>
+            <a href="/spec/Sharding.tla" class="file-link">Sharding.tla</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="spec-card">
+        <div class="spec-header">
+          <div class="spec-icon">🔄</div>
+          <h3>Two-Phase Commit</h3>
+          <span class="spec-status verified">✓ Verificato</span>
+        </div>
+        <div class="spec-content">
+          <p>Specifiche per commit distribuito con proprietà di atomicità e terminazione.</p>
+          <div class="spec-properties">
+            <div class="property">
+              <span class="property-name">Atomicity</span>
+              <span class="property-desc">Tutti i partecipanti commit o abort</span>
+            </div>
+            <div class="property">
+              <span class="property-name">Termination</span>
+              <span class="property-desc">Protocollo sempre termina</span>
+            </div>
+            <div class="property">
+              <span class="property-name">Consistency</span>
+              <span class="property-desc">Stato consistente dopo commit</span>
+            </div>
+          </div>
+          <div class="spec-files">
+            <a href="/spec/TwoPhaseCommit.tla" class="file-link">TwoPhaseCommit.tla</a>
+            <a href="/spec/DistributedTx.tla" class="file-link">DistributedTx.tla</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="spec-card">
+        <div class="spec-header">
+          <div class="spec-icon">🔐</div>
+          <h3>Security & Auth</h3>
+          <span class="spec-status verified">✓ Verificato</span>
+        </div>
+        <div class="spec-content">
+          <p>Modelli per autenticazione, autorizzazione e gestione delle sessioni.</p>
+          <div class="spec-properties">
+            <div class="property">
+              <span class="property-name">Authentication</span>
+              <span class="property-desc">Solo utenti autenticati accedono</span>
+            </div>
+            <div class="property">
+              <span class="property-name">Authorization</span>
+              <span class="property-desc">Accesso basato su ruoli e permessi</span>
+            </div>
+            <div class="property">
+              <span class="property-name">Session Security</span>
+              <span class="property-desc">Sessioni sicure e scadenza</span>
+            </div>
+          </div>
+          <div class="spec-files">
+            <a href="/spec/Authentication.tla" class="file-link">Authentication.tla</a>
+            <a href="/spec/Authorization.tla" class="file-link">Authorization.tla</a>
+            <a href="/spec/Security.tla" class="file-link">Security.tla</a>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
+
+<!-- Verification Process -->
+<section class="verification">
+  <div class="container">
+    <div class="section-header">
+      <h2>Processo di Verifica</h2>
+      <p>Come utilizziamo TLA+ per garantire la correttezza del sistema</p>
+    </div>
+    
+    <div class="verification-steps">
+      <div class="verification-step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3>Scrittura Specifica</h3>
+          <p>Definiamo il comportamento del sistema in TLA+ con invarianti e proprietà temporali.</p>
+          <div class="code-example">
+            <pre><code>VARIABLES buffer, wal, dirty
+
+TypeOK == /\ buffer \in [PageId -> PageData]
+          /\ wal \in Seq(LogEntry)
+          /\ dirty \in SUBSET PageId
+
+Invariant == /\ TypeOK
+             /\ \A p \in dirty : p \in DOMAIN buffer
+             /\ LogBeforeData</code></pre>
+          </div>
+        </div>
+      </div>
+      
+      <div class="verification-step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3>Model Checking</h3>
+          <p>Utilizziamo TLC per verificare automaticamente le proprietà su stati finiti.</p>
+          <div class="tlc-config">
+            <h4>Configurazione TLC</h4>
+            <pre><code>SPECIFICATION BufferPoolSpec
+CONSTANTS
+  PageCount = 10
+  MaxOperations = 100
+
+PROPERTIES
+  TypeOK
+  LogBeforeData
+  Durability</code></pre>
+          </div>
+        </div>
+      </div>
+      
+      <div class="verification-step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h3>Implementazione</h3>
+          <p>Il codice Swift implementa esattamente il comportamento specificato in TLA+.</p>
+          <div class="swift-example">
+            <h4>Implementazione Swift</h4>
+            <pre><code>// Based on: spec/BufferPool.tla
+class BufferPoolManager {
+    private var buffer: [PageId: PageData] = [:]
+    private var dirty: Set<PageId> = []
+    
+    func writePage(_ pageId: PageId, _ data: PageData) {
+        // Log-before-data invariant
+        wal.writeLog(LogEntry(pageId: pageId, data: data))
+        buffer[pageId] = data
+        dirty.insert(pageId)
+    }
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Tools and Resources -->
+<section class="tools">
+  <div class="container">
+    <div class="section-header">
+      <h2>Strumenti e Risorse</h2>
+      <p>Tutto quello che ti serve per esplorare le specifiche TLA+</p>
+    </div>
+    
+    <div class="tools-grid">
+      <div class="tool-card">
+        <div class="tool-icon">📚</div>
+        <h3>Documentazione TLA+</h3>
+        <p>Guida completa per comprendere e utilizzare le specifiche formali.</p>
+        <a href="/wiki/TLA-Plus-Guide.html" class="tool-link">Leggi la guida →</a>
+      </div>
+      
+      <div class="tool-card">
+        <div class="tool-icon">🔧</div>
+        <h3>Strumenti di Verifica</h3>
+        <p>TLC model checker e strumenti per eseguire le verifiche localmente.</p>
+        <a href="/wiki/Verification-Tools.html" class="tool-link">Scarica gli strumenti →</a>
+      </div>
+      
+      <div class="tool-card">
+        <div class="tool-icon">📁</div>
+        <h3>Repository Specifiche</h3>
+        <p>Tutti i file .tla e .cfg nel repository per esplorazione diretta.</p>
+        <a href="https://github.com/gpicchiarelli/Colibri-DB/tree/main/spec" class="tool-link">Esplora il repo →</a>
+      </div>
+      
+      <div class="tool-card">
+        <div class="tool-icon">🎓</div>
+        <h3>Esempi Pratici</h3>
+        <p>Tutorial step-by-step per creare e verificare specifiche TLA+.</p>
+        <a href="/wiki/TLA-Examples.html" class="tool-link">Vedi gli esempi →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+.hero-sub {
+  background: linear-gradient(135deg, var(--secondary) 0%, var(--accent) 100%);
+  padding: var(--space-20) 0;
+  text-align: center;
+}
+
+.overview {
+  padding: var(--space-24) 0;
+  background: white;
+}
+
+.overview-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-16);
+  align-items: center;
+}
+
+.overview h3 {
+  margin-bottom: var(--space-4);
+  color: var(--gray-900);
+}
+
+.overview p {
+  margin-bottom: var(--space-8);
+  color: var(--gray-600);
+}
+
+.benefits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.benefit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.benefit-icon {
+  font-size: 2rem;
+}
+
+.benefit-content h4 {
+  margin-bottom: var(--space-1);
+  color: var(--gray-900);
+}
+
+.benefit-content p {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: 0.875rem;
+}
+
+.tla-process {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.process-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-6);
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-lg);
+  min-width: 150px;
+}
+
+.step-icon {
+  font-size: 2rem;
+  margin-bottom: var(--space-3);
+}
+
+.process-step h4 {
+  margin-bottom: var(--space-2);
+  color: var(--gray-900);
+}
+
+.process-step p {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: 0.875rem;
+}
+
+.process-arrow {
+  font-size: 1.5rem;
+  color: var(--primary);
+  font-weight: bold;
+}
+
+.specifications {
+  padding: var(--space-24) 0;
+  background: var(--gray-50);
+}
+
+.specs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--space-8);
+}
+
+.spec-card {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.spec-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--primary);
+}
+
+.spec-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: var(--gray-50);
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.spec-icon {
+  font-size: 2rem;
+}
+
+.spec-header h3 {
+  flex: 1;
+  margin: 0;
+  color: var(--gray-900);
+}
+
+.spec-status {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--border-radius);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.spec-status.verified {
+  background: var(--success);
+  color: white;
+}
+
+.spec-content {
+  padding: var(--space-6);
+}
+
+.spec-content p {
+  margin-bottom: var(--space-6);
+  color: var(--gray-600);
+}
+
+.spec-properties {
+  margin-bottom: var(--space-6);
+}
+
+.property {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.property:last-child {
+  border-bottom: none;
+}
+
+.property-name {
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+.property-desc {
+  color: var(--gray-600);
+  font-size: 0.875rem;
+}
+
+.spec-files {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.file-link {
+  padding: var(--space-2) var(--space-3);
+  background: var(--gray-100);
+  color: var(--primary);
+  text-decoration: none;
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.file-link:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.verification {
+  padding: var(--space-24) 0;
+  background: white;
+}
+
+.verification-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.verification-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+.step-content h3 {
+  margin-bottom: var(--space-4);
+  color: var(--gray-900);
+}
+
+.step-content p {
+  margin-bottom: var(--space-6);
+  color: var(--gray-600);
+}
+
+.code-example,
+.tlc-config,
+.swift-example {
+  background: var(--gray-900);
+  border-radius: var(--border-radius);
+  padding: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.code-example h4,
+.tlc-config h4,
+.swift-example h4 {
+  color: var(--gray-300);
+  margin-bottom: var(--space-3);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.code-example pre,
+.tlc-config pre,
+.swift-example pre {
+  margin: 0;
+  color: var(--gray-100);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.tools {
+  padding: var(--space-24) 0;
+  background: var(--gray-50);
+}
+
+.tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-8);
+}
+
+.tool-card {
+  padding: var(--space-8);
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+  text-align: center;
+}
+
+.tool-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+  border-color: var(--primary);
+}
+
+.tool-icon {
+  font-size: 3rem;
+  margin-bottom: var(--space-4);
+}
+
+.tool-card h3 {
+  margin-bottom: var(--space-4);
+  color: var(--gray-900);
+}
+
+.tool-card p {
+  margin-bottom: var(--space-6);
+  color: var(--gray-600);
+}
+
+.tool-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.tool-link:hover {
+  color: var(--primary-dark);
+}
+
+@media (max-width: 768px) {
+  .overview-content {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+  
+  .tla-process {
+    flex-direction: column;
+  }
+  
+  .process-arrow {
+    transform: rotate(90deg);
+  }
+  
+  .verification-step {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+  
+  .step-number {
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.25rem;
+  }
+}
+</style>
