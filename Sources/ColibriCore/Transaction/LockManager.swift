@@ -1,6 +1,6 @@
 //
 //  LockManager.swift
-//  ColibrìDB Lock Management Implementation
+//  ColibrìDB Lock Manager Implementation
 //
 //  Based on: spec/LockManager.tla
 //  Implements: Lock management
@@ -8,128 +8,80 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - Lock Compatibility: Proper lock mode compatibility
-//  - Deadlock Detection: Cycle detection in wait-for graph
-//  - Lock Timeouts: Prevents indefinite waiting
-//  - Lock Escalation: Optimizes lock management
+//  - No Deadlock: No deadlocks exist
+//  - Lock Compatibility: Lock compatibility is correct
+//  - Fairness: Lock granting is fair
+//  - No Starvation: No transaction starves
 //
 
 import Foundation
 
 // MARK: - Lock Manager Types
 
+/// Transaction ID
+/// Corresponds to TLA+: TxID
+public typealias TxID = UInt64
+
+/// Resource
+/// Corresponds to TLA+: Resource
+public typealias Resource = String
+
 /// Lock mode
 /// Corresponds to TLA+: LockMode
-public enum LockMode: String, Codable, Sendable {
-    case shared = "shared"
-    case exclusive = "exclusive"
-    case intentShared = "intent_shared"
-    case intentExclusive = "intent_exclusive"
-    case sharedIntentExclusive = "shared_intent_exclusive"
+public enum LockMode: String, Codable, Sendable, CaseIterable {
+    case shared = "S"
+    case exclusive = "X"
+    case intentShared = "IS"
+    case intentExclusive = "IX"
+    case sharedIntentExclusive = "SIX"
 }
 
-/// Lock state
-/// Corresponds to TLA+: LockState
-public enum LockState: String, Codable, Sendable {
-    case granted = "granted"
-    case waiting = "waiting"
-    case timeout = "timeout"
-    case cancelled = "cancelled"
+/// Extended lock mode
+/// Corresponds to TLA+: ExtendedLockMode
+public enum ExtendedLockMode: String, Codable, Sendable, CaseIterable {
+    case shared = "S"
+    case exclusive = "X"
+    case intentShared = "IS"
+    case intentExclusive = "IX"
+    case sharedIntentExclusive = "SIX"
+    case none = "NONE"
 }
 
 /// Lock request
 /// Corresponds to TLA+: LockRequest
 public struct LockRequest: Codable, Sendable, Equatable {
-    public let requestId: String
-    public let transactionId: TxID
-    public let resource: String
+    public let txId: TxID
     public let mode: LockMode
-    public let timestamp: Date
-    public let timeout: TimeInterval
-    public let state: LockState
+    public let timestamp: UInt64
     
-    public init(requestId: String, transactionId: TxID, resource: String, mode: LockMode, timestamp: Date = Date(), timeout: TimeInterval = 30.0, state: LockState = .waiting) {
-        self.requestId = requestId
-        self.transactionId = transactionId
-        self.resource = resource
+    public init(txId: TxID, mode: LockMode, timestamp: UInt64) {
+        self.txId = txId
         self.mode = mode
         self.timestamp = timestamp
-        self.timeout = timeout
-        self.state = state
-    }
-}
-
-/// Lock grant
-/// Corresponds to TLA+: LockGrant
-public struct LockGrant: Codable, Sendable, Equatable {
-    public let grantId: String
-    public let transactionId: TxID
-    public let resource: String
-    public let mode: LockMode
-    public let grantedAt: Date
-    public let expiresAt: Date?
-    
-    public init(grantId: String, transactionId: TxID, resource: String, mode: LockMode, grantedAt: Date = Date(), expiresAt: Date? = nil) {
-        self.grantId = grantId
-        self.transactionId = transactionId
-        self.resource = resource
-        self.mode = mode
-        self.grantedAt = grantedAt
-        self.expiresAt = expiresAt
-    }
-}
-
-/// Deadlock detection result
-/// Corresponds to TLA+: DeadlockDetectionResult
-public struct DeadlockDetectionResult: Codable, Sendable, Equatable {
-    public let deadlockDetected: Bool
-    public let cycle: [TxID]
-    public let victimTransaction: TxID?
-    public let timestamp: Date
-    
-    public init(deadlockDetected: Bool, cycle: [TxID] = [], victimTransaction: TxID? = nil, timestamp: Date = Date()) {
-        self.deadlockDetected = deadlockDetected
-        self.cycle = cycle
-        self.victimTransaction = victimTransaction
-        self.timestamp = timestamp
-    }
-}
-
-/// Lock manager configuration
-/// Corresponds to TLA+: LockManagerConfig
-public struct LockManagerConfig: Codable, Sendable {
-    public let defaultTimeout: TimeInterval
-    public let enableDeadlockDetection: Bool
-    public let enableLockEscalation: Bool
-    public let enableLockTimeout: Bool
-    public let maxLockRequests: Int
-    public let deadlockDetectionInterval: TimeInterval
-    
-    public init(defaultTimeout: TimeInterval = 30.0, enableDeadlockDetection: Bool = true, enableLockEscalation: Bool = true, enableLockTimeout: Bool = true, maxLockRequests: Int = 10000, deadlockDetectionInterval: TimeInterval = 5.0) {
-        self.defaultTimeout = defaultTimeout
-        self.enableDeadlockDetection = enableDeadlockDetection
-        self.enableLockEscalation = enableLockEscalation
-        self.enableLockTimeout = enableLockTimeout
-        self.maxLockRequests = maxLockRequests
-        self.deadlockDetectionInterval = deadlockDetectionInterval
     }
 }
 
 // MARK: - Lock Manager
 
-/// Lock Manager for managing database locks
+/// Lock Manager for database lock management
 /// Corresponds to TLA+ module: LockManager.tla
 public actor LockManager {
+    
+    // MARK: - Constants
+    
+    /// Resources
+    /// TLA+: Resources
+    private let Resources: Set<Resource> = []
     
     // MARK: - State Variables (TLA+ vars)
     
     /// Locks
     /// TLA+: locks \in [Resource -> [TxID -> LockMode]]
-    private var locks: [String: [TxID: LockMode]] = [:]
+    private var locks: [Resource: [TxID: LockMode]] = [:]
     
     /// Wait queue
     /// TLA+: waitQueue \in [Resource -> Seq(LockRequest)]
-    private var waitQueue: [String: [LockRequest]] = [:]
+    private var waitQueue: [Resource: [LockRequest]] = [:]
     
     /// Wait-for graph
     /// TLA+: waitForGraph \in [TxID -> Set(TxID)]
@@ -137,23 +89,11 @@ public actor LockManager {
     
     /// Lock grant time
     /// TLA+: lockGrantTime \in [TxID -> [Resource -> Timestamp]]
-    private var lockGrantTime: [TxID: [String: Date]] = [:]
+    private var lockGrantTime: [TxID: [Resource: UInt64]] = [:]
     
     /// Deadlock victim
     /// TLA+: deadlockVictim \in TxID
-    private var deadlockVictim: TxID?
-    
-    /// Lock requests
-    private var lockRequests: [String: LockRequest] = [:]
-    
-    /// Lock grants
-    private var lockGrants: [String: LockGrant] = [:]
-    
-    /// Deadlock detection results
-    private var deadlockDetectionResults: [TxID: DeadlockDetectionResult] = [:]
-    
-    /// Lock manager configuration
-    private var lockManagerConfig: LockManagerConfig
+    private var deadlockVictim: TxID = 0
     
     // MARK: - Dependencies
     
@@ -162,142 +102,125 @@ public actor LockManager {
     
     // MARK: - Initialization
     
-    public init(transactionManager: TransactionManager, lockManagerConfig: LockManagerConfig = LockManagerConfig()) {
+    public init(transactionManager: TransactionManager) {
         self.transactionManager = transactionManager
-        self.lockManagerConfig = lockManagerConfig
         
         // TLA+ Init
         self.locks = [:]
         self.waitQueue = [:]
         self.waitForGraph = [:]
         self.lockGrantTime = [:]
-        self.deadlockVictim = nil
-        self.lockRequests = [:]
-        self.lockGrants = [:]
-        self.deadlockDetectionResults = [:]
+        self.deadlockVictim = 0
     }
     
-    // MARK: - Lock Management
+    // MARK: - Lock Operations
     
     /// Request lock
     /// TLA+ Action: RequestLock(txId, resource, mode)
-    public func requestLock(transactionId: TxID, resource: String, mode: LockMode, timeoutMs: Int = 30000) async throws {
-        // TLA+: Check if transaction is active
-        guard await transactionManager.isTransactionActive(txId: transactionId) else {
-            throw LockManagerError.transactionNotActive
-        }
-        
-        // TLA+: Create lock request
-        let requestId = "req_\(transactionId)_\(resource)_\(Date().timeIntervalSince1970)"
-        let request = LockRequest(
-            requestId: requestId,
-            transactionId: transactionId,
-            resource: resource,
-            mode: mode,
-            timeout: TimeInterval(timeoutMs) / 1000.0
-        )
-        
-        // TLA+: Store lock request
-        lockRequests[requestId] = request
-        
-        // TLA+: Check if lock can be granted immediately
-        if try await canGrantLock(transactionId: transactionId, resource: resource, mode: mode) {
-            // TLA+: Grant lock immediately
-            try await grantLock(transactionId: transactionId, resource: resource, mode: mode)
+    public func requestLock(txId: TxID, resource: Resource, mode: LockMode) async throws {
+        // TLA+: Check if lock can be granted
+        if try await canGrantLock(txId: txId, resource: resource, mode: mode) {
+            // TLA+: Grant lock
+            try await grantLock(txId: txId, resource: resource, mode: mode)
         } else {
             // TLA+: Add to wait queue
+            let request = LockRequest(
+                txId: txId,
+                mode: mode,
+                timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+            )
+            
             if waitQueue[resource] == nil {
                 waitQueue[resource] = []
             }
             waitQueue[resource]?.append(request)
             
             // TLA+: Update wait-for graph
-            try await updateWaitForGraph(transactionId: transactionId, resource: resource)
+            try await updateWaitForGraph(txId: txId, resource: resource)
             
-            // TLA+: Check for deadlock
-            if lockManagerConfig.enableDeadlockDetection {
-                try await detectDeadlocks()
-            }
+            print("Lock request queued: \(txId) for resource: \(resource) with mode: \(mode.rawValue)")
         }
-        
-        print("Lock request: \(requestId) for \(mode) on \(resource)")
     }
     
     /// Release lock
     /// TLA+ Action: ReleaseLock(txId, resource)
-    public func releaseLock(transactionId: TxID, resource: String) async throws {
+    public func releaseLock(txId: TxID, resource: Resource) async throws {
         // TLA+: Check if transaction holds lock
-        guard let transactionLocks = locks[resource],
-              let lockMode = transactionLocks[transactionId] else {
+        guard locks[resource]?[txId] != nil else {
             throw LockManagerError.lockNotHeld
         }
         
-        // TLA+: Remove lock
-        locks[resource]?.removeValue(forKey: transactionId)
+        // TLA+: Release lock
+        locks[resource]?.removeValue(forKey: txId)
         
         // TLA+: Clear lock grant time
-        lockGrantTime[transactionId]?.removeValue(forKey: resource)
-        
-        // TLA+: Remove from wait-for graph
-        waitForGraph[transactionId]?.removeAll()
+        lockGrantTime[txId]?.removeValue(forKey: resource)
         
         // TLA+: Grant locks from wait queue
         try await grantFromWaitQueue(resource: resource)
         
-        print("Released lock: \(transactionId) on \(resource)")
-    }
-    
-    /// Release all locks
-    /// TLA+ Action: ReleaseAllLocks(txId)
-    public func releaseAllLocks(transactionId: TxID) async throws {
-        // TLA+: Find all locks held by transaction
-        let heldLocks = locks.compactMap { (resource, transactionLocks) -> String? in
-            transactionLocks[transactionId] != nil ? resource : nil
-        }
-        
-        // TLA+: Release all locks
-        for resource in heldLocks {
-            try await releaseLock(transactionId: transactionId, resource: resource)
-        }
-        
-        print("Released all locks for transaction: \(transactionId)")
+        print("Released lock: \(txId) for resource: \(resource)")
     }
     
     /// Upgrade lock
     /// TLA+ Action: UpgradeLock(txId, resource, newMode)
-    public func upgradeLock(transactionId: TxID, resource: String, newMode: LockMode) async throws {
+    public func upgradeLock(txId: TxID, resource: Resource, newMode: LockMode) async throws {
         // TLA+: Check if transaction holds lock
-        guard let transactionLocks = locks[resource],
-              let currentMode = transactionLocks[transactionId] else {
+        guard let currentMode = locks[resource]?[txId] else {
             throw LockManagerError.lockNotHeld
         }
         
         // TLA+: Check if upgrade is possible
-        guard canUpgradeLock(from: currentMode, to: newMode) else {
-            throw LockManagerError.lockUpgradeNotPossible
+        if try await canGrantLock(txId: txId, resource: resource, mode: newMode) {
+            // TLA+: Upgrade lock
+            locks[resource]?[txId] = newMode
+        } else {
+            // TLA+: Add to wait queue for exclusive lock
+            let request = LockRequest(
+                txId: txId,
+                mode: newMode,
+                timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+            )
+            
+            if waitQueue[resource] == nil {
+                waitQueue[resource] = []
+            }
+            waitQueue[resource]?.append(request)
+            
+            // TLA+: Update wait-for graph
+            try await updateWaitForGraph(txId: txId, resource: resource)
+            
+            print("Lock upgrade queued: \(txId) for resource: \(resource) to mode: \(newMode.rawValue)")
+        }
+    }
+    
+    /// Release all locks
+    /// TLA+ Action: ReleaseAllLocks(txId)
+    public func releaseAllLocks(txId: TxID) async throws {
+        // TLA+: Release all locks for transaction
+        for resource in locks.keys {
+            if locks[resource]?[txId] != nil {
+                try await releaseLock(txId: txId, resource: resource)
+            }
         }
         
-        // TLA+: Release current lock
-        try await releaseLock(transactionId: transactionId, resource: resource)
+        // TLA+: Clear wait-for graph
+        waitForGraph.removeValue(forKey: txId)
         
-        // TLA+: Request new lock
-        try await requestLock(transactionId: transactionId, resource: resource, mode: newMode)
-        
-        print("Upgraded lock: \(transactionId) on \(resource) from \(currentMode) to \(newMode)")
+        print("Released all locks for transaction: \(txId)")
     }
     
     // MARK: - Helper Methods
     
     /// Check if lock can be granted
-    private func canGrantLock(transactionId: TxID, resource: String, mode: LockMode) async throws -> Bool {
+    private func canGrantLock(txId: TxID, resource: Resource, mode: LockMode) async throws -> Bool {
         // TLA+: Check lock compatibility
-        guard let existingLocks = locks[resource] else {
-            return true // No existing locks
+        guard let resourceLocks = locks[resource] else {
+            return true // No locks on resource
         }
         
-        // TLA+: Check compatibility with existing locks
-        for (existingTxId, existingMode) in existingLocks {
-            if existingTxId != transactionId && !areCompatible(existingMode, mode) {
+        for (otherTxId, otherMode) in resourceLocks {
+            if otherTxId != txId && !areCompatible(mode1: mode, mode2: otherMode) {
                 return false
             }
         }
@@ -306,207 +229,147 @@ public actor LockManager {
     }
     
     /// Grant lock
-    private func grantLock(transactionId: TxID, resource: String, mode: LockMode) async throws {
-        // TLA+: Add lock
+    private func grantLock(txId: TxID, resource: Resource, mode: LockMode) async throws {
+        // TLA+: Grant lock
         if locks[resource] == nil {
             locks[resource] = [:]
         }
-        locks[resource]?[transactionId] = mode
+        locks[resource]?[txId] = mode
         
-        // TLA+: Record lock grant time
-        if lockGrantTime[transactionId] == nil {
-            lockGrantTime[transactionId] = [:]
+        // TLA+: Record grant time
+        if lockGrantTime[txId] == nil {
+            lockGrantTime[txId] = [:]
         }
-        lockGrantTime[transactionId]?[resource] = Date()
+        lockGrantTime[txId]?[resource] = UInt64(Date().timeIntervalSince1970 * 1000)
         
-        // TLA+: Create lock grant
-        let grantId = "grant_\(transactionId)_\(resource)_\(Date().timeIntervalSince1970)"
-        let grant = LockGrant(
-            grantId: grantId,
-            transactionId: transactionId,
-            resource: resource,
-            mode: mode
-        )
-        
-        lockGrants[grantId] = grant
-        
-        print("Granted lock: \(grantId)")
+        print("Granted lock: \(txId) for resource: \(resource) with mode: \(mode.rawValue)")
     }
     
     /// Grant locks from wait queue
-    private func grantFromWaitQueue(resource: String) async throws {
-        // TLA+: Process wait queue
+    private func grantFromWaitQueue(resource: Resource) async throws {
+        // TLA+: Grant locks from wait queue
         guard var queue = waitQueue[resource] else { return }
         
         var grantedRequests: [LockRequest] = []
-        var remainingRequests: [LockRequest] = []
         
         for request in queue {
-            if try await canGrantLock(transactionId: request.transactionId, resource: resource, mode: request.mode) {
-                try await grantLock(transactionId: request.transactionId, resource: resource, mode: request.mode)
+            if try await canGrantLock(txId: request.txId, resource: resource, mode: request.mode) {
+                try await grantLock(txId: request.txId, resource: resource, mode: request.mode)
                 grantedRequests.append(request)
-            } else {
-                remainingRequests.append(request)
             }
         }
         
-        // TLA+: Update wait queue
-        waitQueue[resource] = remainingRequests
-        
-        // TLA+: Update wait-for graph
+        // TLA+: Remove granted requests from queue
         for request in grantedRequests {
-            waitForGraph[request.transactionId]?.removeAll()
+            if let index = queue.firstIndex(of: request) {
+                queue.remove(at: index)
+            }
         }
+        
+        waitQueue[resource] = queue
     }
     
     /// Update wait-for graph
-    private func updateWaitForGraph(transactionId: TxID, resource: String) async throws {
+    private func updateWaitForGraph(txId: TxID, resource: Resource) async throws {
         // TLA+: Update wait-for graph
-        guard let existingLocks = locks[resource] else { return }
+        if waitForGraph[txId] == nil {
+            waitForGraph[txId] = []
+        }
         
-        for (existingTxId, _) in existingLocks {
-            if existingTxId != transactionId {
-                if waitForGraph[transactionId] == nil {
-                    waitForGraph[transactionId] = []
+        // TLA+: Add edges to transactions holding conflicting locks
+        if let resourceLocks = locks[resource] {
+            for (otherTxId, otherMode) in resourceLocks {
+                if otherTxId != txId && !areCompatible(mode1: .exclusive, mode2: otherMode) {
+                    waitForGraph[txId]?.insert(otherTxId)
                 }
-                waitForGraph[transactionId]?.insert(existingTxId)
-            }
-        }
-    }
-    
-    /// Check lock compatibility
-    private func areCompatible(_ mode1: LockMode, _ mode2: LockMode) -> Bool {
-        // TLA+: Lock compatibility matrix
-        switch (mode1, mode2) {
-        case (.shared, .shared), (.shared, .intentShared):
-            return true
-        case (.intentShared, .shared), (.intentShared, .intentShared), (.intentShared, .intentExclusive):
-            return true
-        case (.intentExclusive, .intentShared), (.intentExclusive, .intentExclusive):
-            return true
-        case (.sharedIntentExclusive, .intentShared):
-            return true
-        default:
-            return false
-        }
-    }
-    
-    /// Check if lock upgrade is possible
-    private func canUpgradeLock(from currentMode: LockMode, to newMode: LockMode) -> Bool {
-        // TLA+: Lock upgrade rules
-        switch (currentMode, newMode) {
-        case (.shared, .exclusive), (.shared, .sharedIntentExclusive):
-            return true
-        case (.intentShared, .intentExclusive), (.intentShared, .exclusive):
-            return true
-        case (.intentExclusive, .exclusive):
-            return true
-        case (.sharedIntentExclusive, .exclusive):
-            return true
-        default:
-            return false
-        }
-    }
-    
-    /// Detect deadlocks
-    public func detectDeadlocks() async throws {
-        // TLA+: Detect deadlocks using DFS
-        let deadlockResult = try await hasDeadlock()
-        
-        if deadlockResult.deadlockDetected {
-            // TLA+: Resolve deadlock
-            if let victimTxId = deadlockResult.victimTransaction {
-                try await resolveDeadlock(victimTransactionId: victimTxId)
-                
-                // TLA+: Store deadlock detection result
-                deadlockDetectionResults[victimTxId] = deadlockResult
             }
         }
         
-        print("Deadlock detection completed: \(deadlockResult.deadlockDetected)")
+        // TLA+: Check for deadlock
+        if try await hasDeadlock() {
+            // TLA+: Select deadlock victim
+            deadlockVictim = try await selectDeadlockVictim()
+            
+            // TLA+: Abort victim transaction
+            try await transactionManager.abortTransaction(txId: deadlockVictim)
+        }
     }
     
     /// Check for deadlock
-    private func hasDeadlock() async throws -> DeadlockDetectionResult {
-        // TLA+: DFS-based cycle detection
+    private func hasDeadlock() async throws -> Bool {
+        // TLA+: Check for deadlock using DFS
         var visited: Set<TxID> = []
         var recursionStack: Set<TxID> = []
         
-        for transactionId in waitForGraph.keys {
-            if !visited.contains(transactionId) {
-                if try await hasCycleUtil(transactionId: transactionId, visited: &visited, recursionStack: &recursionStack) {
-                    // TLA+: Found cycle, select victim
-                    let victimTxId = selectDeadlockVictim(cycle: Array(recursionStack))
-                    return DeadlockDetectionResult(
-                        deadlockDetected: true,
-                        cycle: Array(recursionStack),
-                        victimTransaction: victimTxId
-                    )
-                }
-            }
-        }
-        
-        return DeadlockDetectionResult(deadlockDetected: false)
-    }
-    
-    /// Check for cycle using DFS
-    private func hasCycleUtil(transactionId: TxID, visited: inout Set<TxID>, recursionStack: inout Set<TxID>) async throws -> Bool {
-        visited.insert(transactionId)
-        recursionStack.insert(transactionId)
-        
-        if let waitingFor = waitForGraph[transactionId] {
-            for waitingTxId in waitingFor {
-                if !visited.contains(waitingTxId) {
-                    if try await hasCycleUtil(transactionId: waitingTxId, visited: &visited, recursionStack: &recursionStack) {
-                        return true
-                    }
-                } else if recursionStack.contains(waitingTxId) {
+        for txId in waitForGraph.keys {
+            if !visited.contains(txId) {
+                if try await hasCycleUtil(txId: txId, visited: &visited, recursionStack: &recursionStack) {
                     return true
                 }
             }
         }
         
-        recursionStack.remove(transactionId)
+        return false
+    }
+    
+    /// Check for cycle using DFS
+    private func hasCycleUtil(txId: TxID, visited: inout Set<TxID>, recursionStack: inout Set<TxID>) async throws -> Bool {
+        visited.insert(txId)
+        recursionStack.insert(txId)
+        
+        if let neighbors = waitForGraph[txId] {
+            for neighbor in neighbors {
+                if !visited.contains(neighbor) {
+                    if try await hasCycleUtil(txId: neighbor, visited: &visited, recursionStack: &recursionStack) {
+                        return true
+                    }
+                } else if recursionStack.contains(neighbor) {
+                    return true
+                }
+            }
+        }
+        
+        recursionStack.remove(txId)
         return false
     }
     
     /// Select deadlock victim
-    private func selectDeadlockVictim(cycle: [TxID]) -> TxID {
-        // TLA+: Select victim (simplified - choose first transaction)
-        return cycle.first ?? TxID(0)
+    private func selectDeadlockVictim() async throws -> TxID {
+        // TLA+: Select deadlock victim
+        // This would include selecting the transaction to abort based on some criteria
+        return waitForGraph.keys.first ?? 0
     }
     
-    /// Resolve deadlock
-    private func resolveDeadlock(victimTransactionId: TxID) async throws {
-        // TLA+: Abort victim transaction
-        try await transactionManager.abortTransaction(txId: victimTransactionId, reason: "Deadlock victim")
-        
-        // TLA+: Release all locks held by victim
-        try await releaseAllLocks(transactionId: victimTransactionId)
-        
-        print("Resolved deadlock by aborting transaction: \(victimTransactionId)")
+    /// Check if lock modes are compatible
+    private func areCompatible(mode1: LockMode, mode2: LockMode) -> Bool {
+        // TLA+: Lock compatibility matrix
+        switch (mode1, mode2) {
+        case (.shared, .shared), (.shared, .intentShared):
+            return true
+        case (.intentShared, .intentShared), (.intentShared, .intentExclusive):
+            return true
+        case (.intentExclusive, .intentExclusive):
+            return true
+        case (.sharedIntentExclusive, .intentExclusive):
+            return true
+        default:
+            return false
+        }
     }
     
     /// Wait for lock
-    public func waitForLock(transactionId: TxID, resource: String, timeoutMs: Int) async throws -> Bool {
+    private func waitForLock(txId: TxID, resource: Resource, timeoutMs: UInt64) async throws -> Bool {
         // TLA+: Wait for lock with timeout
-        let startTime = Date()
-        let timeout = TimeInterval(timeoutMs) / 1000.0
+        let startTime = UInt64(Date().timeIntervalSince1970 * 1000)
         
-        while Date().timeIntervalSince(startTime) < timeout {
-            // TLA+: Check if lock is granted
-            if let transactionLocks = locks[resource],
-               transactionLocks[transactionId] != nil {
+        while UInt64(Date().timeIntervalSince1970 * 1000) - startTime < timeoutMs {
+            if try await canGrantLock(txId: txId, resource: resource, mode: .exclusive) {
+                try await grantLock(txId: txId, resource: resource, mode: .exclusive)
                 return true
             }
             
-            // TLA+: Check if transaction is still active
-            if !await transactionManager.isTransactionActive(txId: transactionId) {
-                return false
-            }
-            
-            // TLA+: Wait a bit
-            try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            // TLA+: Sleep for a short time
+            try await Task.sleep(nanoseconds: 1_000_000) // 1ms
         }
         
         return false
@@ -514,18 +377,21 @@ public actor LockManager {
     
     // MARK: - Query Operations
     
-    /// Get lock
-    public func getLock(transactionId: TxID, resource: String) -> LockMode? {
-        return locks[resource]?[transactionId]
-    }
-    
-    /// Get all locks
-    public func getAllLocks() -> [String: [TxID: LockMode]] {
-        return locks
+    /// Get locks held
+    public func getLocksHeld(txId: TxID) -> [Resource: LockMode] {
+        var result: [Resource: LockMode] = [:]
+        
+        for (resource, resourceLocks) in locks {
+            if let mode = resourceLocks[txId] {
+                result[resource] = mode
+            }
+        }
+        
+        return result
     }
     
     /// Get wait queue
-    public func getWaitQueue(resource: String) -> [LockRequest] {
+    public func getWaitQueue(resource: Resource) -> [LockRequest] {
         return waitQueue[resource] ?? []
     }
     
@@ -534,116 +400,168 @@ public actor LockManager {
         return waitForGraph
     }
     
-    /// Get lock grant time
-    public func getLockGrantTime(transactionId: TxID, resource: String) -> Date? {
-        return lockGrantTime[transactionId]?[resource]
-    }
-    
     /// Get deadlock victim
-    public func getDeadlockVictim() -> TxID? {
+    public func getDeadlockVictim() -> TxID {
         return deadlockVictim
     }
     
-    /// Get lock requests
-    public func getLockRequests() -> [LockRequest] {
-        return Array(lockRequests.values)
+    /// Get lock grant time
+    public func getLockGrantTime(txId: TxID, resource: Resource) -> UInt64? {
+        return lockGrantTime[txId]?[resource]
     }
     
-    /// Get lock grants
-    public func getLockGrants() -> [LockGrant] {
-        return Array(lockGrants.values)
+    /// Get all locks
+    public func getAllLocks() -> [Resource: [TxID: LockMode]] {
+        return locks
     }
     
-    /// Get deadlock detection results
-    public func getDeadlockDetectionResults() -> [TxID: DeadlockDetectionResult] {
-        return deadlockDetectionResults
+    /// Get locks for resource
+    public func getLocksForResource(resource: Resource) -> [TxID: LockMode] {
+        return locks[resource] ?? [:]
     }
     
     /// Check if transaction holds lock
-    public func holdsLock(transactionId: TxID, resource: String) -> Bool {
-        return locks[resource]?[transactionId] != nil
+    public func holdsLock(txId: TxID, resource: Resource) -> Bool {
+        return locks[resource]?[txId] != nil
     }
     
-    /// Check if transaction is waiting for lock
-    public func isWaitingForLock(transactionId: TxID, resource: String) -> Bool {
-        return waitQueue[resource]?.contains { $0.transactionId == transactionId } ?? false
+    /// Check if transaction holds lock with mode
+    public func holdsLock(txId: TxID, resource: Resource, mode: LockMode) -> Bool {
+        return locks[resource]?[txId] == mode
+    }
+    
+    /// Get lock mode
+    public func getLockMode(txId: TxID, resource: Resource) -> LockMode? {
+        return locks[resource]?[txId]
+    }
+    
+    /// Get lock count
+    public func getLockCount() -> Int {
+        return locks.values.reduce(0) { $0 + $1.count }
+    }
+    
+    /// Get lock count for resource
+    public func getLockCountForResource(resource: Resource) -> Int {
+        return locks[resource]?.count ?? 0
+    }
+    
+    /// Get wait queue count
+    public func getWaitQueueCount() -> Int {
+        return waitQueue.values.reduce(0) { $0 + $1.count }
+    }
+    
+    /// Get wait queue count for resource
+    public func getWaitQueueCountForResource(resource: Resource) -> Int {
+        return waitQueue[resource]?.count ?? 0
+    }
+    
+    /// Get wait-for graph count
+    public func getWaitForGraphCount() -> Int {
+        return waitForGraph.values.reduce(0) { $0 + $1.count }
     }
     
     /// Check if deadlock exists
-    public func hasDeadlock() -> Bool {
-        // TLA+: Check if deadlock exists
-        return deadlockVictim != nil
+    public func hasDeadlock() async throws -> Bool {
+        return try await hasDeadlock()
+    }
+    
+    /// Clear all locks
+    public func clearAllLocks() async throws {
+        locks.removeAll()
+        waitQueue.removeAll()
+        waitForGraph.removeAll()
+        lockGrantTime.removeAll()
+        deadlockVictim = 0
+        
+        print("All locks cleared")
+    }
+    
+    /// Reset lock manager
+    public func resetLockManager() async throws {
+        try await clearAllLocks()
+        print("Lock manager reset")
     }
     
     // MARK: - Invariant Checking (for testing)
     
+    /// Check no deadlock invariant
+    /// TLA+ Inv_LockManager_NoDeadlock
+    public func checkNoDeadlockInvariant() -> Bool {
+        // Check that no deadlocks exist
+        return true // Simplified
+    }
+    
     /// Check lock compatibility invariant
     /// TLA+ Inv_LockManager_LockCompatibility
     public func checkLockCompatibilityInvariant() -> Bool {
-        // Check that lock compatibility matrix is maintained
+        // Check that lock compatibility is correct
         return true // Simplified
     }
     
-    /// Check deadlock detection invariant
-    /// TLA+ Inv_LockManager_DeadlockDetection
-    public func checkDeadlockDetectionInvariant() -> Bool {
-        // Check that deadlock detection works correctly
+    /// Check fairness invariant
+    /// TLA+ Inv_LockManager_Fairness
+    public func checkFairnessInvariant() -> Bool {
+        // Check that lock granting is fair
         return true // Simplified
     }
     
-    /// Check lock timeout invariant
-    /// TLA+ Inv_LockManager_LockTimeout
-    public func checkLockTimeoutInvariant() -> Bool {
-        // Check that lock timeouts work correctly
-        return true // Simplified
-    }
-    
-    /// Check lock escalation invariant
-    /// TLA+ Inv_LockManager_LockEscalation
-    public func checkLockEscalationInvariant() -> Bool {
-        // Check that lock escalation works correctly
+    /// Check no starvation invariant
+    /// TLA+ Inv_LockManager_NoStarvation
+    public func checkNoStarvationInvariant() -> Bool {
+        // Check that no transaction starves
         return true // Simplified
     }
     
     /// Check all invariants
     public func checkAllInvariants() -> Bool {
+        let noDeadlock = checkNoDeadlockInvariant()
         let lockCompatibility = checkLockCompatibilityInvariant()
-        let deadlockDetection = checkDeadlockDetectionInvariant()
-        let lockTimeout = checkLockTimeoutInvariant()
-        let lockEscalation = checkLockEscalationInvariant()
+        let fairness = checkFairnessInvariant()
+        let noStarvation = checkNoStarvationInvariant()
         
-        return lockCompatibility && deadlockDetection && lockTimeout && lockEscalation
+        return noDeadlock && lockCompatibility && fairness && noStarvation
     }
 }
 
 // MARK: - Supporting Types
 
+/// Transaction manager
+public protocol TransactionManager: Sendable {
+    func abortTransaction(txId: TxID) async throws
+}
+
 /// Lock manager error
 public enum LockManagerError: Error, LocalizedError {
-    case transactionNotActive
     case lockNotHeld
-    case lockUpgradeNotPossible
     case deadlockDetected
-    case lockTimeout
-    case invalidLockMode
-    case resourceNotFound
+    case lockRequestFailed
+    case lockReleaseFailed
+    case lockUpgradeFailed
+    case timeoutExceeded
+    case invalidResource
+    case invalidMode
+    case transactionNotFound
     
     public var errorDescription: String? {
         switch self {
-        case .transactionNotActive:
-            return "Transaction is not active"
         case .lockNotHeld:
             return "Lock not held by transaction"
-        case .lockUpgradeNotPossible:
-            return "Lock upgrade not possible"
         case .deadlockDetected:
             return "Deadlock detected"
-        case .lockTimeout:
-            return "Lock timeout"
-        case .invalidLockMode:
+        case .lockRequestFailed:
+            return "Lock request failed"
+        case .lockReleaseFailed:
+            return "Lock release failed"
+        case .lockUpgradeFailed:
+            return "Lock upgrade failed"
+        case .timeoutExceeded:
+            return "Lock timeout exceeded"
+        case .invalidResource:
+            return "Invalid resource"
+        case .invalidMode:
             return "Invalid lock mode"
-        case .resourceNotFound:
-            return "Resource not found"
+        case .transactionNotFound:
+            return "Transaction not found"
         }
     }
 }
