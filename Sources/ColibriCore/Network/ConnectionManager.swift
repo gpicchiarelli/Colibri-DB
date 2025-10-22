@@ -386,7 +386,7 @@ public actor ConnectionManager {
         return connections[cid]
     }
     
-    public func getSession(sid: Int) -> Session? {
+    public func getSession(sid: Int) -> ConnectionSession? {
         return sessions[sid]
     }
     
