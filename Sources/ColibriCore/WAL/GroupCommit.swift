@@ -26,29 +26,30 @@ import Foundation
 // MARK: - Commit Request
 
 /// Commit request from a transaction
-public struct CommitRequest: Codable {
-    public let transactionId: String
-    public let targetLSN: UInt64
-    public let timestamp: Date
-    public let completionHandler: UUID  // Reference to completion handler
+/// Corresponds to TLA+: CommitRequest
+public struct CommitRequest: Codable, Sendable {
+    public let tid: TxID
+    public let targetLSN: LSN
+    public let timestamp: Timestamp
     
-    public init(transactionId: String, targetLSN: UInt64, timestamp: Date = Date(),
-                completionHandler: UUID = UUID()) {
-        self.transactionId = transactionId
+    public init(tid: TxID, targetLSN: LSN, timestamp: Timestamp) {
+        self.tid = tid
         self.targetLSN = targetLSN
         self.timestamp = timestamp
-        self.completionHandler = completionHandler
     }
 }
 
 // MARK: - Group Commit Configuration
 
 /// Configuration for group commit optimization
-public struct GroupCommitConfig {
+/// Corresponds to TLA+ constants: MAX_BATCH_SIZE, MAX_WAIT_TIME_MS
+public struct GroupCommitConfig: Sendable {
     /// Maximum commits per batch before forced flush
+    /// TLA+: MAX_BATCH_SIZE
     public let maxBatchSize: Int
     
     /// Maximum wait time (in milliseconds) before forced flush
+    /// TLA+: MAX_WAIT_TIME_MS
     public let maxWaitTimeMs: Int
     
     /// Enable group commit optimization
@@ -66,39 +67,55 @@ public struct GroupCommitConfig {
 // MARK: - Group Commit Manager
 
 /// Manager for group commit optimization
+/// Corresponds to TLA+ module: GroupCommit.tla
 public actor GroupCommitManager {
     
-    // Configuration
-    private let config: GroupCommitConfig
+    // MARK: - State Variables (TLA+ vars)
     
-    // Commit queue
+    /// Sequence of pending commit requests
+    /// TLA+: commitQueue \in Seq(CommitRequest)
     private var commitQueue: [CommitRequest] = []
     
-    // Batch timer (in milliseconds)
+    /// Timer for forced flush
+    /// TLA+: batchTimer \in Nat
     private var batchTimer: Int = 0
     
-    // Timestamp of last flush
-    private var lastFlushTime: Date = Date()
+    /// Timestamp of last flush
+    /// TLA+: lastFlushTime \in Timestamp
+    private var lastFlushTime: Timestamp = 0
     
-    // Flushed LSN
-    private var flushedLSN: UInt64 = 0
+    /// Current flushed LSN (from WAL module)
+    private var flushedLSN: LSN = 0
     
-    // Completion handlers
-    private var completionHandlers: [UUID: (Result<UInt64, Error>) -> Void] = [:]
+    // MARK: - Configuration
     
-    // Timer task
+    /// Configuration for group commit
+    private let config: GroupCommitConfig
+    
+    /// Flush callback (to WAL)
+    private let flushCallback: (LSN) async throws -> Void
+    
+    /// Completion handlers for commit requests
+    private var completionHandlers: [TxID: (Result<LSN, Error>) -> Void] = [:]
+    
+    /// Timer task
     private var timerTask: Task<Void, Never>?
     
-    // Flush callback (to WAL)
-    private let flushCallback: (UInt64) async throws -> Void
-    
-    // Statistics
+    /// Statistics
     private var stats: GroupCommitStats = GroupCommitStats()
     
+    // MARK: - Initialization
+    
     public init(config: GroupCommitConfig = .default,
-                flushCallback: @escaping (UInt64) async throws -> Void) {
+                flushCallback: @escaping (LSN) async throws -> Void) {
         self.config = config
         self.flushCallback = flushCallback
+        
+        // TLA+ Init_GC
+        self.commitQueue = []
+        self.batchTimer = 0
+        self.lastFlushTime = 0
+        self.flushedLSN = 0
         
         if config.enabled {
             startTimer()
@@ -108,20 +125,28 @@ public actor GroupCommitManager {
     // MARK: - Public API
     
     /// Request a commit (adds to queue)
+    /// TLA+ Action: RequestCommit(tid, targetLSN, timestamp)
+    /// Precondition: Len(commitQueue) < MAX_BATCH_SIZE
+    /// Postcondition: request added to queue
     public func requestCommit(
-        transactionId: String,
-        targetLSN: UInt64,
-        completion: @escaping (Result<UInt64, Error>) -> Void
+        tid: TxID,
+        targetLSN: LSN,
+        completion: @escaping (Result<LSN, Error>) -> Void
     ) {
-        let handlerId = UUID()
-        let request = CommitRequest(
-            transactionId: transactionId,
-            targetLSN: targetLSN,
-            timestamp: Date(),
-            completionHandler: handlerId
-        )
+        // TLA+: Len(commitQueue) < MAX_BATCH_SIZE
+        guard commitQueue.count < config.maxBatchSize else {
+            completion(.failure(GroupCommitError.queueFull))
+            return
+        }
         
-        completionHandlers[handlerId] = completion
+        // TLA+: request == [tid |-> tid, targetLSN |-> targetLSN, timestamp |-> timestamp]
+        let timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
+        let request = CommitRequest(tid: tid, targetLSN: targetLSN, timestamp: timestamp)
+        
+        // TLA+: commitQueue' = Append(commitQueue, request)
+        commitQueue.append(request)
+        completionHandlers[tid] = completion
+        stats.totalRequests += 1
         
         if !config.enabled {
             // Group commit disabled - flush immediately
@@ -137,10 +162,6 @@ public actor GroupCommitManager {
             return
         }
         
-        // Add to queue
-        commitQueue.append(request)
-        stats.totalRequests += 1
-        
         // Check if we should flush immediately
         if shouldFlushBatch() {
             Task {
@@ -150,13 +171,14 @@ public actor GroupCommitManager {
     }
     
     /// Force flush all pending commits
+    /// TLA+ Action: FlushBatch
     public func forceFlush() async throws {
         guard !commitQueue.isEmpty else { return }
         await flushBatch()
     }
     
     /// Get current flushed LSN
-    public func getFlushedLSN() -> UInt64 {
+    public func getFlushedLSN() -> LSN {
         return flushedLSN
     }
     
@@ -173,48 +195,51 @@ public actor GroupCommitManager {
     
     // MARK: - Batch Processing
     
+    /// Check if batch should be flushed
+    /// TLA+: FlushBatch precondition
     private func shouldFlushBatch() -> Bool {
         guard !commitQueue.isEmpty else { return false }
         
-        // Size threshold
-        if commitQueue.count >= config.maxBatchSize {
-            return true
-        }
-        
-        // Time threshold
-        let elapsed = Int(Date().timeIntervalSince(lastFlushTime) * 1000)
-        if elapsed >= config.maxWaitTimeMs {
-            return true
-        }
-        
-        return false
+        // TLA+: Len(commitQueue) >= MAX_BATCH_SIZE \/ batchTimer >= MAX_WAIT_TIME_MS
+        return commitQueue.count >= config.maxBatchSize || batchTimer >= config.maxWaitTimeMs
     }
     
+    /// Flush batch of commits
+    /// TLA+ Action: FlushBatch
+    /// Precondition: commitQueue # <<>> /\ (size threshold \/ time threshold)
+    /// Postcondition: all commits in batch flushed atomically
     private func flushBatch() async {
         guard !commitQueue.isEmpty else { return }
         
         let startTime = Date()
         let batch = commitQueue
+        
+        // TLA+: commitQueue' = <<>>
         commitQueue = []
+        
+        // TLA+: batchTimer' = 0
         batchTimer = 0
         
-        // Find maximum LSN in batch
+        // TLA+: maxLSN == Max({req.targetLSN : req \in Range(commitQueue)})
         let maxLSN = batch.map { $0.targetLSN }.max() ?? 0
         
         do {
             // Perform flush to disk
             try await flushCallback(maxLSN)
             
-            // Update flushed LSN
+            // TLA+: flushedLSN' = maxLSN
             flushedLSN = max(flushedLSN, maxLSN)
             
             // Complete all commits in batch
             for request in batch {
-                if let handler = completionHandlers[request.completionHandler] {
+                if let handler = completionHandlers[request.tid] {
                     handler(.success(maxLSN))
-                    completionHandlers.removeValue(forKey: request.completionHandler)
+                    completionHandlers.removeValue(forKey: request.tid)
                 }
             }
+            
+            // TLA+: lastFlushTime' = lastFlushTime + 1
+            lastFlushTime += 1
             
             // Update statistics
             stats.totalBatches += 1
@@ -224,14 +249,12 @@ public actor GroupCommitManager {
             let elapsed = Date().timeIntervalSince(startTime) * 1000
             stats.averageFlushTimeMs = (stats.averageFlushTimeMs * Double(stats.totalBatches - 1) + elapsed) / Double(stats.totalBatches)
             
-            lastFlushTime = Date()
-            
         } catch {
             // Flush failed - fail all commits in batch
             for request in batch {
-                if let handler = completionHandlers[request.completionHandler] {
+                if let handler = completionHandlers[request.tid] {
                     handler(.failure(error))
-                    completionHandlers.removeValue(forKey: request.completionHandler)
+                    completionHandlers.removeValue(forKey: request.tid)
                 }
             }
             
@@ -241,6 +264,7 @@ public actor GroupCommitManager {
     
     // MARK: - Timer Management
     
+    /// Start timer for forced flush
     private func startTimer() {
         timerTask = Task {
             while !Task.isCancelled {
@@ -253,12 +277,24 @@ public actor GroupCommitManager {
         }
     }
     
+    /// Tick timer (increment batch timer)
+    /// TLA+ Action: TickTimer
+    /// Precondition: commitQueue # <<>> /\ batchTimer < MAX_WAIT_TIME_MS
+    /// Postcondition: batchTimer' = batchTimer + 1
     private func tickTimer() async {
         guard !commitQueue.isEmpty else {
             batchTimer = 0
             return
         }
         
+        // TLA+: batchTimer < MAX_WAIT_TIME_MS
+        guard batchTimer < config.maxWaitTimeMs else {
+            // Time threshold reached - flush batch
+            await flushBatch()
+            return
+        }
+        
+        // TLA+: batchTimer' = batchTimer + 1
         batchTimer += 1
         
         if shouldFlushBatch() {
