@@ -304,31 +304,23 @@ public actor QueryPlanner {
     }
     
     
-    /// Get plan cost
-    private func getPlanCost(planId: String) -> Double? {
-        return queryPlans[planId]?.estimatedCost
-    }
     
-    /// Get plan cache size
-    private func getPlanCacheSize() -> Int {
-        return planCache.count
-    }
     
     // MARK: - Query Operations
     
     /// Get plan
     public func getPlan(planId: String) -> PlanNode? {
-        return getPlan(planId: planId)
+        return queryPlans[planId]
     }
     
     /// Get plan cost
     public func getPlanCost(planId: String) -> Double? {
-        return getPlanCost(planId: planId)
+        return queryPlans[planId]?.estimatedCost
     }
     
     /// Get plan cache size
     public func getPlanCacheSize() -> Int {
-        return getPlanCacheSize()
+        return planCache.count
     }
     
     /// Get all plans
@@ -436,11 +428,6 @@ public protocol CostEstimator: Sendable {
     func estimateCost(plan: PlanNode, costModel: [String: Double]) async throws -> PlanCost
 }
 
-/// Statistics manager
-public protocol StatisticsManager: Sendable {
-    func getStatistics(tableName: String) async throws -> [String: Double]
-    func updateStatistics(tableName: String, statistics: [String: Double]) async throws
-}
 
 /// Planner error
 public enum PlannerError: Error, LocalizedError {

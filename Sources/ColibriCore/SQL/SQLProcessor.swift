@@ -169,14 +169,14 @@ public actor SQLProcessor {
     private let queryParser: QueryParser
     
     /// Query planner
-    private let queryPlanner: QueryPlanner
+    private let queryPlanner: SQLProcessorQueryPlanner
     
     /// Query executor
     private let queryExecutor: QueryExecutor
     
     // MARK: - Initialization
     
-    public init(queryParser: QueryParser, queryPlanner: QueryPlanner, queryExecutor: QueryExecutor) {
+    public init(queryParser: QueryParser, queryPlanner: SQLProcessorQueryPlanner, queryExecutor: QueryExecutor) {
         self.queryParser = queryParser
         self.queryPlanner = queryPlanner
         self.queryExecutor = queryExecutor
@@ -551,8 +551,8 @@ public struct ParsedStatement: Codable, Sendable, Equatable {
     }
 }
 
-/// Query planner
-public protocol QueryPlanner: Sendable {
+/// SQL processor query planner
+public protocol SQLProcessorQueryPlanner: Sendable {
     func generatePlan(queryId: String, query: String) async throws -> QueryPlan
 }
 
