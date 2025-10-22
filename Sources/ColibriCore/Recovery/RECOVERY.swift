@@ -50,16 +50,7 @@ public enum ATTStatus: String, Codable {
 
 // MARK: - Undo Record
 
-/// Record to undo during undo phase
-public struct UndoRecord: Codable {
-    public let txId: String
-    public let lsn: UInt64
-    
-    public init(txId: String, lsn: UInt64) {
-        self.txId = txId
-        self.lsn = lsn
-    }
-}
+// UndoRecord is defined in ARIESRecoveryManager.swift
 
 // MARK: - WAL Record (simplified)
 
