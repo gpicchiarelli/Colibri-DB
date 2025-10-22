@@ -204,7 +204,7 @@ public actor MVCCManager {
             beginTS: globalTS,
             endTS: 0,
             createdBy: txId,
-            deletedBy: 0
+            deletedBy: 0,
             nextVersion: nil
         )
         
