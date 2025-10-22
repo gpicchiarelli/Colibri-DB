@@ -342,7 +342,7 @@ public actor MVCCManager {
     /// Is version visible
     private func isVersionVisible(version: Version, snapshot: MVCCSnapshot) -> Bool {
         // TLA+: Check if version is visible to snapshot
-        return committedTx.contains(version.beginTx) && version.beginTS <= snapshot.startTS
+        return committedTx.contains(version.beginTx) && version.beginTS <= snapshot.timestamp
     }
     
     
@@ -380,7 +380,7 @@ public actor MVCCManager {
     
     /// Get versions for key
     public func getVersionsForKey(key: Key) -> [Version] {
-        return Array(versions[key]?.values ?? [Version]())
+        return Array(versions[key]?.values ?? [])
     }
     
     /// Get active transactions

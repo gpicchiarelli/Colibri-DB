@@ -93,7 +93,7 @@ public actor ColibrìDB {
         // Initialize transaction components
         self.mvcc = MVCCManager()
         self.lockManager = LockManager()
-        self.transactionManager = TransactionManager(wal: wal, mvcc: mvcc, lockManager: lockManager)
+        self.transactionManager = TransactionManager(walManager: wal, mvccManager: mvcc, lockManager: lockManager)
         
         // Initialize recovery
         self.recovery = ARIESRecovery(wal: wal, bufferPool: bufferPool)
