@@ -73,11 +73,33 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🏗️ ColibrìDB Architecture</h1>
-            <p class="lead">Architettura completa di un database relazionale formalmente verificato</p>
-        </header>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <span class="brand-icon">🐦</span>
+                <span class="brand-text">ColibrìDB</span>
+            </div>
+            <div class="nav-menu">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="architecture.html" class="nav-link active">Architettura</a>
+                <a href="documentation.html" class="nav-link">Documentazione</a>
+                <a href="tla-specifications.html" class="nav-link">TLA+ Specs</a>
+                <a href="performance.html" class="nav-link">Performance</a>
+                <a href="https://github.com/gpicchiarelli/Colibri-DB" class="nav-link external" target="_blank">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h1>Architettura ColibrìDB</h1>
+                <p class="page-description">
+                    Architettura completa di un database relazionale formalmente verificato
+                </p>
+            </div>
 
         <section class="overview">
             <h2>Panoramica Architetturale</h2>
@@ -460,10 +482,40 @@
             </ul>
         </section>
 
-        <footer>
-            <p><strong>ColibrìDB Architecture</strong> - Architettura production-ready con verifica formale</p>
-            <p>Ultimo aggiornamento: 2025-10-19</p>
-        </footer>
-    </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>ColibrìDB</h3>
+                    <p>RDBMS moderno e performante per macOS, con architettura modulare e verifiche formali complete.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Risorse</h3>
+                    <ul>
+                        <li><a href="documentation.html">Documentazione</a></li>
+                        <li><a href="architecture.html">Architettura</a></li>
+                        <li><a href="tla-specifications.html">Specifiche TLA+</a></li>
+                        <li><a href="api-reference.html">API Reference</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Community</h3>
+                    <ul>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank">GitHub</a></li>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/issues" target="_blank">Segnala Bug</a></li>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/discussions" target="_blank">Discussioni</a></li>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md" target="_blank">Contribuisci</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 ColibrìDB · Swift 6.2 · Licenza BSD-3-Clause</p>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>
