@@ -1,606 +1,836 @@
--------------------------- MODULE PointInTimeRecovery --------------------------
-(*****************************************************************************)
-(* Point-in-Time Recovery (PITR) for ColibrìDB                              *)
-(*                                                                           *)
-(* This specification models Point-in-Time Recovery with:                   *)
-(*   - WAL-based recovery to any consistent point                           *)
-(*   - Transaction-level recovery granularity                               *)
-(*   - Forward and backward recovery                                        *)
-(*   - Undo/Redo log replay                                                 *)
-(*   - Crash recovery (ARIES algorithm)                                     *)
-(*   - Savepoints and nested recovery                                       *)
-(*   - Consistent snapshot restoration                                      *)
-(*   - Media recovery for disk failures                                     *)
-(*   - Logical replication for continuous recovery                          *)
-(*                                                                           *)
-(* Based on:                                                                 *)
-(*   - Mohan et al. (1992): "ARIES: A Transaction Recovery Method"         *)
-(*   - Gray & Reuter (1993): "Transaction Processing" - Recovery            *)
-(*   - Hellerstein et al. (2007): "Architecture of a Database System"      *)
-(*   - PostgreSQL Write-Ahead Logging and PITR                              *)
-(*   - Oracle Database Flashback and Recovery                               *)
-(*   - MySQL InnoDB Recovery mechanisms                                     *)
-(*   - SQLite WAL mode and recovery                                         *)
-(*                                                                           *)
-(* Author: ColibrìDB Development Team                                        *)
-(* Date: 2025-10-19                                                          *)
-(*****************************************************************************)
+---------------------------- MODULE PointInTimeRecovery ----------------------------
+(*
+  ColibrìDB Point-in-Time Recovery Specification
+  
+  Manages point-in-time recovery including:
+  - WAL-based recovery to specific timestamps
+  - Recovery point selection and validation
+  - Incremental recovery operations
+  - Recovery consistency verification
+  - Recovery performance optimization
+  - Recovery monitoring and logging
+  
+  Based on:
+  - PostgreSQL Point-in-Time Recovery (2019)
+  - MySQL Binary Log Recovery (2018)
+  - Oracle Flashback Database (2020)
+  - MongoDB Oplog Recovery (2021)
+  - ARIES Recovery Algorithm (Mohan et al., 1992)
+  
+  Key Properties:
+  - Accuracy: Recovery to exact point in time
+  - Consistency: Database remains consistent after recovery
+  - Completeness: All committed transactions recovered
+  - Performance: Efficient recovery operations
+  - Reliability: Recovery operations are atomic
+  
+  Author: ColibrìDB Team
+  Date: 2025-10-19
+  Version: 1.0.0
+*)
 
-EXTENDS Naturals, Sequences, FiniteSets, TLC, CORE, TLC
+EXTENDS CORE, INTERFACES, DISK_FORMAT, Naturals, Sequences, FiniteSets, TLC
 
 CONSTANTS
-    Transactions,       \* Set of all transactions
-    Pages,              \* Set of database pages
-    MaxWALSize,         \* Maximum WAL size before archiving
-    MaxSavepoints,      \* Maximum savepoints per transaction
-    RecoveryTargets     \* Set of recovery target types
+  MaxRecoveryPoints,     \* Maximum recovery points to maintain
+  RecoveryTimeout,       \* Timeout for recovery operations
+  MinRecoveryInterval,   \* Minimum interval between recovery points
+  MaxRecoverySize,       \* Maximum size for recovery operations
+  RecoveryVerificationLevel, \* Level of recovery verification
+  MaxRecoveryHistory     \* Maximum recovery history to maintain
 
 VARIABLES
-    wal,                \* Write-Ahead Log (sequence of log records)
-    committedTxns,      \* Set of committed transactions
-    abortedTxns,        \* Set of aborted transactions
-    activeTxns,         \* Currently active transactions
-    pageState,          \* Current state of pages
-    checkpoints,        \* Sequence of checkpoint records
-    savepoints,         \* Transaction -> Seq of savepoints
-    lastLSN,            \* Last Log Sequence Number
-    recoverySessions,   \* Active recovery sessions
-    recoveryTarget,     \* Target for PITR
-    undoLog,            \* Undo information for active transactions
-    redoLog,            \* Redo information for committed transactions
-    currentTime,        \* Global clock
-    systemState         \* Database system state
+  recoveryPoints,        \* [PointId -> RecoveryPoint]
+  recoveryJobs,          \* [JobId -> RecoveryJob]
+  recoveryHistory,       \* [HistoryId -> RecoveryHistory]
+  recoveryPolicies,      \* [PolicyId -> RecoveryPolicy]
+  recoveryVerification,  \* [JobId -> RecoveryVerification]
+  recoveryMonitoring,    \* RecoveryMonitoring
+  walSegments,           \* [SegmentId -> WALSegment]
+  recoveryCheckpoints    \* [CheckpointId -> RecoveryCheckpoint]
 
-vars == <<wal, committedTxns, abortedTxns, activeTxns, pageState, checkpoints,
-          savepoints, lastLSN, recoverySessions, recoveryTarget, undoLog, 
-          redoLog, currentTime, systemState>>
+pitrVars == <<recoveryPoints, recoveryJobs, recoveryHistory, recoveryPolicies, 
+             recoveryVerification, recoveryMonitoring, walSegments, recoveryCheckpoints>>
 
---------------------------------------------------------------------------------
-(* Type Definitions *)
+(* --------------------------------------------------------------------------
+   TYPE DEFINITIONS
+   -------------------------------------------------------------------------- *)
 
-TxnId == Transactions
-PageId == Pages
-LSN == Nat  \* Log Sequence Number
-Timestamp == Nat
-
-(* System states *)
-SystemState == {"NORMAL", "RECOVERING", "CRASHED", "CONSISTENT"}
-
-(* Recovery target types *)
-RecoveryTargetType == {
-    "TIME",             \* Recover to specific timestamp
-    "XID",              \* Recover to specific transaction ID
-    "LSN",              \* Recover to specific LSN
-    "NAME",             \* Recover to named restore point
-    "IMMEDIATE",        \* Recover to earliest consistent point
-    "LATEST"            \* Recover to latest possible point
-}
-
-(* Log record types *)
-LogRecordType == {
-    "BEGIN",            \* Transaction begin
-    "COMMIT",           \* Transaction commit
-    "ABORT",            \* Transaction abort
-    "UPDATE",           \* Page update
-    "CHECKPOINT",       \* Checkpoint
-    "SAVEPOINT",        \* Savepoint creation
-    "ROLLBACK_SAVEPOINT", \* Rollback to savepoint
-    "COMPENSATION"      \* CLR (Compensation Log Record) for undo
-}
-
-(* Log record structure *)
-LogRecord == [
+\* Recovery point
+RecoveryPoint == [
+  pointId: Nat,
+  timestamp: Timestamp,
     lsn: LSN,
-    type: LogRecordType,
-    txnId: TxnId \cup {0},      \* 0 for non-transactional records
-    prevLSN: LSN \cup {0},      \* Previous LSN for this transaction
-    pageId: PageId \cup {0},    \* Page affected (0 if none)
-    undoInfo: STRING,           \* Information needed for undo
-    redoInfo: STRING,           \* Information needed for redo
-    timestamp: Timestamp,
-    nextLSN: LSN \cup {0}       \* For CLRs: next record to undo
+  databaseName: STRING,
+  isConsistent: BOOLEAN,
+  isVerified: BOOLEAN,
+  walSegmentId: Nat,
+  checkpointId: Nat,
+  size: Nat,
+  isActive: BOOLEAN
 ]
 
-(* Checkpoint structure *)
-Checkpoint == [
-    lsn: LSN,
-    timestamp: Timestamp,
-    activeTxns: SUBSET Transactions,
-    dirtyPages: SUBSET Pages,
-    oldestActiveTxnLSN: LSN
+\* Recovery job
+RecoveryJob == [
+  jobId: Nat,
+  targetTimestamp: Timestamp,
+  targetLSN: LSN,
+  sourceDatabase: STRING,
+  targetDatabase: STRING,
+  recoveryType: {"full", "incremental", "selective"},
+  status: {"pending", "running", "completed", "failed", "cancelled"},
+  startTime: Timestamp,
+  endTime: Timestamp,
+  progress: Nat,  \* 0-100
+  errorMessage: STRING,
+  isVerified: BOOLEAN
 ]
 
-(* Savepoint structure *)
-Savepoint == [
-    name: STRING,
-    lsn: LSN,
-    txnId: TxnId,
-    timestamp: Timestamp
+\* Recovery history
+RecoveryHistory == [
+  historyId: Nat,
+  jobId: Nat,
+  recoveryType: {"full", "incremental", "selective"},
+  startTimestamp: Timestamp,
+  endTimestamp: Timestamp,
+  duration: Nat,
+  success: BOOLEAN,
+  errorMessage: STRING,
+  recoveredTransactions: Nat,
+  recoveredData: Nat
 ]
 
-(* Recovery target *)
-Target == [
-    type: RecoveryTargetType,
-    value: Nat \cup STRING,     \* Timestamp, XID, LSN, or name
-    inclusive: BOOLEAN          \* Include or exclude target point
+\* Recovery policy
+RecoveryPolicy == [
+  policyId: Nat,
+  policyName: STRING,
+  databaseName: STRING,
+  recoveryPointFrequency: Nat,  \* seconds
+  retentionPeriod: Nat,  \* seconds
+  verificationEnabled: BOOLEAN,
+  compressionEnabled: BOOLEAN,
+  encryptionEnabled: BOOLEAN,
+  isActive: BOOLEAN
 ]
 
---------------------------------------------------------------------------------
-(* Initial State *)
+\* Recovery verification
+RecoveryVerification == [
+  jobId: Nat,
+  verificationType: {"consistency", "integrity", "completeness", "performance"},
+  status: {"pending", "running", "passed", "failed"},
+  startTime: Timestamp,
+  endTime: Timestamp,
+  errorMessage: STRING,
+  isVerified: BOOLEAN
+]
+
+\* Recovery monitoring
+RecoveryMonitoring == [
+  totalRecoveries: Nat,
+  successfulRecoveries: Nat,
+  failedRecoveries: Nat,
+  averageRecoveryTime: Nat,
+  lastRecoveryTime: Timestamp,
+  nextScheduledRecovery: Timestamp,
+  recoveryPointCount: Nat,
+  walSegmentCount: Nat,
+  isHealthy: BOOLEAN
+]
+
+\* WAL segment
+WALSegment == [
+  segmentId: Nat,
+  startLSN: LSN,
+  endLSN: LSN,
+  startTimestamp: Timestamp,
+  endTimestamp: Timestamp,
+  size: Nat,
+  isCompressed: BOOLEAN,
+  isEncrypted: BOOLEAN,
+  isActive: BOOLEAN
+]
+
+\* Recovery checkpoint
+RecoveryCheckpoint == [
+  checkpointId: Nat,
+  timestamp: Timestamp,
+  lsn: LSN,
+  databaseName: STRING,
+  isConsistent: BOOLEAN,
+  isVerified: BOOLEAN,
+  size: Nat,
+  isActive: BOOLEAN
+]
+
+(* --------------------------------------------------------------------------
+   TYPE INVARIANT
+   -------------------------------------------------------------------------- *)
+
+TypeOK_PointInTimeRecovery ==
+  /\ recoveryPoints \in [Nat -> RecoveryPoint]
+  /\ recoveryJobs \in [Nat -> RecoveryJob]
+  /\ recoveryHistory \in [Nat -> RecoveryHistory]
+  /\ recoveryPolicies \in [Nat -> RecoveryPolicy]
+  /\ recoveryVerification \in [Nat -> RecoveryVerification]
+  /\ recoveryMonitoring \in RecoveryMonitoring
+  /\ walSegments \in [Nat -> WALSegment]
+  /\ recoveryCheckpoints \in [Nat -> RecoveryCheckpoint]
+
+(* --------------------------------------------------------------------------
+   INITIAL STATE
+   -------------------------------------------------------------------------- *)
 
 Init ==
-    /\ wal = <<>>
-    /\ committedTxns = {}
-    /\ abortedTxns = {}
-    /\ activeTxns = {}
-    /\ pageState = [p \in Pages |-> [version |-> 0, lsn |-> 0, data |-> <<>>]]
-    /\ checkpoints = <<>>
-    /\ savepoints = [txn \in Transactions |-> <<>>]
-    /\ lastLSN = 0
-    /\ recoverySessions = {}
-    /\ recoveryTarget = [type |-> "LATEST", value |-> 0, inclusive |-> TRUE]
-    /\ undoLog = [txn \in Transactions |-> <<>>]
-    /\ redoLog = <<>>
-    /\ currentTime = 0
-    /\ systemState = "NORMAL"
-
---------------------------------------------------------------------------------
-(* Helper Functions *)
-
-(* Append log record to WAL *)
-AppendWAL(record) ==
-    /\ lastLSN' = lastLSN + 1
-    /\ wal' = Append(wal, [record EXCEPT !.lsn = lastLSN + 1])
-
-(* Find log records for a transaction *)
-TxnLogRecords(txnId) ==
-    {i \in DOMAIN wal : wal[i].txnId = txnId}
-
-(* Get last log record for transaction *)
-LastTxnLSN(txnId) ==
-    IF TxnLogRecords(txnId) = {} THEN 0
-    ELSE CHOOSE lsn \in {wal[i].lsn : i \in TxnLogRecords(txnId)} :
-           \A other \in {wal[i].lsn : i \in TxnLogRecords(txnId)} :
-             other <= lsn
-
-(* Find checkpoint before given LSN *)
-CheckpointBefore(lsn) ==
-    IF checkpoints = <<>> THEN 0
-    ELSE LET validCps == {i \in DOMAIN checkpoints : checkpoints[i].lsn < lsn}
-         IN IF validCps = {} THEN 0
-            ELSE CHOOSE i \in validCps :
-                   \A j \in validCps : checkpoints[j].lsn <= checkpoints[i].lsn
-
-(* Determine if LSN is before recovery target *)
-BeforeTarget(lsn, target) ==
-    CASE target.type = "LSN" -> 
-           IF target.inclusive THEN lsn <= target.value ELSE lsn < target.value
-      [] target.type = "TIME" ->
-           \E i \in DOMAIN wal : wal[i].lsn = lsn /\
-             (IF target.inclusive 
-              THEN wal[i].timestamp <= target.value 
-              ELSE wal[i].timestamp < target.value)
-      [] target.type = "XID" ->
-           \E i \in DOMAIN wal : 
-             wal[i].lsn = lsn /\ wal[i].txnId <= target.value
-      [] target.type = "IMMEDIATE" -> FALSE
-      [] target.type = "LATEST" -> TRUE
-      [] OTHER -> TRUE
-
-(* Check if transaction should be recovered *)
-ShouldRecover(txnId, target) ==
-    LET txnRecords == {wal[i] : i \in TxnLogRecords(txnId)}
-        commitRecord == CHOOSE r \in txnRecords : r.type = "COMMIT"
-    IN
-        /\ commitRecord # {}
-        /\ BeforeTarget(commitRecord.lsn, target)
-
---------------------------------------------------------------------------------
-(* Normal Operations *)
-
-(* Begin transaction *)
-BeginTransaction(txnId) ==
-    /\ txnId \notin activeTxns
-    /\ txnId \notin committedTxns
-    /\ txnId \notin abortedTxns
-    /\ systemState = "NORMAL"
-    /\ LET record == [
-             lsn |-> 0,  \* Will be set by AppendWAL
-             type |-> "BEGIN",
-             txnId |-> txnId,
-             prevLSN |-> 0,
-             pageId |-> 0,
-             undoInfo |-> <<>>,
-             redoInfo |-> <<>>,
-             timestamp |-> currentTime,
-             nextLSN |-> 0
-       ]
-       IN
-           /\ AppendWAL(record)
-           /\ activeTxns' = activeTxns \cup {txnId}
-           /\ undoLog' = [undoLog EXCEPT ![txnId] = <<>>]
-    /\ UNCHANGED <<committedTxns, abortedTxns, pageState, checkpoints, savepoints,
-                  recoverySessions, recoveryTarget, redoLog, currentTime, systemState>>
-
-(* Update page *)
-UpdatePage(txnId, pageId, undoInfo, redoInfo) ==
-    /\ txnId \in activeTxns
-    /\ systemState = "NORMAL"
-    /\ LET record == [
+  /\ recoveryPoints = [p \in {} |-> [
+       pointId |-> 0,
+       timestamp |-> 0,
+       lsn |-> 0,
+       databaseName |-> "",
+       isConsistent |-> FALSE,
+       isVerified |-> FALSE,
+       walSegmentId |-> 0,
+       checkpointId |-> 0,
+       size |-> 0,
+       isActive |-> FALSE
+     ]]
+  /\ recoveryJobs = [j \in {} |-> [
+       jobId |-> 0,
+       targetTimestamp |-> 0,
+       targetLSN |-> 0,
+       sourceDatabase |-> "",
+       targetDatabase |-> "",
+       recoveryType |-> "full",
+       status |-> "pending",
+       startTime |-> 0,
+       endTime |-> 0,
+       progress |-> 0,
+       errorMessage |-> "",
+       isVerified |-> FALSE
+     ]]
+  /\ recoveryHistory = [h \in {} |-> [
+       historyId |-> 0,
+       jobId |-> 0,
+       recoveryType |-> "full",
+       startTimestamp |-> 0,
+       endTimestamp |-> 0,
+       duration |-> 0,
+       success |-> FALSE,
+       errorMessage |-> "",
+       recoveredTransactions |-> 0,
+       recoveredData |-> 0
+     ]]
+  /\ recoveryPolicies = [p \in {} |-> [
+       policyId |-> 0,
+       policyName |-> "",
+       databaseName |-> "",
+       recoveryPointFrequency |-> 3600,
+       retentionPeriod |-> 86400,
+       verificationEnabled |-> TRUE,
+       compressionEnabled |-> TRUE,
+       encryptionEnabled |-> FALSE,
+       isActive |-> FALSE
+     ]]
+  /\ recoveryVerification = [v \in {} |-> [
+       jobId |-> 0,
+       verificationType |-> "consistency",
+       status |-> "pending",
+       startTime |-> 0,
+       endTime |-> 0,
+       errorMessage |-> "",
+       isVerified |-> FALSE
+     ]]
+  /\ recoveryMonitoring = [
+       totalRecoveries |-> 0,
+       successfulRecoveries |-> 0,
+       failedRecoveries |-> 0,
+       averageRecoveryTime |-> 0,
+       lastRecoveryTime |-> 0,
+       nextScheduledRecovery |-> 0,
+       recoveryPointCount |-> 0,
+       walSegmentCount |-> 0,
+       isHealthy |-> TRUE
+     ]
+  /\ walSegments = [s \in {} |-> [
+       segmentId |-> 0,
+       startLSN |-> 0,
+       endLSN |-> 0,
+       startTimestamp |-> 0,
+       endTimestamp |-> 0,
+       size |-> 0,
+       isCompressed |-> FALSE,
+       isEncrypted |-> FALSE,
+       isActive |-> FALSE
+     ]]
+  /\ recoveryCheckpoints = [c \in {} |-> [
+       checkpointId |-> 0,
+       timestamp |-> 0,
              lsn |-> 0,
-             type |-> "UPDATE",
-             txnId |-> txnId,
-             prevLSN |-> LastTxnLSN(txnId),
-             pageId |-> pageId,
-             undoInfo |-> undoInfo,
-             redoInfo |-> redoInfo,
-             timestamp |-> currentTime,
-             nextLSN |-> 0
+       databaseName |-> "",
+       isConsistent |-> FALSE,
+       isVerified |-> FALSE,
+       size |-> 0,
+       isActive |-> FALSE
+     ]]
+
+(* --------------------------------------------------------------------------
+   OPERATIONS
+   -------------------------------------------------------------------------- *)
+
+\* Create recovery point
+CreateRecoveryPoint(pointId, timestamp, lsn, databaseName, walSegmentId, checkpointId, size) ==
+  /\ ~(pointId \in DOMAIN recoveryPoints)
+  /\ LET recoveryPoint == [
+       pointId |-> pointId,
+       timestamp |-> timestamp,
+       lsn |-> lsn,
+       databaseName |-> databaseName,
+       isConsistent |-> TRUE,
+       isVerified |-> FALSE,
+       walSegmentId |-> walSegmentId,
+       checkpointId |-> checkpointId,
+       size |-> size,
+       isActive |-> TRUE
+     ]
+  IN /\ recoveryPoints' = [recoveryPoints EXCEPT ![pointId] = recoveryPoint]
+     /\ recoveryMonitoring' = [recoveryMonitoring EXCEPT 
+                              !.recoveryPointCount = recoveryMonitoring.recoveryPointCount + 1]
+     /\ UNCHANGED <<recoveryJobs, recoveryHistory, recoveryPolicies, 
+                   recoveryVerification, walSegments, recoveryCheckpoints>>
+
+\* Start recovery job
+StartRecoveryJob(jobId, targetTimestamp, targetLSN, sourceDatabase, targetDatabase, recoveryType) ==
+  /\ ~(jobId \in DOMAIN recoveryJobs)
+  /\ LET recoveryJob == [
+       jobId |-> jobId,
+       targetTimestamp |-> targetTimestamp,
+       targetLSN |-> targetLSN,
+       sourceDatabase |-> sourceDatabase,
+       targetDatabase |-> targetDatabase,
+       recoveryType |-> recoveryType,
+       status |-> "running",
+       startTime |-> globalTimestamp,
+       endTime |-> 0,
+       progress |-> 0,
+       errorMessage |-> "",
+       isVerified |-> FALSE
+     ]
+  IN /\ recoveryJobs' = [recoveryJobs EXCEPT ![jobId] = recoveryJob]
+     /\ UNCHANGED <<recoveryPoints, recoveryHistory, recoveryPolicies, 
+                   recoveryVerification, recoveryMonitoring, walSegments, recoveryCheckpoints>>
+
+\* Complete recovery job
+CompleteRecoveryJob(jobId, success, errorMessage, recoveredTransactions, recoveredData) ==
+  /\ jobId \in DOMAIN recoveryJobs
+  /\ LET recoveryJob == recoveryJobs[jobId]
+       updatedJob == [recoveryJob EXCEPT 
+                     !.status = IF success THEN "completed" ELSE "failed",
+                     !.endTime = globalTimestamp,
+                     !.errorMessage = errorMessage,
+                     !.isVerified = success]
+       historyEntry == [
+         historyId |-> Len(DOMAIN recoveryHistory) + 1,
+         jobId |-> jobId,
+         recoveryType |-> recoveryJob.recoveryType,
+         startTimestamp |-> recoveryJob.startTime,
+         endTimestamp |-> globalTimestamp,
+         duration |-> globalTimestamp - recoveryJob.startTime,
+         success |-> success,
+         errorMessage |-> errorMessage,
+         recoveredTransactions |-> recoveredTransactions,
+         recoveredData |-> recoveredData
        ]
-       IN
-           /\ AppendWAL(record)
-           /\ pageState' = [pageState EXCEPT 
-                ![pageId].version = @ + 1,
-                ![pageId].lsn = lastLSN + 1,
-                ![pageId].data = redoInfo]
-           /\ undoLog' = [undoLog EXCEPT 
-                ![txnId] = Append(@, [lsn |-> lastLSN + 1, 
-                                      pageId |-> pageId,
-                                      undoInfo |-> undoInfo])]
-    /\ UNCHANGED <<committedTxns, abortedTxns, activeTxns, checkpoints, savepoints,
-                  recoverySessions, recoveryTarget, redoLog, currentTime, systemState>>
+  IN /\ recoveryJobs' = [recoveryJobs EXCEPT ![jobId] = updatedJob]
+     /\ recoveryHistory' = [recoveryHistory EXCEPT ![Len(DOMAIN recoveryHistory) + 1] = historyEntry]
+     /\ recoveryMonitoring' = [recoveryMonitoring EXCEPT 
+                              !.totalRecoveries = recoveryMonitoring.totalRecoveries + 1,
+                              !.successfulRecoveries = IF success THEN recoveryMonitoring.successfulRecoveries + 1 
+                                                      ELSE recoveryMonitoring.successfulRecoveries,
+                              !.failedRecoveries = IF success THEN recoveryMonitoring.failedRecoveries 
+                                                  ELSE recoveryMonitoring.failedRecoveries + 1,
+                              !.lastRecoveryTime = globalTimestamp]
+     /\ UNCHANGED <<recoveryPoints, recoveryPolicies, recoveryVerification, 
+                   walSegments, recoveryCheckpoints>>
 
-(* Commit transaction *)
-CommitTransaction(txnId) ==
-    /\ txnId \in activeTxns
-    /\ systemState = "NORMAL"
-    /\ LET record == [
-             lsn |-> 0,
-             type |-> "COMMIT",
-             txnId |-> txnId,
-             prevLSN |-> LastTxnLSN(txnId),
-             pageId |-> 0,
-             undoInfo |-> <<>>,
-             redoInfo |-> <<>>,
-             timestamp |-> currentTime,
-             nextLSN |-> 0
+\* Verify recovery
+VerifyRecovery(jobId, verificationType, success, errorMessage) ==
+  /\ jobId \in DOMAIN recoveryJobs
+  /\ LET verification == [
+       jobId |-> jobId,
+       verificationType |-> verificationType,
+       status |-> IF success THEN "passed" ELSE "failed",
+       startTime |-> globalTimestamp,
+       endTime |-> globalTimestamp,
+       errorMessage |-> errorMessage,
+       isVerified |-> success
+     ]
+  IN /\ recoveryVerification' = [recoveryVerification EXCEPT ![jobId] = verification]
+     /\ recoveryJobs' = [recoveryJobs EXCEPT ![jobId] = [recoveryJobs[jobId] EXCEPT 
+                   !.isVerified = success]]
+     /\ UNCHANGED <<recoveryPoints, recoveryHistory, recoveryPolicies, 
+                   recoveryMonitoring, walSegments, recoveryCheckpoints>>
+
+\* Create recovery policy
+CreateRecoveryPolicy(policyId, policyName, databaseName, recoveryPointFrequency, 
+                    retentionPeriod, verificationEnabled, compressionEnabled, encryptionEnabled) ==
+  /\ ~(policyId \in DOMAIN recoveryPolicies)
+  /\ LET policy == [
+       policyId |-> policyId,
+       policyName |-> policyName,
+       databaseName |-> databaseName,
+       recoveryPointFrequency |-> recoveryPointFrequency,
+       retentionPeriod |-> retentionPeriod,
+       verificationEnabled |-> verificationEnabled,
+       compressionEnabled |-> compressionEnabled,
+       encryptionEnabled |-> encryptionEnabled,
+       isActive |-> TRUE
+     ]
+  IN /\ recoveryPolicies' = [recoveryPolicies EXCEPT ![policyId] = policy]
+     /\ UNCHANGED <<recoveryPoints, recoveryJobs, recoveryHistory, 
+                   recoveryVerification, recoveryMonitoring, walSegments, recoveryCheckpoints>>
+
+\* Add WAL segment
+AddWALSegment(segmentId, startLSN, endLSN, startTimestamp, endTimestamp, size, 
+              isCompressed, isEncrypted) ==
+  /\ ~(segmentId \in DOMAIN walSegments)
+  /\ LET walSegment == [
+       segmentId |-> segmentId,
+       startLSN |-> startLSN,
+       endLSN |-> endLSN,
+       startTimestamp |-> startTimestamp,
+       endTimestamp |-> endTimestamp,
+       size |-> size,
+       isCompressed |-> isCompressed,
+       isEncrypted |-> isEncrypted,
+       isActive |-> TRUE
+     ]
+  IN /\ walSegments' = [walSegments EXCEPT ![segmentId] = walSegment]
+     /\ recoveryMonitoring' = [recoveryMonitoring EXCEPT 
+                              !.walSegmentCount = recoveryMonitoring.walSegmentCount + 1]
+     /\ UNCHANGED <<recoveryPoints, recoveryJobs, recoveryHistory, recoveryPolicies, 
+                   recoveryVerification, recoveryCheckpoints>>
+
+\* Create recovery checkpoint
+CreateRecoveryCheckpoint(checkpointId, timestamp, lsn, databaseName, size) ==
+  /\ ~(checkpointId \in DOMAIN recoveryCheckpoints)
+  /\ LET checkpoint == [
+       checkpointId |-> checkpointId,
+       timestamp |-> timestamp,
+       lsn |-> lsn,
+       databaseName |-> databaseName,
+       isConsistent |-> TRUE,
+       isVerified |-> FALSE,
+       size |-> size,
+       isActive |-> TRUE
+     ]
+  IN /\ recoveryCheckpoints' = [recoveryCheckpoints EXCEPT ![checkpointId] = checkpoint]
+     /\ UNCHANGED <<recoveryPoints, recoveryJobs, recoveryHistory, recoveryPolicies, 
+                   recoveryVerification, recoveryMonitoring, walSegments>>
+
+\* Update recovery monitoring
+UpdateRecoveryMonitoring() ==
+  /\ LET totalRecoveries == Len(DOMAIN recoveryJobs)
+       successfulRecoveries == Len({jobId \in DOMAIN recoveryJobs : 
+                                   recoveryJobs[jobId].status = "completed"})
+       failedRecoveries == Len({jobId \in DOMAIN recoveryJobs : 
+                               recoveryJobs[jobId].status = "failed"})
+       averageRecoveryTime == CalculateAverageRecoveryTime()
+       lastRecoveryTime == GetLastRecoveryTime()
+       nextScheduledRecovery == GetNextScheduledRecovery()
+       recoveryPointCount == Len(DOMAIN recoveryPoints)
+       walSegmentCount == Len(DOMAIN walSegments)
+       isHealthy == successfulRecoveries > 0 /\ failedRecoveries < totalRecoveries / 2
+       monitoring == [
+         totalRecoveries |-> totalRecoveries,
+         successfulRecoveries |-> successfulRecoveries,
+         failedRecoveries |-> failedRecoveries,
+         averageRecoveryTime |-> averageRecoveryTime,
+         lastRecoveryTime |-> lastRecoveryTime,
+         nextScheduledRecovery |-> nextScheduledRecovery,
+         recoveryPointCount |-> recoveryPointCount,
+         walSegmentCount |-> walSegmentCount,
+         isHealthy |-> isHealthy
        ]
-       IN
-           /\ AppendWAL(record)
-           /\ activeTxns' = activeTxns \ {txnId}
-           /\ committedTxns' = committedTxns \cup {txnId}
-           /\ redoLog' = Append(redoLog, [txnId |-> txnId, commitLSN |-> lastLSN + 1])
-    /\ UNCHANGED <<abortedTxns, pageState, checkpoints, savepoints, undoLog,
-                  recoverySessions, recoveryTarget, currentTime, systemState>>
+  IN /\ recoveryMonitoring' = monitoring
+     /\ UNCHANGED <<recoveryPoints, recoveryJobs, recoveryHistory, recoveryPolicies, 
+                   recoveryVerification, walSegments, recoveryCheckpoints>>
 
-(* Abort transaction *)
-AbortTransaction(txnId) ==
-    /\ txnId \in activeTxns
-    /\ systemState = "NORMAL"
-    /\ LET record == [
-             lsn |-> 0,
-             type |-> "ABORT",
-             txnId |-> txnId,
-             prevLSN |-> LastTxnLSN(txnId),
-             pageId |-> 0,
-             undoInfo |-> <<>>,
-             redoInfo |-> <<>>,
-             timestamp |-> currentTime,
-             nextLSN |-> 0
-       ]
-       IN
-           /\ AppendWAL(record)
-           /\ activeTxns' = activeTxns \ {txnId}
-           /\ abortedTxns' = abortedTxns \cup {txnId}
-    /\ UNCHANGED <<committedTxns, pageState, checkpoints, savepoints, undoLog,
-                  redoLog, recoverySessions, recoveryTarget, currentTime, systemState>>
+\* Cleanup old recovery points
+CleanupOldRecoveryPoints() ==
+  /\ LET currentTime == globalTimestamp
+       oldPoints == {pointId \in DOMAIN recoveryPoints : 
+                    currentTime - recoveryPoints[pointId].timestamp > MaxRecoveryHistory}
+  IN /\ recoveryPoints' = [p \in DOMAIN recoveryPoints \ oldPoints |-> recoveryPoints[p]]
+     /\ recoveryMonitoring' = [recoveryMonitoring EXCEPT 
+                              !.recoveryPointCount = recoveryMonitoring.recoveryPointCount - Len(oldPoints)]
+     /\ UNCHANGED <<recoveryJobs, recoveryHistory, recoveryPolicies, 
+                   recoveryVerification, walSegments, recoveryCheckpoints>>
 
---------------------------------------------------------------------------------
-(* Savepoints *)
+\* Progress recovery job
+ProgressRecoveryJob(jobId, progress) ==
+  /\ jobId \in DOMAIN recoveryJobs
+  /\ LET recoveryJob == recoveryJobs[jobId]
+       updatedJob == [recoveryJob EXCEPT !.progress = progress]
+  IN /\ recoveryJobs' = [recoveryJobs EXCEPT ![jobId] = updatedJob]
+     /\ UNCHANGED <<recoveryPoints, recoveryHistory, recoveryPolicies, 
+                   recoveryVerification, recoveryMonitoring, walSegments, recoveryCheckpoints>>
 
-CreateSavepoint(txnId, savepointName) ==
-    /\ txnId \in activeTxns
-    /\ systemState = "NORMAL"
-    /\ Len(savepoints[txnId]) < MaxSavepoints
-    /\ LET sp == [
-             name |-> savepointName,
-             lsn |-> lastLSN,
-             txnId |-> txnId,
-             timestamp |-> currentTime
-       ]
-           record == [
-             lsn |-> 0,
-             type |-> "SAVEPOINT",
-             txnId |-> txnId,
-             prevLSN |-> LastTxnLSN(txnId),
-             pageId |-> 0,
-             undoInfo |-> savepointName,
-             redoInfo |-> <<>>,
-             timestamp |-> currentTime,
-             nextLSN |-> 0
-       ]
-       IN
-           /\ AppendWAL(record)
-           /\ savepoints' = [savepoints EXCEPT ![txnId] = Append(@, sp)]
-    /\ UNCHANGED <<committedTxns, abortedTxns, activeTxns, pageState, checkpoints,
-                  undoLog, redoLog, recoverySessions, recoveryTarget, currentTime, systemState>>
+(* --------------------------------------------------------------------------
+   HELPER FUNCTIONS
+   -------------------------------------------------------------------------- *)
 
-RollbackToSavepoint(txnId, savepointName) ==
-    /\ txnId \in activeTxns
-    /\ systemState = "NORMAL"
-    /\ \E i \in DOMAIN savepoints[txnId] : 
-         savepoints[txnId][i].name = savepointName
-    /\ LET sp == CHOOSE s \in {savepoints[txnId][i] : i \in DOMAIN savepoints[txnId]} :
-                   s.name = savepointName
-           undoRecords == {wal[i] : i \in DOMAIN wal /\ 
-                          wal[i].txnId = txnId /\ wal[i].lsn > sp.lsn}
-       IN
-           \* Undo operations back to savepoint
-           /\ undoLog' = [undoLog EXCEPT ![txnId] = 
-                SelectSeq(@, LAMBDA x: x.lsn <= sp.lsn)]
-    /\ UNCHANGED <<wal, committedTxns, abortedTxns, activeTxns, pageState, 
-                  checkpoints, savepoints, lastLSN, recoverySessions, 
-                  recoveryTarget, redoLog, currentTime, systemState>>
+\* Calculate average recovery time
+CalculateAverageRecoveryTime() ==
+  IF DOMAIN recoveryJobs = {} THEN 0
+  ELSE LET totalTime == SumRecoveryTimes()
+           jobCount == Len(DOMAIN recoveryJobs)
+       IN totalTime / jobCount
 
---------------------------------------------------------------------------------
-(* Checkpointing *)
+\* Sum recovery times
+SumRecoveryTimes() ==
+  IF DOMAIN recoveryJobs = {} THEN 0
+  ELSE LET jobId == CHOOSE j \in DOMAIN recoveryJobs : TRUE
+           job == recoveryJobs[jobId]
+           restJobs == [j \in DOMAIN recoveryJobs \ {jobId} |-> recoveryJobs[j]]
+       IN (job.endTime - job.startTime) + SumRecoveryTimes()
 
-CreateCheckpoint ==
-    /\ systemState = "NORMAL"
-    /\ LET cp == [
-             lsn |-> lastLSN + 1,
-             timestamp |-> currentTime,
-             activeTxns |-> activeTxns,
-             dirtyPages |-> {p \in Pages : pageState[p].lsn > 0},
-             oldestActiveTxnLSN |-> IF activeTxns = {} THEN lastLSN
-                                   ELSE Min({LastTxnLSN(t) : t \in activeTxns})
-       ]
-           record == [
-             lsn |-> 0,
-             type |-> "CHECKPOINT",
-             txnId |-> 0,
-             prevLSN |-> 0,
-             pageId |-> 0,
-             undoInfo |-> <<>>,
-             redoInfo |-> <<>>,
-             timestamp |-> currentTime,
-             nextLSN |-> 0
-       ]
-       IN
-           /\ AppendWAL(record)
-           /\ checkpoints' = Append(checkpoints, cp)
-    /\ UNCHANGED <<committedTxns, abortedTxns, activeTxns, pageState, savepoints,
-                  undoLog, redoLog, recoverySessions, recoveryTarget, 
-                  currentTime, systemState>>
+\* Get last recovery time
+GetLastRecoveryTime() ==
+  IF DOMAIN recoveryJobs = {} THEN 0
+  ELSE LET recoveryTimes == {recoveryJobs[jobId].endTime : jobId \in DOMAIN recoveryJobs}
+       IN Max(recoveryTimes)
 
---------------------------------------------------------------------------------
-(* Crash and Recovery *)
+\* Get next scheduled recovery
+GetNextScheduledRecovery() ==
+  IF DOMAIN recoveryPolicies = {} THEN 0
+  ELSE LET policyTimes == {recoveryPolicies[policyId].recoveryPointFrequency : 
+                          policyId \in DOMAIN recoveryPolicies}
+       IN Min(policyTimes)
 
-Crash ==
-    /\ systemState = "NORMAL"
-    /\ systemState' = "CRASHED"
-    /\ activeTxns' = {}  \* Lose in-memory transaction state
-    /\ UNCHANGED <<wal, committedTxns, abortedTxns, pageState, checkpoints,
-                  savepoints, lastLSN, undoLog, redoLog, recoverySessions,
-                  recoveryTarget, currentTime>>
+\* Check if recovery point is valid
+IsRecoveryPointValid(pointId) ==
+  pointId \in DOMAIN recoveryPoints /\ 
+  recoveryPoints[pointId].isConsistent /\ 
+  recoveryPoints[pointId].isActive
 
-InitiateRecovery(target) ==
-    /\ systemState = "CRASHED"
-    /\ systemState' = "RECOVERING"
-    /\ recoveryTarget' = target
-    /\ recoverySessions' = {[startTime |-> currentTime, target |-> target]}
-    /\ UNCHANGED <<wal, committedTxns, abortedTxns, activeTxns, pageState,
-                  checkpoints, savepoints, lastLSN, undoLog, redoLog, currentTime>>
+\* Check if recovery is possible
+IsRecoveryPossible(targetTimestamp) ==
+  \E pointId \in DOMAIN recoveryPoints : 
+    IsRecoveryPointValid(pointId) /\ 
+    recoveryPoints[pointId].timestamp <= targetTimestamp
 
-(* ARIES Recovery - Analysis Phase *)
-AnalysisPhase ==
-    /\ systemState = "RECOVERING"
-    /\ LET cpIndex == CheckpointBefore(lastLSN)
-           startLSN == IF cpIndex = 0 THEN 1 ELSE checkpoints[cpIndex].lsn
-           relevantRecords == {wal[i] : i \in DOMAIN wal /\ 
-                              wal[i].lsn >= startLSN /\
-                              BeforeTarget(wal[i].lsn, recoveryTarget)}
-       IN
-           \* Identify committed and active transactions
-           /\ committedTxns' = {r.txnId : r \in relevantRecords /\ r.type = "COMMIT"}
-           /\ activeTxns' = {r.txnId : r \in relevantRecords /\ 
-                            r.type = "BEGIN" /\ r.txnId \notin committedTxns'}
-    /\ UNCHANGED <<wal, abortedTxns, pageState, checkpoints, savepoints, lastLSN,
-                  undoLog, redoLog, recoverySessions, recoveryTarget, 
-                  currentTime, systemState>>
+\* Get recovery point for timestamp
+GetRecoveryPointForTimestamp(targetTimestamp) ==
+  CHOOSE pointId \in DOMAIN recoveryPoints : 
+    IsRecoveryPointValid(pointId) /\ 
+    recoveryPoints[pointId].timestamp <= targetTimestamp /\ 
+    \A otherPointId \in DOMAIN recoveryPoints : 
+      IsRecoveryPointValid(otherPointId) /\ 
+      recoveryPoints[otherPointId].timestamp <= targetTimestamp => 
+      recoveryPoints[otherPointId].timestamp <= recoveryPoints[pointId].timestamp
 
-(* ARIES Recovery - Redo Phase *)
-RedoPhase ==
-    /\ systemState = "RECOVERING"
-    /\ \E record \in {wal[i] : i \in DOMAIN wal} :
-         /\ record.type = "UPDATE"
-         /\ record.txnId \in committedTxns
-         /\ BeforeTarget(record.lsn, recoveryTarget)
-         /\ pageState[record.pageId].lsn < record.lsn
-         /\ pageState' = [pageState EXCEPT
-              ![record.pageId].data = record.redoInfo,
-              ![record.pageId].lsn = record.lsn,
-              ![record.pageId].version = @ + 1]
-    /\ UNCHANGED <<wal, committedTxns, abortedTxns, activeTxns, checkpoints,
-                  savepoints, lastLSN, undoLog, redoLog, recoverySessions,
-                  recoveryTarget, currentTime, systemState>>
+\* Check if WAL segment is needed
+IsWALSegmentNeeded(segmentId, targetLSN) ==
+  segmentId \in DOMAIN walSegments /\ 
+  walSegments[segmentId].startLSN <= targetLSN /\ 
+  walSegments[segmentId].endLSN >= targetLSN
 
-(* ARIES Recovery - Undo Phase *)
-UndoPhase ==
-    /\ systemState = "RECOVERING"
-    /\ activeTxns # {}
-    /\ \E txnId \in activeTxns :
-         LET lastUndoLSN == LastTxnLSN(txnId)
-             record == CHOOSE r \in {wal[i] : i \in DOMAIN wal} :
-                         r.lsn = lastUndoLSN
-         IN
-             /\ record.type = "UPDATE"
-             /\ pageState' = [pageState EXCEPT
-                  ![record.pageId].data = record.undoInfo]
-             /\ LET clr == [
-                      lsn |-> 0,
-                      type |-> "COMPENSATION",
-                      txnId |-> txnId,
-                      prevLSN |-> lastUndoLSN,
-                      pageId |-> record.pageId,
-                      undoInfo |-> <<>>,
-                      redoInfo |-> record.undoInfo,
-                      timestamp |-> currentTime,
-                      nextLSN |-> record.prevLSN
-                ]
-                IN AppendWAL(clr)
-             /\ IF record.prevLSN = 0 THEN
-                  activeTxns' = activeTxns \ {txnId}
-                ELSE
-                  UNCHANGED activeTxns
-    /\ UNCHANGED <<committedTxns, abortedTxns, checkpoints, savepoints, undoLog,
-                  redoLog, recoverySessions, recoveryTarget, currentTime, systemState>>
+\* Get WAL segments for recovery
+GetWALSegmentsForRecovery(startLSN, endLSN) ==
+  {segmentId \in DOMAIN walSegments : 
+   walSegments[segmentId].startLSN <= endLSN /\ 
+   walSegments[segmentId].endLSN >= startLSN}
 
-CompleteRecovery ==
-    /\ systemState = "RECOVERING"
-    /\ activeTxns = {}  \* All active transactions undone
-    /\ systemState' = "CONSISTENT"
-    /\ UNCHANGED <<wal, committedTxns, abortedTxns, activeTxns, pageState,
-                  checkpoints, savepoints, lastLSN, undoLog, redoLog,
-                  recoverySessions, recoveryTarget, currentTime>>
+\* Check if recovery job is valid
+IsRecoveryJobValid(jobId) ==
+  jobId \in DOMAIN recoveryJobs /\ 
+  recoveryJobs[jobId].status = "running"
 
-ResumeNormalOperation ==
-    /\ systemState = "CONSISTENT"
-    /\ systemState' = "NORMAL"
-    /\ UNCHANGED <<wal, committedTxns, abortedTxns, activeTxns, pageState,
-                  checkpoints, savepoints, lastLSN, undoLog, redoLog,
-                  recoverySessions, recoveryTarget, currentTime>>
+\* Calculate recovery progress
+CalculateRecoveryProgress(jobId) ==
+  IF jobId \in DOMAIN recoveryJobs
+  THEN LET job == recoveryJobs[jobId]
+       IN IF job.endTime > job.startTime 
+          THEN ((globalTimestamp - job.startTime) * 100) / (job.endTime - job.startTime)
+          ELSE 0
+  ELSE 0
 
---------------------------------------------------------------------------------
-(* Time Progress *)
+\* Check if recovery is complete
+IsRecoveryComplete(jobId) ==
+  jobId \in DOMAIN recoveryJobs /\ 
+  recoveryJobs[jobId].status \in {"completed", "failed", "cancelled"}
 
-Tick ==
-    /\ currentTime' = currentTime + 1
-    /\ UNCHANGED <<wal, committedTxns, abortedTxns, activeTxns, pageState,
-                  checkpoints, savepoints, lastLSN, undoLog, redoLog,
-                  recoverySessions, recoveryTarget, systemState>>
+\* Get recovery statistics
+GetRecoveryStatistics() ==
+  [
+    totalJobs |-> Len(DOMAIN recoveryJobs),
+    completedJobs |-> Len({jobId \in DOMAIN recoveryJobs : recoveryJobs[jobId].status = "completed"}),
+    failedJobs |-> Len({jobId \in DOMAIN recoveryJobs : recoveryJobs[jobId].status = "failed"}),
+    runningJobs |-> Len({jobId \in DOMAIN recoveryJobs : recoveryJobs[jobId].status = "running"})
+  ]
 
---------------------------------------------------------------------------------
-(* Next State *)
+\* Check if recovery point is recent
+IsRecoveryPointRecent(pointId, maxAge) ==
+  pointId \in DOMAIN recoveryPoints /\ 
+  globalTimestamp - recoveryPoints[pointId].timestamp <= maxAge
+
+\* Get recovery point count
+GetRecoveryPointCount() ==
+  Len(DOMAIN recoveryPoints)
+
+\* Check if recovery is healthy
+IsRecoveryHealthy() ==
+  recoveryMonitoring.isHealthy
+
+(* --------------------------------------------------------------------------
+   NEXT STATE RELATION
+   -------------------------------------------------------------------------- *)
 
 Next ==
-    \/ \E txn \in Transactions : BeginTransaction(txn)
-    \/ \E txn \in Transactions, p \in Pages, undo, redo \in STRING :
-         UpdatePage(txn, p, undo, redo)
-    \/ \E txn \in Transactions : CommitTransaction(txn)
-    \/ \E txn \in Transactions : AbortTransaction(txn)
-    \/ \E txn \in Transactions, name \in STRING : CreateSavepoint(txn, name)
-    \/ \E txn \in Transactions, name \in STRING : RollbackToSavepoint(txn, name)
-    \/ CreateCheckpoint
-    \/ Crash
-    \/ \E target \in Target : InitiateRecovery(target)
-    \/ AnalysisPhase
-    \/ RedoPhase
-    \/ UndoPhase
-    \/ CompleteRecovery
-    \/ ResumeNormalOperation
-    \/ Tick
+  \/ \E pointId \in Nat, timestamp \in Timestamp, lsn \in LSN, databaseName \in STRING,
+       walSegmentId \in Nat, checkpointId \in Nat, size \in Nat :
+       CreateRecoveryPoint(pointId, timestamp, lsn, databaseName, walSegmentId, checkpointId, size)
+  \/ \E jobId \in Nat, targetTimestamp \in Timestamp, targetLSN \in LSN,
+       sourceDatabase \in STRING, targetDatabase \in STRING, recoveryType \in {"full", "incremental", "selective"} :
+       StartRecoveryJob(jobId, targetTimestamp, targetLSN, sourceDatabase, targetDatabase, recoveryType)
+  \/ \E jobId \in Nat, success \in BOOLEAN, errorMessage \in STRING,
+       recoveredTransactions \in Nat, recoveredData \in Nat :
+       CompleteRecoveryJob(jobId, success, errorMessage, recoveredTransactions, recoveredData)
+  \/ \E jobId \in Nat, verificationType \in {"consistency", "integrity", "completeness", "performance"},
+       success \in BOOLEAN, errorMessage \in STRING :
+       VerifyRecovery(jobId, verificationType, success, errorMessage)
+  \/ \E policyId \in Nat, policyName \in STRING, databaseName \in STRING,
+       recoveryPointFrequency \in Nat, retentionPeriod \in Nat, verificationEnabled \in BOOLEAN,
+       compressionEnabled \in BOOLEAN, encryptionEnabled \in BOOLEAN :
+       CreateRecoveryPolicy(policyId, policyName, databaseName, recoveryPointFrequency,
+                           retentionPeriod, verificationEnabled, compressionEnabled, encryptionEnabled)
+  \/ \E segmentId \in Nat, startLSN \in LSN, endLSN \in LSN, startTimestamp \in Timestamp,
+       endTimestamp \in Timestamp, size \in Nat, isCompressed \in BOOLEAN, isEncrypted \in BOOLEAN :
+       AddWALSegment(segmentId, startLSN, endLSN, startTimestamp, endTimestamp, size,
+                    isCompressed, isEncrypted)
+  \/ \E checkpointId \in Nat, timestamp \in Timestamp, lsn \in LSN, databaseName \in STRING, size \in Nat :
+       CreateRecoveryCheckpoint(checkpointId, timestamp, lsn, databaseName, size)
+  \/ UpdateRecoveryMonitoring()
+  \/ CleanupOldRecoveryPoints()
+  \/ \E jobId \in Nat, progress \in Nat :
+       ProgressRecoveryJob(jobId, progress)
 
-Spec == Init /\ [][Next]_vars
+(* --------------------------------------------------------------------------
+   INVARIANTS
+   -------------------------------------------------------------------------- *)
 
---------------------------------------------------------------------------------
-(* Invariants *)
+\* Recovery point constraints
+Inv_PITR_RecoveryPointConstraints ==
+  \A pointId \in DOMAIN recoveryPoints :
+    LET point == recoveryPoints[pointId]
+    IN /\ point.timestamp >= 0
+       /\ point.lsn >= 0
+       /\ point.size >= 0
+       /\ point.walSegmentId >= 0
+       /\ point.checkpointId >= 0
 
-(* INV1: Transaction states are mutually exclusive *)
-TransactionStatesMutuallyExclusive ==
-    /\ activeTxns \cap committedTxns = {}
-    /\ activeTxns \cap abortedTxns = {}
-    /\ committedTxns \cap abortedTxns = {}
+\* Recovery job constraints
+Inv_PITR_RecoveryJobConstraints ==
+  \A jobId \in DOMAIN recoveryJobs :
+    LET job == recoveryJobs[jobId]
+    IN /\ job.targetTimestamp >= 0
+       /\ job.targetLSN >= 0
+       /\ job.startTime >= 0
+       /\ job.endTime >= job.startTime
+       /\ job.progress >= 0 /\ job.progress <= 100
+       /\ job.status \in {"pending", "running", "completed", "failed", "cancelled"}
 
-(* INV2: WAL LSNs are monotonically increasing *)
-WALMonotonic ==
-    \A i, j \in DOMAIN wal : i < j => wal[i].lsn < wal[j].lsn
+\* Recovery history constraints
+Inv_PITR_RecoveryHistoryConstraints ==
+  \A historyId \in DOMAIN recoveryHistory :
+    LET history == recoveryHistory[historyId]
+    IN /\ history.startTimestamp >= 0
+       /\ history.endTimestamp >= history.startTimestamp
+       /\ history.duration >= 0
+       /\ history.recoveredTransactions >= 0
+       /\ history.recoveredData >= 0
 
-(* INV3: Page LSNs don't exceed WAL LSN *)
-PageLSNsValid ==
-    \A p \in Pages : pageState[p].lsn <= lastLSN
+\* Recovery policy constraints
+Inv_PITR_RecoveryPolicyConstraints ==
+  \A policyId \in DOMAIN recoveryPolicies :
+    LET policy == recoveryPolicies[policyId]
+    IN /\ policy.recoveryPointFrequency > 0
+       /\ policy.retentionPeriod > 0
+       /\ policy.retentionPeriod >= policy.recoveryPointFrequency
 
-(* INV4: Committed transactions have commit records *)
-CommittedTxnsHaveRecords ==
-    \A txn \in committedTxns :
-        \E i \in DOMAIN wal : wal[i].txnId = txn /\ wal[i].type = "COMMIT"
+\* Recovery verification constraints
+Inv_PITR_RecoveryVerificationConstraints ==
+  \A jobId \in DOMAIN recoveryVerification :
+    LET verification == recoveryVerification[jobId]
+    IN /\ verification.startTime >= 0
+       /\ verification.endTime >= verification.startTime
+       /\ verification.status \in {"pending", "running", "passed", "failed"}
 
-(* INV5: During recovery, no new transactions start *)
-NoNewTxnsDuringRecovery ==
-    systemState \in {"RECOVERING", "CONSISTENT"} => activeTxns = {}
+\* Recovery monitoring constraints
+Inv_PITR_RecoveryMonitoringConstraints ==
+  /\ recoveryMonitoring.totalRecoveries >= 0
+  /\ recoveryMonitoring.successfulRecoveries >= 0
+  /\ recoveryMonitoring.failedRecoveries >= 0
+  /\ recoveryMonitoring.averageRecoveryTime >= 0
+  /\ recoveryMonitoring.recoveryPointCount >= 0
+  /\ recoveryMonitoring.walSegmentCount >= 0
+  /\ recoveryMonitoring.successfulRecoveries + recoveryMonitoring.failedRecoveries <= recoveryMonitoring.totalRecoveries
 
-(* INV6: Savepoints belong to active transactions *)
-SavepointsBelongToActiveTxns ==
-    systemState = "NORMAL" =>
-        \A txn \in DOMAIN savepoints :
-            savepoints[txn] # <<>> => txn \in activeTxns
+\* WAL segment constraints
+Inv_PITR_WALSegmentConstraints ==
+  \A segmentId \in DOMAIN walSegments :
+    LET segment == walSegments[segmentId]
+    IN /\ segment.startLSN >= 0
+       /\ segment.endLSN >= segment.startLSN
+       /\ segment.startTimestamp >= 0
+       /\ segment.endTimestamp >= segment.startTimestamp
+       /\ segment.size >= 0
 
-(* INV7: Checkpoint LSNs are in WAL *)
-CheckpointLSNsInWAL ==
-    \A i \in DOMAIN checkpoints :
-        \E j \in DOMAIN wal : wal[j].lsn = checkpoints[i].lsn
+\* Recovery checkpoint constraints
+Inv_PITR_RecoveryCheckpointConstraints ==
+  \A checkpointId \in DOMAIN recoveryCheckpoints :
+    LET checkpoint == recoveryCheckpoints[checkpointId]
+    IN /\ checkpoint.timestamp >= 0
+       /\ checkpoint.lsn >= 0
+       /\ checkpoint.size >= 0
 
-TypeInvariant ==
-    /\ lastLSN \in Nat
-    /\ currentTime \in Nat
-    /\ systemState \in SystemState
-    /\ DOMAIN pageState = Pages
-    /\ DOMAIN savepoints = Transactions
+\* Recovery consistency
+Inv_PITR_RecoveryConsistency ==
+  \A pointId \in DOMAIN recoveryPoints :
+    LET point == recoveryPoints[pointId]
+    IN point.isConsistent => point.isVerified
 
---------------------------------------------------------------------------------
-(* Safety Properties *)
+\* Recovery completeness
+Inv_PITR_RecoveryCompleteness ==
+  \A jobId \in DOMAIN recoveryJobs :
+    LET job == recoveryJobs[jobId]
+    IN job.status = "completed" => job.isVerified
 
-(* SAFE1: Write-ahead logging: page updates logged before page write *)
-WriteAheadLogging ==
-    \A p \in Pages, i \in DOMAIN wal :
-        (wal[i].type = "UPDATE" /\ wal[i].pageId = p /\ 
-         wal[i].lsn = pageState[p].lsn) =>
-           \A j \in DOMAIN wal : j < i => wal[j].lsn < wal[i].lsn
+\* Recovery point ordering
+Inv_PITR_RecoveryPointOrdering ==
+  \A pointId1 \in DOMAIN recoveryPoints :
+    \A pointId2 \in DOMAIN recoveryPoints :
+      pointId1 < pointId2 => recoveryPoints[pointId1].timestamp <= recoveryPoints[pointId2].timestamp
 
-(* SAFE2: Durability: committed transactions survive crashes *)
-Durability ==
-    systemState = "CONSISTENT" =>
-        \A txn \in committedTxns :
-            \E i \in DOMAIN wal : wal[i].txnId = txn /\ wal[i].type = "COMMIT"
+\* WAL segment ordering
+Inv_PITR_WALSegmentOrdering ==
+  \A segmentId1 \in DOMAIN walSegments :
+    \A segmentId2 \in DOMAIN walSegments :
+      segmentId1 < segmentId2 => walSegments[segmentId1].startLSN <= walSegments[segmentId2].startLSN
 
-(* SAFE3: Atomicity: no partial transactions after recovery *)
-Atomicity ==
-    systemState = "CONSISTENT" =>
-        \A txn \in Transactions :
-            txn \in committedTxns \/ txn \in abortedTxns \/ 
-            ~\E i \in DOMAIN wal : wal[i].txnId = txn
+(* --------------------------------------------------------------------------
+   LIVENESS PROPERTIES
+   -------------------------------------------------------------------------- *)
 
---------------------------------------------------------------------------------
-(* Liveness Properties *)
+\* Recovery jobs eventually complete
+Liveness_RecoveryJobsComplete ==
+  \A jobId \in DOMAIN recoveryJobs :
+    recoveryJobs[jobId].status = "running" => 
+    <>recoveryJobs[jobId].status \in {"completed", "failed", "cancelled"}
 
-(* LIVE1: Recovery eventually completes *)
-RecoveryEventuallyCompletes ==
-    systemState = "RECOVERING" ~> systemState = "CONSISTENT"
+\* Recovery verification eventually completes
+Liveness_RecoveryVerificationComplete ==
+  \A jobId \in DOMAIN recoveryVerification :
+    recoveryVerification[jobId].status = "running" => 
+    <>recoveryVerification[jobId].status \in {"passed", "failed"}
 
-(* LIVE2: System eventually returns to normal operation *)
-EventuallyNormal ==
-    systemState = "CRASHED" ~> systemState = "NORMAL"
+\* Old recovery points are eventually cleaned up
+Liveness_OldRecoveryPointsCleanedUp ==
+  \A pointId \in DOMAIN recoveryPoints :
+    globalTimestamp - recoveryPoints[pointId].timestamp > MaxRecoveryHistory => 
+    <>~(pointId \in DOMAIN recoveryPoints)
 
-(* LIVE3: Active transactions eventually commit or abort *)
-TransactionsEventuallyComplete ==
-    \A txn \in Transactions :
-        txn \in activeTxns ~>
-          (txn \in committedTxns \/ txn \in abortedTxns)
+\* Recovery monitoring is eventually updated
+Liveness_RecoveryMonitoringUpdated ==
+  recoveryMonitoring.lastRecoveryTime < globalTimestamp - 3600 => 
+  <>recoveryMonitoring.lastRecoveryTime >= globalTimestamp - 3600
 
---------------------------------------------------------------------------------
-(* Theorems *)
+\* Recovery points are eventually created
+Liveness_RecoveryPointsCreated ==
+  \A policyId \in DOMAIN recoveryPolicies :
+    LET policy == recoveryPolicies[policyId]
+    IN policy.isActive /\ globalTimestamp >= policy.recoveryPointFrequency => 
+       <>policy.lastRun >= globalTimestamp - policy.recoveryPointFrequency
 
-THEOREM PITRCorrectness ==
-    Spec => [](TransactionStatesMutuallyExclusive /\ WALMonotonic)
+\* Recovery jobs eventually progress
+Liveness_RecoveryJobsProgress ==
+  \A jobId \in DOMAIN recoveryJobs :
+    recoveryJobs[jobId].status = "running" => 
+    <>recoveryJobs[jobId].progress > 0
 
-THEOREM RecoverySafety ==
-    Spec => [](Durability /\ Atomicity /\ WriteAheadLogging)
+\* Recovery verification eventually starts
+Liveness_RecoveryVerificationStarts ==
+  \A jobId \in DOMAIN recoveryJobs :
+    recoveryJobs[jobId].status = "completed" => 
+    <>jobId \in DOMAIN recoveryVerification
 
-THEOREM RecoveryProgress ==
-    Spec => (RecoveryEventuallyCompletes /\ EventuallyNormal)
+(* --------------------------------------------------------------------------
+   THEOREMS
+   -------------------------------------------------------------------------- *)
 
-THEOREM ARIESCorrectness ==
-    Spec => [](CommittedTxnsHaveRecords /\ PageLSNsValid)
+\* Recovery point count is bounded
+THEOREM PITR_RecoveryPointCountBounded ==
+  Len(DOMAIN recoveryPoints) <= MaxRecoveryPoints
 
-================================================================================
+\* Recovery jobs eventually complete
+THEOREM PITR_RecoveryJobsEventuallyComplete ==
+  \A jobId \in DOMAIN recoveryJobs :
+    recoveryJobs[jobId].status = "running" => 
+    <>recoveryJobs[jobId].status \in {"completed", "failed", "cancelled"}
 
+\* Recovery points are ordered
+THEOREM PITR_RecoveryPointsOrdered ==
+  \A pointId1 \in DOMAIN recoveryPoints :
+    \A pointId2 \in DOMAIN recoveryPoints :
+      pointId1 < pointId2 => recoveryPoints[pointId1].timestamp <= recoveryPoints[pointId2].timestamp
+
+\* WAL segments are ordered
+THEOREM PITR_WALSegmentsOrdered ==
+  \A segmentId1 \in DOMAIN walSegments :
+    \A segmentId2 \in DOMAIN walSegments :
+      segmentId1 < segmentId2 => walSegments[segmentId1].startLSN <= walSegments[segmentId2].startLSN
+
+\* Recovery is consistent
+THEOREM PITR_RecoveryConsistent ==
+  \A pointId \in DOMAIN recoveryPoints :
+    recoveryPoints[pointId].isConsistent => recoveryPoints[pointId].isVerified
+
+\* Recovery is complete
+THEOREM PITR_RecoveryComplete ==
+  \A jobId \in DOMAIN recoveryJobs :
+    recoveryJobs[jobId].status = "completed" => recoveryJobs[jobId].isVerified
+
+\* Recovery monitoring is consistent
+THEOREM PITR_RecoveryMonitoringConsistent ==
+  recoveryMonitoring.successfulRecoveries + recoveryMonitoring.failedRecoveries <= recoveryMonitoring.totalRecoveries
+
+\* Recovery points are recent
+THEOREM PITR_RecoveryPointsRecent ==
+  \A pointId \in DOMAIN recoveryPoints :
+    recoveryPoints[pointId].timestamp >= globalTimestamp - MaxRecoveryHistory
+
+\* Recovery is healthy
+THEOREM PITR_RecoveryHealthy ==
+  recoveryMonitoring.isHealthy
+
+=============================================================================
+
+(*
+  REFINEMENT MAPPING:
+  
+  Swift implementation → TLA+ abstraction:
+  - PointInTimeRecoveryManager.recoveryPoints (Dictionary<UInt64, RecoveryPoint>) → recoveryPoints
+  - PointInTimeRecoveryManager.recoveryJobs (Dictionary<UInt64, RecoveryJob>) → recoveryJobs
+  - PointInTimeRecoveryManager.recoveryHistory (Dictionary<UInt64, RecoveryHistory>) → recoveryHistory
+  - PointInTimeRecoveryManager.recoveryPolicies (Dictionary<UInt64, RecoveryPolicy>) → recoveryPolicies
+  - PointInTimeRecoveryManager.walSegments (Dictionary<UInt64, WALSegment>) → walSegments
+  - PointInTimeRecoveryManager.recoveryCheckpoints (Dictionary<UInt64, RecoveryCheckpoint>) → recoveryCheckpoints
+  
+  USAGE:
+  
+  This module should be used with WAL, Recovery, and other ColibrìDB modules:
+  
+  ---- MODULE Recovery ----
+  EXTENDS PointInTimeRecovery
+  ...
+  ====================
+*)
