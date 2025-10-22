@@ -109,6 +109,23 @@ public actor MVCCManager {
     
     // MARK: - Initialization
     
+    public init() {
+        // Create default managers
+        self.transactionManager = DefaultMVCCTransactionManager()
+        self.lockManager = DefaultMVCCLockManager()
+        
+        // TLA+ Init
+        self.versions = [:]
+        self.activeTx = []
+        self.committedTx = []
+        self.abortedTx = []
+        self.snapshots = [:]
+        self.readSets = [:]
+        self.writeSets = [:]
+        self.globalTS = 0
+        self.minActiveTx = 0
+    }
+    
     public init(transactionManager: MVCCTransactionManager, lockManager: MVCCLockManager) {
         self.transactionManager = transactionManager
         self.lockManager = lockManager
@@ -204,8 +221,7 @@ public actor MVCCManager {
             beginTS: globalTS,
             endTS: 0,
             createdBy: txId,
-            deletedBy: 0,
-            nextVersion: nil
+            deletedBy: 0
         )
         
         // TLA+: Add version
@@ -284,7 +300,7 @@ public actor MVCCManager {
                 // TLA+: Remove old committed versions
                 let committedVersions = keyVersions.filter { committedTx.contains($0.key) }
                 if committedVersions.count > 1 {
-                    let sortedVersions = committedVersions.sorted { $0.value.timestamp < $1.value.timestamp }
+                    let sortedVersions = committedVersions.sorted(by: { $0.value.beginTS < $1.value.beginTS })
                     for i in 0..<sortedVersions.count - 1 {
                         keyVersions.removeValue(forKey: sortedVersions[i].key)
                     }
@@ -308,10 +324,10 @@ public actor MVCCManager {
         
         // TLA+: Find latest committed version visible to snapshot
         let visibleVersions = keyVersions.filter { version in
-            committedTx.contains(version.key) && version.value.timestamp <= snapshot.timestamp
+            committedTx.contains(version.key) && version.value.beginTS <= snapshot.timestamp
         }
         
-        return visibleVersions.max { $0.value.timestamp < $1.value.timestamp }?.value
+        return visibleVersions.max { $0.value.beginTS < $1.value.beginTS }?.value
     }
     
     /// Detect write-write conflict
@@ -326,7 +342,7 @@ public actor MVCCManager {
     /// Is version visible
     private func isVersionVisible(version: Version, snapshot: MVCCSnapshot) -> Bool {
         // TLA+: Check if version is visible to snapshot
-        return committedTx.contains(version.txId) && version.timestamp <= snapshot.timestamp
+        return committedTx.contains(version.beginTx) && version.beginTS <= snapshot.startTS
     }
     
     
@@ -364,7 +380,7 @@ public actor MVCCManager {
     
     /// Get versions for key
     public func getVersionsForKey(key: Key) -> [Version] {
-        return Array(versions[key]?.values ?? [])
+        return Array(versions[key]?.values ?? [Version]())
     }
     
     /// Get active transactions
@@ -508,5 +524,33 @@ public enum MVCCManagerError: Error, LocalizedError {
         case .isolationViolation:
             return "Isolation violation"
         }
+    }
+}
+
+// MARK: - Default Implementations
+
+/// Default MVCC Transaction Manager
+private class DefaultMVCCTransactionManager: @unchecked Sendable, MVCCTransactionManager {
+    func beginTransaction() async throws -> TxID {
+        return UInt64.random(in: 1...UInt64.max)
+    }
+    
+    func commitTransaction(txId: TxID) async throws {
+        // Default implementation - do nothing
+    }
+    
+    func abortTransaction(txId: TxID) async throws {
+        // Default implementation - do nothing
+    }
+}
+
+/// Default MVCC Lock Manager
+private class DefaultMVCCLockManager: @unchecked Sendable, MVCCLockManager {
+    func requestLock(txId: TxID, resource: String, mode: String) async throws {
+        // Default implementation - do nothing
+    }
+    
+    func releaseLock(txId: TxID, resource: String) async throws {
+        // Default implementation - do nothing
     }
 }

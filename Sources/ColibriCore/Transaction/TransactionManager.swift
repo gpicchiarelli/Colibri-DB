@@ -720,20 +720,6 @@ public protocol TransactionLockManager: Sendable {
     func releaseLock(txId: TxID, resource: String) async throws
 }
 
-/// Snapshot
-public struct Snapshot: Codable, Sendable, Equatable {
-    public let txId: TxID
-    public let timestamp: Timestamp
-    public let activeTransactions: Set<TxID>
-    public let committedTransactions: Set<TxID>
-    
-    public init(txId: TxID, timestamp: Timestamp, activeTransactions: Set<TxID>, committedTransactions: Set<TxID>) {
-        self.txId = txId
-        self.timestamp = timestamp
-        self.activeTransactions = activeTransactions
-        self.committedTransactions = committedTransactions
-    }
-}
 
 /// Transaction manager error
 public enum TransactionManagerError: Error, LocalizedError {
