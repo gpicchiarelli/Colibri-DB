@@ -35,7 +35,7 @@ jobs:
           egress-policy: audit
       
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       
@@ -106,7 +106,7 @@ jobs:
           egress-policy: audit
       
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       - name: Setup Swift
         uses: swift-actions/setup-swift@v2
@@ -236,7 +236,7 @@ jobs:
           egress-policy: audit
       
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       - name: Generate SBOM with syft
         run: |
@@ -348,7 +348,7 @@ jobs:
     
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       - name: Update Release Notes
         run: |
