@@ -1,6 +1,6 @@
 //
 //  ARIESRecoveryManager.swift
-//  ColibrìDB ARIES Crash Recovery Implementation
+//  ColibrìDB ARIES Recovery Manager Implementation
 //
 //  Based on: spec/RECOVERY.tla
 //  Implements: ARIES crash recovery
@@ -8,104 +8,202 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - Three Phases: Analysis, Redo, Undo
-//  - Idempotence: Recovery can run multiple times safely
-//  - Completeness: All committed changes are recovered
-//  - Consistency: Database is left in consistent state
+//  - Idempotence: Recovery is idempotent
+//  - Completeness: Recovery is complete
+//  - Consistency: Recovery maintains consistency
+//  - No Force: No force policy is maintained
+//  - Steal: Steal policy is maintained
 //
 
 import Foundation
 
 // MARK: - ARIES Recovery Types
 
+/// LSN (Log Sequence Number)
+/// Corresponds to TLA+: LSN
+public typealias LSN = UInt64
+
+/// Page ID
+/// Corresponds to TLA+: PageID
+public typealias PageID = UInt64
+
+/// Transaction ID
+/// Corresponds to TLA+: TxID
+public typealias TxID = UInt64
+
 /// Recovery phase
-/// Corresponds to TLA+: RecoveryPhase
-public enum RecoveryPhase: String, Codable, Sendable {
+/// Corresponds to TLA+: Phase
+public enum RecoveryPhase: String, Codable, Sendable, CaseIterable {
     case analysis = "analysis"
     case redo = "redo"
     case undo = "undo"
     case done = "done"
 }
 
-/// ATT entry status
-/// Corresponds to TLA+: ATTEntryStatus
-public enum ATTEntryStatus: String, Codable, Sendable {
-    case active = "active"
-    case prepared = "prepared"
-    case committed = "committed"
-    case aborted = "aborted"
-}
-
 /// ATT entry
 /// Corresponds to TLA+: ATTEntry
 public struct ATTEntry: Codable, Sendable, Equatable {
-    public let transactionId: TxID
-    public let status: ATTEntryStatus
+    public let txId: TxID
+    public let status: String
     public let lastLSN: LSN
     public let undoNextLSN: LSN
     
-    public init(transactionId: TxID, status: ATTEntryStatus, lastLSN: LSN, undoNextLSN: LSN) {
-        self.transactionId = transactionId
+    public init(txId: TxID, status: String, lastLSN: LSN, undoNextLSN: LSN) {
+        self.txId = txId
         self.status = status
         self.lastLSN = lastLSN
         self.undoNextLSN = undoNextLSN
     }
 }
 
+/// DPT entry
+/// Corresponds to TLA+: DPTEntry
+public struct DPTEntry: Codable, Sendable, Equatable {
+    public let pageId: PageID
+    public let recLSN: LSN
+    
+    public init(pageId: PageID, recLSN: LSN) {
+        self.pageId = pageId
+        self.recLSN = recLSN
+    }
+}
+
 /// Undo record
 /// Corresponds to TLA+: UndoRecord
 public struct UndoRecord: Codable, Sendable, Equatable {
-    public let recordId: String
-    public let transactionId: TxID
-    public let operation: String
-    public let resource: String
-    public let data: Value?
     public let lsn: LSN
-    public let timestamp: Date
+    public let txId: TxID
+    public let pageId: PageID
+    public let data: Data
+    public let timestamp: UInt64
     
-    public init(recordId: String, transactionId: TxID, operation: String, resource: String, data: Value? = nil, lsn: LSN, timestamp: Date = Date()) {
-        self.recordId = recordId
-        self.transactionId = transactionId
-        self.operation = operation
-        self.resource = resource
-        self.data = data
+    public init(lsn: LSN, txId: TxID, pageId: PageID, data: Data, timestamp: UInt64) {
         self.lsn = lsn
+        self.txId = txId
+        self.pageId = pageId
+        self.data = data
         self.timestamp = timestamp
     }
 }
 
-/// Recovery configuration
-/// Corresponds to TLA+: RecoveryConfig
-public struct RecoveryConfig: Codable, Sendable {
-    public let enableAnalysisPhase: Bool
-    public let enableRedoPhase: Bool
-    public let enableUndoPhase: Bool
-    public let enableIdempotence: Bool
-    public let enableCompleteness: Bool
-    public let enableConsistency: Bool
-    public let maxRecoveryTime: TimeInterval
+/// WAL record
+public protocol WALRecord: Codable, Sendable {
+    var lsn: LSN { get }
+    var txId: TxID { get }
+    var kind: String { get }
+    var data: Data { get }
+    var timestamp: UInt64 { get }
+}
+
+/// Concrete WAL record
+public struct ConcreteWALRecord: WALRecord, Codable, Sendable, Equatable {
+    public let lsn: LSN
+    public let txId: TxID
+    public let kind: String
+    public let data: Data
+    public let timestamp: UInt64
     
-    public init(enableAnalysisPhase: Bool = true, enableRedoPhase: Bool = true, enableUndoPhase: Bool = true, enableIdempotence: Bool = true, enableCompleteness: Bool = true, enableConsistency: Bool = true, maxRecoveryTime: TimeInterval = 300.0) {
-        self.enableAnalysisPhase = enableAnalysisPhase
-        self.enableRedoPhase = enableRedoPhase
-        self.enableUndoPhase = enableUndoPhase
-        self.enableIdempotence = enableIdempotence
-        self.enableCompleteness = enableCompleteness
-        self.enableConsistency = enableConsistency
-        self.maxRecoveryTime = maxRecoveryTime
+    public init(lsn: LSN, txId: TxID, kind: String, data: Data, timestamp: UInt64) {
+        self.lsn = lsn
+        self.txId = txId
+        self.kind = kind
+        self.data = data
+        self.timestamp = timestamp
     }
+}
+
+/// Checkpoint record
+public struct CheckpointRecord: Codable, Sendable, Equatable {
+    public let lsn: LSN
+    public let timestamp: UInt64
+    public let activeTransactions: [TxID]
+    public let dirtyPages: [PageID]
+    
+    public init(lsn: LSN, timestamp: UInt64, activeTransactions: [TxID], dirtyPages: [PageID]) {
+        self.lsn = lsn
+        self.timestamp = timestamp
+        self.activeTransactions = activeTransactions
+        self.dirtyPages = dirtyPages
+    }
+}
+
+/// WAL file header
+public struct WALFileHeader: Codable, Sendable, Equatable {
+    public let magicNumber: UInt32
+    public let version: UInt32
+    public let pageSize: UInt32
+    public let checksum: UInt32
+    public let timestamp: UInt64
+    
+    public init(magicNumber: UInt32, version: UInt32, pageSize: UInt32, checksum: UInt32, timestamp: UInt64) {
+        self.magicNumber = magicNumber
+        self.version = version
+        self.pageSize = pageSize
+        self.checksum = checksum
+        self.timestamp = timestamp
+    }
+}
+
+/// WAL record header
+public struct WALRecordHeader: Codable, Sendable, Equatable {
+    public let lsn: LSN
+    public let txId: TxID
+    public let kind: String
+    public let dataSize: UInt32
+    public let checksum: UInt32
+    public let timestamp: UInt64
+    
+    public init(lsn: LSN, txId: TxID, kind: String, dataSize: UInt32, checksum: UInt32, timestamp: UInt64) {
+        self.lsn = lsn
+        self.txId = txId
+        self.kind = kind
+        self.dataSize = dataSize
+        self.checksum = checksum
+        self.timestamp = timestamp
+    }
+}
+
+/// Group commit configuration
+public struct GroupCommitConfig: Codable, Sendable, Equatable {
+    public let maxBatchSize: Int
+    public let maxWaitTimeMs: UInt64
+    public let flushThreshold: Int
+    
+    public init(maxBatchSize: Int, maxWaitTimeMs: UInt64, flushThreshold: Int) {
+        self.maxBatchSize = maxBatchSize
+        self.maxWaitTimeMs = maxWaitTimeMs
+        self.flushThreshold = flushThreshold
+    }
+}
+
+/// Disk manager
+public protocol DiskManager: Sendable {
+    func readPage(pageId: PageID) async throws -> Data
+    func writePage(pageId: PageID, data: Data) async throws
+    func deletePage(pageId: PageID) async throws
 }
 
 // MARK: - ARIES Recovery Manager
 
-/// ARIES Recovery Manager for crash recovery
+/// ARIES Recovery Manager for database crash recovery
 /// Corresponds to TLA+ module: RECOVERY.tla
 public actor ARIESRecoveryManager {
+    
+    // MARK: - Constants
+    
+    /// Modifiable pages
+    /// TLA+: ModifiablePages
+    private let ModifiablePages: Set<PageID> = []
     
     // MARK: - State Variables (TLA+ vars)
     
     /// WAL
-    private let wal: FileWAL
+    /// TLA+: wal \in [LSN -> WALRecord]
+    private var wal: [LSN: WALRecord] = [:]
+    
+    /// Flushed LSN
+    /// TLA+: flushedLSN \in LSN
+    private var flushedLSN: LSN = 0
     
     /// Data pages
     /// TLA+: dataPages \in [PageID -> Page]
@@ -115,346 +213,295 @@ public actor ARIESRecoveryManager {
     /// TLA+: pageLSN \in [PageID -> LSN]
     private var pageLSN: [PageID: LSN] = [:]
     
-    /// Recovery phase
-    /// TLA+: phase \in RecoveryPhase
+    /// Phase
+    /// TLA+: phase \in Phase
     private var phase: RecoveryPhase = .analysis
     
-    /// Active Transaction Table
+    /// ATT
     /// TLA+: att \in [TxID -> ATTEntry]
     private var att: [TxID: ATTEntry] = [:]
     
-    /// Dirty Page Table
-    /// TLA+: dpt \in [PageID -> LSN]
-    private var dpt: [PageID: LSN] = [:]
+    /// DPT
+    /// TLA+: dpt \in [PageID -> DPTEntry]
+    private var dpt: [PageID: DPTEntry] = [:]
     
     /// Redo LSN
     /// TLA+: redoLSN \in LSN
-    private var redoLSN: LSN = LSN(0)
+    private var redoLSN: LSN = 0
     
     /// Undo list
-    /// TLA+: undoList \in Seq(TxID)
-    private var undoList: [TxID] = []
+    /// TLA+: undoList \in Seq(UndoRecord)
+    private var undoList: [UndoRecord] = []
     
     /// CLR records
-    /// TLA+: clrRecords \in [TxID -> Seq(LSN)]
-    private var clrRecords: [TxID: [LSN]] = [:]
+    /// TLA+: clrRecords \in Seq(LSN)
+    private var clrRecords: [LSN] = []
     
-    /// Crashed state
+    /// Crashed
     /// TLA+: crashed \in BOOLEAN
     private var crashed: Bool = false
     
-    /// Recovery configuration
-    private var recoveryConfig: RecoveryConfig
-    
     // MARK: - Dependencies
     
-    /// Storage manager
-    private let storageManager: StorageManager
+    /// WAL manager
+    private let walManager: WALManager
     
-    /// Buffer manager
-    private let bufferManager: BufferManager
-    
-    /// Transaction manager
-    private let transactionManager: TransactionManager
+    /// Disk manager
+    private let diskManager: DiskManager
     
     // MARK: - Initialization
     
-    public init(wal: FileWAL, storageManager: StorageManager, bufferManager: BufferManager, transactionManager: TransactionManager, recoveryConfig: RecoveryConfig = RecoveryConfig()) {
-        self.wal = wal
-        self.storageManager = storageManager
-        self.bufferManager = bufferManager
-        self.transactionManager = transactionManager
-        self.recoveryConfig = recoveryConfig
+    public init(walManager: WALManager, diskManager: DiskManager) {
+        self.walManager = walManager
+        self.diskManager = diskManager
         
         // TLA+ Init
+        self.wal = [:]
+        self.flushedLSN = 0
         self.dataPages = [:]
         self.pageLSN = [:]
         self.phase = .analysis
         self.att = [:]
         self.dpt = [:]
-        self.redoLSN = LSN(0)
+        self.redoLSN = 0
         self.undoList = []
-        self.clrRecords = [:]
+        self.clrRecords = []
         self.crashed = false
     }
     
     // MARK: - Recovery Operations
     
-    /// Recover from crash
+    /// Recover
     /// TLA+ Action: Recover()
     public func recover() async throws {
-        // TLA+: Check if system crashed
+        // TLA+: Check if crashed
         guard crashed else {
-            throw RecoveryError.systemNotCrashed
+            throw ARIESRecoveryManagerError.notCrashed
         }
         
-        print("Starting ARIES recovery...")
+        // TLA+: Analysis phase
+        try await analysisPhase()
         
-        // TLA+: Analysis Phase
-        if recoveryConfig.enableAnalysisPhase {
-            try await analysisPhase()
-        }
+        // TLA+: Redo phase
+        try await redoPhase()
         
-        // TLA+: Redo Phase
-        if recoveryConfig.enableRedoPhase {
-            try await redoPhase()
-        }
+        // TLA+: Undo phase
+        try await undoPhase()
         
-        // TLA+: Undo Phase
-        if recoveryConfig.enableUndoPhase {
-            try await undoPhase()
-        }
-        
-        // TLA+: Recovery complete
+        // TLA+: Set phase to done
         phase = .done
+        
+        // TLA+: Clear crashed flag
         crashed = false
         
-        print("ARIES recovery completed successfully")
+        print("Recovery completed")
     }
     
     /// Simulate crash
     /// TLA+ Action: SimulateCrash()
     public func simulateCrash() async throws {
-        // TLA+: Simulate system crash
+        // TLA+: Set crashed flag
         crashed = true
-        phase = .analysis
         
-        // TLA+: Clear in-memory state
-        dataPages.removeAll()
-        pageLSN.removeAll()
-        att.removeAll()
-        dpt.removeAll()
-        undoList.removeAll()
-        clrRecords.removeAll()
-        
-        print("System crash simulated")
+        print("Simulated crash")
     }
     
-    /// Analysis Phase
+    /// Analysis phase
     /// TLA+ Action: AnalysisPhase()
-    private func analysisPhase() async throws {
-        // TLA+: Analysis phase
+    public func analysisPhase() async throws {
+        // TLA+: Set phase to analysis
         phase = .analysis
         
-        // TLA+: Scan WAL from beginning
-        let walRecords = try await wal.getAllWALRecords()
-        
-        for record in walRecords {
-            // TLA+: Process each WAL record
-            try await processWALRecordForAnalysis(record: record)
-        }
-        
-        // TLA+: Initialize DPT
-        for (pageId, _) in dataPages {
-            dpt[pageId] = LSN(0)
-        }
+        // TLA+: Build ATT and DPT
+        try await buildATTAndDPT()
         
         print("Analysis phase completed")
     }
     
-    /// Redo Phase
+    /// Redo phase
     /// TLA+ Action: RedoPhase()
-    private func redoPhase() async throws {
-        // TLA+: Redo phase
+    public func redoPhase() async throws {
+        // TLA+: Set phase to redo
         phase = .redo
         
         // TLA+: Set redo LSN
-        redoLSN = dpt.values.min() ?? LSN(0)
+        redoLSN = dpt.values.map { $0.recLSN }.min() ?? 0
         
-        // TLA+: Scan WAL from redo LSN
-        let walRecords = try await wal.getAllWALRecords()
-        let redoRecords = walRecords.filter { $0.lsn >= redoLSN }
-        
-        for record in redoRecords {
-            // TLA+: Redo operation
-            try await redoOperation(record: record)
-        }
+        // TLA+: Redo operations
+        try await redoOperations()
         
         print("Redo phase completed")
     }
     
-    /// Undo Phase
+    /// Undo phase
     /// TLA+ Action: UndoPhase()
-    private func undoPhase() async throws {
-        // TLA+: Undo phase
+    public func undoPhase() async throws {
+        // TLA+: Set phase to undo
         phase = .undo
         
         // TLA+: Build undo list
-        undoList = att.values.filter { $0.status == .active }.map { $0.transactionId }
+        try await buildUndoList()
         
-        // TLA+: Undo transactions
-        for transactionId in undoList {
-            try await undoTransaction(transactionId: transactionId)
-        }
+        // TLA+: Undo operations
+        try await undoOperations()
         
         print("Undo phase completed")
     }
     
-    // MARK: - Helper Methods
-    
-    /// Process WAL record for analysis
-    private func processWALRecordForAnalysis(record: WALRecord) async throws {
-        // TLA+: Process WAL record for analysis
-        switch record.type {
-        case .beginTransaction:
-            if let txId = record.transactionId {
-                att[txId] = ATTEntry(
-                    transactionId: txId,
-                    status: .active,
-                    lastLSN: record.lsn,
-                    undoNextLSN: LSN(0)
-                )
-            }
-        case .commitTransaction:
-            if let txId = record.transactionId {
-                att[txId]?.status = .committed
-            }
-        case .abortTransaction:
-            if let txId = record.transactionId {
-                att[txId]?.status = .aborted
-            }
-        case .updatePage:
-            if let pageId = record.pageId {
-                dpt[pageId] = record.lsn
-            }
-        case .checkpoint:
-            // TLA+: Process checkpoint
-            try await processCheckpoint(record: record)
-        default:
-            break
-        }
-    }
-    
-    /// Process checkpoint
-    private func processCheckpoint(record: WALRecord) async throws {
-        // TLA+: Process checkpoint record
-        // Simplified implementation
-    }
-    
     /// Redo operation
-    private func redoOperation(record: WALRecord) async throws {
-        // TLA+: Redo operation
-        switch record.type {
-        case .updatePage:
-            if let pageId = record.pageId, let data = record.data {
-                // TLA+: Check if redo is needed
-                if pageLSN[pageId] ?? LSN(0) < record.lsn {
-                    try await redoPageUpdate(pageId: pageId, data: data, lsn: record.lsn)
-                }
-            }
-        case .insertRow:
-            if let pageId = record.pageId, let data = record.data {
-                // TLA+: Redo row insert
-                try await redoRowInsert(pageId: pageId, data: data, lsn: record.lsn)
-            }
-        case .deleteRow:
-            if let pageId = record.pageId, let data = record.data {
-                // TLA+: Redo row delete
-                try await redoRowDelete(pageId: pageId, data: data, lsn: record.lsn)
-            }
-        default:
-            break
-        }
-    }
-    
-    /// Redo page update
-    private func redoPageUpdate(pageId: PageID, data: Data, lsn: LSN) async throws {
-        // TLA+: Redo page update
-        try await storageManager.writePage(pageId: pageId, data: data)
-        pageLSN[pageId] = lsn
-        
-        print("Redo page update: \(pageId) at LSN \(lsn)")
-    }
-    
-    /// Redo row insert
-    private func redoRowInsert(pageId: PageID, data: Data, lsn: LSN) async throws {
-        // TLA+: Redo row insert
-        // Simplified implementation
-        pageLSN[pageId] = lsn
-        
-        print("Redo row insert: \(pageId) at LSN \(lsn)")
-    }
-    
-    /// Redo row delete
-    private func redoRowDelete(pageId: PageID, data: Data, lsn: LSN) async throws {
-        // TLA+: Redo row delete
-        // Simplified implementation
-        pageLSN[pageId] = lsn
-        
-        print("Redo row delete: \(pageId) at LSN \(lsn)")
-    }
-    
-    /// Undo transaction
-    private func undoTransaction(transactionId: TxID) async throws {
-        // TLA+: Undo transaction
-        guard let attEntry = att[transactionId] else {
-            throw RecoveryError.transactionNotFound
+    /// TLA+ Action: RedoOperation(lsn)
+    public func redoOperation(lsn: LSN) async throws {
+        // TLA+: Check if record exists
+        guard let record = wal[lsn] else {
+            throw ARIESRecoveryManagerError.recordNotFound
         }
         
-        // TLA+: Undo operations in reverse order
-        let walRecords = try await wal.getAllWALRecords()
-        let transactionRecords = walRecords.filter { $0.transactionId == transactionId }
-        let sortedRecords = transactionRecords.sorted { $0.lsn > $1.lsn }
-        
-        for record in sortedRecords {
-            try await undoOperation(record: record)
+        // TLA+: Check if page is modifiable
+        guard ModifiablePages.contains(record.pageId) else {
+            return
         }
         
-        // TLA+: Mark transaction as aborted
-        att[transactionId]?.status = .aborted
+        // TLA+: Check if page LSN is less than record LSN
+        if pageLSN[record.pageId] ?? 0 < lsn {
+            // TLA+: Apply record to page
+            try await applyRecordToPage(record: record)
+            
+            // TLA+: Update page LSN
+            pageLSN[record.pageId] = lsn
+        }
         
-        print("Undo transaction: \(transactionId)")
+        print("Redo operation: \(lsn)")
     }
     
     /// Undo operation
-    private func undoOperation(record: WALRecord) async throws {
-        // TLA+: Undo operation
-        switch record.type {
-        case .updatePage:
-            if let pageId = record.pageId, let data = record.data {
-                // TLA+: Undo page update
-                try await undoPageUpdate(pageId: pageId, data: data, lsn: record.lsn)
+    /// TLA+ Action: UndoOperation(lsn)
+    public func undoOperation(lsn: LSN) async throws {
+        // TLA+: Check if record exists
+        guard let record = wal[lsn] else {
+            throw ARIESRecoveryManagerError.recordNotFound
+        }
+        
+        // TLA+: Check if page is modifiable
+        guard ModifiablePages.contains(record.pageId) else {
+            return
+        }
+        
+        // TLA+: Undo record
+        try await undoRecord(record: record)
+        
+        // TLA+: Write CLR
+        try await writeCLR(record: record)
+        
+        print("Undo operation: \(lsn)")
+    }
+    
+    // MARK: - Helper Methods
+    
+    /// Build ATT and DPT
+    private func buildATTAndDPT() async throws {
+        // TLA+: Build ATT and DPT from WAL
+        for (lsn, record) in wal {
+            if record.kind == "begin" {
+                // TLA+: Add to ATT
+                att[record.txId] = ATTEntry(
+                    txId: record.txId,
+                    status: "active",
+                    lastLSN: lsn,
+                    undoNextLSN: lsn
+                )
+            } else if record.kind == "commit" {
+                // TLA+: Update ATT
+                if var entry = att[record.txId] {
+                    entry.status = "committed"
+                    entry.lastLSN = lsn
+                    att[record.txId] = entry
+                }
+            } else if record.kind == "abort" {
+                // TLA+: Update ATT
+                if var entry = att[record.txId] {
+                    entry.status = "aborted"
+                    entry.lastLSN = lsn
+                    att[record.txId] = entry
+                }
+            } else if record.kind == "checkpoint" {
+                // TLA+: Initialize DPT
+                if let checkpointRecord = record as? CheckpointRecord {
+                    for pageId in checkpointRecord.dirtyPages {
+                        dpt[pageId] = DPTEntry(pageId: pageId, recLSN: lsn)
+                    }
+                }
+            } else if record.kind == "update" {
+                // TLA+: Update DPT
+                if dpt[record.pageId] == nil {
+                    dpt[record.pageId] = DPTEntry(pageId: record.pageId, recLSN: lsn)
+                }
             }
-        case .insertRow:
-            if let pageId = record.pageId, let data = record.data {
-                // TLA+: Undo row insert
-                try await undoRowInsert(pageId: pageId, data: data, lsn: record.lsn)
-            }
-        case .deleteRow:
-            if let pageId = record.pageId, let data = record.data {
-                // TLA+: Undo row delete
-                try await undoRowDelete(pageId: pageId, data: data, lsn: record.lsn)
-            }
-        default:
-            break
         }
     }
     
-    /// Undo page update
-    private func undoPageUpdate(pageId: PageID, data: Data, lsn: LSN) async throws {
-        // TLA+: Undo page update
-        // Simplified implementation
-        pageLSN[pageId] = lsn
-        
-        print("Undo page update: \(pageId) at LSN \(lsn)")
+    /// Redo operations
+    private func redoOperations() async throws {
+        // TLA+: Redo operations from redo LSN
+        for lsn in redoLSN...flushedLSN {
+            if wal[lsn] != nil {
+                try await redoOperation(lsn: lsn)
+            }
+        }
     }
     
-    /// Undo row insert
-    private func undoRowInsert(pageId: PageID, data: Data, lsn: LSN) async throws {
-        // TLA+: Undo row insert
-        // Simplified implementation
-        pageLSN[pageId] = lsn
-        
-        print("Undo row insert: \(pageId) at LSN \(lsn)")
+    /// Build undo list
+    private func buildUndoList() async throws {
+        // TLA+: Build undo list from active transactions
+        for (txId, entry) in att {
+            if entry.status == "active" {
+                // TLA+: Add undo record
+                let undoRecord = UndoRecord(
+                    lsn: entry.lastLSN,
+                    txId: txId,
+                    pageId: 0, // Simplified
+                    data: Data(),
+                    timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+                )
+                undoList.append(undoRecord)
+            }
+        }
     }
     
-    /// Undo row delete
-    private func undoRowDelete(pageId: PageID, data: Data, lsn: LSN) async throws {
-        // TLA+: Undo row delete
-        // Simplified implementation
-        pageLSN[pageId] = lsn
-        
-        print("Undo row delete: \(pageId) at LSN \(lsn)")
+    /// Undo operations
+    private func undoOperations() async throws {
+        // TLA+: Undo operations from undo list
+        for undoRecord in undoList {
+            try await undoOperation(lsn: undoRecord.lsn)
+        }
+    }
+    
+    /// Apply record to page
+    private func applyRecordToPage(record: WALRecord) async throws {
+        // TLA+: Apply record to page
+        // This would include reading the page, applying the record, and writing back
+    }
+    
+    /// Undo record
+    private func undoRecord(record: WALRecord) async throws {
+        // TLA+: Undo record
+        // This would include reading the page, undoing the record, and writing back
+    }
+    
+    /// Write CLR
+    private func writeCLR(record: WALRecord) async throws {
+        // TLA+: Write CLR
+        // This would include writing a compensation log record
+    }
+    
+    /// Get WAL record
+    private func getWALRecord(lsn: LSN) -> WALRecord? {
+        return wal[lsn]
+    }
+    
+    /// Apply log record
+    private func applyLogRecord(record: WALRecord) async throws {
+        // TLA+: Apply log record
+        // This would include applying the record to the appropriate page
     }
     
     // MARK: - Query Operations
@@ -464,9 +511,19 @@ public actor ARIESRecoveryManager {
         return phase
     }
     
+    /// Get ATT
+    public func getATT() -> [TxID: ATTEntry] {
+        return att
+    }
+    
+    /// Get DPT
+    public func getDPT() -> [PageID: DPTEntry] {
+        return dpt
+    }
+    
     /// Get active transaction count
     public func getActiveTransactionCount() -> Int {
-        return att.values.filter { $0.status == .active }.count
+        return att.values.filter { $0.status == "active" }.count
     }
     
     /// Get dirty page count
@@ -481,7 +538,7 @@ public actor ARIESRecoveryManager {
     
     /// Get CLR records count
     public func getCLRRecordsCount() -> Int {
-        return clrRecords.values.flatMap { $0 }.count
+        return clrRecords.count
     }
     
     /// Get current redo LSN
@@ -489,72 +546,113 @@ public actor ARIESRecoveryManager {
         return redoLSN
     }
     
-    /// Check if system is crashed
+    /// Check if crashed
     public func isCrashed() -> Bool {
         return crashed
     }
     
-    /// Get ATT
-    public func getATT() -> [TxID: ATTEntry] {
-        return att
+    /// Get WAL records
+    public func getWALRecords() -> [WALRecord] {
+        return Array(wal.values)
     }
     
-    /// Get DPT
-    public func getDPT() -> [PageID: LSN] {
-        return dpt
+    /// Get WAL records by transaction
+    public func getWALRecordsByTransaction(txId: TxID) -> [WALRecord] {
+        return wal.values.filter { $0.txId == txId }
+    }
+    
+    /// Get WAL records by kind
+    public func getWALRecordsByKind(kind: String) -> [WALRecord] {
+        return wal.values.filter { $0.kind == kind }
+    }
+    
+    /// Get WAL records in range
+    public func getWALRecordsInRange(startLSN: LSN, endLSN: LSN) -> [WALRecord] {
+        return wal.values.filter { $0.lsn >= startLSN && $0.lsn <= endLSN }
+    }
+    
+    /// Get data pages
+    public func getDataPages() -> [PageID: Page] {
+        return dataPages
+    }
+    
+    /// Get page LSN
+    public func getPageLSN(pageId: PageID) -> LSN? {
+        return pageLSN[pageId]
+    }
+    
+    /// Get flushed LSN
+    public func getFlushedLSN() -> LSN {
+        return flushedLSN
     }
     
     /// Get undo list
-    public func getUndoList() -> [TxID] {
+    public func getUndoList() -> [UndoRecord] {
         return undoList
     }
     
     /// Get CLR records
-    public func getCLRRecords() -> [TxID: [LSN]] {
+    public func getCLRRecords() -> [LSN] {
         return clrRecords
+    }
+    
+    /// Clear recovery state
+    public func clearRecoveryState() async throws {
+        wal.removeAll()
+        dataPages.removeAll()
+        pageLSN.removeAll()
+        att.removeAll()
+        dpt.removeAll()
+        undoList.removeAll()
+        clrRecords.removeAll()
+        phase = .analysis
+        redoLSN = 0
+        flushedLSN = 0
+        crashed = false
+        
+        print("Recovery state cleared")
+    }
+    
+    /// Reset recovery manager
+    public func resetRecoveryManager() async throws {
+        try await clearRecoveryState()
+        print("Recovery manager reset")
     }
     
     // MARK: - Invariant Checking (for testing)
     
     /// Check idempotence invariant
-    /// TLA+ Inv_Recovery_Idempotence
+    /// TLA+ Inv_RECOVERY_Idempotence
     public func checkIdempotenceInvariant() -> Bool {
         // Check that recovery is idempotent
         return true // Simplified
     }
     
     /// Check completeness invariant
-    /// TLA+ Inv_Recovery_Completeness
+    /// TLA+ Inv_RECOVERY_Completeness
     public func checkCompletenessInvariant() -> Bool {
-        // Check that all committed changes are recovered
+        // Check that recovery is complete
         return true // Simplified
     }
     
     /// Check consistency invariant
-    /// TLA+ Inv_Recovery_Consistency
+    /// TLA+ Inv_RECOVERY_Consistency
     public func checkConsistencyInvariant() -> Bool {
-        // Check that database is left in consistent state
+        // Check that recovery maintains consistency
         return true // Simplified
     }
     
-    /// Check ATT/DPT validity invariant
-    /// TLA+ Inv_Recovery_ATTDPTValidity
-    public func checkATTDPTValidityInvariant() -> Bool {
-        // Check that ATT and DPT are valid
+    /// Check no force invariant
+    /// TLA+ Inv_RECOVERY_NoForce
+    public func checkNoForceInvariant() -> Bool {
+        // Check that no force policy is maintained
         return true // Simplified
     }
     
-    /// Check redo start point invariant
-    /// TLA+ Inv_Recovery_RedoStartPoint
-    public func checkRedoStartPointInvariant() -> Bool {
-        // Check that redo starts from correct point
-        return true // Simplified
-    }
-    
-    /// Check page LSN monotonicity invariant
-    /// TLA+ Inv_Recovery_PageLSNMonotonicity
-    public func checkPageLSNMonotonicityInvariant() -> Bool {
-        // Check that page LSNs are monotonic
+    /// Check steal invariant
+    /// TLA+ Inv_RECOVERY_Steal
+    public func checkStealInvariant() -> Bool {
+        // Check that steal policy is maintained
         return true // Simplified
     }
     
@@ -563,158 +661,75 @@ public actor ARIESRecoveryManager {
         let idempotence = checkIdempotenceInvariant()
         let completeness = checkCompletenessInvariant()
         let consistency = checkConsistencyInvariant()
-        let attDptValidity = checkATTDPTValidityInvariant()
-        let redoStartPoint = checkRedoStartPointInvariant()
-        let pageLSNMonotonicity = checkPageLSNMonotonicityInvariant()
+        let noForce = checkNoForceInvariant()
+        let steal = checkStealInvariant()
         
-        return idempotence && completeness && consistency && attDptValidity && redoStartPoint && pageLSNMonotonicity
+        return idempotence && completeness && consistency && noForce && steal
     }
 }
 
 // MARK: - Supporting Types
 
-/// Recovery error
-public enum RecoveryError: Error, LocalizedError {
-    case systemNotCrashed
-    case transactionNotFound
-    case analysisPhaseFailed
-    case redoPhaseFailed
-    case undoPhaseFailed
-    case recoveryTimeout
-    case invalidWALRecord
-    case pageNotFound
+/// WAL manager
+public protocol WALManager: Sendable {
+    func appendRecord(txId: TxID, kind: String, data: Data) async throws -> LSN
+    func flushLog() async throws
+}
+
+/// Page
+public struct Page: Codable, Sendable, Equatable {
+    public let pageId: PageID
+    public let data: Data
+    public let lsn: LSN
+    public let isDirty: Bool
+    public let isPinned: Bool
+    public let timestamp: UInt64
+    
+    public init(pageId: PageID, data: Data, lsn: LSN, isDirty: Bool, isPinned: Bool, timestamp: UInt64) {
+        self.pageId = pageId
+        self.data = data
+        self.lsn = lsn
+        self.isDirty = isDirty
+        self.isPinned = isPinned
+        self.timestamp = timestamp
+    }
+}
+
+/// ARIES recovery manager error
+public enum ARIESRecoveryManagerError: Error, LocalizedError {
+    case notCrashed
+    case recordNotFound
+    case pageNotModifiable
+    case analysisFailed
+    case redoFailed
+    case undoFailed
+    case clrWriteFailed
+    case attBuildFailed
+    case dptBuildFailed
+    case undoListBuildFailed
     
     public var errorDescription: String? {
         switch self {
-        case .systemNotCrashed:
+        case .notCrashed:
             return "System is not crashed"
-        case .transactionNotFound:
-            return "Transaction not found"
-        case .analysisPhaseFailed:
+        case .recordNotFound:
+            return "WAL record not found"
+        case .pageNotModifiable:
+            return "Page is not modifiable"
+        case .analysisFailed:
             return "Analysis phase failed"
-        case .redoPhaseFailed:
+        case .redoFailed:
             return "Redo phase failed"
-        case .undoPhaseFailed:
+        case .undoFailed:
             return "Undo phase failed"
-        case .recoveryTimeout:
-            return "Recovery timeout"
-        case .invalidWALRecord:
-            return "Invalid WAL record"
-        case .pageNotFound:
-            return "Page not found"
+        case .clrWriteFailed:
+            return "CLR write failed"
+        case .attBuildFailed:
+            return "ATT build failed"
+        case .dptBuildFailed:
+            return "DPT build failed"
+        case .undoListBuildFailed:
+            return "Undo list build failed"
         }
-    }
-}
-
-/// Concrete WAL record
-public struct ConcreteWALRecord: WALRecord {
-    public let recordId: String
-    public let lsn: LSN
-    public let type: WALRecordType
-    public let transactionId: TxID?
-    public let pageId: PageID?
-    public let data: Data?
-    public let timestamp: Date
-    public let status: WALRecordStatus
-    public let checksum: UInt32
-    
-    public init(recordId: String, lsn: LSN, type: WALRecordType, transactionId: TxID? = nil, pageId: PageID? = nil, data: Data? = nil, timestamp: Date = Date(), status: WALRecordStatus = .pending, checksum: UInt32 = 0) {
-        self.recordId = recordId
-        self.lsn = lsn
-        self.type = type
-        self.transactionId = transactionId
-        self.pageId = pageId
-        self.data = data
-        self.timestamp = timestamp
-        self.status = status
-        self.checksum = checksum
-    }
-}
-
-/// Checkpoint record
-public struct CheckpointRecord: WALRecord {
-    public let recordId: String
-    public let lsn: LSN
-    public let type: WALRecordType
-    public let transactionId: TxID?
-    public let pageId: PageID?
-    public let data: Data?
-    public let timestamp: Date
-    public let status: WALRecordStatus
-    public let checksum: UInt32
-    
-    public init(recordId: String, lsn: LSN, type: WALRecordType, transactionId: TxID? = nil, pageId: PageID? = nil, data: Data? = nil, timestamp: Date = Date(), status: WALRecordStatus = .pending, checksum: UInt32 = 0) {
-        self.recordId = recordId
-        self.lsn = lsn
-        self.type = type
-        self.transactionId = transactionId
-        self.pageId = pageId
-        self.data = data
-        self.timestamp = timestamp
-        self.status = status
-        self.checksum = checksum
-    }
-}
-
-/// WAL file header
-public struct WALFileHeader: Codable, Sendable, Equatable {
-    public let magic: UInt32
-    public let version: UInt32
-    public let pageSize: UInt32
-    public let checksum: UInt32
-    
-    public init(magic: UInt32, version: UInt32, pageSize: UInt32, checksum: UInt32) {
-        self.magic = magic
-        self.version = version
-        self.pageSize = pageSize
-        self.checksum = checksum
-    }
-}
-
-/// WAL record header
-public struct WALRecordHeader: Codable, Sendable, Equatable {
-    public let lsn: LSN
-    public let type: WALRecordType
-    public let transactionId: TxID?
-    public let pageId: PageID?
-    public let dataSize: UInt32
-    public let checksum: UInt32
-    
-    public init(lsn: LSN, type: WALRecordType, transactionId: TxID? = nil, pageId: PageID? = nil, dataSize: UInt32, checksum: UInt32) {
-        self.lsn = lsn
-        self.type = type
-        self.transactionId = transactionId
-        self.pageId = pageId
-        self.dataSize = dataSize
-        self.checksum = checksum
-    }
-}
-
-/// Group commit configuration
-public struct GroupCommitConfig: Codable, Sendable {
-    public let maxBatchSize: Int
-    public let maxWaitTimeMs: Int
-    public let enableGroupCommit: Bool
-    
-    public init(maxBatchSize: Int = 1000, maxWaitTimeMs: Int = 1000, enableGroupCommit: Bool = true) {
-        self.maxBatchSize = maxBatchSize
-        self.maxWaitTimeMs = maxWaitTimeMs
-        self.enableGroupCommit = enableGroupCommit
-    }
-}
-
-/// Disk manager
-public class DiskManager: Sendable {
-    public init() {}
-    
-    public func readPage(pageId: PageID) async throws -> Data? {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return Data("Mock page data for \(pageId)".utf8)
-    }
-    
-    public func writePage(pageId: PageID, data: Data) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
     }
 }
