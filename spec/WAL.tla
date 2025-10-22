@@ -73,14 +73,14 @@ vars == <<wal, nextLSN, flushedLSN, pendingRecords, txLastLSN, dataApplied, page
 
 TypeOK ==
   /\ wal \in Seq(WALRecord)
-  /\ nextLSN \in LSN
-  /\ flushedLSN \in LSN
+  /\ nextLSN \in LSNs
+  /\ flushedLSN \in LSNs
   /\ pendingRecords \in Seq(WALRecord)
-  /\ txLastLSN \in [TxIds -> LSN]
+  /\ txLastLSN \in [TxIds -> LSNs]
   /\ dataApplied \subseteq ModifiablePages
-  /\ pageLSN \in [ModifiablePages -> LSN]
-  /\ lastCheckpointLSN \in LSN \union {0}
-  /\ dirtyPageTable \in [ModifiablePages -> LSN]
+  /\ pageLSN \in [ModifiablePages -> LSNs]
+  /\ lastCheckpointLSN \in LSNs \union {0}
+  /\ dirtyPageTable \in [ModifiablePages -> LSNs]
   /\ groupCommitTimer \in Nat
   /\ crashed \in BOOLEAN
 

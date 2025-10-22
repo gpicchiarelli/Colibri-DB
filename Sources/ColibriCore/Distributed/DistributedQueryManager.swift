@@ -144,7 +144,7 @@ public actor DistributedQueryManager {
     public func executeFragment(fragmentId: String) async throws {
         // TLA+: Check if fragment exists
         guard var fragment = fragments[fragmentId] else {
-            throw DistributedQueryError.fragmentNotFound
+            throw DistributedQueryManagerError.fragmentNotFound
         }
         
         // TLA+: Set status to executing

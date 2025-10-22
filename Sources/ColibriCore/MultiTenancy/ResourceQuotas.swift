@@ -30,8 +30,8 @@ public struct ResourceQuota: Codable, Sendable {
     }
 }
 
-/// Resource usage tracking
-public struct ResourceUsage: Sendable {
+/// Multi-tenancy resource usage tracking
+public struct MultiTenancyResourceUsage: Sendable {
     public var connections: Int = 0
     public var memoryMB: Int = 0
     public var storageGB: Int = 0

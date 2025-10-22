@@ -118,7 +118,7 @@ public struct AppendEntriesResponse: Codable {
 // MARK: - Configuration
 
 /// Raft configuration
-public struct RaftConfig {
+public struct RaftConfig: Sendable {
     public let heartbeatTimeout: TimeInterval    // 10-500ms typical
     public let electionTimeoutMin: TimeInterval  // 150ms typical
     public let electionTimeoutMax: TimeInterval  // 300ms typical

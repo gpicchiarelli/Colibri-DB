@@ -82,7 +82,7 @@ public class TTreeNode<Key: Comparable & Codable, Value: Codable> {
 // MARK: - Configuration
 
 /// T-Tree configuration
-public struct TTreeConfig {
+public struct TTreeConfig: Sendable {
     public let minKeys: Int     // Minimum keys per node (cache-line fit)
     public let maxKeys: Int     // Maximum keys per node
     

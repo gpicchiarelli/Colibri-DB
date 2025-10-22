@@ -18,14 +18,6 @@ import Foundation
 
 // MARK: - MVCC Types
 
-/// Transaction ID
-/// Corresponds to TLA+: TxID
-public typealias TxID = UInt64
-
-/// Timestamp
-/// Corresponds to TLA+: Timestamp
-public typealias Timestamp = UInt64
-
 // Types are defined in Core/Types.swift and MVCCTypes.swift
 
 /// Snapshot

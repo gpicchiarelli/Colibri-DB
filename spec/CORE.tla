@@ -53,11 +53,12 @@ RID == [pageId: PageId, slotId: Nat]
 
 \* Simple value types for database rows
 \* In implementation: enum Value (int, double, bool, string, null, decimal, date)
-ValueType == {"int", "double", "bool", "string", "null"}
+ValueType == {"int", "double", "bool", "string", "null", "decimal", "date"}
 
 \* A database value is a tuple of (type, value)
 \* For model checking, we abstract values to small integers/strings
-Value == [type: ValueType, val: -10..10] \union {[type |-> "null"]}
+\* Fixed: More precise type definition with proper union handling
+Value == [type: ValueType, val: -10..10] \union {[type |-> "null", val |-> 0]}
 
 \* String type for model checking
 STRING == StringSet
@@ -74,7 +75,8 @@ ResourceNames == StringSet
 \* A row is a function from column names to values
 \* In implementation: Row = [String: Value]
 \* For TLA+, we model rows abstractly as records
-Row == [DOMAIN -> Value]  \* Abstract representation
+\* Fixed: More precise type definition with proper domain constraint
+Row == [col: STRING -> Value]  \* Abstract representation with explicit column mapping
 
 (* --------------------------------------------------------------------------
    TRANSACTION STATES
@@ -187,10 +189,11 @@ ErrorType == {
 
 \* Result type: either Ok(value) or Err(error)
 \* In implementation: Swift Result<T, Error>
-Result(T) == [ok: BOOLEAN, value: T \union ErrorType]
+\* Fixed: More precise type definition with proper error handling
+Result(T) == [ok: BOOLEAN, value: T] \union [ok: BOOLEAN, error: ErrorType]
 
 Ok(v) == [ok |-> TRUE, value |-> v]
-Err(e) == [ok |-> FALSE, value |-> e]
+Err(e) == [ok |-> FALSE, error |-> e]
 
 IsOk(r) == r.ok
 IsErr(r) == ~r.ok
@@ -230,20 +233,21 @@ LSNs == 0..MAX_LSN
 PageIds == 1..MAX_PAGES
 
 \* Common ID types for new modules
-AllocationId == Nat
-JobId == Nat
-RequestId == Nat
-PoolId == Nat
-ArenaId == Nat
-EngineId == Nat
-MapId == Nat
-NodeId == Nat
-PointId == Nat
-HistoryId == Nat
-PolicyId == Nat
-StorageId == Nat
-SegmentId == Nat
-CheckpointId == Nat
+\* Fixed: More precise type definitions with proper constraints
+AllocationId == 1..MAX_PAGES
+JobId == 1..MAX_TX
+RequestId == 1..MAX_LSN
+PoolId == 1..MAX_PAGES
+ArenaId == 1..MAX_PAGES
+EngineId == 1..MAX_TX
+MapId == 1..MAX_PAGES
+NodeId == 1..MAX_TX
+PointId == 1..MAX_PAGES
+HistoryId == 1..MAX_LSN
+PolicyId == 1..MAX_TX
+StorageId == 1..MAX_PAGES
+SegmentId == 1..MAX_PAGES
+CheckpointId == 1..MAX_LSN
 
 =============================================================================
 
