@@ -1,271 +1,385 @@
----
-layout: default
-title: Colibrì DB – RDBMS professionale per macOS
-description: Database relazionale ad alte prestazioni con architettura modulare, verifiche formali e distribuzione nativa
----
-
-<!-- Hero Section -->
-<section class="hero">
-  <div class="hero-background">
-    <div class="hero-particles"></div>
-    <div class="hero-grid"></div>
-  </div>
-  <div class="container">
-    <div class="hero-content">
-      <div class="hero-badge">
-        <span class="badge-icon">🚀</span>
-        <span>RDBMS Professionale per macOS</span>
-      </div>
-      <h1 class="hero-title">
-        Colibrì DB
-        <span class="hero-subtitle">Database relazionale ad alte prestazioni</span>
-      </h1>
-      <p class="hero-description">
-        Un RDBMS moderno scritto in Swift 6.2 con architettura modulare, verifiche formali complete 
-        e supporto nativo per distribuzione e replica. Progettato per applicazioni enterprise che 
-        richiedono performance, consistenza e scalabilità.
-      </p>
-      <div class="hero-actions">
-        <a href="/wiki/Quick-Start.html" class="btn btn-primary">
-          <span class="btn-icon">⚡</span>
-          Inizia Subito
-        </a>
-        <a href="/architecture.html" class="btn btn-secondary">
-          <span class="btn-icon">🏗️</span>
-          Architettura
-        </a>
-        <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-outline" target="_blank">
-          <span class="btn-icon">📦</span>
-          GitHub
-        </a>
-      </div>
-      <div class="hero-stats">
-        <div class="stat">
-          <div class="stat-number">100%</div>
-          <div class="stat-label">Swift 6.2</div>
-        </div>
-        <div class="stat">
-          <div class="stat-number">TLA+</div>
-          <div class="stat-label">Verifiche Formali</div>
-        </div>
-        <div class="stat">
-          <div class="stat-number">ACID</div>
-          <div class="stat-label">Transazioni</div>
-        </div>
-        <div class="stat">
-          <div class="stat-number">∞</div>
-          <div class="stat-label">Scalabilità</div>
-        </div>
-      </div>
-    </div>
-    <div class="hero-visual">
-      <div class="database-diagram">
-        <div class="db-layer storage">
-          <div class="layer-icon">💾</div>
-          <div class="layer-title">Storage</div>
-          <div class="layer-desc">Buffer Pool + WAL</div>
-        </div>
-        <div class="db-layer transaction">
-          <div class="layer-icon">🔒</div>
-          <div class="layer-title">Transaction</div>
-          <div class="layer-desc">MVCC + Lock Manager</div>
-        </div>
-        <div class="db-layer query">
-          <div class="layer-icon">⚙️</div>
-          <div class="layer-title">Query Engine</div>
-          <div class="layer-desc">Parser + Optimizer</div>
-        </div>
-        <div class="db-layer distributed">
-          <div class="layer-icon">🌐</div>
-          <div class="layer-title">Distributed</div>
-          <div class="layer-desc">Raft + Sharding</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Features Section -->
-<section class="features">
-  <div class="container">
-    <div class="section-header">
-      <h2>Caratteristiche Principali</h2>
-      <p>Un database enterprise-grade con tutte le funzionalità moderne</p>
-    </div>
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">⚡</div>
-        <h3>Performance Estreme</h3>
-        <p>Buffer pool intelligente, WAL ottimizzato, indici B-Tree e query optimizer cost-based per performance superiori.</p>
-        <ul class="feature-list">
-          <li>Clock-sweep algorithm</li>
-          <li>Group commit WAL</li>
-          <li>Hash & Sort-merge joins</li>
-          <li>Statistics-driven optimization</li>
-        </ul>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🛡️</div>
-        <h3>Affidabilità Totale</h3>
-        <p>Transazioni ACID complete, MVCC per concorrenza senza blocchi e recovery automatico con ARIES.</p>
-        <ul class="feature-list">
-          <li>ACID compliance</li>
-          <li>Snapshot isolation</li>
-          <li>ARIES recovery</li>
-          <li>Point-in-time recovery</li>
-        </ul>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📈</div>
-        <h3>Scalabilità Infinita</h3>
-        <p>Sharding automatico, replica Raft e query distribuite. Cresci da single-node a cluster multi-regione.</p>
-        <ul class="feature-list">
-          <li>Automatic sharding</li>
-          <li>Raft consensus</li>
-          <li>Distributed queries</li>
-          <li>Multi-region support</li>
-        </ul>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔬</div>
-        <h3>Verifiche Formali</h3>
-        <p>Ogni componente è verificato con specifiche TLA+ per garantire correttezza e proprietà di sicurezza.</p>
-        <ul class="feature-list">
-          <li>TLA+ specifications</li>
-          <li>Safety properties</li>
-          <li>Liveness guarantees</li>
-          <li>Formal verification</li>
-        </ul>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔒</div>
-        <h3>Sicurezza Enterprise</h3>
-        <p>Autenticazione robusta, autorizzazione RBAC, crittografia end-to-end e audit completo.</p>
-        <ul class="feature-list">
-          <li>RBAC authorization</li>
-          <li>End-to-end encryption</li>
-          <li>Audit logging</li>
-          <li>Security policies</li>
-        </ul>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🛠️</div>
-        <h3>Tooling Completo</h3>
-        <p>CLI avanzato, dashboard di monitoring, backup automatico e strumenti di sviluppo integrati.</p>
-        <ul class="feature-list">
-          <li>Advanced CLI</li>
-          <li>Real-time monitoring</li>
-          <li>Automated backup</li>
-          <li>Development tools</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Architecture Section -->
-<section class="architecture">
-  <div class="container">
-    <div class="section-header">
-      <h2>Architettura Modulare</h2>
-      <p>Ogni componente è progettato per essere indipendente e verificabile</p>
-    </div>
-    <div class="architecture-diagram">
-      <div class="arch-layer">
-        <div class="layer-header">
-          <div class="layer-icon">🌐</div>
-          <h3>Distributed Layer</h3>
-        </div>
-        <div class="layer-components">
-          <div class="component">Raft Consensus</div>
-          <div class="component">Two-Phase Commit</div>
-          <div class="component">Sharding Manager</div>
-          <div class="component">Replication</div>
-        </div>
-      </div>
-      <div class="arch-layer">
-        <div class="layer-header">
-          <div class="layer-icon">⚙️</div>
-          <h3>Query Layer</h3>
-        </div>
-        <div class="layer-components">
-          <div class="component">SQL Parser</div>
-          <div class="component">Query Planner</div>
-          <div class="component">Query Executor</div>
-          <div class="component">Optimizer</div>
-        </div>
-      </div>
-      <div class="arch-layer">
-        <div class="layer-header">
-          <div class="layer-icon">🔒</div>
-          <h3>Transaction Layer</h3>
-        </div>
-        <div class="layer-components">
-          <div class="component">Transaction Manager</div>
-          <div class="component">Lock Manager</div>
-          <div class="component">MVCC Manager</div>
-          <div class="component">Recovery Manager</div>
-        </div>
-      </div>
-      <div class="arch-layer">
-        <div class="layer-header">
-          <div class="layer-icon">💾</div>
-          <h3>Storage Layer</h3>
-        </div>
-        <div class="layer-components">
-          <div class="component">Buffer Pool</div>
-          <div class="component">Heap Storage</div>
-          <div class="component">WAL</div>
-          <div class="component">Index Manager</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Quick Start Section -->
-<section class="quick-start">
-  <div class="container">
-    <div class="quick-start-content">
-      <div class="quick-start-text">
-        <h2>Inizia in 5 Minuti</h2>
-        <p>Installa e configura Colibrì DB con pochi comandi. Perfetto per sviluppo e produzione.</p>
-        <div class="quick-start-steps">
-          <div class="step">
-            <div class="step-number">1</div>
-            <div class="step-content">
-              <h4>Installa</h4>
-              <p>Clona il repository e compila</p>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Colibrì DB - RDBMS Professionale per macOS</title>
+    <meta name="description" content="Database relazionale ad alte prestazioni con architettura modulare, verifiche formali e distribuzione nativa per macOS">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.82em' font-size='78'>🐦</text></svg>">
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="brand-icon">🐦</span>
+                <span class="brand-text">Colibrì DB</span>
             </div>
-          </div>
-          <div class="step">
-            <div class="step-number">2</div>
-            <div class="step-content">
-              <h4>Configura</h4>
-              <p>Personalizza le impostazioni</p>
+            <div class="nav-menu" id="nav-menu">
+                <a href="#home" class="nav-link active">Home</a>
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#architecture" class="nav-link">Architettura</a>
+                <a href="#docs" class="nav-link">Documentazione</a>
+                <a href="https://github.com/gpicchiarelli/Colibri-DB" class="nav-link external" target="_blank">GitHub ↗</a>
             </div>
-          </div>
-          <div class="step">
-            <div class="step-number">3</div>
-            <div class="step-content">
-              <h4>Esegui</h4>
-              <p>Avvia il server e connettiti</p>
+            <div class="nav-toggle" id="nav-toggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
             </div>
-          </div>
         </div>
-        <a href="/wiki/Quick-Start.html" class="btn btn-primary btn-large">
-          <span class="btn-icon">🚀</span>
-          Guida Completa
-        </a>
-      </div>
-      <div class="quick-start-code">
-        <div class="code-block">
-          <div class="code-header">
-            <span class="code-title">Terminal</span>
-            <span class="code-lang">bash</span>
-          </div>
-          <div class="code-content">
-            <pre><code># Clona il repository
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-background">
+            <div class="hero-particles"></div>
+            <div class="hero-grid"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <span class="badge-icon">🚀</span>
+                    <span>RDBMS Professionale per macOS</span>
+                </div>
+                <h1 class="hero-title">
+                    Colibrì DB
+                    <span class="hero-subtitle">Database relazionale ad alte prestazioni</span>
+                </h1>
+                <p class="hero-description">
+                    Un RDBMS moderno scritto in Swift 6.2 con architettura modulare, verifiche formali complete 
+                    e supporto nativo per distribuzione e replica. Progettato per applicazioni enterprise che 
+                    richiedono performance, consistenza e scalabilità.
+                </p>
+                <div class="hero-actions">
+                    <a href="#docs" class="btn btn-primary">
+                        <span class="btn-icon">⚡</span>
+                        Inizia Subito
+                    </a>
+                    <a href="#architecture" class="btn btn-secondary">
+                        <span class="btn-icon">🏗️</span>
+                        Architettura
+                    </a>
+                    <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-outline" target="_blank">
+                        <span class="btn-icon">📦</span>
+                        GitHub
+                    </a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <div class="stat-number">100%</div>
+                        <div class="stat-label">Swift 6.2</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">TLA+</div>
+                        <div class="stat-label">Verifiche Formali</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">ACID</div>
+                        <div class="stat-label">Transazioni</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">∞</div>
+                        <div class="stat-label">Scalabilità</div>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="database-diagram">
+                    <div class="db-layer storage">
+                        <div class="layer-icon">💾</div>
+                        <div class="layer-title">Storage</div>
+                        <div class="layer-desc">Buffer Pool + WAL</div>
+                    </div>
+                    <div class="db-layer transaction">
+                        <div class="layer-icon">🔒</div>
+                        <div class="layer-title">Transaction</div>
+                        <div class="layer-desc">MVCC + Lock Manager</div>
+                    </div>
+                    <div class="db-layer query">
+                        <div class="layer-icon">⚙️</div>
+                        <div class="layer-title">Query Engine</div>
+                        <div class="layer-desc">Parser + Optimizer</div>
+                    </div>
+                    <div class="db-layer distributed">
+                        <div class="layer-icon">🌐</div>
+                        <div class="layer-title">Distributed</div>
+                        <div class="layer-desc">Raft + Sharding</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Caratteristiche Principali</h2>
+                <p>Un database enterprise-grade con tutte le funzionalità moderne</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Performance Estreme</h3>
+                    <p>Buffer pool intelligente, WAL ottimizzato, indici B-Tree e query optimizer cost-based per performance superiori.</p>
+                    <ul class="feature-list">
+                        <li>Clock-sweep algorithm</li>
+                        <li>Group commit WAL</li>
+                        <li>Hash & Sort-merge joins</li>
+                        <li>Statistics-driven optimization</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3>Affidabilità Totale</h3>
+                    <p>Transazioni ACID complete, MVCC per concorrenza senza blocchi e recovery automatico con ARIES.</p>
+                    <ul class="feature-list">
+                        <li>ACID compliance</li>
+                        <li>Snapshot isolation</li>
+                        <li>ARIES recovery</li>
+                        <li>Point-in-time recovery</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h3>Scalabilità Infinita</h3>
+                    <p>Sharding automatico, replica Raft e query distribuite. Cresci da single-node a cluster multi-regione.</p>
+                    <ul class="feature-list">
+                        <li>Automatic sharding</li>
+                        <li>Raft consensus</li>
+                        <li>Distributed queries</li>
+                        <li>Multi-region support</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔬</div>
+                    <h3>Verifiche Formali</h3>
+                    <p>Ogni componente è verificato con specifiche TLA+ per garantire correttezza e proprietà di sicurezza.</p>
+                    <ul class="feature-list">
+                        <li>TLA+ specifications</li>
+                        <li>Safety properties</li>
+                        <li>Liveness guarantees</li>
+                        <li>Formal verification</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Sicurezza Enterprise</h3>
+                    <p>Autenticazione robusta, autorizzazione RBAC, crittografia end-to-end e audit completo.</p>
+                    <ul class="feature-list">
+                        <li>RBAC authorization</li>
+                        <li>End-to-end encryption</li>
+                        <li>Audit logging</li>
+                        <li>Security policies</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛠️</div>
+                    <h3>Tooling Completo</h3>
+                    <p>CLI avanzato, dashboard di monitoring, backup automatico e strumenti di sviluppo integrati.</p>
+                    <ul class="feature-list">
+                        <li>Advanced CLI</li>
+                        <li>Real-time monitoring</li>
+                        <li>Automated backup</li>
+                        <li>Development tools</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" class="architecture">
+        <div class="container">
+            <div class="section-header">
+                <h2>Architettura Modulare</h2>
+                <p>Ogni componente è progettato per essere indipendente e verificabile</p>
+            </div>
+            <div class="architecture-diagram">
+                <div class="arch-layer">
+                    <div class="layer-header">
+                        <div class="layer-icon">🌐</div>
+                        <h3>Distributed Layer</h3>
+                        <span class="layer-badge">Consenso & Replica</span>
+                    </div>
+                    <div class="layer-description">
+                        <p>Gestisce la distribuzione, il consenso e la replica dei dati attraverso il cluster.</p>
+                    </div>
+                    <div class="layer-components">
+                        <div class="component">
+                            <div class="component-icon">🤝</div>
+                            <div class="component-name">Raft Consensus</div>
+                            <div class="component-desc">Elezione leader e log matching</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">🔄</div>
+                            <div class="component-name">Two-Phase Commit</div>
+                            <div class="component-desc">Transazioni distribuite atomiche</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">📊</div>
+                            <div class="component-name">Sharding Manager</div>
+                            <div class="component-desc">Partizionamento automatico</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">📡</div>
+                            <div class="component-name">Replication</div>
+                            <div class="component-desc">Replica sincrona/asincrona</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="arch-layer">
+                    <div class="layer-header">
+                        <div class="layer-icon">⚙️</div>
+                        <h3>Query Layer</h3>
+                        <span class="layer-badge">SQL & Ottimizzazione</span>
+                    </div>
+                    <div class="layer-description">
+                        <p>Processa le query SQL, le ottimizza e le esegue utilizzando operatori fisici efficienti.</p>
+                    </div>
+                    <div class="layer-components">
+                        <div class="component">
+                            <div class="component-icon">📝</div>
+                            <div class="component-name">SQL Parser</div>
+                            <div class="component-desc">Parsing e validazione SQL</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">🧠</div>
+                            <div class="component-name">Query Planner</div>
+                            <div class="component-desc">Pianificazione logica</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">⚡</div>
+                            <div class="component-name">Query Executor</div>
+                            <div class="component-desc">Esecuzione operatori fisici</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">🎯</div>
+                            <div class="component-name">Optimizer</div>
+                            <div class="component-desc">Ottimizzazione cost-based</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="arch-layer">
+                    <div class="layer-header">
+                        <div class="layer-icon">🔒</div>
+                        <h3>Transaction Layer</h3>
+                        <span class="layer-badge">ACID & Concorrenza</span>
+                    </div>
+                    <div class="layer-description">
+                        <p>Garantisce le proprietà ACID e gestisce la concorrenza attraverso MVCC e lock management.</p>
+                    </div>
+                    <div class="layer-components">
+                        <div class="component">
+                            <div class="component-icon">📋</div>
+                            <div class="component-name">Transaction Manager</div>
+                            <div class="component-desc">Lifecycle transazioni</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">🔐</div>
+                            <div class="component-name">Lock Manager</div>
+                            <div class="component-desc">Gestione lock e deadlock</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">📸</div>
+                            <div class="component-name">MVCC Manager</div>
+                            <div class="component-desc">Snapshot isolation</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">🔄</div>
+                            <div class="component-name">Recovery Manager</div>
+                            <div class="component-desc">ARIES recovery</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="arch-layer">
+                    <div class="layer-header">
+                        <div class="layer-icon">💾</div>
+                        <h3>Storage Layer</h3>
+                        <span class="layer-badge">Persistenza & Indici</span>
+                    </div>
+                    <div class="layer-description">
+                        <p>Gestisce la persistenza dei dati, il buffering in memoria e l'indicizzazione per accessi veloci.</p>
+                    </div>
+                    <div class="layer-components">
+                        <div class="component">
+                            <div class="component-icon">🧠</div>
+                            <div class="component-name">Buffer Pool</div>
+                            <div class="component-desc">Cache intelligente</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">📁</div>
+                            <div class="component-name">Heap Storage</div>
+                            <div class="component-desc">Storage slotted pages</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">📝</div>
+                            <div class="component-name">WAL</div>
+                            <div class="component-desc">Write-ahead logging</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-icon">🔍</div>
+                            <div class="component-name">Index Manager</div>
+                            <div class="component-desc">B-Tree, Hash, Bitmap</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start Section -->
+    <section class="quick-start">
+        <div class="container">
+            <div class="quick-start-content">
+                <div class="quick-start-text">
+                    <h2>Inizia in 5 Minuti</h2>
+                    <p>Installa e configura Colibrì DB con pochi comandi. Perfetto per sviluppo e produzione.</p>
+                    <div class="quick-start-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-content">
+                                <h4>Installa</h4>
+                                <p>Clona il repository e compila</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-content">
+                                <h4>Configura</h4>
+                                <p>Personalizza le impostazioni</p>
+                            </div>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-content">
+                                <h4>Esegui</h4>
+                                <p>Avvia il server e connettiti</p>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="#docs" class="btn btn-primary btn-large">
+                        <span class="btn-icon">🚀</span>
+                        Guida Completa
+                    </a>
+                </div>
+                <div class="quick-start-code">
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Terminal</span>
+                            <span class="code-lang">bash</span>
+                        </div>
+                        <div class="code-content">
+                            <pre><code># Clona il repository
 git clone https://github.com/gpicchiarelli/Colibri-DB.git
 cd Colibri-DB
 
@@ -277,65 +391,102 @@ swift run coldb-server
 
 # Connettiti con il CLI
 swift run coldb</code></pre>
-          </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- Documentation Section -->
-<section class="documentation">
-  <div class="container">
-    <div class="section-header">
-      <h2>Documentazione Completa</h2>
-      <p>Tutto quello che ti serve per utilizzare Colibrì DB al meglio</p>
-    </div>
-    <div class="docs-grid">
-      <div class="doc-card">
-        <div class="doc-icon">📚</div>
-        <h3>Guida Utente</h3>
-        <p>Impara le basi e le funzionalità avanzate di Colibrì DB</p>
-        <a href="/wiki/Home.html" class="doc-link">Leggi la guida →</a>
-      </div>
-      <div class="doc-card">
-        <div class="doc-icon">🔧</div>
-        <h3>API Reference</h3>
-        <p>Documentazione completa di tutte le API e interfacce</p>
-        <a href="/wiki/API-Reference.html" class="doc-link">Consulta le API →</a>
-      </div>
-      <div class="doc-card">
-        <div class="doc-icon">🏗️</div>
-        <h3>Architettura</h3>
-        <p>Comprendi il design interno e le decisioni architetturali</p>
-        <a href="/architecture.html" class="doc-link">Esplora l'architettura →</a>
-      </div>
-      <div class="doc-card">
-        <div class="doc-icon">🔬</div>
-        <h3>Specifiche TLA+</h3>
-        <p>Modelli formali e verifiche matematiche del sistema</p>
-        <a href="/tla-specifications.html" class="doc-link">Vedi le specifiche →</a>
-      </div>
-    </div>
-  </div>
-</section>
+    <!-- Documentation Section -->
+    <section id="docs" class="documentation">
+        <div class="container">
+            <div class="section-header">
+                <h2>Documentazione Completa</h2>
+                <p>Tutto quello che ti serve per utilizzare Colibrì DB al meglio</p>
+            </div>
+            <div class="docs-grid">
+                <div class="doc-card">
+                    <div class="doc-icon">📚</div>
+                    <h3>Guida Utente</h3>
+                    <p>Impara le basi e le funzionalità avanzate di Colibrì DB</p>
+                    <a href="docs.html" class="doc-link">Leggi la guida →</a>
+                </div>
+                <div class="doc-card">
+                    <div class="doc-icon">🔧</div>
+                    <h3>API Reference</h3>
+                    <p>Documentazione completa di tutte le API e interfacce</p>
+                    <a href="api.html" class="doc-link">Consulta le API →</a>
+                </div>
+                <div class="doc-card">
+                    <div class="doc-icon">🏗️</div>
+                    <h3>Architettura</h3>
+                    <p>Comprendi il design interno e le decisioni architetturali</p>
+                    <a href="architecture.html" class="doc-link">Esplora l'architettura →</a>
+                </div>
+                <div class="doc-card">
+                    <div class="doc-icon">🔬</div>
+                    <h3>Specifiche TLA+</h3>
+                    <p>Modelli formali e verifiche matematiche del sistema</p>
+                    <a href="tla.html" class="doc-link">Vedi le specifiche →</a>
+                </div>
+            </div>
+        </div>
+    </section>
 
-<!-- CTA Section -->
-<section class="cta">
-  <div class="container">
-    <div class="cta-content">
-      <h2>Pronto per iniziare?</h2>
-      <p>Unisciti alla community e contribuisci allo sviluppo di Colibrì DB</p>
-      <div class="cta-actions">
-        <a href="/wiki/Quick-Start.html" class="btn btn-primary btn-large">
-          <span class="btn-icon">⚡</span>
-          Inizia Subito
-        </a>
-        <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-outline btn-large" target="_blank">
-          <span class="btn-icon">⭐</span>
-          Star su GitHub
-        </a>
-      </div>
-    </div>
-  </div>
-</section>
+    <!-- CTA Section -->
+    <section class="cta">
+        <div class="container">
+            <div class="cta-content">
+                <h2>Pronto per iniziare?</h2>
+                <p>Unisciti alla community e contribuisci allo sviluppo di Colibrì DB</p>
+                <div class="cta-actions">
+                    <a href="#docs" class="btn btn-primary btn-large">
+                        <span class="btn-icon">⚡</span>
+                        Inizia Subito
+                    </a>
+                    <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-outline btn-large" target="_blank">
+                        <span class="btn-icon">⭐</span>
+                        Star su GitHub
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>Colibrì DB</h3>
+                    <p>RDBMS moderno e performante per macOS, con architettura modulare e verifiche formali complete.</p>
+                </div>
+                <div class="footer-section">
+                    <h3>Risorse</h3>
+                    <ul>
+                        <li><a href="#docs">Documentazione</a></li>
+                        <li><a href="#architecture">Architettura</a></li>
+                        <li><a href="tla.html">Specifiche TLA+</a></li>
+                        <li><a href="api.html">API Reference</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h3>Community</h3>
+                    <ul>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank">GitHub</a></li>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/issues" target="_blank">Segnala Bug</a></li>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/discussions" target="_blank">Discussioni</a></li>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md" target="_blank">Contribuisci</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Colibrì DB · Swift 6.2 · Licenza MIT</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
