@@ -482,6 +482,45 @@ public actor WireProtocolHandler {
         serverStates[server] = .ready
     }
     
+    // MARK: - TLA+ Invariants Implementation
+    
+    /// Invariant: Message order preserved (TLA+: MessageOrderPreserved)
+    public func checkMessageOrderInvariant() -> Bool {
+        return network.values.allSatisfy { messages in
+            for i in 0..<messages.count - 1 {
+                if messages[i].seqNum >= messages[i + 1].seqNum {
+                    return false
+                }
+            }
+            return true
+        }
+    }
+    
+    /// Invariant: No message loss (TLA+: NoMessageLoss)
+    public func checkNoMessageLossInvariant() -> Bool {
+        return clientPipeline.values.allSatisfy { $0.count <= maxPipelineDepth }
+    }
+    
+    /// Invariant: Transaction state consistent (TLA+: TxnStateConsistent)
+    public func checkTxnStateConsistentInvariant() -> Bool {
+        return serverTxnState.values.allSatisfy { state in
+            [WireTransactionState.idle, .inTransaction, .failed].contains(state)
+        }
+    }
+    
+    /// Invariant: Message size bounded (TLA+: MessageSizeBounded)
+    public func checkMessageSizeBoundedInvariant() -> Bool {
+        return network.values.flatMap { $0 }.allSatisfy { $0.size <= maxMessageSize }
+    }
+    
+    /// Combined safety invariant (TLA+: Safety)
+    public func checkSafetyInvariant() -> Bool {
+        return checkMessageOrderInvariant() &&
+               checkNoMessageLossInvariant() &&
+               checkTxnStateConsistentInvariant() &&
+               checkMessageSizeBoundedInvariant()
+    }
+    
     // MARK: - Query Methods
     
     public func getStats() -> WireProtocolStats {

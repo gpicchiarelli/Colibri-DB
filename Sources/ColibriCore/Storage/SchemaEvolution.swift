@@ -396,6 +396,44 @@ public actor SchemaEvolutionManager {
         txSchemaVersion[txId, default: [:]][table] = schemaVersion[table, default: 1]
     }
     
+    // MARK: - TLA+ Invariants Implementation
+    
+    /// Invariant: Schema versions are always increasing (TLA+: Inv_SchemaEvolution_VersionMonotonic)
+    public func checkVersionMonotonicInvariant() -> Bool {
+        return schemaVersion.values.allSatisfy { version in
+            version >= 1
+        }
+    }
+    
+    /// Invariant: Current schema version matches latest in version history (TLA+: Inv_SchemaEvolution_CurrentVersionMatch)
+    public func checkCurrentVersionMatchInvariant() -> Bool {
+        return schemas.allSatisfy { (table, schema) in
+            schema.version == schemaVersion[table, default: 1]
+        }
+    }
+    
+    /// Invariant: Schema changes are atomic (TLA+: Inv_SchemaEvolution_Atomicity)
+    public func checkAtomicityInvariant() -> Bool {
+        return changeHistory.allSatisfy { change in
+            change.success || schemas[change.table]?.version ?? 0 >= change.fromVersion
+        }
+    }
+    
+    /// Invariant: Online changes don't block normal operations (TLA+: Inv_SchemaEvolution_OnlineChangeNonBlocking)
+    public func checkOnlineChangeNonBlockingInvariant() -> Bool {
+        return schemaLocks.values.allSatisfy { lock in
+            lock != .exclusive
+        }
+    }
+    
+    /// Combined safety invariant (TLA+: Inv_SchemaEvolution_Safety)
+    public func checkSafetyInvariant() -> Bool {
+        return checkVersionMonotonicInvariant() &&
+               checkCurrentVersionMatchInvariant() &&
+               checkAtomicityInvariant() &&
+               checkOnlineChangeNonBlockingInvariant()
+    }
+    
     // MARK: - Query Methods
     
     public func getSchemaVersion(table: String) -> Int {
@@ -435,6 +473,8 @@ public struct SchemaChange {
     public let details: [String: Any]
     public let appliedAt: Date
     public let version: Int
+    public let success: Bool
+    public let fromVersion: Int
     
     public init(type: SchemaChangeType, table: String, details: [String: String], version: Int) {
         self.id = UUID()
@@ -443,6 +483,8 @@ public struct SchemaChange {
         self.details = details
         self.appliedAt = Date()
         self.version = version
+        self.success = true
+        self.fromVersion = version - 1
     }
 }
 

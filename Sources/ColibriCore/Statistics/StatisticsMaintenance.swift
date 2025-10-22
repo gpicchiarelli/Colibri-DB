@@ -33,7 +33,7 @@ import Foundation
 
 // MARK: - Table Statistics
 
-/// Statistics for a table (TLA+: TableStats)
+/// Statistics for a table (TLA+: TableStatistics)
 public struct TableStatistics: Codable {
     public var rowCount: Int64          // TLA+: rowCount
     public var pageCount: Int64         // TLA+: pageCount
@@ -55,7 +55,7 @@ public struct TableStatistics: Codable {
 
 // MARK: - Column Statistics
 
-/// Statistics for a column (TLA+: ColumnStats)
+/// Statistics for a column (TLA+: ColumnStatistics)
 public struct ColumnStatistics: Codable {
     public let columnName: String
     public var nullFraction: Int        // TLA+: nullFraction (percentage 0-100)
@@ -96,7 +96,7 @@ public struct ColumnStatistics: Codable {
 
 // MARK: - Index Statistics
 
-/// Statistics for an index (TLA+: IndexStats)
+/// Statistics for an index (TLA+: IndexStatistics)
 public struct IndexStatistics: Codable {
     public var distinctKeys: Int64      // TLA+: distinctKeys
     public var height: Int              // TLA+: height
@@ -543,6 +543,48 @@ public actor StatisticsMaintenanceManager {
         guard let lastTime = lastAnalyzed[table] else { return 0.0 }
         let age = Date().timeIntervalSince(lastTime)
         return max(0.0, 1.0 - (age / 86400.0))  // 24 hour threshold
+    }
+    
+    // MARK: - TLA+ Invariants Implementation
+    
+    /// Invariant: Statistics are consistent with table data (TLA+: Inv_StatisticsMaintenance_Consistency)
+    public func checkConsistencyInvariant() -> Bool {
+        return tableStatistics.values.allSatisfy { stats in
+            stats.rowCount >= 0 && stats.pageCount >= 0 && 
+            stats.avgRowSize >= 0 && stats.sampleRate >= 0 && stats.sampleRate <= 100
+        }
+    }
+    
+    /// Invariant: Column statistics are consistent (TLA+: Inv_StatisticsMaintenance_ColumnConsistency)
+    public func checkColumnConsistencyInvariant() -> Bool {
+        return columnStatistics.allSatisfy { (table, cols) in
+            cols.values.allSatisfy { colStats in
+                colStats.nullCount >= 0 && colStats.distinctCount >= 0 &&
+                colStats.distinctCount <= (tableStatistics[table]?.rowCount ?? 0) &&
+                colStats.nullCount <= (tableStatistics[table]?.rowCount ?? 0)
+            }
+        }
+    }
+    
+    /// Invariant: Histograms are valid (TLA+: Inv_StatisticsMaintenance_HistogramValidity)
+    public func checkHistogramValidityInvariant() -> Bool {
+        return columnStatistics.allSatisfy { (table, cols) in
+            cols.values.allSatisfy { colStats in
+                guard let histogram = colStats.histogram else { return true }
+                return histogram.bucketCount >= 0 && 
+                       histogram.bucketCount <= maxHistogramBuckets &&
+                       histogram.buckets.count == histogram.bucketCount &&
+                       histogram.totalRows >= 0 && histogram.nullRows >= 0 &&
+                       histogram.distinctValues >= 0
+            }
+        }
+    }
+    
+    /// Combined safety invariant (TLA+: Inv_StatisticsMaintenance_Safety)
+    public func checkSafetyInvariant() -> Bool {
+        return checkConsistencyInvariant() &&
+               checkColumnConsistencyInvariant() &&
+               checkHistogramValidityInvariant()
     }
     
     // MARK: - Helper Methods

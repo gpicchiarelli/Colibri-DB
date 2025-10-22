@@ -40,7 +40,7 @@ public protocol QueryExecutorTransactionManager: Sendable {
 // MARK: - Tuple Structure
 
 /// Tuple with values and RID (TLA+: Tuple)
-public struct ExecutorTuple: Codable {
+public struct ExecutorTuple: Codable, Sendable {
     public let values: [Value]
     public let rid: RID
     
@@ -53,7 +53,7 @@ public struct ExecutorTuple: Codable {
 // MARK: - Operator States (TLA+ VARIABLES)
 
 /// Query executor scan state (TLA+: ScanState)
-public struct QueryExecutorScanState {
+public struct QueryExecutorScanState: Codable, Sendable {
     public var table: String
     public var predicate: String?
     public var currentRID: RID?
@@ -61,7 +61,7 @@ public struct QueryExecutorScanState {
     public var indexName: String?
     public var exhausted: Bool
     
-    public enum ScanType: String {
+    public enum ScanType: String, Codable, Sendable {
         case sequential = "sequential"
         case index = "index"
     }
@@ -77,7 +77,7 @@ public struct QueryExecutorScanState {
 }
 
 /// Query executor join state (TLA+: JoinState)
-public struct QueryExecutorJoinState {
+public struct QueryExecutorJoinState: Codable, Sendable {
     public var leftInput: [ExecutorTuple]
     public var rightInput: [ExecutorTuple]
     public var joinType: JoinType
@@ -87,7 +87,7 @@ public struct QueryExecutorJoinState {
     public var hashTable: [String: [ExecutorTuple]]  // For hash join
     public var exhausted: Bool
     
-    public enum JoinType: String {
+    public enum JoinType: String, Codable, Sendable {
         case nestedLoop = "nested_loop"
         case hash = "hash"
         case sortMerge = "sort_merge"
@@ -106,7 +106,7 @@ public struct QueryExecutorJoinState {
 }
 
 /// Query executor aggregation state (TLA+: AggregationState)
-public struct QueryExecutorAggregationState {
+public struct QueryExecutorAggregationState: Codable, Sendable {
     public var groupBy: [Int]           // Column indices
     public var aggregates: [AggregateSpec]
     public var hashTable: [[Value]: [Value]]  // GroupKey -> AggValues
@@ -120,11 +120,11 @@ public struct QueryExecutorAggregationState {
     }
 }
 
-public struct AggregateSpec {
+public struct AggregateSpec: Codable, Sendable {
     public let function: AggregateFunc
     public let column: Int
     
-    public enum AggregateFunc: String {
+    public enum AggregateFunc: String, Codable, Sendable {
         case sum = "SUM"
         case count = "COUNT"
         case avg = "AVG"
@@ -134,7 +134,7 @@ public struct AggregateSpec {
 }
 
 /// Query executor sort state (TLA+: SortState)
-public struct QueryExecutorSortState {
+public struct QueryExecutorSortState: Codable, Sendable {
     public var input: [ExecutorTuple]
     public var sortKeys: [SortKey]
     public var sorted: [ExecutorTuple]
@@ -148,11 +148,11 @@ public struct QueryExecutorSortState {
     }
 }
 
-public struct SortKey: Sendable {
+public struct SortKey: Sendable, Codable {
     public let column: Int
     public let order: SortOrder
     
-    public enum SortOrder: String, Sendable {
+    public enum SortOrder: String, Sendable, Codable {
         case ascending = "ASC"
         case descending = "DESC"
     }
@@ -536,6 +536,50 @@ public actor QueryExecutor {
     public func getOutputBuffer(opId: Int) -> [ExecutorTuple] {
         return outputBuffer[opId] ?? []
     }
+    
+    // MARK: - TLA+ Invariants Implementation
+    
+    /// Invariant: Output buffers bounded (TLA+: Inv_Executor_BoundedOutput)
+    public func checkBoundedOutputInvariant(maxTuples: Int) -> Bool {
+        return outputBuffer.values.allSatisfy { $0.count <= maxTuples }
+    }
+    
+    /// Invariant: Join indices within bounds (TLA+: Inv_Executor_JoinBounds)
+    public func checkJoinBoundsInvariant() -> Bool {
+        return joinState.values.allSatisfy { state in
+            state.leftIdx >= 0 && state.rightIdx >= 0 &&
+            state.leftIdx <= state.leftInput.count + 1 &&
+            state.rightIdx <= state.rightInput.count + 1
+        }
+    }
+    
+    /// Invariant: Exhausted operators don't produce output (TLA+: Inv_Executor_ExhaustedNoOutput)
+    public func checkExhaustedNoOutputInvariant() -> Bool {
+        let scanExhausted = scanState.values.allSatisfy { state in
+            !state.exhausted || !(pipelineActive[state.table.hashValue] ?? false)
+        }
+        let joinExhausted = joinState.values.allSatisfy { state in
+            !state.exhausted || !(pipelineActive[state.leftInput.hashValue] ?? false)
+        }
+        return scanExhausted && joinExhausted
+    }
+    
+    /// Invariant: All output tuples valid (TLA+: Inv_Executor_ValidTuples)
+    public func checkValidTuplesInvariant() -> Bool {
+        return outputBuffer.values.allSatisfy { tuples in
+            tuples.allSatisfy { tuple in
+                tuple.values.allSatisfy { $0.isValid } && tuple.rid.isValid
+            }
+        }
+    }
+    
+    /// Combined safety invariant (TLA+: Inv_Executor_Safety)
+    public func checkSafetyInvariant(maxTuples: Int = 1000) -> Bool {
+        return checkBoundedOutputInvariant(maxTuples: maxTuples) &&
+               checkJoinBoundsInvariant() &&
+               checkExhaustedNoOutputInvariant() &&
+               checkValidTuplesInvariant()
+    }
 }
 
 // MARK: - Statistics
@@ -546,6 +590,23 @@ public struct QueryExecutorStats: Codable {
     public var tuplesFiltered: Int = 0
     public var tuplesSorted: Int = 0
     public var tuplesAggregated: Int = 0
+}
+
+// MARK: - Value Extensions
+
+extension Value {
+    var isValid: Bool {
+        switch self {
+        case .int, .double, .bool, .string, .null, .decimal, .date, .bytes:
+            return true
+        }
+    }
+}
+
+extension RID {
+    var isValid: Bool {
+        return pageID > 0 && slotID >= 0
+    }
 }
 
 /*
