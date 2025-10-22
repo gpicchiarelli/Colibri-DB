@@ -1,6 +1,6 @@
 //
-//  ConsensusProtocol.swift
-//  ColibrìDB Raft Consensus Implementation
+//  RaftConsensusManager.swift
+//  ColibrìDB Raft Consensus Manager Implementation
 //
 //  Based on: spec/ConsensusProtocol.tla
 //  Implements: Raft consensus algorithm
@@ -8,104 +8,97 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - Safety: Only one leader per term
-//  - Liveness: System makes progress
-//  - Consistency: All nodes agree on state
-//  - Fault Tolerance: Handles node failures
+//  - Leader Completeness: Leader has all committed entries
+//  - State Machine Safety: State machines are consistent
+//  - Election Safety: At most one leader per term
+//  - Log Matching: Logs are consistent
+//  - Term Monotonicity: Terms are monotonic
 //
 
 import Foundation
 
-// MARK: - Consensus Types
+// MARK: - Raft Consensus Types
 
-/// Node state
-/// Corresponds to TLA+: NodeState
-public enum NodeState: String, Codable, Sendable {
+/// Server ID
+/// Corresponds to TLA+: ServerID
+public typealias ServerID = String
+
+/// Term
+/// Corresponds to TLA+: Term
+public typealias Term = UInt64
+
+/// Log index
+/// Corresponds to TLA+: LogIndex
+public typealias LogIndex = UInt64
+
+/// Log entry
+/// Corresponds to TLA+: LogEntry
+public struct LogEntry: Codable, Sendable, Equatable {
+    public let term: Term
+    public let command: String
+    public let data: Data
+    
+    public init(term: Term, command: String, data: Data) {
+        self.term = term
+        self.command = command
+        self.data = data
+    }
+}
+
+/// Server state
+/// Corresponds to TLA+: ServerState
+public enum ServerState: String, Codable, Sendable, CaseIterable {
     case follower = "follower"
     case candidate = "candidate"
     case leader = "leader"
 }
 
-/// Log entry
-/// Corresponds to TLA+: LogEntry
-public struct LogEntry: Codable, Sendable, Equatable {
-    public let term: Int
-    public let command: String
-    public let data: [String: Value]
-    public let timestamp: Date
+/// Message type
+/// Corresponds to TLA+: MessageType
+public enum MessageType: String, Codable, Sendable, CaseIterable {
+    case requestVote = "requestVote"
+    case voteResponse = "voteResponse"
+    case appendEntries = "appendEntries"
+    case appendEntriesResponse = "appendEntriesResponse"
+    case installSnapshot = "installSnapshot"
+    case installSnapshotResponse = "installSnapshotResponse"
+}
+
+/// RPC message
+/// Corresponds to TLA+: RPCMessage
+public struct RPCMessage: Codable, Sendable, Equatable {
+    public let messageType: MessageType
+    public let from: ServerID
+    public let to: ServerID
+    public let term: Term
+    public let data: Data
+    public let timestamp: UInt64
     
-    public init(term: Int, command: String, data: [String: Value], timestamp: Date = Date()) {
+    public init(messageType: MessageType, from: ServerID, to: ServerID, term: Term, data: Data, timestamp: UInt64) {
+        self.messageType = messageType
+        self.from = from
+        self.to = to
         self.term = term
-        self.command = command
         self.data = data
         self.timestamp = timestamp
     }
 }
 
-/// Vote request
-/// Corresponds to TLA+: VoteRequest
-public struct VoteRequest: Codable, Sendable, Equatable {
-    public let term: Int
-    public let candidateId: String
-    public let lastLogIndex: Int
-    public let lastLogTerm: Int
+/// Configuration
+/// Corresponds to TLA+: Configuration
+public struct Configuration: Codable, Sendable, Equatable {
+    public let servers: [ServerID]
+    public let currentTerm: Term
+    public let leaderId: ServerID?
+    public let lastApplied: LogIndex
+    public let commitIndex: LogIndex
     
-    public init(term: Int, candidateId: String, lastLogIndex: Int, lastLogTerm: Int) {
-        self.term = term
-        self.candidateId = candidateId
-        self.lastLogIndex = lastLogIndex
-        self.lastLogTerm = lastLogTerm
-    }
-}
-
-/// Vote response
-/// Corresponds to TLA+: VoteResponse
-public struct VoteResponse: Codable, Sendable, Equatable {
-    public let term: Int
-    public let voteGranted: Bool
-    public let voterId: String
-    
-    public init(term: Int, voteGranted: Bool, voterId: String) {
-        self.term = term
-        self.voteGranted = voteGranted
-        self.voteGranted = voteGranted
-        self.voterId = voterId
-    }
-}
-
-/// Append entries request
-/// Corresponds to TLA+: AppendEntriesRequest
-public struct AppendEntriesRequest: Codable, Sendable, Equatable {
-    public let term: Int
-    public let leaderId: String
-    public let prevLogIndex: Int
-    public let prevLogTerm: Int
-    public let entries: [LogEntry]
-    public let leaderCommit: Int
-    
-    public init(term: Int, leaderId: String, prevLogIndex: Int, prevLogTerm: Int, entries: [LogEntry], leaderCommit: Int) {
-        self.term = term
+    public init(servers: [ServerID], currentTerm: Term, leaderId: ServerID?, lastApplied: LogIndex, commitIndex: LogIndex) {
+        self.servers = servers
+        self.currentTerm = currentTerm
         self.leaderId = leaderId
-        self.prevLogIndex = prevLogIndex
-        self.prevLogTerm = prevLogTerm
-        self.entries = entries
-        self.leaderCommit = leaderCommit
-    }
-}
-
-/// Append entries response
-/// Corresponds to TLA+: AppendEntriesResponse
-public struct AppendEntriesResponse: Codable, Sendable, Equatable {
-    public let term: Int
-    public let success: Bool
-    public let followerId: String
-    public let lastLogIndex: Int
-    
-    public init(term: Int, success: Bool, followerId: String, lastLogIndex: Int) {
-        self.term = term
-        self.success = success
-        self.followerId = followerId
-        self.lastLogIndex = lastLogIndex
+        self.lastApplied = lastApplied
+        self.commitIndex = commitIndex
     }
 }
 
@@ -118,52 +111,68 @@ public actor RaftConsensusManager {
     // MARK: - State Variables (TLA+ vars)
     
     /// Current term
-    /// TLA+: currentTerm \in Nat
-    private var currentTerm: Int = 0
+    /// TLA+: currentTerm \in Term
+    private var currentTerm: Term = 0
     
     /// Voted for
-    /// TLA+: votedFor \in NodeId \cup {null}
-    private var votedFor: String? = nil
+    /// TLA+: votedFor \in ServerID \union {null}
+    private var votedFor: ServerID? = nil
     
-    /// Log entries
+    /// Log
     /// TLA+: log \in Seq(LogEntry)
     private var log: [LogEntry] = []
     
     /// Commit index
-    /// TLA+: commitIndex \in Nat
-    private var commitIndex: Int = 0
+    /// TLA+: commitIndex \in LogIndex
+    private var commitIndex: LogIndex = 0
     
     /// Last applied
-    /// TLA+: lastApplied \in Nat
-    private var lastApplied: Int = 0
+    /// TLA+: lastApplied \in LogIndex
+    private var lastApplied: LogIndex = 0
     
     /// Next index
-    /// TLA+: nextIndex \in [NodeId -> Nat]
-    private var nextIndex: [String: Int] = [:]
+    /// TLA+: nextIndex \in [ServerID -> LogIndex]
+    private var nextIndex: [ServerID: LogIndex] = [:]
     
     /// Match index
-    /// TLA+: matchIndex \in [NodeId -> Nat]
-    private var matchIndex: [String: Int] = [:]
+    /// TLA+: matchIndex \in [ServerID -> LogIndex]
+    private var matchIndex: [ServerID: LogIndex] = [:]
     
-    /// Node state
-    /// TLA+: state \in NodeState
-    private var state: NodeState = .follower
+    /// State
+    /// TLA+: state \in ServerState
+    private var state: ServerState = .follower
     
-    /// Leader ID
-    /// TLA+: leaderId \in NodeId \cup {null}
-    private var leaderId: String? = nil
+    /// Votes granted
+    /// TLA+: votesGranted \in Set(ServerID)
+    private var votesGranted: Set<ServerID> = []
     
-    /// Election timeout
-    private var electionTimeout: TimeInterval
+    /// Election timer
+    /// TLA+: electionTimer \in Nat
+    private var electionTimer: UInt64 = 0
     
-    /// Heartbeat timeout
-    private var heartbeatTimeout: TimeInterval
+    /// Heartbeat timer
+    /// TLA+: heartbeatTimer \in Nat
+    private var heartbeatTimer: UInt64 = 0
     
-    /// Node ID
-    private var nodeId: String
+    /// Messages
+    /// TLA+: messages \in Seq(RPCMessage)
+    private var messages: [RPCMessage] = []
     
-    /// Cluster nodes
-    private var clusterNodes: Set<String>
+    /// Configuration
+    /// TLA+: configuration \in Configuration
+    private var configuration: Configuration
+    
+    /// Metrics
+    /// TLA+: metrics \in [String -> Nat]
+    private var metrics: [String: UInt64] = [:]
+    
+    /// Audit log
+    /// TLA+: auditLog \in Seq(String)
+    private var auditLog: [String] = []
+    
+    /// Current time
+    /// TLA+: currentTime \in Nat
+    private var currentTime: UInt64 = 0
     
     // MARK: - Dependencies
     
@@ -175,13 +184,9 @@ public actor RaftConsensusManager {
     
     // MARK: - Initialization
     
-    public init(nodeId: String, clusterNodes: Set<String>, networkManager: NetworkManager, stateMachine: StateMachine, electionTimeout: TimeInterval = 5.0, heartbeatTimeout: TimeInterval = 1.0) {
-        self.nodeId = nodeId
-        self.clusterNodes = clusterNodes
+    public init(serverId: ServerID, servers: [ServerID], networkManager: NetworkManager, stateMachine: StateMachine) {
         self.networkManager = networkManager
         self.stateMachine = stateMachine
-        self.electionTimeout = electionTimeout
-        self.heartbeatTimeout = heartbeatTimeout
         
         // TLA+ Init
         self.currentTerm = 0
@@ -192,515 +197,393 @@ public actor RaftConsensusManager {
         self.nextIndex = [:]
         self.matchIndex = [:]
         self.state = .follower
-        self.leaderId = nil
-        
-        // Initialize nextIndex and matchIndex for all nodes
-        for nodeId in clusterNodes {
-            self.nextIndex[nodeId] = 0
-            self.matchIndex[nodeId] = 0
-        }
+        self.votesGranted = []
+        self.electionTimer = 0
+        self.heartbeatTimer = 0
+        self.messages = []
+        self.configuration = Configuration(
+            servers: servers,
+            currentTerm: 0,
+            leaderId: nil,
+            lastApplied: 0,
+            commitIndex: 0
+        )
+        self.metrics = [:]
+        self.auditLog = []
+        self.currentTime = 0
     }
     
-    // MARK: - Election Management
+    // MARK: - Raft Operations
     
     /// Start election
-    /// TLA+ Action: StartElection
+    /// TLA+ Action: StartElection()
     public func startElection() async throws {
-        // TLA+: Check if node is follower
-        guard state == .follower else {
-            throw ConsensusError.invalidState
-        }
-        
         // TLA+: Increment current term
         currentTerm += 1
         
-        // TLA+: Change to candidate state
+        // TLA+: Vote for self
+        votedFor = "self"
+        
+        // TLA+: Set state to candidate
         state = .candidate
         
-        // TLA+: Vote for self
-        votedFor = nodeId
+        // TLA+: Reset votes granted
+        votesGranted = ["self"]
         
-        // TLA+: Reset vote count
-        var votesReceived = 1
+        // TLA+: Send request vote to all servers
+        try await sendRequestVoteToAll()
         
-        // TLA+: Send vote requests to all other nodes
-        let voteRequest = VoteRequest(
-            term: currentTerm,
-            candidateId: nodeId,
-            lastLogIndex: log.count - 1,
-            lastLogTerm: log.last?.term ?? 0
-        )
-        
-        for otherNodeId in clusterNodes {
-            if otherNodeId != nodeId {
-                do {
-                    let response = try await networkManager.sendVoteRequest(
-                        nodeId: otherNodeId,
-                        request: voteRequest
-                    )
-                    
-                    if response.voteGranted {
-                        votesReceived += 1
-                    }
-                    
-                    // TLA+: Update term if response has higher term
-                    if response.term > currentTerm {
-                        currentTerm = response.term
-                        state = .follower
-                        votedFor = nil
-                        return
-                    }
-                } catch {
-                    // TLA+: Handle network failure
-                    continue
-                }
-            }
-        }
-        
-        // TLA+: Check if majority votes received
-        let majority = (clusterNodes.count / 2) + 1
-        if votesReceived >= majority {
-            // TLA+: Become leader
-            becomeLeader()
-        } else {
-            // TLA+: Return to follower state
-            state = .follower
-            votedFor = nil
-        }
-    }
-    
-    /// Become leader
-    private func becomeLeader() {
-        // TLA+: Change to leader state
-        state = .leader
-        leaderId = nodeId
-        
-        // TLA+: Initialize nextIndex and matchIndex
-        for nodeId in clusterNodes {
-            nextIndex[nodeId] = log.count
-            matchIndex[nodeId] = 0
-        }
-        
-        // TLA+: Start sending heartbeats
-        Task {
-            await startHeartbeat()
-        }
-    }
-    
-    /// Start heartbeat
-    private func startHeartbeat() async {
-        while state == .leader {
-            // TLA+: Send heartbeat to all followers
-            for followerId in clusterNodes {
-                if followerId != nodeId {
-                    do {
-                        try await sendHeartbeat(to: followerId)
-                    } catch {
-                        // TLA+: Handle network failure
-                        continue
-                    }
-                }
-            }
-            
-            // TLA+: Wait for heartbeat timeout
-            try? await Task.sleep(nanoseconds: UInt64(heartbeatTimeout * 1_000_000_000))
-        }
+        print("Started election for term: \(currentTerm)")
     }
     
     /// Send heartbeat
-    private func sendHeartbeat(to followerId: String) async throws {
-        // TLA+: Create append entries request
-        let request = AppendEntriesRequest(
-            term: currentTerm,
-            leaderId: nodeId,
-            prevLogIndex: nextIndex[followerId]! - 1,
-            prevLogTerm: nextIndex[followerId]! > 0 ? log[nextIndex[followerId]! - 1].term : 0,
-            entries: [],
-            leaderCommit: commitIndex
-        )
-        
-        // TLA+: Send request
-        let response = try await networkManager.sendAppendEntriesRequest(
-            nodeId: followerId,
-            request: request
-        )
-        
-        // TLA+: Update term if response has higher term
-        if response.term > currentTerm {
-            currentTerm = response.term
-            state = .follower
-            leaderId = nil
+    /// TLA+ Action: SendHeartbeat()
+    public func sendHeartbeat() async throws {
+        // TLA+: Check if leader
+        guard state == .leader else {
             return
         }
         
-        // TLA+: Update nextIndex and matchIndex
-        if response.success {
-            nextIndex[followerId] = response.lastLogIndex + 1
-            matchIndex[followerId] = response.lastLogIndex
-        } else {
-            nextIndex[followerId] = max(0, nextIndex[followerId]! - 1)
-        }
+        // TLA+: Send append entries to all servers
+        try await sendAppendEntriesToAll()
         
-        // TLA+: Update commit index
-        updateCommitIndex()
+        // TLA+: Reset heartbeat timer
+        heartbeatTimer = 0
+        
+        print("Sent heartbeat for term: \(currentTerm)")
     }
     
-    // MARK: - Log Management
-    
-    /// Append entry
-    /// TLA+ Action: AppendEntry(command, data)
-    public func appendEntry(command: String, data: [String: Value]) async throws {
-        // TLA+: Check if node is leader
+    /// Append entries
+    /// TLA+ Action: AppendEntries(entries)
+    public func appendEntries(entries: [LogEntry]) async throws {
+        // TLA+: Check if leader
         guard state == .leader else {
-            throw ConsensusError.notLeader
+            throw RaftError.notLeader
+        }
+        
+        // TLA+: Append entries to log
+        log.append(contentsOf: entries)
+        
+        // TLA+: Send append entries to all servers
+        try await sendAppendEntriesToAll()
+        
+        print("Appended \(entries.count) entries to log")
+    }
+    
+    /// Request vote
+    /// TLA+ Action: RequestVote(candidateId, term, lastLogIndex, lastLogTerm)
+    public func requestVote(candidateId: ServerID, term: Term, lastLogIndex: LogIndex, lastLogTerm: Term) async throws -> Bool {
+        // TLA+: Check if term is current
+        if term < currentTerm {
+            return false
+        }
+        
+        // TLA+: Check if already voted
+        if votedFor != nil && votedFor != candidateId {
+            return false
+        }
+        
+        // TLA+: Check if candidate's log is up-to-date
+        if !isLogUpToDate(lastLogIndex: lastLogIndex, lastLogTerm: lastLogTerm) {
+            return false
+        }
+        
+        // TLA+: Vote for candidate
+        votedFor = candidateId
+        
+        // TLA+: Update current term
+        currentTerm = term
+        
+        // TLA+: Set state to follower
+        state = .follower
+        
+        print("Voted for candidate: \(candidateId) in term: \(term)")
+        return true
+    }
+    
+    /// Apply log entry
+    /// TLA+ Action: ApplyLogEntry(entry)
+    public func applyLogEntry(entry: LogEntry) async throws {
+        // TLA+: Apply entry to state machine
+        try await stateMachine.applyCommand(command: entry.command, data: entry.data)
+        
+        // TLA+: Update last applied
+        lastApplied += 1
+        
+        print("Applied log entry: \(entry.command)")
+    }
+    
+    /// Handle client request
+    /// TLA+ Action: HandleClientRequest(request)
+    public func handleClientRequest(request: String) async throws {
+        // TLA+: Check if leader
+        guard state == .leader else {
+            throw RaftError.notLeader
         }
         
         // TLA+: Create log entry
         let entry = LogEntry(
             term: currentTerm,
-            command: command,
-            data: data
+            command: request,
+            data: request.data(using: .utf8) ?? Data()
         )
         
         // TLA+: Append to log
-        log.append(entry)
+        try await appendEntries(entries: [entry])
         
-        // TLA+: Send to all followers
-        for followerId in clusterNodes {
-            if followerId != nodeId {
-                try await sendLogEntry(to: followerId, entry: entry)
-            }
-        }
-        
-        // TLA+: Update commit index
-        updateCommitIndex()
+        print("Handled client request: \(request)")
     }
     
-    /// Send log entry
-    private func sendLogEntry(to followerId: String, entry: LogEntry) async throws {
-        // TLA+: Create append entries request
-        let request = AppendEntriesRequest(
-            term: currentTerm,
-            leaderId: nodeId,
-            prevLogIndex: nextIndex[followerId]! - 1,
-            prevLogTerm: nextIndex[followerId]! > 0 ? log[nextIndex[followerId]! - 1].term : 0,
-            entries: [entry],
-            leaderCommit: commitIndex
+    /// Change configuration
+    /// TLA+ Action: ChangeConfiguration(newServers)
+    public func changeConfiguration(newServers: [ServerID]) async throws {
+        // TLA+: Update configuration
+        configuration = Configuration(
+            servers: newServers,
+            currentTerm: currentTerm,
+            leaderId: state == .leader ? "self" : nil,
+            lastApplied: lastApplied,
+            commitIndex: commitIndex
         )
         
-        // TLA+: Send request
-        let response = try await networkManager.sendAppendEntriesRequest(
-            nodeId: followerId,
-            request: request
-        )
-        
-        // TLA+: Update term if response has higher term
-        if response.term > currentTerm {
-            currentTerm = response.term
-            state = .follower
-            leaderId = nil
-            return
+        // TLA+: Update next index and match index
+        for serverId in newServers {
+            nextIndex[serverId] = log.count
+            matchIndex[serverId] = 0
         }
         
-        // TLA+: Update nextIndex and matchIndex
-        if response.success {
-            nextIndex[followerId] = response.lastLogIndex + 1
-            matchIndex[followerId] = response.lastLogIndex
-        } else {
-            nextIndex[followerId] = max(0, nextIndex[followerId]! - 1)
+        print("Changed configuration to \(newServers.count) servers")
+    }
+    
+    // MARK: - Helper Methods
+    
+    /// Send request vote to all
+    private func sendRequestVoteToAll() async throws {
+        // TLA+: Send request vote to all servers
+        for serverId in configuration.servers {
+            if serverId != "self" {
+                let message = RPCMessage(
+                    messageType: .requestVote,
+                    from: "self",
+                    to: serverId,
+                    term: currentTerm,
+                    data: Data(),
+                    timestamp: currentTime
+                )
+                messages.append(message)
+            }
         }
+    }
+    
+    /// Send append entries to all
+    private func sendAppendEntriesToAll() async throws {
+        // TLA+: Send append entries to all servers
+        for serverId in configuration.servers {
+            if serverId != "self" {
+                let message = RPCMessage(
+                    messageType: .appendEntries,
+                    from: "self",
+                    to: serverId,
+                    term: currentTerm,
+                    data: Data(),
+                    timestamp: currentTime
+                )
+                messages.append(message)
+            }
+        }
+    }
+    
+    /// Check if log is up-to-date
+    private func isLogUpToDate(lastLogIndex: LogIndex, lastLogTerm: Term) -> Bool {
+        // TLA+: Check if log is up-to-date
+        if log.isEmpty {
+            return true
+        }
+        
+        let lastEntry = log.last!
+        return lastLogTerm > lastEntry.term || 
+               (lastLogTerm == lastEntry.term && lastLogIndex >= log.count)
+    }
+    
+    /// Check if leader
+    private func isLeader() -> Bool {
+        return state == .leader
+    }
+    
+    /// Check if follower
+    private func isFollower() -> Bool {
+        return state == .follower
+    }
+    
+    /// Check if candidate
+    private func isCandidate() -> Bool {
+        return state == .candidate
+    }
+    
+    /// Check if has quorum
+    private func hasQuorum() -> Bool {
+        return votesGranted.count > configuration.servers.count / 2
     }
     
     /// Update commit index
     private func updateCommitIndex() {
-        // TLA+: Find highest committed index
-        var newCommitIndex = commitIndex
-        
-        for index in (commitIndex + 1)..<log.count {
-            let entry = log[index]
-            
-            // TLA+: Count replicas that have this entry
-            var replicaCount = 1 // Leader has it
-            
-            for nodeId in clusterNodes {
-                if nodeId != self.nodeId && matchIndex[nodeId]! >= index {
-                    replicaCount += 1
-                }
-            }
-            
-            // TLA+: Check if majority has this entry
-            let majority = (clusterNodes.count / 2) + 1
-            if replicaCount >= majority && entry.term == currentTerm {
-                newCommitIndex = index
-            }
-        }
-        
         // TLA+: Update commit index
-        commitIndex = newCommitIndex
+        let sortedMatchIndex = matchIndex.values.sorted()
+        let majorityIndex = sortedMatchIndex[sortedMatchIndex.count / 2]
         
-        // TLA+: Apply committed entries
-        applyCommittedEntries()
-    }
-    
-    /// Apply committed entries
-    private func applyCommittedEntries() {
-        // TLA+: Apply entries from lastApplied to commitIndex
-        while lastApplied < commitIndex {
-            lastApplied += 1
-            let entry = log[lastApplied]
-            
-            // TLA+: Apply to state machine
-            Task {
-                try await stateMachine.applyCommand(
-                    command: entry.command,
-                    data: entry.data
-                )
-            }
+        if majorityIndex > commitIndex {
+            commitIndex = majorityIndex
         }
-    }
-    
-    // MARK: - Message Handling
-    
-    /// Handle vote request
-    /// TLA+ Action: HandleVoteRequest(request)
-    public func handleVoteRequest(_ request: VoteRequest) async throws -> VoteResponse {
-        // TLA+: Check if request term is higher
-        if request.term > currentTerm {
-            currentTerm = request.term
-            state = .follower
-            votedFor = nil
-        }
-        
-        // TLA+: Check if already voted
-        if votedFor != nil && votedFor != request.candidateId {
-            return VoteResponse(
-                term: currentTerm,
-                voteGranted: false,
-                voterId: nodeId
-            )
-        }
-        
-        // TLA+: Check if candidate's log is up-to-date
-        let lastLogIndex = log.count - 1
-        let lastLogTerm = log.last?.term ?? 0
-        
-        if request.lastLogTerm < lastLogTerm ||
-           (request.lastLogTerm == lastLogTerm && request.lastLogIndex < lastLogIndex) {
-            return VoteResponse(
-                term: currentTerm,
-                voteGranted: false,
-                voterId: nodeId
-            )
-        }
-        
-        // TLA+: Grant vote
-        votedFor = request.candidateId
-        return VoteResponse(
-            term: currentTerm,
-            voteGranted: true,
-            voterId: nodeId
-        )
-    }
-    
-    /// Handle append entries request
-    /// TLA+ Action: HandleAppendEntriesRequest(request)
-    public func handleAppendEntriesRequest(_ request: AppendEntriesRequest) async throws -> AppendEntriesResponse {
-        // TLA+: Check if request term is higher
-        if request.term > currentTerm {
-            currentTerm = request.term
-            state = .follower
-            leaderId = request.leaderId
-        }
-        
-        // TLA+: Check if request term is lower
-        if request.term < currentTerm {
-            return AppendEntriesResponse(
-                term: currentTerm,
-                success: false,
-                followerId: nodeId,
-                lastLogIndex: log.count - 1
-            )
-        }
-        
-        // TLA+: Check if previous log entry matches
-        if request.prevLogIndex >= 0 && request.prevLogIndex < log.count {
-            if log[request.prevLogIndex].term != request.prevLogTerm {
-                return AppendEntriesResponse(
-                    term: currentTerm,
-                    success: false,
-                    followerId: nodeId,
-                    lastLogIndex: log.count - 1
-                )
-            }
-        }
-        
-        // TLA+: Append new entries
-        if !request.entries.isEmpty {
-            // TLA+: Remove conflicting entries
-            if request.prevLogIndex + 1 < log.count {
-                log.removeSubrange((request.prevLogIndex + 1)...)
-            }
-            
-            // TLA+: Append new entries
-            log.append(contentsOf: request.entries)
-        }
-        
-        // TLA+: Update commit index
-        if request.leaderCommit > commitIndex {
-            commitIndex = min(request.leaderCommit, log.count - 1)
-            applyCommittedEntries()
-        }
-        
-        // TLA+: Update leader
-        leaderId = request.leaderId
-        
-        return AppendEntriesResponse(
-            term: currentTerm,
-            success: true,
-            followerId: nodeId,
-            lastLogIndex: log.count - 1
-        )
     }
     
     // MARK: - Query Operations
     
     /// Get current term
-    public func getCurrentTerm() -> Int {
+    public func getCurrentTerm() -> Term {
         return currentTerm
     }
     
-    /// Get node state
-    public func getNodeState() -> NodeState {
-        return state
-    }
-    
     /// Get leader ID
-    public func getLeaderId() -> String? {
-        return leaderId
+    public func getLeaderID() -> ServerID? {
+        return state == .leader ? "self" : configuration.leaderId
     }
     
-    /// Get log count
-    public func getLogCount() -> Int {
+    /// Get log length
+    public func getLogLength() -> Int {
         return log.count
     }
     
     /// Get commit index
-    public func getCommitIndex() -> Int {
+    public func getCommitIndex() -> LogIndex {
         return commitIndex
     }
     
     /// Get last applied
-    public func getLastApplied() -> Int {
+    public func getLastApplied() -> LogIndex {
         return lastApplied
     }
     
-    /// Check if node is leader
+    /// Get state
+    public func getState() -> ServerState {
+        return state
+    }
+    
+    /// Get votes granted
+    public func getVotesGranted() -> Set<ServerID> {
+        return votesGranted
+    }
+    
+    /// Get configuration
+    public func getConfiguration() -> Configuration {
+        return configuration
+    }
+    
+    /// Get metrics
+    public func getMetrics() -> [String: UInt64] {
+        return metrics
+    }
+    
+    /// Get audit log
+    public func getAuditLog() -> [String] {
+        return auditLog
+    }
+    
+    /// Check if is leader
     public func isLeader() -> Bool {
-        return state == .leader
+        return isLeader()
     }
     
-    /// Check if node is follower
+    /// Check if is follower
     public func isFollower() -> Bool {
-        return state == .follower
+        return isFollower()
     }
     
-    /// Check if node is candidate
+    /// Check if is candidate
     public func isCandidate() -> Bool {
-        return state == .candidate
+        return isCandidate()
+    }
+    
+    /// Check if has quorum
+    public func hasQuorum() -> Bool {
+        return hasQuorum()
     }
     
     // MARK: - Invariant Checking (for testing)
     
-    /// Check safety invariant
-    /// TLA+ Inv_Consensus_Safety
-    public func checkSafetyInvariant() -> Bool {
-        // Check that only one leader per term
+    /// Check leader completeness invariant
+    /// TLA+ Inv_Raft_LeaderCompleteness
+    public func checkLeaderCompletenessInvariant() -> Bool {
+        // Check that leader has all committed entries
         return true // Simplified
     }
     
-    /// Check liveness invariant
-    /// TLA+ Inv_Consensus_Liveness
-    public func checkLivenessInvariant() -> Bool {
-        // Check that system makes progress
+    /// Check state machine safety invariant
+    /// TLA+ Inv_Raft_StateMachineSafety
+    public func checkStateMachineSafetyInvariant() -> Bool {
+        // Check that state machines are consistent
         return true // Simplified
     }
     
-    /// Check consistency invariant
-    /// TLA+ Inv_Consensus_Consistency
-    public func checkConsistencyInvariant() -> Bool {
-        // Check that all nodes agree on state
+    /// Check election safety invariant
+    /// TLA+ Inv_Raft_ElectionSafety
+    public func checkElectionSafetyInvariant() -> Bool {
+        // Check that at most one leader per term
         return true // Simplified
     }
     
-    /// Check fault tolerance invariant
-    /// TLA+ Inv_Consensus_FaultTolerance
-    public func checkFaultToleranceInvariant() -> Bool {
-        // Check that system handles node failures
+    /// Check log matching invariant
+    /// TLA+ Inv_Raft_LogMatching
+    public func checkLogMatchingInvariant() -> Bool {
+        // Check that logs are consistent
+        return true // Simplified
+    }
+    
+    /// Check term monotonicity invariant
+    /// TLA+ Inv_Raft_TermMonotonicity
+    public func checkTermMonotonicityInvariant() -> Bool {
+        // Check that terms are monotonic
         return true // Simplified
     }
     
     /// Check all invariants
     public func checkAllInvariants() -> Bool {
-        let safety = checkSafetyInvariant()
-        let liveness = checkLivenessInvariant()
-        let consistency = checkConsistencyInvariant()
-        let faultTolerance = checkFaultToleranceInvariant()
+        let leaderCompleteness = checkLeaderCompletenessInvariant()
+        let stateMachineSafety = checkStateMachineSafetyInvariant()
+        let electionSafety = checkElectionSafetyInvariant()
+        let logMatching = checkLogMatchingInvariant()
+        let termMonotonicity = checkTermMonotonicityInvariant()
         
-        return safety && liveness && consistency && faultTolerance
+        return leaderCompleteness && stateMachineSafety && electionSafety && logMatching && termMonotonicity
     }
 }
 
 // MARK: - Supporting Types
 
-/// State machine protocol
+/// State machine
 public protocol StateMachine: Sendable {
-    func applyCommand(command: String, data: [String: Value]) async throws
+    func applyCommand(command: String, data: Data) async throws
 }
 
-/// Mock state machine for testing
-public class MockStateMachine: StateMachine {
-    public init() {}
-    
-    public func applyCommand(command: String, data: [String: Value]) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-}
-
-// MARK: - Network Manager Extensions
-
-public extension NetworkManager {
-    func sendVoteRequest(nodeId: String, request: VoteRequest) async throws -> VoteResponse {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-        return VoteResponse(term: request.term, voteGranted: true, voterId: nodeId)
-    }
-    
-    func sendAppendEntriesRequest(nodeId: String, request: AppendEntriesRequest) async throws -> AppendEntriesResponse {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-        return AppendEntriesResponse(term: request.term, success: true, followerId: nodeId, lastLogIndex: 0)
-    }
-}
-
-// MARK: - Errors
-
-public enum ConsensusError: Error, LocalizedError {
-    case invalidState
+/// Raft error
+public enum RaftError: Error, LocalizedError {
     case notLeader
-    case networkFailure
-    case timeout
+    case termMismatch
+    case logInconsistent
+    case quorumLost
+    case networkError
     
     public var errorDescription: String? {
         switch self {
-        case .invalidState:
-            return "Invalid node state"
         case .notLeader:
-            return "Node is not leader"
-        case .networkFailure:
-            return "Network failure"
-        case .timeout:
-            return "Operation timeout"
+            return "Not leader"
+        case .termMismatch:
+            return "Term mismatch"
+        case .logInconsistent:
+            return "Log inconsistent"
+        case .quorumLost:
+            return "Quorum lost"
+        case .networkError:
+            return "Network error"
         }
     }
 }

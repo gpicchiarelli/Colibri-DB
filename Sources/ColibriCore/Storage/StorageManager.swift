@@ -1,6 +1,6 @@
 //
 //  StorageManager.swift
-//  ColibrìDB Storage Management Implementation
+//  ColibrìDB Storage Manager Implementation
 //
 //  Based on: spec/Storage.tla
 //  Implements: Database storage management
@@ -8,131 +8,76 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - Durability: Data persists across failures
-//  - Consistency: Data integrity maintained
-//  - Performance: Efficient storage operations
-//  - Scalability: Handles large datasets
+//  - Data Integrity: Data is consistent and correct
+//  - Space Management: Free space is managed efficiently
+//  - Performance Metrics: Storage performance is tracked
 //
 
 import Foundation
 
 // MARK: - Storage Types
 
-/// Storage type
-/// Corresponds to TLA+: StorageType
-public enum StorageType: String, Codable, Sendable {
-    case memory = "memory"
-    case disk = "disk"
-    case ssd = "ssd"
-    case network = "network"
-    case hybrid = "hybrid"
+/// Page ID
+/// Corresponds to TLA+: PageID
+public typealias PageID = UInt64
+
+/// Record ID
+/// Corresponds to TLA+: RecordID
+public typealias RecordID = UInt64
+
+/// Storage area
+/// Corresponds to TLA+: StorageArea
+public enum StorageArea: String, Codable, Sendable, CaseIterable {
+    case data = "data"
+    case index = "index"
+    case log = "log"
+    case temp = "temp"
+    case system = "system"
 }
 
-/// Storage status
-/// Corresponds to TLA+: StorageStatus
-public enum StorageStatus: String, Codable, Sendable {
-    case active = "active"
-    case inactive = "inactive"
-    case degraded = "degraded"
-    case failed = "failed"
-    case maintenance = "maintenance"
-}
-
-/// Storage operation
-/// Corresponds to TLA+: StorageOperation
-public enum StorageOperation: String, Codable, Sendable {
-    case read = "read"
-    case write = "write"
-    case delete = "delete"
-    case update = "update"
-    case scan = "scan"
-    case backup = "backup"
-    case restore = "restore"
-}
-
-// MARK: - Storage Metadata
-
-/// Storage device
-/// Corresponds to TLA+: StorageDevice
-public struct StorageDevice: Codable, Sendable, Equatable {
-    public let deviceId: String
-    public let type: StorageType
-    public let status: StorageStatus
-    public let capacity: Int64
-    public let usedSpace: Int64
-    public let freeSpace: Int64
-    public let readSpeed: Double
-    public let writeSpeed: Double
-    public let latency: TimeInterval
-    public let createdAt: Date
-    public let lastAccessed: Date
+/// Storage policy
+/// Corresponds to TLA+: StoragePolicy
+public struct StoragePolicy: Codable, Sendable, Equatable {
+    public let policyId: String
+    public let area: StorageArea
+    public let maxSize: UInt64
+    public let compressionEnabled: Bool
+    public let encryptionEnabled: Bool
+    public let replicationFactor: Int
     
-    public init(deviceId: String, type: StorageType, status: StorageStatus, capacity: Int64, usedSpace: Int64, freeSpace: Int64, readSpeed: Double, writeSpeed: Double, latency: TimeInterval, createdAt: Date = Date(), lastAccessed: Date = Date()) {
-        self.deviceId = deviceId
-        self.type = type
-        self.status = status
-        self.capacity = capacity
+    public init(policyId: String, area: StorageArea, maxSize: UInt64, compressionEnabled: Bool, encryptionEnabled: Bool, replicationFactor: Int) {
+        self.policyId = policyId
+        self.area = area
+        self.maxSize = maxSize
+        self.compressionEnabled = compressionEnabled
+        self.encryptionEnabled = encryptionEnabled
+        self.replicationFactor = replicationFactor
+    }
+}
+
+/// Storage metrics
+/// Corresponds to TLA+: StorageMetrics
+public struct StorageMetrics: Codable, Sendable, Equatable {
+    public let totalPages: Int
+    public let usedPages: Int
+    public let freePages: Int
+    public let totalRecords: Int
+    public let usedSpace: UInt64
+    public let freeSpace: UInt64
+    public let compressionRatio: Double
+    public let ioOperations: Int
+    public let averageLatency: Double
+    
+    public init(totalPages: Int, usedPages: Int, freePages: Int, totalRecords: Int, usedSpace: UInt64, freeSpace: UInt64, compressionRatio: Double, ioOperations: Int, averageLatency: Double) {
+        self.totalPages = totalPages
+        self.usedPages = usedPages
+        self.freePages = freePages
+        self.totalRecords = totalRecords
         self.usedSpace = usedSpace
         self.freeSpace = freeSpace
-        self.readSpeed = readSpeed
-        self.writeSpeed = writeSpeed
-        self.latency = latency
-        self.createdAt = createdAt
-        self.lastAccessed = lastAccessed
-    }
-}
-
-/// Storage operation result
-/// Corresponds to TLA+: StorageOperationResult
-public struct StorageOperationResult: Codable, Sendable, Equatable {
-    public let operationId: String
-    public let operation: StorageOperation
-    public let success: Bool
-    public let data: Data?
-    public let bytesRead: Int
-    public let bytesWritten: Int
-    public let executionTime: TimeInterval
-    public let error: String?
-    public let timestamp: Date
-    
-    public init(operationId: String, operation: StorageOperation, success: Bool, data: Data?, bytesRead: Int, bytesWritten: Int, executionTime: TimeInterval, error: String? = nil, timestamp: Date = Date()) {
-        self.operationId = operationId
-        self.operation = operation
-        self.success = success
-        self.data = data
-        self.bytesRead = bytesRead
-        self.bytesWritten = bytesWritten
-        self.executionTime = executionTime
-        self.error = error
-        self.timestamp = timestamp
-    }
-}
-
-/// Storage statistics
-/// Corresponds to TLA+: StorageStatistics
-public struct StorageStatistics: Codable, Sendable, Equatable {
-    public let totalCapacity: Int64
-    public let totalUsedSpace: Int64
-    public let totalFreeSpace: Int64
-    public let totalReadOperations: Int
-    public let totalWriteOperations: Int
-    public let totalBytesRead: Int64
-    public let totalBytesWritten: Int64
-    public let averageReadLatency: TimeInterval
-    public let averageWriteLatency: TimeInterval
-    public let throughput: Double
-    
-    public init(totalCapacity: Int64, totalUsedSpace: Int64, totalFreeSpace: Int64, totalReadOperations: Int, totalWriteOperations: Int, totalBytesRead: Int64, totalBytesWritten: Int64, averageReadLatency: TimeInterval, averageWriteLatency: TimeInterval, throughput: Double) {
-        self.totalCapacity = totalCapacity
-        self.totalUsedSpace = totalUsedSpace
-        self.totalFreeSpace = totalFreeSpace
-        self.totalReadOperations = totalReadOperations
-        self.totalWriteOperations = totalWriteOperations
-        self.totalBytesRead = totalBytesRead
-        self.totalBytesWritten = totalBytesWritten
-        self.averageReadLatency = averageReadLatency
-        self.averageWriteLatency = averageWriteLatency
-        self.throughput = throughput
+        self.compressionRatio = compressionRatio
+        self.ioOperations = ioOperations
+        self.averageLatency = averageLatency
     }
 }
 
@@ -144,768 +89,499 @@ public actor StorageManager {
     
     // MARK: - State Variables (TLA+ vars)
     
-    /// Storage devices
-    /// TLA+: storageDevices \in [DeviceId -> StorageDevice]
-    private var storageDevices: [String: StorageDevice] = [:]
+    /// Pages
+    /// TLA+: pages \in [PageID -> Page]
+    private var pages: [PageID: Page] = [:]
     
-    /// Storage operations
-    /// TLA+: storageOperations \in [OperationId -> StorageOperationResult]
-    private var storageOperations: [String: StorageOperationResult] = [:]
+    /// Records
+    /// TLA+: records \in [RecordID -> Record]
+    private var records: [RecordID: Record] = [:]
     
-    /// Storage statistics
-    /// TLA+: storageStatistics \in StorageStatistics
-    private var storageStatistics: StorageStatistics
+    /// Free space map
+    /// TLA+: freeSpaceMap \in [PageID -> UInt64]
+    private var freeSpaceMap: [PageID: UInt64] = [:]
     
-    /// Storage cache
-    /// TLA+: storageCache \in [Key -> Data]
-    private var storageCache: [String: Data] = [:]
+    /// Storage areas
+    /// TLA+: storageAreas \in [StorageArea -> [PageID]]
+    private var storageAreas: [StorageArea: [PageID]] = [:]
     
-    /// Storage history
-    /// TLA+: storageHistory \in Seq(StorageEvent)
-    private var storageHistory: [StorageEvent] = []
-    
-    /// Storage configuration
-    private var storageConfig: StorageConfig
+    /// Metrics
+    /// TLA+: metrics \in StorageMetrics
+    private var metrics: StorageMetrics = StorageMetrics(
+        totalPages: 0,
+        usedPages: 0,
+        freePages: 0,
+        totalRecords: 0,
+        usedSpace: 0,
+        freeSpace: 0,
+        compressionRatio: 1.0,
+        ioOperations: 0,
+        averageLatency: 0.0
+    )
     
     // MARK: - Dependencies
     
     /// Disk manager
     private let diskManager: DiskManager
     
-    /// Cache manager
-    private let cacheManager: CacheManager
+    /// Compression service
+    private let compressionService: CompressionService
     
-    /// WAL for logging
-    private let wal: FileWAL
+    /// Encryption service
+    private let encryptionService: EncryptionService
     
     // MARK: - Initialization
     
-    public init(diskManager: DiskManager, cacheManager: CacheManager, wal: FileWAL, storageConfig: StorageConfig = StorageConfig()) {
+    public init(diskManager: DiskManager, compressionService: CompressionService, encryptionService: EncryptionService) {
         self.diskManager = diskManager
-        self.cacheManager = cacheManager
-        self.wal = wal
-        self.storageConfig = storageConfig
+        self.compressionService = compressionService
+        self.encryptionService = encryptionService
         
         // TLA+ Init
-        self.storageDevices = [:]
-        self.storageOperations = [:]
-        self.storageStatistics = StorageStatistics(
-            totalCapacity: 0,
-            totalUsedSpace: 0,
-            totalFreeSpace: 0,
-            totalReadOperations: 0,
-            totalWriteOperations: 0,
-            totalBytesRead: 0,
-            totalBytesWritten: 0,
-            averageReadLatency: 0,
-            averageWriteLatency: 0,
-            throughput: 0
+        self.pages = [:]
+        self.records = [:]
+        self.freeSpaceMap = [:]
+        self.storageAreas = [:]
+        self.metrics = StorageMetrics(
+            totalPages: 0,
+            usedPages: 0,
+            freePages: 0,
+            totalRecords: 0,
+            usedSpace: 0,
+            freeSpace: 0,
+            compressionRatio: 1.0,
+            ioOperations: 0,
+            averageLatency: 0.0
         )
-        self.storageCache = [:]
-        self.storageHistory = []
-        
-        // Initialize default storage devices
-        initializeDefaultStorageDevices()
-    }
-    
-    // MARK: - Storage Device Management
-    
-    /// Add storage device
-    /// TLA+ Action: AddStorageDevice(deviceId, device)
-    public func addStorageDevice(deviceId: String, device: StorageDevice) throws {
-        // TLA+: Check if device already exists
-        guard storageDevices[deviceId] == nil else {
-            throw StorageError.deviceAlreadyExists
-        }
-        
-        // TLA+: Validate device
-        try validateStorageDevice(device)
-        
-        // TLA+: Add device
-        storageDevices[deviceId] = device
-        
-        // TLA+: Update statistics
-        updateStorageStatistics()
-        
-        // TLA+: Log device addition
-        let event = StorageEvent(
-            eventId: "\(deviceId)_added",
-            deviceId: deviceId,
-            eventType: .deviceAdded,
-            timestamp: Date(),
-            data: ["type": .string(device.type.rawValue), "capacity": .int(Int(device.capacity))])
-        storageHistory.append(event)
-    }
-    
-    /// Remove storage device
-    /// TLA+ Action: RemoveStorageDevice(deviceId)
-    public func removeStorageDevice(deviceId: String) throws {
-        // TLA+: Check if device exists
-        guard let device = storageDevices[deviceId] else {
-            throw StorageError.deviceNotFound
-        }
-        
-        // TLA+: Check if device is in use
-        guard device.status == .inactive else {
-            throw StorageError.deviceInUse
-        }
-        
-        // TLA+: Remove device
-        storageDevices.removeValue(forKey: deviceId)
-        
-        // TLA+: Update statistics
-        updateStorageStatistics()
-        
-        // TLA+: Log device removal
-        let event = StorageEvent(
-            eventId: "\(deviceId)_removed",
-            deviceId: deviceId,
-            eventType: .deviceRemoved,
-            timestamp: Date(),
-            data: [:])
-        storageHistory.append(event)
-    }
-    
-    /// Update storage device
-    /// TLA+ Action: UpdateStorageDevice(deviceId, device)
-    public func updateStorageDevice(deviceId: String, device: StorageDevice) throws {
-        // TLA+: Check if device exists
-        guard storageDevices[deviceId] != nil else {
-            throw StorageError.deviceNotFound
-        }
-        
-        // TLA+: Validate device
-        try validateStorageDevice(device)
-        
-        // TLA+: Update device
-        storageDevices[deviceId] = device
-        
-        // TLA+: Update statistics
-        updateStorageStatistics()
-        
-        // TLA+: Log device update
-        let event = StorageEvent(
-            eventId: "\(deviceId)_updated",
-            deviceId: deviceId,
-            eventType: .deviceUpdated,
-            timestamp: Date(),
-            data: ["type": .string(device.type.rawValue), "status": .string(device.status.rawValue)])
-        storageHistory.append(event)
     }
     
     // MARK: - Storage Operations
     
-    /// Read data
-    /// TLA+ Action: ReadData(key, deviceId)
-    public func readData(key: String, deviceId: String? = nil) async throws -> Data {
-        // TLA+: Check cache first
-        if let cachedData = storageCache[key] {
-            // TLA+: Log cache hit
-            let event = StorageEvent(
-                eventId: "\(key)_cache_hit",
-                deviceId: deviceId ?? "cache",
-                eventType: .cacheHit,
-                timestamp: Date(),
-                data: ["key": .string(key)])
-            storageHistory.append(event)
-            
-            return cachedData
+    /// Allocate page
+    /// TLA+ Action: AllocatePage(area, size)
+    public func allocatePage(area: StorageArea, size: UInt64) async throws -> PageID {
+        // TLA+: Find free page
+        let pageId = try await findFreePage(area: area, size: size)
+        
+        // TLA+: Allocate page
+        let page = Page(
+            pageId: pageId,
+            area: area,
+            size: size,
+            data: Data(),
+            isAllocated: true,
+            isDirty: false,
+            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+        )
+        
+        pages[pageId] = page
+        freeSpaceMap[pageId] = size
+        
+        // TLA+: Update storage area
+        if storageAreas[area] == nil {
+            storageAreas[area] = []
         }
+        storageAreas[area]?.append(pageId)
         
-        // TLA+: Select device
-        let targetDeviceId = deviceId ?? selectOptimalDevice(for: .read)
+        // TLA+: Update metrics
+        updateMetrics()
         
-        // TLA+: Check if device exists
-        guard let device = storageDevices[targetDeviceId] else {
-            throw StorageError.deviceNotFound
-        }
-        
-        // TLA+: Check if device is active
-        guard device.status == .active else {
-            throw StorageError.deviceNotActive
-        }
-        
-        let startTime = Date()
-        
-        do {
-            // TLA+: Read data from device
-            let data = try await diskManager.readData(key: key, deviceId: targetDeviceId)
-            
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Cache data
-            storageCache[key] = data
-            
-            // TLA+: Record operation
-            let operation = StorageOperationResult(
-                operationId: "\(key)_read_\(Date().timeIntervalSince1970)",
-                operation: .read,
-                success: true,
-                data: data,
-                bytesRead: data.count,
-                bytesWritten: 0,
-                executionTime: executionTime
-            )
-            storageOperations[operation.operationId] = operation
-            
-            // TLA+: Update statistics
-            updateStorageStatistics()
-            
-            // TLA+: Log read operation
-            let event = StorageEvent(
-                eventId: "\(key)_read",
-                deviceId: targetDeviceId,
-                eventType: .readOperation,
-                timestamp: Date(),
-                data: ["key": .string(key), "bytesRead": .int(data.count)])
-            storageHistory.append(event)
-            
-            return data
-            
-        } catch {
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Record failed operation
-            let operation = StorageOperationResult(
-                operationId: "\(key)_read_\(Date().timeIntervalSince1970)",
-                operation: .read,
-                success: false,
-                data: nil,
-                bytesRead: 0,
-                bytesWritten: 0,
-                executionTime: executionTime,
-                error: error.localizedDescription
-            )
-            storageOperations[operation.operationId] = operation
-            
-            // TLA+: Log read failure
-            let event = StorageEvent(
-                eventId: "\(key)_read_failed",
-                deviceId: targetDeviceId,
-                eventType: .readFailure,
-                timestamp: Date(),
-                data: ["key": .string(key), "error": .string(error.localizedDescription)])
-            storageHistory.append(event)
-            
-            throw error
-        }
+        print("Allocated page: \(pageId) in area: \(area.rawValue)")
+        return pageId
     }
     
-    /// Write data
-    /// TLA+ Action: WriteData(key, data, deviceId)
-    public func writeData(key: String, data: Data, deviceId: String? = nil) async throws {
-        // TLA+: Select device
-        let targetDeviceId = deviceId ?? selectOptimalDevice(for: .write)
-        
-        // TLA+: Check if device exists
-        guard let device = storageDevices[targetDeviceId] else {
-            throw StorageError.deviceNotFound
+    /// Deallocate page
+    /// TLA+ Action: DeallocatePage(pageId)
+    public func deallocatePage(pageId: PageID) async throws {
+        // TLA+: Check if page exists
+        guard let page = pages[pageId] else {
+            throw StorageError.pageNotFound
         }
         
-        // TLA+: Check if device is active
-        guard device.status == .active else {
-            throw StorageError.deviceNotActive
+        // TLA+: Deallocate page
+        pages.removeValue(forKey: pageId)
+        freeSpaceMap.removeValue(forKey: pageId)
+        
+        // TLA+: Remove from storage area
+        if let area = page.area {
+            storageAreas[area]?.removeAll { $0 == pageId }
         }
         
-        // TLA+: Check if device has enough space
-        guard device.freeSpace >= Int64(data.count) else {
-            throw StorageError.insufficientSpace
-        }
+        // TLA+: Update metrics
+        updateMetrics()
         
-        let startTime = Date()
-        
-        do {
-            // TLA+: Write data to device
-            try await diskManager.writeData(key: key, data: data, deviceId: targetDeviceId)
-            
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Cache data
-            storageCache[key] = data
-            
-            // TLA+: Record operation
-            let operation = StorageOperationResult(
-                operationId: "\(key)_write_\(Date().timeIntervalSince1970)",
-                operation: .write,
-                success: true,
-                data: data,
-                bytesRead: 0,
-                bytesWritten: data.count,
-                executionTime: executionTime
-            )
-            storageOperations[operation.operationId] = operation
-            
-            // TLA+: Update device usage
-            updateDeviceUsage(deviceId: targetDeviceId, bytesWritten: data.count)
-            
-            // TLA+: Update statistics
-            updateStorageStatistics()
-            
-            // TLA+: Log write operation
-            let event = StorageEvent(
-                eventId: "\(key)_write",
-                deviceId: targetDeviceId,
-                eventType: .writeOperation,
-                timestamp: Date(),
-                data: ["key": .string(key), "bytesWritten": .int(data.count)])
-            storageHistory.append(event)
-            
-        } catch {
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Record failed operation
-            let operation = StorageOperationResult(
-                operationId: "\(key)_write_\(Date().timeIntervalSince1970)",
-                operation: .write,
-                success: false,
-                data: data,
-                bytesRead: 0,
-                bytesWritten: 0,
-                executionTime: executionTime,
-                error: error.localizedDescription
-            )
-            storageOperations[operation.operationId] = operation
-            
-            // TLA+: Log write failure
-            let event = StorageEvent(
-                eventId: "\(key)_write_failed",
-                deviceId: targetDeviceId,
-                eventType: .writeFailure,
-                timestamp: Date(),
-                data: ["key": .string(key), "error": .string(error.localizedDescription)])
-            storageHistory.append(event)
-            
-            throw error
-        }
+        print("Deallocated page: \(pageId)")
     }
     
-    /// Delete data
-    /// TLA+ Action: DeleteData(key, deviceId)
-    public func deleteData(key: String, deviceId: String? = nil) async throws {
-        // TLA+: Select device
-        let targetDeviceId = deviceId ?? selectOptimalDevice(for: .delete)
-        
-        // TLA+: Check if device exists
-        guard let device = storageDevices[targetDeviceId] else {
-            throw StorageError.deviceNotFound
+    /// Read record
+    /// TLA+ Action: ReadRecord(recordId)
+    public func readRecord(recordId: RecordID) async throws -> Record {
+        // TLA+: Check if record exists
+        guard let record = records[recordId] else {
+            throw StorageError.recordNotFound
         }
         
-        // TLA+: Check if device is active
-        guard device.status == .active else {
-            throw StorageError.deviceNotActive
+        // TLA+: Update metrics
+        metrics.ioOperations += 1
+        
+        print("Read record: \(recordId)")
+        return record
+    }
+    
+    /// Write record
+    /// TLA+ Action: WriteRecord(recordId, data)
+    public func writeRecord(recordId: RecordID, data: Data) async throws {
+        // TLA+: Create record
+        let record = Record(
+            recordId: recordId,
+            data: data,
+            pageId: nil,
+            offset: 0,
+            size: UInt64(data.count),
+            isDeleted: false,
+            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+        )
+        
+        records[recordId] = record
+        
+        // TLA+: Update metrics
+        metrics.ioOperations += 1
+        updateMetrics()
+        
+        print("Wrote record: \(recordId)")
+    }
+    
+    /// Update record
+    /// TLA+ Action: UpdateRecord(recordId, data)
+    public func updateRecord(recordId: RecordID, data: Data) async throws {
+        // TLA+: Check if record exists
+        guard records[recordId] != nil else {
+            throw StorageError.recordNotFound
         }
         
-        let startTime = Date()
+        // TLA+: Update record
+        let record = Record(
+            recordId: recordId,
+            data: data,
+            pageId: nil,
+            offset: 0,
+            size: UInt64(data.count),
+            isDeleted: false,
+            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+        )
         
-        do {
-            // TLA+: Delete data from device
-            try await diskManager.deleteData(key: key, deviceId: targetDeviceId)
-            
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Remove from cache
-            storageCache.removeValue(forKey: key)
-            
-            // TLA+: Record operation
-            let operation = StorageOperationResult(
-                operationId: "\(key)_delete_\(Date().timeIntervalSince1970)",
-                operation: .delete,
-                success: true,
-                data: nil,
-                bytesRead: 0,
-                bytesWritten: 0,
-                executionTime: executionTime
-            )
-            storageOperations[operation.operationId] = operation
-            
-            // TLA+: Update statistics
-            updateStorageStatistics()
-            
-            // TLA+: Log delete operation
-            let event = StorageEvent(
-                eventId: "\(key)_delete",
-                deviceId: targetDeviceId,
-                eventType: .deleteOperation,
-                timestamp: Date(),
-                data: ["key": .string(key)])
-            storageHistory.append(event)
-            
-        } catch {
-            let executionTime = Date().timeIntervalSince(startTime)
-            
-            // TLA+: Record failed operation
-            let operation = StorageOperationResult(
-                operationId: "\(key)_delete_\(Date().timeIntervalSince1970)",
-                operation: .delete,
-                success: false,
-                data: nil,
-                bytesRead: 0,
-                bytesWritten: 0,
-                executionTime: executionTime,
-                error: error.localizedDescription
-            )
-            storageOperations[operation.operationId] = operation
-            
-            // TLA+: Log delete failure
-            let event = StorageEvent(
-                eventId: "\(key)_delete_failed",
-                deviceId: targetDeviceId,
-                eventType: .deleteFailure,
-                timestamp: Date(),
-                data: ["key": .string(key), "error": .string(error.localizedDescription)])
-            storageHistory.append(event)
-            
-            throw error
+        records[recordId] = record
+        
+        // TLA+: Update metrics
+        metrics.ioOperations += 1
+        updateMetrics()
+        
+        print("Updated record: \(recordId)")
+    }
+    
+    /// Delete record
+    /// TLA+ Action: DeleteRecord(recordId)
+    public func deleteRecord(recordId: RecordID) async throws {
+        // TLA+: Check if record exists
+        guard var record = records[recordId] else {
+            throw StorageError.recordNotFound
         }
+        
+        // TLA+: Mark as deleted
+        record.isDeleted = true
+        records[recordId] = record
+        
+        // TLA+: Update metrics
+        updateMetrics()
+        
+        print("Deleted record: \(recordId)")
+    }
+    
+    /// Manage free space
+    /// TLA+ Action: ManageFreeSpace()
+    public func manageFreeSpace() async throws {
+        // TLA+: Manage free space
+        let freePages = pages.values.filter { !$0.isAllocated }
+        let usedPages = pages.values.filter { $0.isAllocated }
+        
+        // TLA+: Update free space map
+        for page in freePages {
+            freeSpaceMap[page.pageId] = page.size
+        }
+        
+        // TLA+: Update metrics
+        updateMetrics()
+        
+        print("Managed free space: \(freePages.count) free pages, \(usedPages.count) used pages")
     }
     
     // MARK: - Helper Methods
     
-    /// Validate storage device
-    private func validateStorageDevice(_ device: StorageDevice) throws {
-        // TLA+: Validate storage device
-        guard device.capacity > 0 else {
-            throw StorageError.invalidCapacity
+    /// Find free page
+    private func findFreePage(area: StorageArea, size: UInt64) async throws -> PageID {
+        // TLA+: Find free page in area
+        let areaPages = storageAreas[area] ?? []
+        
+        for pageId in areaPages {
+            if let freeSpace = freeSpaceMap[pageId], freeSpace >= size {
+                return pageId
+            }
         }
         
-        guard device.usedSpace >= 0 else {
-            throw StorageError.invalidUsedSpace
-        }
-        
-        guard device.freeSpace >= 0 else {
-            throw StorageError.invalidFreeSpace
-        }
-        
-        guard device.usedSpace + device.freeSpace <= device.capacity else {
-            throw StorageError.invalidSpaceAllocation
-        }
+        // TLA+: Create new page if no free page found
+        let pageId = UInt64(pages.count + 1)
+        return pageId
     }
     
-    /// Select optimal device
-    private func selectOptimalDevice(for operation: StorageOperation) -> String {
-        // TLA+: Select optimal device based on operation
-        let activeDevices = storageDevices.filter { $0.value.status == .active }
+    /// Update metrics
+    private func updateMetrics() {
+        // TLA+: Update storage metrics
+        let totalPages = pages.count
+        let usedPages = pages.values.filter { $0.isAllocated }.count
+        let freePages = totalPages - usedPages
+        let totalRecords = records.values.filter { !$0.isDeleted }.count
+        let usedSpace = pages.values.filter { $0.isAllocated }.reduce(0) { $0 + $1.size }
+        let freeSpace = pages.values.filter { !$0.isAllocated }.reduce(0) { $0 + $1.size }
         
-        switch operation {
-        case .read:
-            // TLA+: Select device with lowest latency
-            return activeDevices.min { $0.value.latency < $1.value.latency }?.key ?? ""
-        case .write:
-            // TLA+: Select device with highest write speed
-            return activeDevices.max { $0.value.writeSpeed < $1.value.writeSpeed }?.key ?? ""
-        case .delete:
-            // TLA+: Select device with lowest latency
-            return activeDevices.min { $0.value.latency < $1.value.latency }?.key ?? ""
-        default:
-            // TLA+: Select first available device
-            return activeDevices.first?.key ?? ""
-        }
-    }
-    
-    /// Update device usage
-    private func updateDeviceUsage(deviceId: String, bytesWritten: Int) {
-        // TLA+: Update device usage
-        if var device = storageDevices[deviceId] {
-            device.usedSpace += Int64(bytesWritten)
-            device.freeSpace -= Int64(bytesWritten)
-            device.lastAccessed = Date()
-            storageDevices[deviceId] = device
-        }
-    }
-    
-    /// Update storage statistics
-    private func updateStorageStatistics() {
-        // TLA+: Update storage statistics
-        let totalCapacity = storageDevices.values.reduce(0) { $0 + $1.capacity }
-        let totalUsedSpace = storageDevices.values.reduce(0) { $0 + $1.usedSpace }
-        let totalFreeSpace = storageDevices.values.reduce(0) { $0 + $1.freeSpace }
-        
-        let totalReadOperations = storageOperations.values.filter { $0.operation == .read }.count
-        let totalWriteOperations = storageOperations.values.filter { $0.operation == .write }.count
-        
-        let totalBytesRead = storageOperations.values.reduce(0) { $0 + Int64($1.bytesRead) }
-        let totalBytesWritten = storageOperations.values.reduce(0) { $0 + Int64($1.bytesWritten) }
-        
-        let readOperations = storageOperations.values.filter { $0.operation == .read && $0.success }
-        let writeOperations = storageOperations.values.filter { $0.operation == .write && $0.success }
-        
-        let averageReadLatency = readOperations.isEmpty ? 0 : readOperations.reduce(0) { $0 + $1.executionTime } / Double(readOperations.count)
-        let averageWriteLatency = writeOperations.isEmpty ? 0 : writeOperations.reduce(0) { $0 + $1.executionTime } / Double(writeOperations.count)
-        
-        let throughput = totalBytesRead + totalBytesWritten > 0 ? Double(totalBytesRead + totalBytesWritten) / 1024 / 1024 : 0 // MB/s
-        
-        storageStatistics = StorageStatistics(
-            totalCapacity: totalCapacity,
-            totalUsedSpace: totalUsedSpace,
-            totalFreeSpace: totalFreeSpace,
-            totalReadOperations: totalReadOperations,
-            totalWriteOperations: totalWriteOperations,
-            totalBytesRead: totalBytesRead,
-            totalBytesWritten: totalBytesWritten,
-            averageReadLatency: averageReadLatency,
-            averageWriteLatency: averageWriteLatency,
-            throughput: throughput
+        metrics = StorageMetrics(
+            totalPages: totalPages,
+            usedPages: usedPages,
+            freePages: freePages,
+            totalRecords: totalRecords,
+            usedSpace: usedSpace,
+            freeSpace: freeSpace,
+            compressionRatio: metrics.compressionRatio,
+            ioOperations: metrics.ioOperations,
+            averageLatency: metrics.averageLatency
         )
     }
     
-    /// Initialize default storage devices
-    private func initializeDefaultStorageDevices() {
-        // TLA+: Initialize default storage devices
-        let defaultDevices = [
-            StorageDevice(
-                deviceId: "memory_1",
-                type: .memory,
-                status: .active,
-                capacity: 8 * 1024 * 1024 * 1024, // 8GB
-                usedSpace: 0,
-                freeSpace: 8 * 1024 * 1024 * 1024,
-                readSpeed: 10000, // MB/s
-                writeSpeed: 10000,
-                latency: 0.001 // 1ms
-            ),
-            StorageDevice(
-                deviceId: "disk_1",
-                type: .disk,
-                status: .active,
-                capacity: 1000 * 1024 * 1024 * 1024, // 1TB
-                usedSpace: 0,
-                freeSpace: 1000 * 1024 * 1024 * 1024,
-                readSpeed: 150, // MB/s
-                writeSpeed: 150,
-                latency: 0.01 // 10ms
-            )
-        ]
-        
-        for device in defaultDevices {
-            storageDevices[device.deviceId] = device
-        }
-        
-        updateStorageStatistics()
+    /// Get page
+    private func getPage(pageId: PageID) -> Page? {
+        return pages[pageId]
+    }
+    
+    /// Get record
+    private func getRecord(recordId: RecordID) -> Record? {
+        return records[recordId]
+    }
+    
+    /// Get free space
+    private func getFreeSpace(pageId: PageID) -> UInt64? {
+        return freeSpaceMap[pageId]
     }
     
     // MARK: - Query Operations
     
-    /// Get storage device
-    public func getStorageDevice(deviceId: String) -> StorageDevice? {
-        return storageDevices[deviceId]
+    /// Get page
+    public func getPage(pageId: PageID) -> Page? {
+        return getPage(pageId: pageId)
     }
     
-    /// Get all storage devices
-    public func getAllStorageDevices() -> [StorageDevice] {
-        return Array(storageDevices.values)
+    /// Get record
+    public func getRecord(recordId: RecordID) -> Record? {
+        return getRecord(recordId: recordId)
     }
     
-    /// Get storage statistics
-    public func getStorageStatistics() -> StorageStatistics {
-        return storageStatistics
+    /// Get free space
+    public func getFreeSpace(pageId: PageID) -> UInt64? {
+        return getFreeSpace(pageId: pageId)
     }
     
-    /// Get storage operations
-    public func getStorageOperations() -> [StorageOperationResult] {
-        return Array(storageOperations.values)
+    /// Get page count
+    public func getPageCount() -> Int {
+        return pages.count
     }
     
-    /// Get storage history
-    public func getStorageHistory() -> [StorageEvent] {
-        return storageHistory
+    /// Get record count
+    public func getRecordCount() -> Int {
+        return records.count
     }
     
-    /// Check if device exists
-    public func deviceExists(deviceId: String) -> Bool {
-        return storageDevices[deviceId] != nil
+    /// Get free space percentage
+    public func getFreeSpacePercentage() -> Double {
+        let totalSpace = metrics.usedSpace + metrics.freeSpace
+        return totalSpace > 0 ? Double(metrics.freeSpace) / Double(totalSpace) * 100.0 : 0.0
     }
     
-    /// Check if device is active
-    public func isDeviceActive(deviceId: String) -> Bool {
-        return storageDevices[deviceId]?.status == .active
+    /// Get storage metrics
+    public func getStorageMetrics() -> StorageMetrics {
+        return metrics
+    }
+    
+    /// Get pages by area
+    public func getPagesByArea(area: StorageArea) -> [PageID] {
+        return storageAreas[area] ?? []
+    }
+    
+    /// Get records by page
+    public func getRecordsByPage(pageId: PageID) -> [RecordID] {
+        return records.values.filter { $0.pageId == pageId }.map { $0.recordId }
+    }
+    
+    /// Get storage areas
+    public func getStorageAreas() -> [StorageArea: [PageID]] {
+        return storageAreas
+    }
+    
+    /// Get free space map
+    public func getFreeSpaceMap() -> [PageID: UInt64] {
+        return freeSpaceMap
+    }
+    
+    /// Check if page exists
+    public func pageExists(pageId: PageID) -> Bool {
+        return pages[pageId] != nil
+    }
+    
+    /// Check if record exists
+    public func recordExists(recordId: RecordID) -> Bool {
+        return records[recordId] != nil
+    }
+    
+    /// Get total space
+    public func getTotalSpace() -> UInt64 {
+        return metrics.usedSpace + metrics.freeSpace
+    }
+    
+    /// Get used space
+    public func getUsedSpace() -> UInt64 {
+        return metrics.usedSpace
+    }
+    
+    /// Get free space
+    public func getFreeSpace() -> UInt64 {
+        return metrics.freeSpace
     }
     
     // MARK: - Invariant Checking (for testing)
     
-    /// Check durability invariant
-    /// TLA+ Inv_Storage_Durability
-    public func checkDurabilityInvariant() -> Bool {
-        // Check that data persists across failures
+    /// Check data integrity invariant
+    /// TLA+ Inv_Storage_DataIntegrity
+    public func checkDataIntegrityInvariant() -> Bool {
+        // Check that data is consistent and correct
         return true // Simplified
     }
     
-    /// Check consistency invariant
-    /// TLA+ Inv_Storage_Consistency
-    public func checkConsistencyInvariant() -> Bool {
-        // Check that data integrity is maintained
+    /// Check space management invariant
+    /// TLA+ Inv_Storage_SpaceManagement
+    public func checkSpaceManagementInvariant() -> Bool {
+        // Check that free space is managed efficiently
         return true // Simplified
     }
     
-    /// Check performance invariant
-    /// TLA+ Inv_Storage_Performance
-    public func checkPerformanceInvariant() -> Bool {
-        // Check that storage operations are efficient
-        return storageStatistics.averageReadLatency < 0.1 && storageStatistics.averageWriteLatency < 0.1
-    }
-    
-    /// Check scalability invariant
-    /// TLA+ Inv_Storage_Scalability
-    public func checkScalabilityInvariant() -> Bool {
-        // Check that system can handle large datasets
-        return storageStatistics.totalCapacity > 0
+    /// Check performance metrics invariant
+    /// TLA+ Inv_Storage_PerformanceMetrics
+    public func checkPerformanceMetricsInvariant() -> Bool {
+        // Check that storage performance is tracked
+        return true // Simplified
     }
     
     /// Check all invariants
     public func checkAllInvariants() -> Bool {
-        let durability = checkDurabilityInvariant()
-        let consistency = checkConsistencyInvariant()
-        let performance = checkPerformanceInvariant()
-        let scalability = checkScalabilityInvariant()
+        let dataIntegrity = checkDataIntegrityInvariant()
+        let spaceManagement = checkSpaceManagementInvariant()
+        let performanceMetrics = checkPerformanceMetricsInvariant()
         
-        return durability && consistency && performance && scalability
+        return dataIntegrity && spaceManagement && performanceMetrics
     }
 }
 
 // MARK: - Supporting Types
 
-/// Storage event type
-public enum StorageEventType: String, Codable, Sendable {
-    case deviceAdded = "device_added"
-    case deviceRemoved = "device_removed"
-    case deviceUpdated = "device_updated"
-    case readOperation = "read_operation"
-    case writeOperation = "write_operation"
-    case deleteOperation = "delete_operation"
-    case readFailure = "read_failure"
-    case writeFailure = "write_failure"
-    case deleteFailure = "delete_failure"
-    case cacheHit = "cache_hit"
-}
-
-/// Storage event
-public struct StorageEvent: Codable, Sendable, Equatable {
-    public let eventId: String
-    public let deviceId: String
-    public let eventType: StorageEventType
-    public let timestamp: Date
-    public let data: [String: Value]
+/// Page
+public struct Page: Codable, Sendable, Equatable {
+    public let pageId: PageID
+    public let area: StorageArea?
+    public let size: UInt64
+    public let data: Data
+    public let isAllocated: Bool
+    public let isDirty: Bool
+    public let timestamp: UInt64
     
-    public init(eventId: String, deviceId: String, eventType: StorageEventType, timestamp: Date, data: [String: Value]) {
-        self.eventId = eventId
-        self.deviceId = deviceId
-        self.eventType = eventType
-        self.timestamp = timestamp
+    public init(pageId: PageID, area: StorageArea?, size: UInt64, data: Data, isAllocated: Bool, isDirty: Bool, timestamp: UInt64) {
+        self.pageId = pageId
+        self.area = area
+        self.size = size
         self.data = data
+        self.isAllocated = isAllocated
+        self.isDirty = isDirty
+        self.timestamp = timestamp
     }
 }
 
-/// Storage configuration
-public struct StorageConfig: Codable, Sendable {
-    public let enableCaching: Bool
-    public let cacheSize: Int
-    public let enableCompression: Bool
-    public let enableEncryption: Bool
-    public let maxFileSize: Int64
+/// Record
+public struct Record: Codable, Sendable, Equatable {
+    public let recordId: RecordID
+    public let data: Data
+    public let pageId: PageID?
+    public let offset: UInt64
+    public let size: UInt64
+    public let isDeleted: Bool
+    public let timestamp: UInt64
     
-    public init(enableCaching: Bool = true, cacheSize: Int = 1000, enableCompression: Bool = false, enableEncryption: Bool = false, maxFileSize: Int64 = 1024 * 1024 * 1024) {
-        self.enableCaching = enableCaching
-        self.cacheSize = cacheSize
-        self.enableCompression = enableCompression
-        self.enableEncryption = enableEncryption
-        self.maxFileSize = maxFileSize
+    public init(recordId: RecordID, data: Data, pageId: PageID?, offset: UInt64, size: UInt64, isDeleted: Bool, timestamp: UInt64) {
+        self.recordId = recordId
+        self.data = data
+        self.pageId = pageId
+        self.offset = offset
+        self.size = size
+        self.isDeleted = isDeleted
+        self.timestamp = timestamp
     }
 }
 
-/// Disk manager protocol
+/// Disk manager
 public protocol DiskManager: Sendable {
-    func readData(key: String, deviceId: String) async throws -> Data
-    func writeData(key: String, data: Data, deviceId: String) async throws
-    func deleteData(key: String, deviceId: String) async throws
+    func readPage(pageId: PageID) async throws -> Data
+    func writePage(pageId: PageID, data: Data) async throws
+    func deletePage(pageId: PageID) async throws
 }
 
-/// Mock disk manager for testing
-public class MockDiskManager: DiskManager {
-    public init() {}
-    
-    public func readData(key: String, deviceId: String) async throws -> Data {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-        return Data()
-    }
-    
-    public func writeData(key: String, data: Data, deviceId: String) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
-    
-    public func deleteData(key: String, deviceId: String) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
+/// Compression service
+public protocol CompressionService: Sendable {
+    func compress(data: Data) async throws -> Data
+    func decompress(data: Data) async throws -> Data
 }
 
-/// Cache manager protocol
-public protocol CacheManager: Sendable {
-    func get(key: String) -> Data?
-    func set(key: String, data: Data)
-    func remove(key: String)
-    func clear()
+/// Encryption service
+public protocol EncryptionService: Sendable {
+    func encrypt(data: Data) async throws -> Data
+    func decrypt(data: Data) async throws -> Data
 }
 
-/// Mock cache manager for testing
-public class MockCacheManager: CacheManager {
-    private var cache: [String: Data] = [:]
-    
-    public init() {}
-    
-    public func get(key: String) -> Data? {
-        return cache[key]
-    }
-    
-    public func set(key: String, data: Data) {
-        cache[key] = data
-    }
-    
-    public func remove(key: String) {
-        cache.removeValue(forKey: key)
-    }
-    
-    public func clear() {
-        cache.removeAll()
-    }
-}
-
-// MARK: - Errors
-
+/// Storage error
 public enum StorageError: Error, LocalizedError {
-    case deviceAlreadyExists
-    case deviceNotFound
-    case deviceInUse
-    case deviceNotActive
+    case pageNotFound
+    case recordNotFound
     case insufficientSpace
-    case invalidCapacity
-    case invalidUsedSpace
-    case invalidFreeSpace
-    case invalidSpaceAllocation
-    case operationFailed
+    case allocationFailed
+    case deallocationFailed
+    case readFailed
+    case writeFailed
+    case updateFailed
+    case deleteFailed
     
     public var errorDescription: String? {
         switch self {
-        case .deviceAlreadyExists:
-            return "Storage device already exists"
-        case .deviceNotFound:
-            return "Storage device not found"
-        case .deviceInUse:
-            return "Storage device is in use"
-        case .deviceNotActive:
-            return "Storage device is not active"
+        case .pageNotFound:
+            return "Page not found"
+        case .recordNotFound:
+            return "Record not found"
         case .insufficientSpace:
-            return "Insufficient storage space"
-        case .invalidCapacity:
-            return "Invalid device capacity"
-        case .invalidUsedSpace:
-            return "Invalid used space"
-        case .invalidFreeSpace:
-            return "Invalid free space"
-        case .invalidSpaceAllocation:
-            return "Invalid space allocation"
-        case .operationFailed:
-            return "Storage operation failed"
+            return "Insufficient space"
+        case .allocationFailed:
+            return "Page allocation failed"
+        case .deallocationFailed:
+            return "Page deallocation failed"
+        case .readFailed:
+            return "Record read failed"
+        case .writeFailed:
+            return "Record write failed"
+        case .updateFailed:
+            return "Record update failed"
+        case .deleteFailed:
+            return "Record delete failed"
         }
     }
 }

@@ -1,0 +1,916 @@
+---
+layout: default
+title: Architettura - Colibrì DB
+description: Architettura modulare dettagliata di Colibrì DB con specifiche TLA+ e componenti implementati
+---
+
+<style>
+/* Architecture Page Styles */
+:root {
+    --primary: #000000;
+    --secondary: #007AFF;
+    --accent: #FF6B35;
+    --success: #34C759;
+    --warning: #FF9500;
+    --error: #FF3B30;
+    --info: #5AC8FA;
+    --gray-50: #FAFAFA;
+    --gray-100: #F5F5F5;
+    --gray-200: #E5E5E5;
+    --gray-300: #D1D1D6;
+    --gray-400: #C7C7CC;
+    --gray-500: #AEAEB2;
+    --gray-600: #8E8E93;
+    --gray-700: #636366;
+    --gray-800: #48484A;
+    --gray-900: #1C1C1E;
+    --white: #FFFFFF;
+    --font-system: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+    --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    --space-3xl: 4rem;
+    --space-4xl: 6rem;
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-system);
+    line-height: 1.6;
+    color: var(--gray-900);
+    background: var(--white);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+}
+
+/* Navigation */
+.nav {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: var(--space-md) 0;
+}
+
+.nav-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.nav-links {
+    display: flex;
+    gap: var(--space-xl);
+    list-style: none;
+}
+
+.nav-links a {
+    color: var(--gray-700);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.nav-links a:hover {
+    color: var(--primary);
+}
+
+/* Hero Section */
+.hero {
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--white) 100%);
+    padding: var(--space-4xl) 0;
+    text-align: center;
+}
+
+.hero h1 {
+    font-size: clamp(2rem, 6vw, 3rem);
+    font-weight: 200;
+    color: var(--primary);
+    margin-bottom: var(--space-lg);
+    letter-spacing: -0.02em;
+}
+
+.hero p {
+    font-size: 1.125rem;
+    color: var(--gray-600);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Architecture Overview */
+.architecture-overview {
+    padding: var(--space-4xl) 0;
+    background: var(--white);
+}
+
+.section-title {
+    text-align: center;
+    font-size: clamp(1.75rem, 4vw, 2.25rem);
+    font-weight: 200;
+    color: var(--primary);
+    margin-bottom: var(--space-xl);
+}
+
+.section-subtitle {
+    text-align: center;
+    font-size: 1.125rem;
+    color: var(--gray-600);
+    margin-bottom: var(--space-2xl);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Architecture Diagram */
+.architecture-diagram {
+    background: var(--gray-50);
+    border-radius: var(--radius-xl);
+    padding: var(--space-2xl);
+    margin: var(--space-2xl) 0;
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-md);
+}
+
+.arch-layer {
+    background: var(--white);
+    border: 2px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    margin: var(--space-md) 0;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.arch-layer:hover {
+    border-color: var(--secondary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.arch-layer h4 {
+    color: var(--primary);
+    margin-bottom: var(--space-sm);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.arch-layer p {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    margin-bottom: var(--space-sm);
+}
+
+.arch-layer .layer-number {
+    background: var(--secondary);
+    color: var(--white);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.arch-components {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+}
+
+.component {
+    background: var(--gray-100);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    color: var(--gray-700);
+    text-align: center;
+}
+
+/* TLA+ Specifications */
+.tla-specs {
+    background: var(--gray-50);
+    padding: var(--space-4xl) 0;
+}
+
+.specs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-lg);
+    margin-top: var(--space-2xl);
+}
+
+.spec-card {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.spec-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--gray-300);
+}
+
+.spec-card h4 {
+    color: var(--primary);
+    margin-bottom: var(--space-sm);
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.spec-card p {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: var(--space-sm);
+}
+
+.spec-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin-top: var(--space-sm);
+}
+
+.spec-tag {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.spec-tag.tla { background: var(--accent); color: var(--white); }
+.spec-tag.invariant { background: var(--success); color: var(--white); }
+.spec-tag.liveness { background: var(--info); color: var(--white); }
+
+/* Module Details */
+.module-details {
+    padding: var(--space-4xl) 0;
+    background: var(--white);
+}
+
+.module-tabs {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xl);
+    border-bottom: 1px solid var(--gray-200);
+    overflow-x: auto;
+}
+
+.module-tab {
+    padding: var(--space-md) var(--space-lg);
+    background: none;
+    border: none;
+    color: var(--gray-600);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+}
+
+.module-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--secondary);
+}
+
+.module-tab:hover {
+    color: var(--primary);
+}
+
+.module-content {
+    display: none;
+}
+
+.module-content.active {
+    display: block;
+}
+
+.module-info {
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-xl);
+}
+
+.module-info h3 {
+    color: var(--primary);
+    margin-bottom: var(--space-md);
+    font-size: 1.25rem;
+}
+
+.module-info p {
+    color: var(--gray-600);
+    margin-bottom: var(--space-md);
+    line-height: 1.6;
+}
+
+.module-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-lg);
+}
+
+.module-feature {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.module-feature h4 {
+    color: var(--primary);
+    margin-bottom: var(--space-sm);
+    font-size: 1rem;
+}
+
+.module-feature p {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Code Examples */
+.code-example {
+    background: var(--gray-900);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--gray-100);
+    overflow-x: auto;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    margin: var(--space-lg) 0;
+}
+
+.code-example::before {
+    content: '';
+    position: absolute;
+    top: var(--space-md);
+    left: var(--space-md);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--error);
+    box-shadow: 20px 0 0 var(--warning), 40px 0 0 var(--success);
+}
+
+.code-example pre {
+    margin: 0;
+    padding-top: var(--space-lg);
+}
+
+.code-comment { color: var(--gray-500); }
+.code-keyword { color: #FF79C6; }
+.code-string { color: #F1FA8C; }
+.code-function { color: #50FA7B; }
+.code-type { color: #8BE9FD; }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .nav-links {
+        display: none;
+    }
+    
+    .module-tabs {
+        flex-direction: column;
+    }
+    
+    .module-features {
+        grid-template-columns: 1fr;
+    }
+    
+    .arch-components {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 0 var(--space-md);
+    }
+}
+</style>
+
+<!-- Navigation -->
+<nav class="nav">
+    <div class="container">
+        <div class="nav-content">
+            <a href="/" class="logo">
+                🐦 Colibrì DB
+            </a>
+            <ul class="nav-links">
+                <li><a href="/">Home</a></li>
+                <li><a href="/architecture">Architecture</a></li>
+                <li><a href="/wiki/Quick-Start">Quick Start</a></li>
+                <li><a href="/wiki/API-Reference">API</a></li>
+                <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank">GitHub</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container">
+        <h1>Architettura Modulare</h1>
+        <p>Design enterprise-grade con specifiche TLA+ complete e separazione delle responsabilità</p>
+    </div>
+</section>
+
+<!-- Architecture Overview -->
+<section class="architecture-overview">
+    <div class="container">
+        <h2 class="section-title">🏗️ Architettura a Livelli</h2>
+        <p class="section-subtitle">
+            Design modulare con interfacce ben definite e verifiche formali complete
+        </p>
+        
+        <div class="architecture-diagram">
+            <div class="arch-layer">
+                <h4><span class="layer-number">1</span> 🎯 SQL Interface & CLI</h4>
+                <p>Parser SQL completo, CLI amministrativa e interfacce programmatiche Swift</p>
+                <div class="arch-components">
+                    <div class="component">SQL Parser</div>
+                    <div class="component">CLI Tool</div>
+                    <div class="component">Swift API</div>
+                    <div class="component">Query Interface</div>
+                </div>
+            </div>
+            
+            <div class="arch-layer">
+                <h4><span class="layer-number">2</span> 🧠 Query Processor</h4>
+                <p>Planner cost-based, operatori Volcano e ottimizzazione query avanzata</p>
+                <div class="arch-components">
+                    <div class="component">Query Planner</div>
+                    <div class="component">Volcano Iterator</div>
+                    <div class="component">Cost Optimizer</div>
+                    <div class="component">Plan Cache</div>
+                </div>
+            </div>
+            
+            <div class="arch-layer">
+                <h4><span class="layer-number">3</span> ⚡ Transaction Manager</h4>
+                <p>MVCC, lock manager, 2PC e gestione concorrenza enterprise</p>
+                <div class="arch-components">
+                    <div class="component">MVCC Engine</div>
+                    <div class="component">Lock Manager</div>
+                    <div class="component">2PC Protocol</div>
+                    <div class="component">Snapshot Manager</div>
+                </div>
+            </div>
+            
+            <div class="arch-layer">
+                <h4><span class="layer-number">4</span> 🚀 Index Manager</h4>
+                <p>B+Tree, indici pluggabili e gestione indici avanzata</p>
+                <div class="arch-components">
+                    <div class="component">B+Tree Engine</div>
+                    <div class="component">Hash Indexes</div>
+                    <div class="component">ART Indexes</div>
+                    <div class="component">Index Validator</div>
+                </div>
+            </div>
+            
+            <div class="arch-layer">
+                <h4><span class="layer-number">5</span> 🗄️ Storage Engine</h4>
+                <p>Heap storage, buffer pool e WAL con recovery completo</p>
+                <div class="arch-components">
+                    <div class="component">Heap Storage</div>
+                    <div class="component">Buffer Pool</div>
+                    <div class="component">WAL Engine</div>
+                    <div class="component">Recovery System</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- TLA+ Specifications -->
+<section class="tla-specs">
+    <div class="container">
+        <h2 class="section-title">🔬 Specifiche TLA+ Complete</h2>
+        <p class="section-subtitle">
+            149 specifiche TLA+ modulari con invarianti e proprietà di liveness verificate
+        </p>
+        
+        <div class="specs-grid">
+            <div class="spec-card">
+                <h4>Schema Evolution</h4>
+                <p>Gestione evoluzione schema con migrazioni online e compatibilità backward/forward.</p>
+                <div class="spec-tags">
+                    <span class="spec-tag tla">TLA+</span>
+                    <span class="spec-tag invariant">Invariants</span>
+                    <span class="spec-tag liveness">Liveness</span>
+                </div>
+            </div>
+            
+            <div class="spec-card">
+                <h4>Statistics Maintenance</h4>
+                <p>Aggiornamento statistiche per query optimizer con histogrammi e cardinalità.</p>
+                <div class="spec-tags">
+                    <span class="spec-tag tla">TLA+</span>
+                    <span class="spec-tag invariant">Invariants</span>
+                    <span class="spec-tag liveness">Liveness</span>
+                </div>
+            </div>
+            
+            <div class="spec-card">
+                <h4>Connection Pooling</h4>
+                <p>Gestione pool connessioni con multi-tenancy e load balancing.</p>
+                <div class="spec-tags">
+                    <span class="spec-tag tla">TLA+</span>
+                    <span class="spec-tag invariant">Invariants</span>
+                    <span class="spec-tag liveness">Liveness</span>
+                </div>
+            </div>
+            
+            <div class="spec-card">
+                <h4>Memory Management</h4>
+                <p>Gestione memoria avanzata con arena allocator e garbage collection.</p>
+                <div class="spec-tags">
+                    <span class="spec-tag tla">TLA+</span>
+                    <span class="spec-tag invariant">Invariants</span>
+                    <span class="spec-tag liveness">Liveness</span>
+                </div>
+            </div>
+            
+            <div class="spec-card">
+                <h4>Compression</h4>
+                <p>Compressione dati con algoritmi pluggabili e dizionari adattivi.</p>
+                <div class="spec-tags">
+                    <span class="spec-tag tla">TLA+</span>
+                    <span class="spec-tag invariant">Invariants</span>
+                    <span class="spec-tag liveness">Liveness</span>
+                </div>
+            </div>
+            
+            <div class="spec-card">
+                <h4>Monitoring</h4>
+                <p>Sistema di monitoraggio con metriche Prometheus e alerting.</p>
+                <div class="spec-tags">
+                    <span class="spec-tag tla">TLA+</span>
+                    <span class="spec-tag invariant">Invariants</span>
+                    <span class="spec-tag liveness">Liveness</span>
+                </div>
+            </div>
+            
+            <div class="spec-card">
+                <h4>Backup & Restore</h4>
+                <p>Sistema completo di backup con compressione e crittografia.</p>
+                <div class="spec-tags">
+                    <span class="spec-tag tla">TLA+</span>
+                    <span class="spec-tag invariant">Invariants</span>
+                    <span class="spec-tag liveness">Liveness</span>
+                </div>
+            </div>
+            
+            <div class="spec-card">
+                <h4>Point-in-Time Recovery</h4>
+                <p>Recovery temporale con WAL replay e checkpoint.</p>
+                <div class="spec-tags">
+                    <span class="spec-tag tla">TLA+</span>
+                    <span class="spec-tag invariant">Invariants</span>
+                    <span class="spec-tag liveness">Liveness</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Module Details -->
+<section class="module-details">
+    <div class="container">
+        <h2 class="section-title">📦 Dettagli Moduli</h2>
+        <p class="section-subtitle">
+            Implementazione dettagliata di ogni componente con esempi di codice
+        </p>
+        
+        <div class="module-tabs">
+            <button class="module-tab active" onclick="showModule('schema')">Schema Evolution</button>
+            <button class="module-tab" onclick="showModule('statistics')">Statistics</button>
+            <button class="module-tab" onclick="showModule('pooling')">Connection Pooling</button>
+            <button class="module-tab" onclick="showModule('memory')">Memory Management</button>
+            <button class="module-tab" onclick="showModule('compression')">Compression</button>
+            <button class="module-tab" onclick="showModule('monitoring')">Monitoring</button>
+            <button class="module-tab" onclick="showModule('backup')">Backup</button>
+            <button class="module-tab" onclick="showModule('pitr')">PITR</button>
+        </div>
+        
+        <!-- Schema Evolution Module -->
+        <div id="schema" class="module-content active">
+            <div class="module-info">
+                <h3>Schema Evolution</h3>
+                <p>
+                    Gestisce l'evoluzione dello schema database con migrazioni online, compatibilità backward/forward 
+                    e validazione constraint. Supporta operazioni DDL atomiche e rollback sicuri.
+                </p>
+            </div>
+            
+            <div class="module-features">
+                <div class="module-feature">
+                    <h4>DDL Operations</h4>
+                    <p>CREATE, ALTER, DROP con supporto per operazioni atomiche e rollback.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Migration System</h4>
+                    <p>Sistema di migrazione con versioning e compatibilità garantita.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Constraint Validation</h4>
+                    <p>Validazione constraint con supporto per NOT NULL, UNIQUE, CHECK, FOREIGN KEY.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Online Changes</h4>
+                    <p>Modifiche schema online senza downtime per operazioni critiche.</p>
+                </div>
+            </div>
+            
+            <div class="code-example">
+                <pre><code><span class="code-comment">// Esempio di migrazione schema</span>
+<span class="code-keyword">let</span> <span class="code-function">migration</span> = <span class="code-type">SchemaMigration</span>(
+    <span class="code-string">version</span>: <span class="code-string">"1.1.0"</span>,
+    <span class="code-string">description</span>: <span class="code-string">"Add email column to users table"</span>,
+    <span class="code-string">ddl</span>: <span class="code-string">"ALTER TABLE users ADD COLUMN email VARCHAR(255)"</span>
+)
+
+<span class="code-keyword">try</span> <span class="code-function">await</span> <span class="code-type">schemaManager</span>.<span class="code-function">applyMigration</span>(migration)</code></pre>
+            </div>
+        </div>
+        
+        <!-- Statistics Module -->
+        <div id="statistics" class="module-content">
+            <div class="module-info">
+                <h3>Statistics Maintenance</h3>
+                <p>
+                    Mantiene statistiche aggiornate per il query optimizer, inclusi histogrammi, cardinalità 
+                    e distribuzione dei valori. Supporta aggiornamenti incrementali e validazione automatica.
+                </p>
+            </div>
+            
+            <div class="module-features">
+                <div class="module-feature">
+                    <h4>Histogram Generation</h4>
+                    <p>Generazione automatica di histogrammi per distribuzione valori.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Cardinality Estimation</h4>
+                    <p>Stima cardinalità per ottimizzazione query cost-based.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Incremental Updates</h4>
+                    <p>Aggiornamenti incrementali per performance ottimali.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Auto Validation</h4>
+                    <p>Validazione automatica e correzione statistiche obsolete.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Connection Pooling Module -->
+        <div id="pooling" class="module-content">
+            <div class="module-info">
+                <h3>Connection Pooling</h3>
+                <p>
+                    Gestisce pool di connessioni con multi-tenancy, load balancing e gestione risorse 
+                    per milioni di connessioni logiche. Supporta isolamento tenant e QoS.
+                </p>
+            </div>
+            
+            <div class="module-features">
+                <div class="module-feature">
+                    <h4>Multi-Tenancy</h4>
+                    <p>Supporto completo per multi-tenancy con isolamento garantito.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Load Balancing</h4>
+                    <p>Bilanciamento carico intelligente tra pool di connessioni.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Resource Management</h4>
+                    <p>Gestione risorse con QoS e limiti per tenant.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Health Monitoring</h4>
+                    <p>Monitoraggio salute connessioni e recovery automatico.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Memory Management Module -->
+        <div id="memory" class="module-content">
+            <div class="module-info">
+                <h3>Memory Management</h3>
+                <p>
+                    Gestione memoria avanzata con arena allocator, garbage collection e deframmentazione 
+                    automatica. Ottimizzato per Apple Silicon con allocazioni zero-copy.
+                </p>
+            </div>
+            
+            <div class="module-features">
+                <div class="module-feature">
+                    <h4>Arena Allocator</h4>
+                    <p>Allocatore arena per gestione memoria efficiente.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Garbage Collection</h4>
+                    <p>GC automatico con strategie pluggabili.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Defragmentation</h4>
+                    <p>Deframmentazione automatica per ottimizzazione memoria.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Zero-Copy</h4>
+                    <p>Allocazioni zero-copy per performance Apple Silicon.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Compression Module -->
+        <div id="compression" class="module-content">
+            <div class="module-info">
+                <h3>Compression</h3>
+                <p>
+                    Compressione dati con algoritmi pluggabili, dizionari adattivi e ottimizzazione 
+                    storage. Supporta LZ4, Zstandard e algoritmi custom.
+                </p>
+            </div>
+            
+            <div class="module-features">
+                <div class="module-feature">
+                    <h4>Pluggable Algorithms</h4>
+                    <p>Algoritmi di compressione pluggabili (LZ4, Zstd, custom).</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Adaptive Dictionaries</h4>
+                    <p>Dizionari adattivi per compressione ottimale.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Storage Optimization</h4>
+                    <p>Ottimizzazione storage con compressione intelligente.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Performance Tuning</h4>
+                    <p>Auto-tuning per bilanciamento compressione/performance.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Monitoring Module -->
+        <div id="monitoring" class="module-content">
+            <div class="module-info">
+                <h3>Monitoring</h3>
+                <p>
+                    Sistema di monitoraggio completo con metriche Prometheus, alerting e health check 
+                    automatici. Dashboard real-time e analisi performance.
+                </p>
+            </div>
+            
+            <div class="module-features">
+                <div class="module-feature">
+                    <h4>Prometheus Metrics</h4>
+                    <p>Metriche Prometheus native per monitoring enterprise.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Real-time Dashboard</h4>
+                    <p>Dashboard real-time per monitoring operativo.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Alerting System</h4>
+                    <p>Sistema di alerting con soglie configurabili.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Health Checks</h4>
+                    <p>Health check automatici con recovery proattivo.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Backup Module -->
+        <div id="backup" class="module-content">
+            <div class="module-info">
+                <h3>Backup & Restore</h3>
+                <p>
+                    Sistema completo di backup con compressione, crittografia e restore incrementale. 
+                    Supporta backup distribuiti e verifica integrità automatica.
+                </p>
+            </div>
+            
+            <div class="module-features">
+                <div class="module-feature">
+                    <h4>Incremental Backup</h4>
+                    <p>Backup incrementali per efficienza storage.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Encryption</h4>
+                    <p>Crittografia end-to-end per sicurezza dati.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Distributed Storage</h4>
+                    <p>Supporto backup distribuiti e replicazione.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Integrity Verification</h4>
+                    <p>Verifica integrità automatica con checksum.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PITR Module -->
+        <div id="pitr" class="module-content">
+            <div class="module-info">
+                <h3>Point-in-Time Recovery</h3>
+                <p>
+                    Recovery temporale con WAL replay, checkpoint e restore a timestamp specifici. 
+                    Supporta recovery granulare e verifica consistenza.
+                </p>
+            </div>
+            
+            <div class="module-features">
+                <div class="module-feature">
+                    <h4>WAL Replay</h4>
+                    <p>Replay WAL per recovery temporale preciso.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Checkpoint System</h4>
+                    <p>Sistema checkpoint per recovery efficiente.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Granular Recovery</h4>
+                    <p>Recovery granulare per tabelle specifiche.</p>
+                </div>
+                <div class="module-feature">
+                    <h4>Consistency Verification</h4>
+                    <p>Verifica consistenza post-recovery automatica.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+function showModule(moduleId) {
+    // Hide all module contents
+    const contents = document.querySelectorAll('.module-content');
+    contents.forEach(content => content.classList.remove('active'));
+    
+    // Remove active class from all tabs
+    const tabs = document.querySelectorAll('.module-tab');
+    tabs.forEach(tab => tab.classList.remove('active'));
+    
+    // Show selected module content
+    document.getElementById(moduleId).classList.add('active');
+    
+    // Add active class to clicked tab
+    event.target.classList.add('active');
+}
+</script>

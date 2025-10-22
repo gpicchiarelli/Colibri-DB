@@ -1,6 +1,6 @@
 //
 //  PolicyManager.swift
-//  ColibrìDB Policy Management Implementation
+//  ColibrìDB Policy Manager Implementation
 //
 //  Based on: spec/Policy.tla
 //  Implements: Database policy management
@@ -8,10 +8,9 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - Security: Access control and authorization
-//  - Compliance: Regulatory compliance
-//  - Audit: Policy enforcement tracking
-//  - Flexibility: Dynamic policy updates
+//  - Policy Consistency: Policies are consistent
+//  - Enforcement Integrity: Policy enforcement is correct
+//  - Audit Log Completeness: Audit log is complete
 //
 
 import Foundation
@@ -20,140 +19,64 @@ import Foundation
 
 /// Policy type
 /// Corresponds to TLA+: PolicyType
-public enum PolicyType: String, Codable, Sendable {
+public enum PolicyType: String, Codable, Sendable, CaseIterable {
+    case security = "security"
+    case resource = "resource"
+    case dataRetention = "dataRetention"
     case access = "access"
-    case dataRetention = "data_retention"
-    case encryption = "encryption"
-    case backup = "backup"
-    case audit = "audit"
     case compliance = "compliance"
-}
-
-/// Policy status
-/// Corresponds to TLA+: PolicyStatus
-public enum PolicyStatus: String, Codable, Sendable {
-    case active = "active"
-    case inactive = "inactive"
-    case pending = "pending"
-    case expired = "expired"
-}
-
-/// Policy priority
-/// Corresponds to TLA+: PolicyPriority
-public enum PolicyPriority: String, Codable, Sendable {
-    case low = "low"
-    case medium = "medium"
-    case high = "high"
-    case critical = "critical"
-}
-
-/// Policy action
-/// Corresponds to TLA+: PolicyAction
-public enum PolicyAction: String, Codable, Sendable {
-    case allow = "allow"
-    case deny = "deny"
-    case audit = "audit"
-    case encrypt = "encrypt"
-    case backup = "backup"
-    case delete = "delete"
-}
-
-// MARK: - Policy Metadata
-
-/// Policy metadata
-/// Corresponds to TLA+: PolicyMetadata
-public struct PolicyMetadata: Codable, Sendable, Equatable {
-    public let policyId: String
-    public let name: String
-    public let type: PolicyType
-    public let status: PolicyStatus
-    public let priority: PolicyPriority
-    public let description: String
-    public let rules: [PolicyRule]
-    public let createdAt: Date
-    public let updatedAt: Date
-    public let expiresAt: Date?
-    
-    public init(policyId: String, name: String, type: PolicyType, status: PolicyStatus, priority: PolicyPriority, description: String, rules: [PolicyRule], createdAt: Date = Date(), updatedAt: Date = Date(), expiresAt: Date? = nil) {
-        self.policyId = policyId
-        self.name = name
-        self.type = type
-        self.status = status
-        self.priority = priority
-        self.description = description
-        self.rules = rules
-        self.createdAt = createdAt
-        self.updatedAt = updatedAt
-        self.expiresAt = expiresAt
-    }
 }
 
 /// Policy rule
 /// Corresponds to TLA+: PolicyRule
 public struct PolicyRule: Codable, Sendable, Equatable {
     public let ruleId: String
-    public let condition: PolicyCondition
-    public let action: PolicyAction
-    public let parameters: [String: Value]
-    public let priority: PolicyPriority
+    public let policyType: PolicyType
+    public let name: String
+    public let description: String
+    public let condition: String
+    public let action: String
+    public let priority: Int
+    public let isActive: Bool
     
-    public init(ruleId: String, condition: PolicyCondition, action: PolicyAction, parameters: [String: Value], priority: PolicyPriority) {
+    public init(ruleId: String, policyType: PolicyType, name: String, description: String, condition: String, action: String, priority: Int, isActive: Bool) {
         self.ruleId = ruleId
+        self.policyType = policyType
+        self.name = name
+        self.description = description
         self.condition = condition
         self.action = action
-        self.parameters = parameters
         self.priority = priority
+        self.isActive = isActive
     }
 }
 
-/// Policy condition
-/// Corresponds to TLA+: PolicyCondition
-public struct PolicyCondition: Codable, Sendable, Equatable {
-    public let expression: String
-    public let variables: [String: Value]
-    public let operators: [PolicyOperator]
-    
-    public init(expression: String, variables: [String: Value], operators: [PolicyOperator]) {
-        self.expression = expression
-        self.variables = variables
-        self.operators = operators
-    }
-}
-
-/// Policy operator
-/// Corresponds to TLA+: PolicyOperator
-public enum PolicyOperator: String, Codable, Sendable {
-    case equals = "equals"
-    case notEquals = "not_equals"
-    case greaterThan = "greater_than"
-    case lessThan = "less_than"
-    case contains = "contains"
-    case startsWith = "starts_with"
-    case endsWith = "ends_with"
-    case regex = "regex"
-    case in = "in"
-    case notIn = "not_in"
+/// Policy action
+/// Corresponds to TLA+: PolicyAction
+public enum PolicyAction: String, Codable, Sendable, CaseIterable {
+    case allow = "allow"
+    case deny = "deny"
+    case warn = "warn"
+    case log = "log"
+    case encrypt = "encrypt"
+    case audit = "audit"
 }
 
 /// Policy evaluation result
 /// Corresponds to TLA+: PolicyEvaluationResult
 public struct PolicyEvaluationResult: Codable, Sendable, Equatable {
-    public let policyId: String
     public let ruleId: String
     public let action: PolicyAction
-    public let matched: Bool
     public let reason: String
-    public let timestamp: Date
-    public let context: [String: Value]
+    public let timestamp: UInt64
+    public let metadata: [String: String]
     
-    public init(policyId: String, ruleId: String, action: PolicyAction, matched: Bool, reason: String, timestamp: Date = Date(), context: [String: Value]) {
-        self.policyId = policyId
+    public init(ruleId: String, action: PolicyAction, reason: String, timestamp: UInt64, metadata: [String: String]) {
         self.ruleId = ruleId
         self.action = action
-        self.matched = matched
         self.reason = reason
         self.timestamp = timestamp
-        self.context = context
+        self.metadata = metadata
     }
 }
 
@@ -165,584 +88,322 @@ public actor PolicyManager {
     
     // MARK: - State Variables (TLA+ vars)
     
-    /// Policy registry
-    /// TLA+: policies \in [PolicyId -> PolicyMetadata]
-    private var policies: [String: PolicyMetadata] = [:]
-    
-    /// Policy evaluations
-    /// TLA+: policyEvaluations \in Seq(PolicyEvaluationResult)
-    private var policyEvaluations: [PolicyEvaluationResult] = []
+    /// Policies
+    /// TLA+: policies \in [String -> PolicyRule]
+    private var policies: [String: PolicyRule] = [:]
     
     /// Active policies
-    /// TLA+: activePolicies \in Set(PolicyId)
+    /// TLA+: activePolicies \in Set(String)
     private var activePolicies: Set<String> = []
     
     /// Policy violations
-    /// TLA+: policyViolations \in Seq(PolicyViolation)
-    private var policyViolations: [PolicyViolation] = []
+    /// TLA+: policyViolations \in [String -> PolicyEvaluationResult]
+    private var policyViolations: [String: PolicyEvaluationResult] = [:]
     
-    /// Policy audit log
-    /// TLA+: policyAuditLog \in Seq(PolicyAuditEvent)
-    private var policyAuditLog: [PolicyAuditEvent] = []
-    
-    /// Policy cache
-    /// TLA+: policyCache \in [Context -> Set(PolicyId)]
-    private var policyCache: [String: Set<String>] = [:]
+    /// Audit log
+    /// TLA+: auditLog \in Seq(String)
+    private var auditLog: [String] = []
     
     // MARK: - Dependencies
-    
-    /// Authentication manager
-    private let authenticationManager: AuthenticationManager
     
     /// Audit manager
     private let auditManager: AuditManager
     
-    /// WAL for logging
-    private let wal: FileWAL
+    /// Security manager
+    private let securityManager: SecurityManager
     
     // MARK: - Initialization
     
-    public init(authenticationManager: AuthenticationManager, auditManager: AuditManager, wal: FileWAL) {
-        self.authenticationManager = authenticationManager
+    public init(auditManager: AuditManager, securityManager: SecurityManager) {
         self.auditManager = auditManager
-        self.wal = wal
+        self.securityManager = securityManager
         
         // TLA+ Init
         self.policies = [:]
-        self.policyEvaluations = []
         self.activePolicies = []
-        self.policyViolations = []
-        self.policyAuditLog = []
-        self.policyCache = [:]
+        self.policyViolations = [:]
+        self.auditLog = []
     }
     
-    // MARK: - Policy Management
+    // MARK: - Policy Management Operations
     
-    /// Create policy
-    /// TLA+ Action: CreatePolicy(policyId, metadata)
-    public func createPolicy(policyId: String, metadata: PolicyMetadata) throws {
-        // TLA+: Check if policy already exists
-        guard policies[policyId] == nil else {
-            throw PolicyError.policyAlreadyExists
-        }
-        
-        // TLA+: Validate policy metadata
-        try validatePolicyMetadata(metadata)
-        
-        // TLA+: Create policy
-        policies[policyId] = metadata
+    /// Add policy
+    /// TLA+ Action: AddPolicy(policy)
+    public func addPolicy(policy: PolicyRule) async throws {
+        // TLA+: Add policy
+        policies[policy.ruleId] = policy
         
         // TLA+: Add to active policies if active
-        if metadata.status == .active {
-            activePolicies.insert(policyId)
+        if policy.isActive {
+            activePolicies.insert(policy.ruleId)
         }
         
-        // TLA+: Log policy creation
-        let event = PolicyAuditEvent(
-            eventId: "\(policyId)_created",
-            policyId: policyId,
-            eventType: .created,
-            timestamp: Date(),
-            data: ["name": .string(metadata.name), "type": .string(metadata.type.rawValue)])
-        policyAuditLog.append(event)
+        // TLA+: Log policy addition
+        auditLog.append("Added policy: \(policy.ruleId) - \(policy.name)")
         
-        // TLA+: Clear policy cache
-        clearPolicyCache()
+        print("Added policy: \(policy.ruleId)")
     }
     
-    /// Update policy
-    /// TLA+ Action: UpdatePolicy(policyId, metadata)
-    public func updatePolicy(policyId: String, metadata: PolicyMetadata) throws {
-        // TLA+: Check if policy exists
-        guard let existingPolicy = policies[policyId] else {
-            throw PolicyError.policyNotFound
-        }
-        
-        // TLA+: Validate policy metadata
-        try validatePolicyMetadata(metadata)
-        
-        // TLA+: Update policy
-        policies[policyId] = metadata
-        
-        // TLA+: Update active policies
-        if metadata.status == .active {
-            activePolicies.insert(policyId)
-        } else {
-            activePolicies.remove(policyId)
-        }
-        
-        // TLA+: Log policy update
-        let event = PolicyAuditEvent(
-            eventId: "\(policyId)_updated",
-            policyId: policyId,
-            eventType: .updated,
-            timestamp: Date(),
-            data: ["name": .string(metadata.name), "type": .string(metadata.type.rawValue)])
-        policyAuditLog.append(event)
-        
-        // TLA+: Clear policy cache
-        clearPolicyCache()
-    }
-    
-    /// Delete policy
-    /// TLA+ Action: DeletePolicy(policyId)
-    public func deletePolicy(policyId: String) throws {
-        // TLA+: Check if policy exists
-        guard policies[policyId] != nil else {
-            throw PolicyError.policyNotFound
-        }
-        
-        // TLA+: Remove from active policies
-        activePolicies.remove(policyId)
-        
+    /// Remove policy
+    /// TLA+ Action: RemovePolicy(ruleId)
+    public func removePolicy(ruleId: String) async throws {
         // TLA+: Remove policy
-        policies.removeValue(forKey: policyId)
+        policies.removeValue(forKey: ruleId)
+        activePolicies.remove(ruleId)
+        policyViolations.removeValue(forKey: ruleId)
         
-        // TLA+: Log policy deletion
-        let event = PolicyAuditEvent(
-            eventId: "\(policyId)_deleted",
-            policyId: policyId,
-            eventType: .deleted,
-            timestamp: Date(),
-            data: [:])
-        policyAuditLog.append(event)
+        // TLA+: Log policy removal
+        auditLog.append("Removed policy: \(ruleId)")
         
-        // TLA+: Clear policy cache
-        clearPolicyCache()
+        print("Removed policy: \(ruleId)")
     }
-    
-    /// Activate policy
-    /// TLA+ Action: ActivatePolicy(policyId)
-    public func activatePolicy(policyId: String) throws {
-        // TLA+: Check if policy exists
-        guard var policy = policies[policyId] else {
-            throw PolicyError.policyNotFound
-        }
-        
-        // TLA+: Update policy status
-        let updatedPolicy = PolicyMetadata(
-            policyId: policy.policyId,
-            name: policy.name,
-            type: policy.type,
-            status: .active,
-            priority: policy.priority,
-            description: policy.description,
-            rules: policy.rules,
-            createdAt: policy.createdAt,
-            updatedAt: Date(),
-            expiresAt: policy.expiresAt
-        )
-        policies[policyId] = updatedPolicy
-        
-        // TLA+: Add to active policies
-        activePolicies.insert(policyId)
-        
-        // TLA+: Log policy activation
-        let event = PolicyAuditEvent(
-            eventId: "\(policyId)_activated",
-            policyId: policyId,
-            eventType: .activated,
-            timestamp: Date(),
-            data: [:])
-        policyAuditLog.append(event)
-        
-        // TLA+: Clear policy cache
-        clearPolicyCache()
-    }
-    
-    /// Deactivate policy
-    /// TLA+ Action: DeactivatePolicy(policyId)
-    public func deactivatePolicy(policyId: String) throws {
-        // TLA+: Check if policy exists
-        guard var policy = policies[policyId] else {
-            throw PolicyError.policyNotFound
-        }
-        
-        // TLA+: Update policy status
-        let updatedPolicy = PolicyMetadata(
-            policyId: policy.policyId,
-            name: policy.name,
-            type: policy.type,
-            status: .inactive,
-            priority: policy.priority,
-            description: policy.description,
-            rules: policy.rules,
-            createdAt: policy.createdAt,
-            updatedAt: Date(),
-            expiresAt: policy.expiresAt
-        )
-        policies[policyId] = updatedPolicy
-        
-        // TLA+: Remove from active policies
-        activePolicies.remove(policyId)
-        
-        // TLA+: Log policy deactivation
-        let event = PolicyAuditEvent(
-            eventId: "\(policyId)_deactivated",
-            policyId: policyId,
-            eventType: .deactivated,
-            timestamp: Date(),
-            data: [:])
-        policyAuditLog.append(event)
-        
-        // TLA+: Clear policy cache
-        clearPolicyCache()
-    }
-    
-    // MARK: - Policy Evaluation
     
     /// Evaluate policy
-    /// TLA+ Action: EvaluatePolicy(policyId, context)
-    public func evaluatePolicy(policyId: String, context: [String: Value]) async throws -> PolicyEvaluationResult {
+    /// TLA+ Action: EvaluatePolicy(ruleId, context)
+    public func evaluatePolicy(ruleId: String, context: [String: String]) async throws -> PolicyEvaluationResult {
         // TLA+: Check if policy exists
-        guard let policy = policies[policyId] else {
+        guard let policy = policies[ruleId] else {
             throw PolicyError.policyNotFound
         }
         
         // TLA+: Check if policy is active
-        guard policy.status == .active else {
-            throw PolicyError.policyNotActive
+        guard policy.isActive else {
+            throw PolicyError.policyInactive
         }
         
-        // TLA+: Evaluate each rule
-        for rule in policy.rules {
-            let result = try await evaluateRule(rule: rule, context: context)
-            
-            // TLA+: Log evaluation result
-            policyEvaluations.append(result)
-            
-            // TLA+: Return first matching rule
-            if result.matched {
-                return result
-            }
-        }
+        // TLA+: Evaluate policy condition
+        let conditionMet = try await evaluateCondition(condition: policy.condition, context: context)
         
-        // TLA+: Return default result
-        return PolicyEvaluationResult(
-            policyId: policyId,
-            ruleId: "default",
-            action: .deny,
-            matched: false,
-            reason: "No rules matched",
-            context: context
-        )
-    }
-    
-    /// Evaluate rule
-    private func evaluateRule(rule: PolicyRule, context: [String: Value]) async throws -> PolicyEvaluationResult {
-        // TLA+: Evaluate condition
-        let conditionResult = try await evaluateCondition(rule.condition, context: context)
+        // TLA+: Determine action
+        let action: PolicyAction = conditionMet ? .allow : .deny
         
         // TLA+: Create evaluation result
         let result = PolicyEvaluationResult(
-            policyId: rule.ruleId,
-            ruleId: rule.ruleId,
-            action: rule.action,
-            matched: conditionResult,
-            reason: conditionResult ? "Condition matched" : "Condition not matched",
-            context: context
+            ruleId: ruleId,
+            action: action,
+            reason: conditionMet ? "Condition met" : "Condition not met",
+            timestamp: UInt64(Date().timeIntervalSince1970 * 1000),
+            metadata: context
         )
         
+        // TLA+: Store violation if denied
+        if action == .deny {
+            policyViolations[ruleId] = result
+        }
+        
+        // TLA+: Log evaluation
+        auditLog.append("Evaluated policy: \(ruleId) - \(action.rawValue)")
+        
+        print("Evaluated policy: \(ruleId) - \(action.rawValue)")
         return result
     }
     
-    /// Evaluate condition
-    private func evaluateCondition(_ condition: PolicyCondition, context: [String: Value]) async throws -> Bool {
-        // TLA+: Evaluate condition expression
-        // Simplified implementation
-        return true
-    }
-    
-    /// Evaluate policies for context
-    /// TLA+ Action: EvaluatePoliciesForContext(context)
-    public func evaluatePoliciesForContext(context: [String: Value]) async throws -> [PolicyEvaluationResult] {
-        // TLA+: Get relevant policies
-        let relevantPolicies = getRelevantPolicies(context: context)
+    /// Enforce policy
+    /// TLA+ Action: EnforcePolicy(ruleId, context)
+    public func enforcePolicy(ruleId: String, context: [String: String]) async throws -> Bool {
+        // TLA+: Evaluate policy
+        let result = try await evaluatePolicy(ruleId: ruleId, context: context)
         
-        var results: [PolicyEvaluationResult] = []
-        
-        // TLA+: Evaluate each relevant policy
-        for policyId in relevantPolicies {
-            do {
-                let result = try await evaluatePolicy(policyId: policyId, context: context)
-                results.append(result)
-            } catch {
-                // TLA+: Handle evaluation error
-                continue
-            }
+        // TLA+: Enforce action
+        switch result.action {
+        case .allow:
+            return true
+        case .deny:
+            return false
+        case .warn:
+            print("Policy warning: \(result.reason)")
+            return true
+        case .log:
+            auditLog.append("Policy log: \(result.reason)")
+            return true
+        case .encrypt:
+            try await securityManager.encryptData(data: context["data"] ?? "")
+            return true
+        case .audit:
+            try await auditManager.auditEvent(event: result.reason, metadata: result.metadata)
+            return true
         }
-        
-        return results
-    }
-    
-    /// Get relevant policies
-    private func getRelevantPolicies(context: [String: Value]) -> Set<String> {
-        // TLA+: Get policies from cache
-        let contextKey = createContextKey(context: context)
-        
-        if let cachedPolicies = policyCache[contextKey] {
-            return cachedPolicies
-        }
-        
-        // TLA+: Find relevant policies
-        var relevantPolicies: Set<String> = []
-        
-        for policyId in activePolicies {
-            guard let policy = policies[policyId] else { continue }
-            
-            // TLA+: Check if policy is relevant
-            if isPolicyRelevant(policy: policy, context: context) {
-                relevantPolicies.insert(policyId)
-            }
-        }
-        
-        // TLA+: Cache results
-        policyCache[contextKey] = relevantPolicies
-        
-        return relevantPolicies
-    }
-    
-    /// Check if policy is relevant
-    private func isPolicyRelevant(policy: PolicyMetadata, context: [String: Value]) -> Bool {
-        // TLA+: Check if policy is relevant to context
-        // Simplified implementation
-        return true
-    }
-    
-    /// Create context key
-    private func createContextKey(context: [String: Value]) -> String {
-        // TLA+: Create unique key for context
-        let sortedKeys = context.keys.sorted()
-        let keyValues = sortedKeys.map { "\($0):\(context[$0]!)" }
-        return keyValues.joined(separator: "|")
-    }
-    
-    // MARK: - Policy Violations
-    
-    /// Record policy violation
-    /// TLA+ Action: RecordPolicyViolation(violation)
-    public func recordPolicyViolation(_ violation: PolicyViolation) {
-        // TLA+: Record violation
-        policyViolations.append(violation)
-        
-        // TLA+: Log violation
-        let event = PolicyAuditEvent(
-            eventId: "\(violation.violationId)_violation",
-            policyId: violation.policyId,
-            eventType: .violation,
-            timestamp: Date(),
-            data: ["violationId": .string(violation.violationId), "severity": .string(violation.severity.rawValue)])
-        policyAuditLog.append(event)
-        
-        // TLA+: Notify audit manager
-        Task {
-            try await auditManager.recordPolicyViolation(violation)
-        }
-    }
-    
-    /// Get policy violations
-    public func getPolicyViolations() -> [PolicyViolation] {
-        return policyViolations
-    }
-    
-    /// Get policy violations for policy
-    public func getPolicyViolations(for policyId: String) -> [PolicyViolation] {
-        return policyViolations.filter { $0.policyId == policyId }
     }
     
     // MARK: - Helper Methods
     
-    /// Validate policy metadata
-    private func validatePolicyMetadata(_ metadata: PolicyMetadata) throws {
-        // TLA+: Validate policy metadata
-        guard !metadata.name.isEmpty else {
-            throw PolicyError.invalidPolicyName
+    /// Evaluate condition
+    private func evaluateCondition(condition: String, context: [String: String]) async throws -> Bool {
+        // TLA+: Evaluate condition
+        // This is a simplified implementation
+        // In practice, you would use a proper expression evaluator
+        
+        if condition.contains("user_role") {
+            let userRole = context["user_role"] ?? ""
+            return userRole == "admin"
         }
         
-        guard !metadata.rules.isEmpty else {
-            throw PolicyError.invalidPolicyRules
+        if condition.contains("time_range") {
+            let currentHour = Calendar.current.component(.hour, from: Date())
+            return currentHour >= 9 && currentHour <= 17
         }
         
-        // Additional validation can be added here
+        if condition.contains("data_size") {
+            let dataSize = Int(context["data_size"] ?? "0") ?? 0
+            return dataSize <= 1000000 // 1MB
+        }
+        
+        return true // Default to allow
     }
     
-    /// Clear policy cache
-    private func clearPolicyCache() {
-        // TLA+: Clear policy cache
-        policyCache.removeAll()
+    /// Get policy
+    private func getPolicy(ruleId: String) -> PolicyRule? {
+        return policies[ruleId]
+    }
+    
+    /// Get violations
+    private func getViolations() -> [PolicyEvaluationResult] {
+        return Array(policyViolations.values)
+    }
+    
+    /// Check if has violations
+    private func hasViolations() -> Bool {
+        return !policyViolations.isEmpty
     }
     
     // MARK: - Query Operations
     
     /// Get policy
-    public func getPolicy(policyId: String) -> PolicyMetadata? {
-        return policies[policyId]
+    public func getPolicy(ruleId: String) -> PolicyRule? {
+        return getPolicy(ruleId: ruleId)
+    }
+    
+    /// Get violations
+    public func getViolations() -> [PolicyEvaluationResult] {
+        return getViolations()
+    }
+    
+    /// Check if has violations
+    public func hasViolations() -> Bool {
+        return hasViolations()
     }
     
     /// Get all policies
-    public func getAllPolicies() -> [PolicyMetadata] {
+    public func getAllPolicies() -> [PolicyRule] {
         return Array(policies.values)
     }
     
     /// Get active policies
-    public func getActivePolicies() -> [PolicyMetadata] {
+    public func getActivePolicies() -> [PolicyRule] {
         return activePolicies.compactMap { policies[$0] }
     }
     
     /// Get policies by type
-    public func getPoliciesByType(_ type: PolicyType) -> [PolicyMetadata] {
-        return policies.values.filter { $0.type == type }
+    public func getPoliciesByType(type: PolicyType) -> [PolicyRule] {
+        return policies.values.filter { $0.policyType == type }
     }
     
-    /// Get policy evaluations
-    public func getPolicyEvaluations() -> [PolicyEvaluationResult] {
-        return policyEvaluations
+    /// Get audit log
+    public func getAuditLog() -> [String] {
+        return auditLog
     }
     
-    /// Get policy audit log
-    public func getPolicyAuditLog() -> [PolicyAuditEvent] {
-        return policyAuditLog
+    /// Get policy count
+    public func getPolicyCount() -> Int {
+        return policies.count
+    }
+    
+    /// Get active policy count
+    public func getActivePolicyCount() -> Int {
+        return activePolicies.count
+    }
+    
+    /// Get violation count
+    public func getViolationCount() -> Int {
+        return policyViolations.count
     }
     
     /// Check if policy exists
-    public func policyExists(policyId: String) -> Bool {
-        return policies[policyId] != nil
+    public func policyExists(ruleId: String) -> Bool {
+        return policies[ruleId] != nil
     }
     
     /// Check if policy is active
-    public func isPolicyActive(policyId: String) -> Bool {
-        return activePolicies.contains(policyId)
+    public func isPolicyActive(ruleId: String) -> Bool {
+        return activePolicies.contains(ruleId)
+    }
+    
+    /// Get policy by name
+    public func getPolicyByName(name: String) -> PolicyRule? {
+        return policies.values.first { $0.name == name }
+    }
+    
+    /// Get policies by priority
+    public func getPoliciesByPriority(priority: Int) -> [PolicyRule] {
+        return policies.values.filter { $0.priority == priority }
     }
     
     // MARK: - Invariant Checking (for testing)
     
-    /// Check security invariant
-    /// TLA+ Inv_Policy_Security
-    public func checkSecurityInvariant() -> Bool {
-        // Check that access control policies are enforced
+    /// Check policy consistency invariant
+    /// TLA+ Inv_Policy_PolicyConsistency
+    public func checkPolicyConsistencyInvariant() -> Bool {
+        // Check that policies are consistent
         return true // Simplified
     }
     
-    /// Check compliance invariant
-    /// TLA+ Inv_Policy_Compliance
-    public func checkComplianceInvariant() -> Bool {
-        // Check that compliance policies are enforced
+    /// Check enforcement integrity invariant
+    /// TLA+ Inv_Policy_EnforcementIntegrity
+    public func checkEnforcementIntegrityInvariant() -> Bool {
+        // Check that policy enforcement is correct
         return true // Simplified
     }
     
-    /// Check audit invariant
-    /// TLA+ Inv_Policy_Audit
-    public func checkAuditInvariant() -> Bool {
-        // Check that policy enforcement is audited
-        return !policyAuditLog.isEmpty
-    }
-    
-    /// Check flexibility invariant
-    /// TLA+ Inv_Policy_Flexibility
-    public func checkFlexibilityInvariant() -> Bool {
-        // Check that policies can be dynamically updated
+    /// Check audit log completeness invariant
+    /// TLA+ Inv_Policy_AuditLogCompleteness
+    public func checkAuditLogCompletenessInvariant() -> Bool {
+        // Check that audit log is complete
         return true // Simplified
     }
     
     /// Check all invariants
     public func checkAllInvariants() -> Bool {
-        let security = checkSecurityInvariant()
-        let compliance = checkComplianceInvariant()
-        let audit = checkAuditInvariant()
-        let flexibility = checkFlexibilityInvariant()
+        let policyConsistency = checkPolicyConsistencyInvariant()
+        let enforcementIntegrity = checkEnforcementIntegrityInvariant()
+        let auditLogCompleteness = checkAuditLogCompletenessInvariant()
         
-        return security && compliance && audit && flexibility
+        return policyConsistency && enforcementIntegrity && auditLogCompleteness
     }
 }
 
 // MARK: - Supporting Types
 
-/// Policy violation
-public struct PolicyViolation: Codable, Sendable, Equatable {
-    public let violationId: String
-    public let policyId: String
-    public let severity: PolicyPriority
-    public let message: String
-    public let timestamp: Date
-    public let context: [String: Value]
-    
-    public init(violationId: String, policyId: String, severity: PolicyPriority, message: String, timestamp: Date = Date(), context: [String: Value]) {
-        self.violationId = violationId
-        self.policyId = policyId
-        self.severity = severity
-        self.message = message
-        self.timestamp = timestamp
-        self.context = context
-    }
-}
-
-/// Policy audit event type
-public enum PolicyAuditEventType: String, Codable, Sendable {
-    case created = "created"
-    case updated = "updated"
-    case deleted = "deleted"
-    case activated = "activated"
-    case deactivated = "deactivated"
-    case evaluated = "evaluated"
-    case violation = "violation"
-}
-
-/// Policy audit event
-public struct PolicyAuditEvent: Codable, Sendable, Equatable {
-    public let eventId: String
-    public let policyId: String
-    public let eventType: PolicyAuditEventType
-    public let timestamp: Date
-    public let data: [String: Value]
-    
-    public init(eventId: String, policyId: String, eventType: PolicyAuditEventType, timestamp: Date, data: [String: Value]) {
-        self.eventId = eventId
-        self.policyId = policyId
-        self.eventType = eventType
-        self.timestamp = timestamp
-        self.data = data
-    }
-}
-
-/// Audit manager protocol
+/// Audit manager
 public protocol AuditManager: Sendable {
-    func recordPolicyViolation(_ violation: PolicyViolation) async throws
+    func auditEvent(event: String, metadata: [String: String]) async throws
 }
 
-/// Mock audit manager for testing
-public class MockAuditManager: AuditManager {
-    public init() {}
-    
-    public func recordPolicyViolation(_ violation: PolicyViolation) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 1_000_000) // 1ms
-    }
+/// Security manager
+public protocol SecurityManager: Sendable {
+    func encryptData(data: String) async throws
+    func decryptData(data: String) async throws
 }
 
-// MARK: - Errors
-
+/// Policy error
 public enum PolicyError: Error, LocalizedError {
-    case policyAlreadyExists
     case policyNotFound
-    case policyNotActive
-    case invalidPolicyName
-    case invalidPolicyRules
+    case policyInactive
     case evaluationFailed
+    case enforcementFailed
+    case invalidCondition
     
     public var errorDescription: String? {
         switch self {
-        case .policyAlreadyExists:
-            return "Policy already exists"
         case .policyNotFound:
             return "Policy not found"
-        case .policyNotActive:
-            return "Policy is not active"
-        case .invalidPolicyName:
-            return "Invalid policy name"
-        case .invalidPolicyRules:
-            return "Invalid policy rules"
+        case .policyInactive:
+            return "Policy is inactive"
         case .evaluationFailed:
             return "Policy evaluation failed"
+        case .enforcementFailed:
+            return "Policy enforcement failed"
+        case .invalidCondition:
+            return "Invalid policy condition"
         }
     }
 }

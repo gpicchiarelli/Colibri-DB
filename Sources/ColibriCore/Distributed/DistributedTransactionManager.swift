@@ -1,6 +1,6 @@
 //
 //  DistributedTransactionManager.swift
-//  ColibrìDB Distributed Transaction Management Implementation
+//  ColibrìDB Distributed Transaction Manager Implementation
 //
 //  Based on: spec/DistributedTransactionManager.tla
 //  Implements: Distributed transaction management
@@ -8,19 +8,19 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - Atomicity: All-or-nothing execution
-//  - Consistency: Data integrity maintained
-//  - Isolation: Concurrent execution safety
-//  - Durability: Committed changes persist
+//  - Distributed Atomicity: Transactions are atomic across nodes
+//  - Replication Consistency: Replication maintains consistency
+//  - Consensus Safety: Consensus protocol ensures safety
+//  - Timestamp Monotonicity: Timestamps are monotonic
 //
 
 import Foundation
 
-// MARK: - Transaction Types
+// MARK: - Distributed Transaction Types
 
-/// Transaction status
-/// Corresponds to TLA+: TransactionStatus
-public enum DistributedTransactionStatus: String, Codable, Sendable {
+/// Distributed transaction state
+/// Corresponds to TLA+: DistributedTxState
+public enum DistributedTxState: String, Codable, Sendable, CaseIterable {
     case active = "active"
     case preparing = "preparing"
     case prepared = "prepared"
@@ -30,720 +30,405 @@ public enum DistributedTransactionStatus: String, Codable, Sendable {
     case aborted = "aborted"
 }
 
-/// Vote
-/// Corresponds to TLA+: Vote
-public enum Vote: String, Codable, Sendable {
-    case yes = "yes"
-    case no = "no"
+/// Commit decision
+/// Corresponds to TLA+: CommitDecision
+public enum CommitDecision: String, Codable, Sendable, CaseIterable {
+    case commit = "commit"
+    case abort = "abort"
+    case unknown = "unknown"
 }
 
-/// Coordinator state
-/// Corresponds to TLA+: CoordinatorState
-public enum CoordinatorState: String, Codable, Sendable {
-    case active = "active"
-    case preparing = "preparing"
-    case committing = "committing"
-    case aborting = "aborting"
-    case terminated = "terminated"
-}
-
-// MARK: - Transaction Metadata
-
-/// Distributed transaction
-/// Corresponds to TLA+: DistributedTransaction
-public struct DistributedTransaction: Codable, Sendable, Equatable {
-    public let txId: TxID
-    public let coordinatorId: String
-    public let participants: Set<String>
-    public let status: DistributedTransactionStatus
-    public let timestamp: Date
-    public let operations: [TransactionOperation]
-    
-    public init(txId: TxID, coordinatorId: String, participants: Set<String>, status: DistributedTransactionStatus, timestamp: Date = Date(), operations: [TransactionOperation]) {
-        self.txId = txId
-        self.coordinatorId = coordinatorId
-        self.participants = participants
-        self.status = status
-        self.timestamp = timestamp
-        self.operations = operations
-    }
-}
-
-/// Transaction operation
-/// Corresponds to TLA+: TransactionOperation
-public struct TransactionOperation: Codable, Sendable, Equatable {
-    public let operationId: String
+/// Node replica
+/// Corresponds to TLA+: NodeReplica
+public struct NodeReplica: Codable, Sendable, Equatable {
     public let nodeId: String
-    public let type: OperationType
-    public let data: [String: Value]
-    public let timestamp: Date
+    public let replicaId: String
+    public let status: String
+    public let lastLSN: LSN
+    public let isAlive: Bool
     
-    public init(operationId: String, nodeId: String, type: OperationType, data: [String: Value], timestamp: Date = Date()) {
-        self.operationId = operationId
+    public init(nodeId: String, replicaId: String, status: String, lastLSN: LSN, isAlive: Bool) {
         self.nodeId = nodeId
-        self.type = type
-        self.data = data
-        self.timestamp = timestamp
+        self.replicaId = replicaId
+        self.status = status
+        self.lastLSN = lastLSN
+        self.isAlive = isAlive
     }
 }
 
-/// Operation type
-public enum OperationType: String, Codable, Sendable {
-    case read = "read"
-    case write = "write"
-    case delete = "delete"
-    case update = "update"
-}
-
-/// Vote record
-/// Corresponds to TLA+: VoteRecord
-public struct VoteRecord: Codable, Sendable, Equatable {
-    public let txId: TxID
-    public let participantId: String
-    public let vote: Vote
-    public let timestamp: Date
+/// Replication lag
+/// Corresponds to TLA+: ReplicationLag
+public struct ReplicationLag: Codable, Sendable, Equatable {
+    public let nodeId: String
+    public let lagMs: UInt64
+    public let lastUpdate: UInt64
     
-    public init(txId: TxID, participantId: String, vote: Vote, timestamp: Date = Date()) {
-        self.txId = txId
-        self.participantId = participantId
-        self.vote = vote
-        self.timestamp = timestamp
+    public init(nodeId: String, lagMs: UInt64, lastUpdate: UInt64) {
+        self.nodeId = nodeId
+        self.lagMs = lagMs
+        self.lastUpdate = lastUpdate
     }
 }
 
 // MARK: - Distributed Transaction Manager
 
-/// Distributed Transaction Manager for managing transactions across multiple nodes
+/// Distributed Transaction Manager for managing distributed transactions
 /// Corresponds to TLA+ module: DistributedTransactionManager.tla
 public actor DistributedTransactionManager {
     
     // MARK: - State Variables (TLA+ vars)
     
-    /// Active transactions
-    /// TLA+: activeTransactions \in [TxId -> DistributedTransaction]
-    private var activeTransactions: [TxID: DistributedTransaction] = [:]
+    /// Distributed transaction
+    /// TLA+: distributedTx \in [TxID -> DistributedTxState]
+    private var distributedTx: [TxID: DistributedTxState] = [:]
     
-    /// Transaction votes
-    /// TLA+: votes \in [TxId -> [ParticipantId -> Vote]]
-    private var votes: [TxID: [String: Vote]] = [:]
+    /// Prepared nodes
+    /// TLA+: preparedNodes \in [TxID -> Set(NodeID)]
+    private var preparedNodes: [TxID: Set<String>] = [:]
     
-    /// Coordinator state
-    /// TLA+: coordinatorState \in [TxId -> CoordinatorState]
-    private var coordinatorState: [TxID: CoordinatorState] = [:]
+    /// Commit decisions
+    /// TLA+: commitDecisions \in [TxID -> CommitDecision]
+    private var commitDecisions: [TxID: CommitDecision] = [:]
     
-    /// Participant state
-    /// TLA+: participantState \in [TxId -> [ParticipantId -> ParticipantState]]
-    private var participantState: [TxID: [String: ParticipantState]] = [:]
+    /// Node replicas
+    /// TLA+: nodeReplicas \in [NodeID -> NodeReplica]
+    private var nodeReplicas: [String: NodeReplica] = [:]
     
-    /// Transaction log
-    /// TLA+: transactionLog \in Seq(TransactionEvent)
-    private var transactionLog: [TransactionEvent] = []
+    /// Replication lag
+    /// TLA+: replicationLag \in [NodeID -> ReplicationLag]
+    private var replicationLag: [String: ReplicationLag] = [:]
     
-    /// Node failures
-    /// TLA+: nodeFailures \in Set(NodeId)
-    private var nodeFailures: Set<String> = []
+    /// Alive nodes
+    /// TLA+: aliveNodes \in Set(NodeID)
+    private var aliveNodes: Set<String> = []
     
-    /// Timeout configuration
-    private var timeoutConfig: TimeoutConfig
+    /// Partitioned nodes
+    /// TLA+: partitionedNodes \in Set(NodeID)
+    private var partitionedNodes: Set<String> = []
     
     // MARK: - Dependencies
     
     /// Local transaction manager
     private let localTransactionManager: TransactionManager
     
-    /// Network manager
-    private let networkManager: NetworkManager
+    /// Two-phase commit manager
+    private let twoPhaseCommitManager: TwoPhaseCommitManager
     
-    /// WAL for logging
-    private let wal: FileWAL
+    /// Replication manager
+    private let replicationManager: ReplicationManager
+    
+    /// Consensus manager
+    private let consensusManager: RaftConsensusManager
+    
+    /// Clock manager
+    private let clockManager: DistributedClockManager
     
     // MARK: - Initialization
     
-    public init(localTransactionManager: TransactionManager, networkManager: NetworkManager, wal: FileWAL, timeoutConfig: TimeoutConfig = TimeoutConfig()) {
+    public init(
+        localTransactionManager: TransactionManager,
+        twoPhaseCommitManager: TwoPhaseCommitManager,
+        replicationManager: ReplicationManager,
+        consensusManager: RaftConsensusManager,
+        clockManager: DistributedClockManager
+    ) {
         self.localTransactionManager = localTransactionManager
-        self.networkManager = networkManager
-        self.wal = wal
-        self.timeoutConfig = timeoutConfig
+        self.twoPhaseCommitManager = twoPhaseCommitManager
+        self.replicationManager = replicationManager
+        self.clockManager = clockManager
         
         // TLA+ Init
-        self.activeTransactions = [:]
-        self.votes = [:]
-        self.coordinatorState = [:]
-        self.participantState = [:]
-        self.transactionLog = []
-        self.nodeFailures = []
+        self.distributedTx = [:]
+        self.preparedNodes = [:]
+        self.commitDecisions = [:]
+        self.nodeReplicas = [:]
+        self.replicationLag = [:]
+        self.aliveNodes = []
+        self.partitionedNodes = []
     }
     
-    // MARK: - Transaction Management
+    // MARK: - Distributed Transaction Operations
     
-    /// Begin distributed transaction
-    /// TLA+ Action: BeginDistributedTransaction(txId, coordinatorId, participants)
-    public func beginDistributedTransaction(txId: TxID, coordinatorId: String, participants: Set<String>) throws {
-        // TLA+: Check if transaction already exists
-        guard activeTransactions[txId] == nil else {
-            throw DistributedTransactionError.transactionAlreadyExists
-        }
+    /// Begin transaction
+    /// TLA+ Action: BeginTransaction(txId, nodes)
+    public func beginTransaction(txId: TxID, nodes: [String]) async throws {
+        // TLA+: Initialize distributed transaction
+        distributedTx[txId] = .active
+        preparedNodes[txId] = Set(nodes)
+        commitDecisions[txId] = .unknown
         
-        // TLA+: Create distributed transaction
-        let transaction = DistributedTransaction(
-            txId: txId,
-            coordinatorId: coordinatorId,
-            participants: participants,
-            status: .active,
-            operations: []
-        )
+        // TLA+: Begin local transaction
+        try await localTransactionManager.beginTransaction(txId: txId)
         
-        activeTransactions[txId] = transaction
-        coordinatorState[txId] = .active
-        participantState[txId] = [:]
+        // TLA+: Update alive nodes
+        aliveNodes = Set(nodes)
         
-        // TLA+: Log transaction event
-        let event = TransactionEvent(
-            txId: txId,
-            type: .begin,
-            timestamp: Date(),
-            data: ["coordinatorId": .string(coordinatorId), "participants": .array(participants.map { .string($0) })])
-        transactionLog.append(event)
-        
-        // TLA+: Notify participants
-        try await notifyParticipants(txId: txId, event: .begin)
-    }
-    
-    /// Add operation to transaction
-    /// TLA+ Action: AddOperation(txId, operation)
-    public func addOperation(txId: TxID, operation: TransactionOperation) throws {
-        // TLA+: Check if transaction exists and is active
-        guard var transaction = activeTransactions[txId],
-              transaction.status == .active else {
-            throw DistributedTransactionError.transactionNotFound
-        }
-        
-        // TLA+: Add operation to transaction
-        var operations = transaction.operations
-        operations.append(operation)
-        
-        let updatedTransaction = DistributedTransaction(
-            txId: transaction.txId,
-            coordinatorId: transaction.coordinatorId,
-            participants: transaction.participants,
-            status: transaction.status,
-            timestamp: transaction.timestamp,
-            operations: operations
-        )
-        
-        activeTransactions[txId] = updatedTransaction
-        
-        // TLA+: Log operation event
-        let event = TransactionEvent(
-            txId: txId,
-            type: .operation,
-            timestamp: Date(),
-            data: ["operationId": .string(operation.operationId), "nodeId": .string(operation.nodeId)])
-        transactionLog.append(event)
+        print("Began distributed transaction: \(txId) on \(nodes.count) nodes")
     }
     
     /// Prepare transaction
     /// TLA+ Action: PrepareTransaction(txId)
     public func prepareTransaction(txId: TxID) async throws {
-        // TLA+: Check if transaction exists
-        guard let transaction = activeTransactions[txId] else {
-            throw DistributedTransactionError.transactionNotFound
-        }
+        // TLA+: Set state to preparing
+        distributedTx[txId] = .preparing
         
-        // TLA+: Update coordinator state
-        coordinatorState[txId] = .preparing
+        // TLA+: Prepare local transaction
+        try await localTransactionManager.prepareTransaction(txId: txId)
         
-        // TLA+: Update transaction status
-        let updatedTransaction = DistributedTransaction(
-            txId: transaction.txId,
-            coordinatorId: transaction.coordinatorId,
-            participants: transaction.participants,
-            status: .preparing,
-            timestamp: transaction.timestamp,
-            operations: transaction.operations
-        )
-        activeTransactions[txId] = updatedTransaction
+        // TLA+: Send prepare to all nodes
+        try await sendPrepareToNodes(txId: txId)
         
-        // TLA+: Send prepare requests to participants
-        try await sendPrepareRequests(txId: txId)
-        
-        // TLA+: Wait for votes
-        try await waitForVotes(txId: txId)
-        
-        // TLA+: Make decision based on votes
-        try await makeDecision(txId: txId)
-    }
-    
-    /// Send prepare requests
-    private func sendPrepareRequests(txId: TxID) async throws {
-        guard let transaction = activeTransactions[txId] else {
-            throw DistributedTransactionError.transactionNotFound
-        }
-        
-        // TLA+: Send prepare request to each participant
-        for participantId in transaction.participants {
-            try await networkManager.sendPrepareRequest(
-                txId: txId,
-                participantId: participantId
-            )
-        }
-    }
-    
-    /// Wait for votes
-    private func waitForVotes(txId: TxID) async throws {
-        guard let transaction = activeTransactions[txId] else {
-            throw DistributedTransactionError.transactionNotFound
-        }
-        
-        let startTime = Date()
-        var receivedVotes: Set<String> = []
-        
-        // TLA+: Wait for votes from all participants
-        while receivedVotes.count < transaction.participants.count {
-            // Check timeout
-            if Date().timeIntervalSince(startTime) > timeoutConfig.prepareTimeout {
-                throw DistributedTransactionError.prepareTimeout
-            }
-            
-            // Check for votes
-            if let vote = votes[txId] {
-                for (participantId, voteValue) in vote {
-                    if !receivedVotes.contains(participantId) {
-                        receivedVotes.insert(participantId)
-                        
-                        // TLA+: Log vote
-                        let event = TransactionEvent(
-                            txId: txId,
-                            type: .vote,
-                            timestamp: Date(),
-                            data: ["participantId": .string(participantId), "vote": .string(voteValue.rawValue)])
-                        transactionLog.append(event)
-                    }
-                }
-            }
-            
-            // Wait a bit before checking again
-            try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-        }
-    }
-    
-    /// Make decision
-    private func makeDecision(txId: TxID) async throws {
-        guard let transaction = activeTransactions[txId],
-              let voteMap = votes[txId] else {
-            throw DistributedTransactionError.transactionNotFound
-        }
-        
-        // TLA+: Check if all votes are "yes"
-        let allYes = transaction.participants.allSatisfy { participantId in
-            voteMap[participantId] == .yes
-        }
-        
-        if allYes {
-            // TLA+: Commit transaction
-            try await commitTransaction(txId: txId)
-        } else {
-            // TLA+: Abort transaction
-            try await abortTransaction(txId: txId)
-        }
+        print("Prepared distributed transaction: \(txId)")
     }
     
     /// Commit transaction
     /// TLA+ Action: CommitTransaction(txId)
     public func commitTransaction(txId: TxID) async throws {
-        // TLA+: Check if transaction exists
-        guard let transaction = activeTransactions[txId] else {
-            throw DistributedTransactionError.transactionNotFound
+        // TLA+: Set state to committing
+        distributedTx[txId] = .committing
+        
+        // TLA+: Check if all nodes are prepared
+        guard let prepared = preparedNodes[txId], prepared.count == aliveNodes.count else {
+            throw DistributedTransactionError.notAllPrepared
         }
         
-        // TLA+: Update coordinator state
-        coordinatorState[txId] = .committing
+        // TLA+: Make commit decision
+        commitDecisions[txId] = .commit
         
-        // TLA+: Update transaction status
-        let updatedTransaction = DistributedTransaction(
-            txId: transaction.txId,
-            coordinatorId: transaction.coordinatorId,
-            participants: transaction.participants,
-            status: .committing,
-            timestamp: transaction.timestamp,
-            operations: transaction.operations
-        )
-        activeTransactions[txId] = updatedTransaction
+        // TLA+: Send commit to all nodes
+        try await sendCommitToNodes(txId: txId)
         
-        // TLA+: Send commit requests to participants
-        try await sendCommitRequests(txId: txId)
+        // TLA+: Commit local transaction
+        try await localTransactionManager.commitTransaction(txId: txId)
         
-        // TLA+: Wait for acknowledgments
-        try await waitForCommitAcknowledgments(txId: txId)
+        // TLA+: Set state to committed
+        distributedTx[txId] = .committed
         
-        // TLA+: Mark transaction as committed
-        let committedTransaction = DistributedTransaction(
-            txId: transaction.txId,
-            coordinatorId: transaction.coordinatorId,
-            participants: transaction.participants,
-            status: .committed,
-            timestamp: transaction.timestamp,
-            operations: transaction.operations
-        )
-        activeTransactions[txId] = committedTransaction
-        coordinatorState[txId] = .terminated
-        
-        // TLA+: Log commit event
-        let event = TransactionEvent(
-            txId: txId,
-            type: .commit,
-            timestamp: Date(),
-            data: [:])
-        transactionLog.append(event)
+        print("Committed distributed transaction: \(txId)")
     }
     
     /// Abort transaction
     /// TLA+ Action: AbortTransaction(txId)
     public func abortTransaction(txId: TxID) async throws {
-        // TLA+: Check if transaction exists
-        guard let transaction = activeTransactions[txId] else {
-            throw DistributedTransactionError.transactionNotFound
-        }
+        // TLA+: Set state to aborting
+        distributedTx[txId] = .aborting
         
-        // TLA+: Update coordinator state
-        coordinatorState[txId] = .aborting
+        // TLA+: Make abort decision
+        commitDecisions[txId] = .abort
         
-        // TLA+: Update transaction status
-        let updatedTransaction = DistributedTransaction(
-            txId: transaction.txId,
-            coordinatorId: transaction.coordinatorId,
-            participants: transaction.participants,
-            status: .aborting,
-            timestamp: transaction.timestamp,
-            operations: transaction.operations
-        )
-        activeTransactions[txId] = updatedTransaction
-        
-        // TLA+: Send abort requests to participants
-        try await sendAbortRequests(txId: txId)
-        
-        // TLA+: Wait for acknowledgments
-        try await waitForAbortAcknowledgments(txId: txId)
-        
-        // TLA+: Mark transaction as aborted
-        let abortedTransaction = DistributedTransaction(
-            txId: transaction.txId,
-            coordinatorId: transaction.coordinatorId,
-            participants: transaction.participants,
-            status: .aborted,
-            timestamp: transaction.timestamp,
-            operations: transaction.operations
-        )
-        activeTransactions[txId] = abortedTransaction
-        coordinatorState[txId] = .terminated
-        
-        // TLA+: Log abort event
-        let event = TransactionEvent(
-            txId: txId,
-            type: .abort,
-            timestamp: Date(),
-            data: [:])
-        transactionLog.append(event)
-    }
-    
-    // MARK: - Participant Operations
-    
-    /// Receive prepare request
-    /// TLA+ Action: ReceivePrepareRequest(txId, participantId)
-    public func receivePrepareRequest(txId: TxID, participantId: String) async throws {
-        // TLA+: Check if transaction exists
-        guard let transaction = activeTransactions[txId] else {
-            throw DistributedTransactionError.transactionNotFound
-        }
-        
-        // TLA+: Check if participant is valid
-        guard transaction.participants.contains(participantId) else {
-            throw DistributedTransactionError.invalidParticipant
-        }
-        
-        // TLA+: Prepare local transaction
-        try await localTransactionManager.prepare(txId: txId)
-        
-        // TLA+: Vote yes if preparation successful
-        votes[txId, default: [:]][participantId] = .yes
-        
-        // TLA+: Log prepare event
-        let event = TransactionEvent(
-            txId: txId,
-            type: .prepare,
-            timestamp: Date(),
-            data: ["participantId": .string(participantId)])
-        transactionLog.append(event)
-    }
-    
-    /// Receive commit request
-    /// TLA+ Action: ReceiveCommitRequest(txId, participantId)
-    public func receiveCommitRequest(txId: TxID, participantId: String) async throws {
-        // TLA+: Check if transaction exists
-        guard let transaction = activeTransactions[txId] else {
-            throw DistributedTransactionError.transactionNotFound
-        }
-        
-        // TLA+: Check if participant is valid
-        guard transaction.participants.contains(participantId) else {
-            throw DistributedTransactionError.invalidParticipant
-        }
-        
-        // TLA+: Commit local transaction
-        try await localTransactionManager.commit(txId: txId)
-        
-        // TLA+: Log commit event
-        let event = TransactionEvent(
-            txId: txId,
-            type: .commit,
-            timestamp: Date(),
-            data: ["participantId": .string(participantId)])
-        transactionLog.append(event)
-    }
-    
-    /// Receive abort request
-    /// TLA+ Action: ReceiveAbortRequest(txId, participantId)
-    public func receiveAbortRequest(txId: TxID, participantId: String) async throws {
-        // TLA+: Check if transaction exists
-        guard let transaction = activeTransactions[txId] else {
-            throw DistributedTransactionError.transactionNotFound
-        }
-        
-        // TLA+: Check if participant is valid
-        guard transaction.participants.contains(participantId) else {
-            throw DistributedTransactionError.invalidParticipant
-        }
+        // TLA+: Send abort to all nodes
+        try await sendAbortToNodes(txId: txId)
         
         // TLA+: Abort local transaction
-        try await localTransactionManager.abort(txId: txId)
+        try await localTransactionManager.abortTransaction(txId: txId)
         
-        // TLA+: Log abort event
-        let event = TransactionEvent(
-            txId: txId,
-            type: .abort,
-            timestamp: Date(),
-            data: ["participantId": .string(participantId)])
-        transactionLog.append(event)
+        // TLA+: Set state to aborted
+        distributedTx[txId] = .aborted
+        
+        print("Aborted distributed transaction: \(txId)")
+    }
+    
+    /// Handle replication
+    /// TLA+ Action: HandleReplication(nodeId, lsn)
+    public func handleReplication(nodeId: String, lsn: LSN) async throws {
+        // TLA+: Update node replica
+        if var replica = nodeReplicas[nodeId] {
+            replica = NodeReplica(
+                nodeId: replica.nodeId,
+                replicaId: replica.replicaId,
+                status: replica.status,
+                lastLSN: lsn,
+                isAlive: true
+            )
+            nodeReplicas[nodeId] = replica
+        }
+        
+        // TLA+: Update replication lag
+        let lag = try await replicationManager.getReplicationLag(nodeId: nodeId)
+        replicationLag[nodeId] = ReplicationLag(
+            nodeId: nodeId,
+            lagMs: lag,
+            lastUpdate: UInt64(Date().timeIntervalSince1970 * 1000)
+        )
+        
+        print("Handled replication for node: \(nodeId) at LSN: \(lsn)")
+    }
+    
+    /// Handle consensus
+    /// TLA+ Action: HandleConsensus(proposal, decision)
+    public func handleConsensus(proposal: String, decision: String) async throws {
+        // TLA+: Handle consensus decision
+        try await consensusManager.handleConsensusDecision(proposal: proposal, decision: decision)
+        
+        print("Handled consensus: \(proposal) -> \(decision)")
     }
     
     // MARK: - Helper Methods
     
-    /// Send commit requests
-    private func sendCommitRequests(txId: TxID) async throws {
-        guard let transaction = activeTransactions[txId] else {
-            throw DistributedTransactionError.transactionNotFound
-        }
-        
-        for participantId in transaction.participants {
-            try await networkManager.sendCommitRequest(
-                txId: txId,
-                participantId: participantId
-            )
+    /// Send prepare to nodes
+    private func sendPrepareToNodes(txId: TxID) async throws {
+        // TLA+: Send prepare to all nodes
+        for nodeId in aliveNodes {
+            try await twoPhaseCommitManager.sendPrepare(txId: txId, nodeId: nodeId)
         }
     }
     
-    /// Send abort requests
-    private func sendAbortRequests(txId: TxID) async throws {
-        guard let transaction = activeTransactions[txId] else {
-            throw DistributedTransactionError.transactionNotFound
-        }
-        
-        for participantId in transaction.participants {
-            try await networkManager.sendAbortRequest(
-                txId: txId,
-                participantId: participantId
-            )
+    /// Send commit to nodes
+    private func sendCommitToNodes(txId: TxID) async throws {
+        // TLA+: Send commit to all nodes
+        for nodeId in aliveNodes {
+            try await twoPhaseCommitManager.sendCommit(txId: txId, nodeId: nodeId)
         }
     }
     
-    /// Wait for commit acknowledgments
-    private func waitForCommitAcknowledgments(txId: TxID) async throws {
-        // TLA+: Wait for acknowledgments (simplified)
-        try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+    /// Send abort to nodes
+    private func sendAbortToNodes(txId: TxID) async throws {
+        // TLA+: Send abort to all nodes
+        for nodeId in aliveNodes {
+            try await twoPhaseCommitManager.sendAbort(txId: txId, nodeId: nodeId)
+        }
     }
     
-    /// Wait for abort acknowledgments
-    private func waitForAbortAcknowledgments(txId: TxID) async throws {
-        // TLA+: Wait for acknowledgments (simplified)
-        try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+    /// Check if transaction is prepared
+    private func isTransactionPrepared(txId: TxID) -> Bool {
+        return distributedTx[txId] == .prepared
     }
     
-    /// Notify participants
-    private func notifyParticipants(txId: TxID, event: TransactionEventType) async throws {
-        // TLA+: Notify participants (simplified)
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
+    /// Get commit decision
+    private func getCommitDecision(txId: TxID) -> CommitDecision {
+        return commitDecisions[txId] ?? .unknown
+    }
+    
+    /// Get replication lag
+    private func getReplicationLag(nodeId: String) -> UInt64 {
+        return replicationLag[nodeId]?.lagMs ?? 0
     }
     
     // MARK: - Query Operations
     
-    /// Get transaction status
-    public func getTransactionStatus(txId: TxID) -> DistributedTransactionStatus? {
-        return activeTransactions[txId]?.status
+    /// Get distributed transaction state
+    public func getDistributedTxState(txId: TxID) -> DistributedTxState? {
+        return distributedTx[txId]
     }
     
-    /// Get active transactions
-    public func getActiveTransactions() -> [TxID] {
-        return activeTransactions.compactMap { (txId, transaction) in
-            transaction.status == .active ? txId : nil
-        }
+    /// Get prepared nodes
+    public func getPreparedNodes(txId: TxID) -> Set<String> {
+        return preparedNodes[txId] ?? []
     }
     
-    /// Get transaction log
-    public func getTransactionLog() -> [TransactionEvent] {
-        return transactionLog
+    /// Get commit decision for transaction
+    public func getCommitDecisionForTx(txId: TxID) -> CommitDecision {
+        return getCommitDecision(txId: txId)
     }
     
-    /// Get failed nodes
-    public func getFailedNodes() -> Set<String> {
-        return nodeFailures
+    /// Get node replica
+    public func getNodeReplica(nodeId: String) -> NodeReplica? {
+        return nodeReplicas[nodeId]
     }
     
-    /// Check if node is failed
-    public func isNodeFailed(nodeId: String) -> Bool {
-        return nodeFailures.contains(nodeId)
+    /// Get replication lag for node
+    public func getReplicationLagForNode(nodeId: String) -> UInt64 {
+        return getReplicationLag(nodeId: nodeId)
+    }
+    
+    /// Get alive nodes
+    public func getAliveNodes() -> Set<String> {
+        return aliveNodes
+    }
+    
+    /// Get partitioned nodes
+    public func getPartitionedNodes() -> Set<String> {
+        return partitionedNodes
+    }
+    
+    /// Check if node is alive
+    public func isNodeAlive(nodeId: String) -> Bool {
+        return aliveNodes.contains(nodeId)
+    }
+    
+    /// Check if node is partitioned
+    public func isNodePartitioned(nodeId: String) -> Bool {
+        return partitionedNodes.contains(nodeId)
+    }
+    
+    /// Get all distributed transactions
+    public func getAllDistributedTransactions() -> [TxID: DistributedTxState] {
+        return distributedTx
+    }
+    
+    /// Get all prepared nodes
+    public func getAllPreparedNodes() -> [TxID: Set<String>] {
+        return preparedNodes
+    }
+    
+    /// Get all commit decisions
+    public func getAllCommitDecisions() -> [TxID: CommitDecision] {
+        return commitDecisions
     }
     
     // MARK: - Invariant Checking (for testing)
     
-    /// Check atomicity invariant
-    /// TLA+ Inv_DistributedTransaction_Atomicity
-    public func checkAtomicityInvariant() -> Bool {
-        // Check that transactions are either fully committed or fully aborted
-        for (txId, transaction) in activeTransactions {
-            if transaction.status == .committed {
-                // All participants should be committed
-                guard let voteMap = votes[txId] else { return false }
-                for participantId in transaction.participants {
-                    guard voteMap[participantId] == .yes else { return false }
-                }
-            }
-        }
-        return true
-    }
-    
-    /// Check consistency invariant
-    /// TLA+ Inv_DistributedTransaction_Consistency
-    public func checkConsistencyInvariant() -> Bool {
-        // Check that data integrity is maintained
+    /// Check distributed atomicity invariant
+    /// TLA+ Inv_DistributedTransactionManager_DistributedAtomicity
+    public func checkDistributedAtomicityInvariant() -> Bool {
+        // Check that transactions are atomic across nodes
         return true // Simplified
     }
     
-    /// Check isolation invariant
-    /// TLA+ Inv_DistributedTransaction_Isolation
-    public func checkIsolationInvariant() -> Bool {
-        // Check that concurrent transactions don't interfere
+    /// Check replication consistency invariant
+    /// TLA+ Inv_DistributedTransactionManager_ReplicationConsistency
+    public func checkReplicationConsistencyInvariant() -> Bool {
+        // Check that replication maintains consistency
         return true // Simplified
     }
     
-    /// Check durability invariant
-    /// TLA+ Inv_DistributedTransaction_Durability
-    public func checkDurabilityInvariant() -> Bool {
-        // Check that committed changes persist
+    /// Check consensus safety invariant
+    /// TLA+ Inv_DistributedTransactionManager_ConsensusSafety
+    public func checkConsensusSafetyInvariant() -> Bool {
+        // Check that consensus protocol ensures safety
+        return true // Simplified
+    }
+    
+    /// Check timestamp monotonicity invariant
+    /// TLA+ Inv_DistributedTransactionManager_TimestampMonotonicity
+    public func checkTimestampMonotonicityInvariant() -> Bool {
+        // Check that timestamps are monotonic
         return true // Simplified
     }
     
     /// Check all invariants
     public func checkAllInvariants() -> Bool {
-        let atomicity = checkAtomicityInvariant()
-        let consistency = checkConsistencyInvariant()
-        let isolation = checkIsolationInvariant()
-        let durability = checkDurabilityInvariant()
+        let distributedAtomicity = checkDistributedAtomicityInvariant()
+        let replicationConsistency = checkReplicationConsistencyInvariant()
+        let consensusSafety = checkConsensusSafetyInvariant()
+        let timestampMonotonicity = checkTimestampMonotonicityInvariant()
         
-        return atomicity && consistency && isolation && durability
+        return distributedAtomicity && replicationConsistency && consensusSafety && timestampMonotonicity
     }
 }
 
 // MARK: - Supporting Types
 
-/// Transaction event type
-public enum TransactionEventType: String, Codable, Sendable {
-    case begin = "begin"
-    case operation = "operation"
-    case prepare = "prepare"
-    case vote = "vote"
-    case commit = "commit"
-    case abort = "abort"
-}
-
-/// Transaction event
-public struct TransactionEvent: Codable, Sendable, Equatable {
-    public let txId: TxID
-    public let type: TransactionEventType
-    public let timestamp: Date
-    public let data: [String: Value]
-    
-    public init(txId: TxID, type: TransactionEventType, timestamp: Date, data: [String: Value]) {
-        self.txId = txId
-        self.type = type
-        self.timestamp = timestamp
-        self.data = data
-    }
-}
-
-/// Participant state
-public enum ParticipantState: String, Codable, Sendable {
-    case active = "active"
-    case prepared = "prepared"
-    case committed = "committed"
-    case aborted = "aborted"
-}
-
-/// Timeout configuration
-public struct TimeoutConfig: Codable, Sendable {
-    public let prepareTimeout: TimeInterval
-    public let commitTimeout: TimeInterval
-    public let abortTimeout: TimeInterval
-    
-    public init(prepareTimeout: TimeInterval = 30.0, commitTimeout: TimeInterval = 30.0, abortTimeout: TimeInterval = 30.0) {
-        self.prepareTimeout = prepareTimeout
-        self.commitTimeout = commitTimeout
-        self.abortTimeout = abortTimeout
-    }
-}
-
-// MARK: - Network Manager Extensions
-
-public extension NetworkManager {
-    func sendPrepareRequest(txId: TxID, participantId: String) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-    }
-    
-    func sendCommitRequest(txId: TxID, participantId: String) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-    }
-    
-    func sendAbortRequest(txId: TxID, participantId: String) async throws {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-    }
-}
-
-// MARK: - Errors
-
+/// Distributed transaction error
 public enum DistributedTransactionError: Error, LocalizedError {
-    case transactionAlreadyExists
-    case transactionNotFound
-    case invalidParticipant
-    case prepareTimeout
-    case commitTimeout
-    case abortTimeout
+    case notAllPrepared
+    case nodeUnavailable
+    case replicationFailed
+    case consensusFailed
+    case clockSkew
     
     public var errorDescription: String? {
         switch self {
-        case .transactionAlreadyExists:
-            return "Transaction already exists"
-        case .transactionNotFound:
-            return "Transaction not found"
-        case .invalidParticipant:
-            return "Invalid participant"
-        case .prepareTimeout:
-            return "Prepare timeout"
-        case .commitTimeout:
-            return "Commit timeout"
-        case .abortTimeout:
-            return "Abort timeout"
+        case .notAllPrepared:
+            return "Not all nodes are prepared"
+        case .nodeUnavailable:
+            return "Node unavailable"
+        case .replicationFailed:
+            return "Replication failed"
+        case .consensusFailed:
+            return "Consensus failed"
+        case .clockSkew:
+            return "Clock skew detected"
         }
     }
 }

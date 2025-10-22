@@ -1,29 +1,18 @@
-# GitHub Pages Configuration for Colibrì DB
-title: Colibrì DB
-description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon
-author: Colibrì DB Team
-url: https://gpicchiarelli.github.io
-baseurl: /Colibri-DB
+# Colibrì DB Documentation Site Configuration
+
+# Site settings
+title: "Colibrì DB"
+description: "RDBMS sperimentale ad alte prestazioni per macOS con architettura modulare e verifiche formali complete"
+baseurl: ""
+url: "https://colibridb.dev"
 
 # Build settings
 markdown: kramdown
 highlighter: rouge
 theme: minima
-timezone: Europe/Rome
-encoding: utf-8
-
-# Plugins
-plugins:
-  - jekyll-feed
-  - jekyll-sitemap
-  - jekyll-seo-tag
-  - jekyll-redirect-from
 
 # Collections
 collections:
-  docs:
-    output: true
-    permalink: /:collection/:name/
   wiki:
     output: true
     permalink: /wiki/:name/
@@ -35,78 +24,79 @@ defaults:
       type: "pages"
     values:
       layout: "default"
-      author: "Colibrì DB Team"
-  - scope:
-      path: ""
-      type: "docs"
-    values:
-      layout: "doc"
-      author: "Colibrì DB Team"
   - scope:
       path: ""
       type: "wiki"
     values:
-      layout: "page"
-      author: "Colibrì DB Team"
+      layout: "doc"
 
-# Exclude from processing
-exclude:
-  - Gemfile
-  - Gemfile.lock
-  - node_modules
-  - vendor/bundle/
-  - vendor/cache/
-  - vendor/gems/
-  - vendor/ruby/
-  - README.md
-  - LICENSE
-  - SECURITY.md
-  - CODE_OF_CONDUCT.md
-  - CONTRIBUTING.md
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
 
-# Include
-include:
-  - _pages
+# SEO
+author: "Colibrì DB Team"
+twitter:
+  username: colibridb
+  card: summary_large_image
 
 # Social links
 social:
   name: Colibrì DB
   links:
     - https://github.com/gpicchiarelli/Colibri-DB
-    - https://github.com/gpicchiarelli/Colibri-DB/issues
-    - https://github.com/gpicchiarelli/Colibri-DB/discussions
 
-# SEO and Meta
-seo:
-  type: Organization
-  name: Colibrì DB
-  description: Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon
-  url: https://gpicchiarelli.github.io/Colibri-DB
-  image: /assets/og-image.png
-  twitter:
-    username: colibridb
-    card: summary_large_image
-  facebook:
-    app_id: 123456789
+# Navigation
+navigation:
+  - title: "Home"
+    url: "/"
+  - title: "Architecture"
+    url: "/architecture"
+  - title: "TLA+ Specifications"
+    url: "/tla-specifications"
+  - title: "Quick Start"
+    url: "/wiki/Quick-Start"
+  - title: "API Reference"
+    url: "/wiki/API-Reference"
+  - title: "GitHub"
+    url: "https://github.com/gpicchiarelli/Colibri-DB"
+    external: true
 
-# Additional meta tags
-meta:
-  keywords: "RDBMS, Swift, Database, macOS, Apple Silicon, WAL, MVCC, B+Tree, Database Engine, SQL, Transaction, Concurrency"
-  robots: "index, follow"
-  googlebot: "index, follow"
-  language: "it"
-  geo:
-    region: "IT"
-    placename: "Italy"
+# Exclude from build
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - vendor/
+  - node_modules/
+  - package.json
+  - package-lock.json
 
-# Site structure
-permalink: /:title/
-paginate: 10
-paginate_path: "/page:num/"
+# Include in build
+include:
+  - _pages/
+  - _assets/
 
-# Custom variables
-version: "0.1.0-alpha"
-swift_version: "6.2"
-min_macos: "13.0"
-apple_silicon: true
-license: "BSD-3-Clause"
+# Sass configuration
+sass:
+  sass_dir: _sass
+  style: compressed
+
+# Kramdown configuration
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+    span:
+      line_numbers: false
+    block:
+      line_numbers: true
+      start_line: 1
+
+# Rouge syntax highlighting
+rouge:
+  theme: github

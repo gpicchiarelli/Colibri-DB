@@ -4,440 +4,286 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}</title>
-    <meta name="description" content="{% if page.description %}{{ page.description }}{% else %}{{ site.description }}{% endif %}">
+    <meta name="description" content="{{ page.description | default: site.description }}">
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ page.url | absolute_url }}">
+    <meta property="og:url" content="{{ site.url }}{{ page.url }}">
     <meta property="og:title" content="{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}">
-    <meta property="og:description" content="{% if page.description %}{{ page.description }}{% else %}{{ site.description }}{% endif %}">
-    <meta property="og:image" content="{{ '/assets/images/og-image.png' | absolute_url }}">
+    <meta property="og:description" content="{{ page.description | default: site.description }}">
+    <meta property="og:image" content="{{ site.url }}/assets/og-image.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="{{ page.url | absolute_url }}">
+    <meta property="twitter:url" content="{{ site.url }}{{ page.url }}">
     <meta property="twitter:title" content="{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}">
-    <meta property="twitter:description" content="{% if page.description %}{{ page.description }}{% else %}{{ site.description }}{% endif %}">
-    <meta property="twitter:image" content="{{ '/assets/images/og-image.png' | absolute_url }}">
-    
+    <meta property="twitter:description" content="{{ page.description | default: site.description }}">
+    <meta property="twitter:image" content="{{ site.url }}/assets/og-image.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <!-- CSS -->
-    <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
-    <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ '/favicon.ico' | relative_url }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ '/apple-touch-icon.png' | relative_url }}">
-    
-    <!-- Theme Color -->
-    <meta name="theme-color" content="#000000">
-    
-    <!-- SEO -->
-    {% seo %}
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
     <style>
-    /* Modern Navigation Styles */
-    :root {
-        --nav-height: 70px;
-        --primary: #000000;
-        --gray-50: #FAFAFA;
-        --gray-100: #F5F5F5;
-        --gray-200: #E5E5E5;
-        --gray-300: #D1D1D6;
-        --gray-600: #8E8E93;
-        --gray-700: #636366;
-        --gray-800: #48484A;
-        --gray-900: #1C1C1E;
-        --white: #FFFFFF;
-        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-        --radius-md: 12px;
-        --space-sm: 0.5rem;
-        --space-md: 1rem;
-        --space-lg: 1.5rem;
-        --space-xl: 2rem;
-    }
-    
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-    
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
-        line-height: 1.6;
-        color: var(--gray-900);
-        background: var(--white);
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-    }
-    
-    /* Navigation */
-    .site-nav {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: var(--nav-height);
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border-bottom: 1px solid var(--gray-200);
-        z-index: 1000;
-        transition: all 0.3s ease;
-    }
-    
-    .site-nav.scrolled {
-        background: rgba(255, 255, 255, 0.98);
-        box-shadow: var(--shadow-sm);
-    }
-    
-    .nav-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 var(--space-lg);
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    
-    .nav-brand {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--primary);
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: var(--space-sm);
-    }
-    
-    .nav-brand:hover {
-        color: var(--gray-700);
-    }
-    
-    .nav-menu {
-        display: flex;
-        list-style: none;
-        gap: var(--space-xl);
-        align-items: center;
-    }
-    
-    .nav-menu a {
-        color: var(--gray-700);
-        text-decoration: none;
-        font-weight: 500;
-        font-size: 0.9rem;
-        padding: var(--space-sm) var(--space-md);
-        border-radius: var(--radius-md);
-        transition: all 0.2s ease;
-        position: relative;
-    }
-    
-    .nav-menu a:hover {
-        color: var(--primary);
-        background: var(--gray-50);
-    }
-    
-    .nav-menu a.active {
-        color: var(--primary);
-        background: var(--gray-100);
-    }
-    
-    .nav-toggle {
-        display: none;
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: var(--gray-700);
-    }
-    
-    /* Main Content */
-    .main-content {
-        margin-top: var(--nav-height);
-        min-height: calc(100vh - var(--nav-height));
-    }
-    
-    .wrapper {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 var(--space-lg);
-    }
-    
-    /* Footer */
-    .site-footer {
-        background: var(--gray-900);
-        color: var(--white);
-        padding: var(--space-xl) 0;
-        margin-top: var(--space-xl);
-    }
-    
-    .footer-content {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: var(--space-xl);
-        margin-bottom: var(--space-xl);
-    }
-    
-    .footer-section h3 {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: var(--space-md);
-        color: var(--white);
-    }
-    
-    .footer-section p {
-        color: var(--gray-300);
-        font-size: 0.9rem;
-        line-height: 1.6;
-    }
-    
-    .footer-links {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-sm);
-    }
-    
-    .footer-links a {
-        color: var(--gray-300);
-        text-decoration: none;
-        font-size: 0.9rem;
-        transition: color 0.2s ease;
-    }
-    
-    .footer-links a:hover {
-        color: var(--white);
-    }
-    
-    .footer-bottom {
-        border-top: 1px solid var(--gray-700);
-        padding-top: var(--space-lg);
-        text-align: center;
-        color: var(--gray-600);
-        font-size: 0.85rem;
-    }
-    
-    .footer-badges {
-        display: flex;
-        justify-content: center;
-        gap: var(--space-sm);
-        margin-bottom: var(--space-md);
-        flex-wrap: wrap;
-    }
-    
-    .footer-badge {
-        display: inline-block;
-        padding: var(--space-sm) var(--space-md);
-        background: var(--gray-800);
-        border-radius: var(--radius-md);
-        font-size: 0.8rem;
-        color: var(--gray-300);
-        text-decoration: none;
-        transition: all 0.2s ease;
-    }
-    
-    .footer-badge:hover {
-        background: var(--gray-700);
-        color: var(--white);
-    }
-    
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .nav-menu {
-            position: fixed;
-            top: var(--nav-height);
-            left: 0;
-            right: 0;
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Color Palette */
+            --primary: #000000;
+            --primary-light: #333333;
+            --secondary: #007AFF;
+            --accent: #FF6B35;
+            --success: #34C759;
+            --warning: #FF9500;
+            --error: #FF3B30;
+            --info: #5AC8FA;
+            
+            /* Grays */
+            --gray-50: #FAFAFA;
+            --gray-100: #F5F5F5;
+            --gray-200: #E5E5E5;
+            --gray-300: #D1D1D6;
+            --gray-400: #C7C7CC;
+            --gray-500: #AEAEB2;
+            --gray-600: #8E8E93;
+            --gray-700: #636366;
+            --gray-800: #48484A;
+            --gray-900: #1C1C1E;
+            --white: #FFFFFF;
+            
+            /* Typography */
+            --font-system: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', system-ui, sans-serif;
+            --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+            
+            /* Spacing */
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+            --space-2xl: 3rem;
+            --space-3xl: 4rem;
+            --space-4xl: 6rem;
+            
+            /* Border Radius */
+            --radius-sm: 6px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+            --radius-full: 9999px;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 8px 25px rgba(0, 0, 0, 0.15);
+            --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        body {
+            font-family: var(--font-system);
+            line-height: 1.6;
+            color: var(--gray-900);
             background: var(--white);
-            flex-direction: column;
-            padding: var(--space-lg);
-            box-shadow: var(--shadow-md);
-            transform: translateY(-100%);
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
-        
-        .nav-menu.active {
-            transform: translateY(0);
-            opacity: 1;
-            visibility: visible;
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--space-lg);
         }
-        
-        .nav-toggle {
-            display: block;
+
+        /* Navigation */
+        .nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: var(--space-md) 0;
         }
-        
-        .footer-content {
-            grid-template-columns: 1fr;
-            gap: var(--space-lg);
-        }
-        
-        .footer-badges {
-            flex-direction: column;
+
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
         }
-    }
-    
-    @media (max-width: 480px) {
-        .nav-container {
-            padding: 0 var(--space-md);
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
         }
-        
-        .wrapper {
-            padding: 0 var(--space-md);
+
+        .nav-links {
+            display: flex;
+            gap: var(--space-xl);
+            list-style: none;
         }
-        
-        .nav-brand {
+
+        .nav-links a {
+            color: var(--gray-700);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Main content */
+        .main {
+            min-height: calc(100vh - 80px);
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--gray-900);
+            color: var(--white);
+            padding: var(--space-4xl) 0 var(--space-2xl);
+            margin-top: var(--space-4xl);
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-2xl);
+            margin-bottom: var(--space-2xl);
+        }
+
+        .footer-section h3 {
+            color: var(--white);
+            margin-bottom: var(--space-md);
             font-size: 1.1rem;
+            font-weight: 600;
         }
-    }
+
+        .footer-section p,
+        .footer-section a {
+            color: var(--gray-300);
+            text-decoration: none;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .footer-section a:hover {
+            color: var(--white);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid var(--gray-800);
+            padding-top: var(--space-xl);
+            text-align: center;
+            color: var(--gray-400);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: var(--space-xl);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 var(--space-md);
+            }
+        }
     </style>
+    
+    {{ content }}
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="site-nav" id="navbar">
-        <div class="nav-container">
-            <a href="{{ '/' | relative_url }}" class="nav-brand">
-                🐦 {{ site.title }}
-            </a>
-            
-            <ul class="nav-menu" id="nav-menu">
-                <li><a href="{{ '/' | relative_url }}">Home</a></li>
-                <li><a href="{{ '/wiki/Quick-Start' | relative_url }}">Quick Start</a></li>
-                <li><a href="{{ '/wiki/Architecture' | relative_url }}">Architettura</a></li>
-                <li><a href="{{ '/wiki/API-Reference' | relative_url }}">API</a></li>
-                <li><a href="{{ '/wiki/Performance' | relative_url }}">Performance</a></li>
-                <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank">GitHub</a></li>
-            </ul>
-            
-            <button class="nav-toggle" id="nav-toggle">
-                ☰
-            </button>
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-content">
+                <a href="/" class="logo">
+                    🐦 Colibrì DB
+                </a>
+                <ul class="nav-links">
+                    <li><a href="/">Home</a></li>
+                    <li><a href="/architecture">Architecture</a></li>
+                    <li><a href="/tla-specifications">TLA+</a></li>
+                    <li><a href="/wiki/Quick-Start">Quick Start</a></li>
+                    <li><a href="/wiki/API-Reference">API</a></li>
+                    <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank">GitHub</a></li>
+                </ul>
+            </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="main">
         {{ content }}
     </main>
 
     <!-- Footer -->
-    <footer class="site-footer">
-        <div class="wrapper">
+    <footer class="footer">
+        <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
-                    <h3>🐦 {{ site.title }}</h3>
-                    <p>Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon.</p>
+                    <h3>Colibrì DB</h3>
+                    <p>
+                        RDBMS sperimentale ad alte prestazioni per macOS con architettura modulare 
+                        e verifiche formali complete.
+                    </p>
                 </div>
                 
                 <div class="footer-section">
-                    <h3>📚 Documentazione</h3>
-                    <div class="footer-links">
-                        <a href="{{ '/wiki/Quick-Start' | relative_url }}">Quick Start</a>
-                        <a href="{{ '/wiki/Architecture' | relative_url }}">Architettura</a>
-                        <a href="{{ '/wiki/API-Reference' | relative_url }}">API Reference</a>
-                        <a href="{{ '/wiki/Performance' | relative_url }}">Performance</a>
-                        <a href="{{ '/wiki/Troubleshooting' | relative_url }}">Troubleshooting</a>
-                    </div>
+                    <h3>Documentazione</h3>
+                    <p><a href="/architecture">Architettura</a></p>
+                    <p><a href="/tla-specifications">TLA+ Specifications</a></p>
+                    <p><a href="/wiki/Quick-Start">Quick Start</a></p>
+                    <p><a href="/wiki/API-Reference">API Reference</a></p>
                 </div>
                 
                 <div class="footer-section">
-                    <h3>🤝 Community</h3>
-                    <div class="footer-links">
-                        <a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank">GitHub Repository</a>
-                        <a href="https://github.com/gpicchiarelli/Colibri-DB/issues" target="_blank">Issues & Bug Reports</a>
-                        <a href="https://github.com/gpicchiarelli/Colibri-DB/discussions" target="_blank">Discussions</a>
-                        <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md" target="_blank">Contributing</a>
-                        <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE" target="_blank">License</a>
-                    </div>
+                    <h3>Community</h3>
+                    <p><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank">GitHub</a></p>
+                    <p><a href="https://github.com/gpicchiarelli/Colibri-DB/issues" target="_blank">Issues</a></p>
+                    <p><a href="https://github.com/gpicchiarelli/Colibri-DB/discussions" target="_blank">Discussions</a></p>
                 </div>
-            </div>
-            
-            <div class="footer-badges">
-                <a href="https://github.com/gpicchiarelli/Colibri-DB/actions" class="footer-badge" target="_blank">
-                    Build Status
-                </a>
-                <a href="https://swift.org" class="footer-badge" target="_blank">
-                    Swift 6.2
-                </a>
-                <a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE" class="footer-badge" target="_blank">
-                    BSD-3-Clause
-                </a>
+                
+                <div class="footer-section">
+                    <h3>Risorse</h3>
+                    <p><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE" target="_blank">Licenza</a></p>
+                    <p><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md" target="_blank">Contribuire</a></p>
+                    <p><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CHANGELOG.md" target="_blank">Changelog</a></p>
+                </div>
             </div>
             
             <div class="footer-bottom">
-                <p>&copy; 2024 {{ site.title }} Team. Rilasciato sotto licenza BSD 3-Clause.</p>
-                <p>Apple, macOS, Swift e Apple Silicon sono marchi registrati di Apple Inc.</p>
+                <p>&copy; 2025 Colibrì DB Team. Tutti i diritti riservati.</p>
             </div>
         </div>
     </footer>
-
-    <!-- JavaScript -->
-    <script>
-        // Navigation scroll effect
-        window.addEventListener('scroll', () => {
-            const navbar = document.getElementById('navbar');
-            if (window.scrollY > 50) {
-                navbar.classList.add('scrolled');
-            } else {
-                navbar.classList.remove('scrolled');
-            }
-        });
-
-        // Mobile navigation toggle
-        const navToggle = document.getElementById('nav-toggle');
-        const navMenu = document.getElementById('nav-menu');
-        
-        navToggle.addEventListener('click', () => {
-            navMenu.classList.toggle('active');
-            navToggle.textContent = navMenu.classList.contains('active') ? '✕' : '☰';
-        });
-
-        // Close mobile menu when clicking on a link
-        document.querySelectorAll('.nav-menu a').forEach(link => {
-            link.addEventListener('click', () => {
-                navMenu.classList.remove('active');
-                navToggle.textContent = '☰';
-            });
-        });
-
-        // Smooth scrolling for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    const offsetTop = target.offsetTop - 80; // Account for fixed navbar
-                    window.scrollTo({
-                        top: offsetTop,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
-
-        // Highlight active navigation item based on current page
-        const currentPath = window.location.pathname;
-        document.querySelectorAll('.nav-menu a').forEach(link => {
-            if (link.getAttribute('href') === currentPath || 
-                (currentPath.includes(link.getAttribute('href')) && link.getAttribute('href') !== '/')) {
-                link.classList.add('active');
-            }
-        });
-
-        // Add loading animation
-        window.addEventListener('load', () => {
-            document.body.style.opacity = '0';
-            document.body.style.transition = 'opacity 0.3s ease';
-            setTimeout(() => {
-                document.body.style.opacity = '1';
-            }, 100);
-        });
-    </script>
 </body>
 </html>

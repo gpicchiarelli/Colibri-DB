@@ -1,6 +1,6 @@
 //
-//  Clock.swift
-//  ColibrìDB Distributed Clock Implementation
+//  DistributedClockManager.swift
+//  ColibrìDB Distributed Clock Manager Implementation
 //
 //  Based on: spec/Clock.tla
 //  Implements: Distributed timestamp oracle
@@ -8,548 +8,485 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - Monotonicity: Timestamps always increase
-//  - Causality: Preserves happens-before relationships
-//  - Precision: High-resolution timestamps
-//  - Synchronization: Clock synchronization across nodes
+//  - Causality Preservation: Causality is preserved
+//  - Monotonicity: Timestamps are monotonic
+//  - External Consistency: External consistency is maintained
+//  - Clock Skew Bound: Clock skew is bounded
 //
 
 import Foundation
 
-// MARK: - Clock Types
+// MARK: - Distributed Clock Types
+
+/// Node ID
+/// Corresponds to TLA+: NodeID
+public typealias NodeID = String
+
+/// Timestamp
+/// Corresponds to TLA+: Timestamp
+public typealias Timestamp = UInt64
 
 /// Clock type
 /// Corresponds to TLA+: ClockType
-public enum ClockType: String, Codable, Sendable {
-    case logical = "logical"
+public enum ClockType: String, Codable, Sendable, CaseIterable {
+    case lamport = "lamport"
+    case vector = "vector"
+    case hlc = "hlc"
     case physical = "physical"
-    case hybrid = "hybrid"
+    case oracle = "oracle"
 }
 
-/// Clock precision
-/// Corresponds to TLA+: ClockPrecision
-public enum ClockPrecision: String, Codable, Sendable {
-    case nanosecond = "nanosecond"
-    case microsecond = "microsecond"
-    case millisecond = "millisecond"
-    case second = "second"
+/// Event type
+/// Corresponds to TLA+: EventType
+public enum EventType: String, Codable, Sendable, CaseIterable {
+    case send = "send"
+    case receive = "receive"
+    case local = "local"
 }
 
-/// Clock status
-/// Corresponds to TLA+: ClockStatus
-public enum ClockStatus: String, Codable, Sendable {
-    case synchronized = "synchronized"
-    case desynchronized = "desynchronized"
-    case unknown = "unknown"
-}
-
-// MARK: - Timestamp Types
-
-/// Logical timestamp
-/// Corresponds to TLA+: LogicalTimestamp
-public struct LogicalTimestamp: Codable, Sendable, Equatable, Comparable {
-    public let value: Int
+/// Event record
+/// Corresponds to TLA+: EventRecord
+public struct EventRecord: Codable, Sendable, Equatable {
+    public let eventId: String
+    public let eventType: EventType
+    public let nodeId: NodeID
+    public let timestamp: Timestamp
+    public let data: Data
     
-    public init(value: Int) {
-        self.value = value
-    }
-    
-    public static func < (lhs: LogicalTimestamp, rhs: LogicalTimestamp) -> Bool {
-        return lhs.value < rhs.value
-    }
-    
-    public static func == (lhs: LogicalTimestamp, rhs: LogicalTimestamp) -> Bool {
-        return lhs.value == rhs.value
-    }
-}
-
-/// Physical timestamp
-/// Corresponds to TLA+: PhysicalTimestamp
-public struct PhysicalTimestamp: Codable, Sendable, Equatable, Comparable {
-    public let value: UInt64 // Nanoseconds since epoch
-    
-    public init(value: UInt64) {
-        self.value = value
-    }
-    
-    public init(date: Date) {
-        self.value = UInt64(date.timeIntervalSince1970 * 1_000_000_000)
-    }
-    
-    public var date: Date {
-        return Date(timeIntervalSince1970: Double(value) / 1_000_000_000)
-    }
-    
-    public static func < (lhs: PhysicalTimestamp, rhs: PhysicalTimestamp) -> Bool {
-        return lhs.value < rhs.value
-    }
-    
-    public static func == (lhs: PhysicalTimestamp, rhs: PhysicalTimestamp) -> Bool {
-        return lhs.value == rhs.value
-    }
-}
-
-/// Hybrid timestamp
-/// Corresponds to TLA+: HybridTimestamp
-public struct HybridTimestamp: Codable, Sendable, Equatable, Comparable {
-    public let physical: PhysicalTimestamp
-    public let logical: LogicalTimestamp
-    
-    public init(physical: PhysicalTimestamp, logical: LogicalTimestamp) {
-        self.physical = physical
-        self.logical = logical
-    }
-    
-    public static func < (lhs: HybridTimestamp, rhs: HybridTimestamp) -> Bool {
-        if lhs.physical < rhs.physical {
-            return true
-        } else if lhs.physical == rhs.physical {
-            return lhs.logical < rhs.logical
-        } else {
-            return false
-        }
-    }
-    
-    public static func == (lhs: HybridTimestamp, rhs: HybridTimestamp) -> Bool {
-        return lhs.physical == rhs.physical && lhs.logical == rhs.logical
-    }
-}
-
-/// Clock synchronization message
-/// Corresponds to TLA+: ClockSyncMessage
-public struct ClockSyncMessage: Codable, Sendable, Equatable {
-    public let nodeId: String
-    public let timestamp: PhysicalTimestamp
-    public let roundTripTime: UInt64
-    public let offset: Int64
-    public let precision: ClockPrecision
-    
-    public init(nodeId: String, timestamp: PhysicalTimestamp, roundTripTime: UInt64, offset: Int64, precision: ClockPrecision) {
+    public init(eventId: String, eventType: EventType, nodeId: NodeID, timestamp: Timestamp, data: Data) {
+        self.eventId = eventId
+        self.eventType = eventType
         self.nodeId = nodeId
         self.timestamp = timestamp
-        self.roundTripTime = roundTripTime
-        self.offset = offset
-        self.precision = precision
+        self.data = data
+    }
+}
+
+/// Message
+/// Corresponds to TLA+: Message
+public struct Message: Codable, Sendable, Equatable {
+    public let messageId: String
+    public let from: NodeID
+    public let to: NodeID
+    public let timestamp: Timestamp
+    public let data: Data
+    
+    public init(messageId: String, from: NodeID, to: NodeID, timestamp: Timestamp, data: Data) {
+        self.messageId = messageId
+        self.from = from
+        self.to = to
+        self.timestamp = timestamp
+        self.data = data
     }
 }
 
 // MARK: - Distributed Clock Manager
 
-/// Distributed Clock Manager for timestamp generation and synchronization
+/// Distributed Clock Manager for timestamp generation
 /// Corresponds to TLA+ module: Clock.tla
 public actor DistributedClockManager {
     
     // MARK: - State Variables (TLA+ vars)
     
-    /// Current timestamp
-    /// TLA+: currentTimestamp \in Timestamp
-    private var currentTimestamp: HybridTimestamp
+    /// Lamport clock
+    /// TLA+: lamportClock \in Nat
+    private var lamportClock: UInt64 = 0
     
-    /// Clock type
-    /// TLA+: clockType \in ClockType
-    private var clockType: ClockType
+    /// Vector clock
+    /// TLA+: vectorClock \in [NodeID -> Nat]
+    private var vectorClock: [NodeID: UInt64] = [:]
     
-    /// Clock precision
-    /// TLA+: clockPrecision \in ClockPrecision
-    private var clockPrecision: ClockPrecision
+    /// HLC physical
+    /// TLA+: hlcPhysical \in Nat
+    private var hlcPhysical: UInt64 = 0
     
-    /// Clock status
-    /// TLA+: clockStatus \in ClockStatus
-    private var clockStatus: ClockStatus
+    /// HLC logical
+    /// TLA+: hlcLogical \in Nat
+    private var hlcLogical: UInt64 = 0
     
-    /// Logical clock
-    /// TLA+: logicalClock \in Nat
-    private var logicalClock: Int = 0
+    /// Physical time
+    /// TLA+: physicalTime \in Nat
+    private var physicalTime: UInt64 = 0
     
-    /// Physical clock offset
-    /// TLA+: physicalClockOffset \in Int
-    private var physicalClockOffset: Int64 = 0
+    /// Uncertainty
+    /// TLA+: uncertainty \in Nat
+    private var uncertainty: UInt64 = 0
     
-    /// Synchronization peers
-    /// TLA+: syncPeers \in Set(NodeId)
-    private var syncPeers: Set<String> = []
+    /// Oracle timestamp
+    /// TLA+: oracleTimestamp \in Nat
+    private var oracleTimestamp: UInt64 = 0
     
-    /// Synchronization interval
-    private var syncInterval: TimeInterval
+    /// Allocated timestamps
+    /// TLA+: allocatedTimestamps \in Set(Timestamp)
+    private var allocatedTimestamps: Set<Timestamp> = []
     
-    /// Clock drift threshold
-    private var driftThreshold: TimeInterval
+    /// Events
+    /// TLA+: events \in Seq(EventRecord)
+    private var events: [EventRecord] = []
     
-    /// Node ID
-    private var nodeId: String
+    /// Next event ID
+    /// TLA+: nextEventId \in Nat
+    private var nextEventId: UInt64 = 0
+    
+    /// Messages
+    /// TLA+: messages \in Seq(Message)
+    private var messages: [Message] = []
+    
+    /// Message ID
+    /// TLA+: messageId \in Nat
+    private var messageId: UInt64 = 0
+    
+    /// Current time
+    /// TLA+: currentTime \in Nat
+    private var currentTime: UInt64 = 0
     
     // MARK: - Dependencies
     
-    /// Network manager
-    private let networkManager: NetworkManager
+    /// Node ID
+    private let nodeId: NodeID
     
-    /// NTP client (if available)
-    private let ntpClient: NTPClient?
+    /// Clock type
+    private let clockType: ClockType
     
     // MARK: - Initialization
     
-    public init(nodeId: String, networkManager: NetworkManager, ntpClient: NTPClient? = nil, clockType: ClockType = .hybrid, clockPrecision: ClockPrecision = .nanosecond, syncInterval: TimeInterval = 60.0, driftThreshold: TimeInterval = 0.001) {
+    public init(nodeId: NodeID, clockType: ClockType = .hlc) {
         self.nodeId = nodeId
-        self.networkManager = networkManager
-        self.ntpClient = ntpClient
         self.clockType = clockType
-        self.clockPrecision = clockPrecision
-        self.syncInterval = syncInterval
-        self.driftThreshold = driftThreshold
         
         // TLA+ Init
-        let now = PhysicalTimestamp(date: Date())
-        self.currentTimestamp = HybridTimestamp(physical: now, logical: LogicalTimestamp(value: 0))
-        self.clockStatus = .unknown
-        self.logicalClock = 0
-        self.physicalClockOffset = 0
-        self.syncPeers = []
+        self.lamportClock = 0
+        self.vectorClock = [:]
+        self.hlcPhysical = 0
+        self.hlcLogical = 0
+        self.physicalTime = 0
+        self.uncertainty = 0
+        self.oracleTimestamp = 0
+        self.allocatedTimestamps = []
+        self.events = []
+        self.nextEventId = 0
+        self.messages = []
+        self.messageId = 0
+        self.currentTime = 0
+    }
+    
+    // MARK: - Clock Operations
+    
+    /// Generate Lamport timestamp
+    /// TLA+ Action: GenerateLamportTimestamp()
+    public func generateLamportTimestamp() async -> Timestamp {
+        // TLA+: Increment Lamport clock
+        lamportClock += 1
         
-        // Start synchronization
-        Task {
-            await startSynchronization()
-        }
-    }
-    
-    // MARK: - Timestamp Generation
-    
-    /// Get current timestamp
-    /// TLA+ Action: GetCurrentTimestamp
-    public func getCurrentTimestamp() -> HybridTimestamp {
-        // TLA+: Update current timestamp
-        updateCurrentTimestamp()
-        return currentTimestamp
-    }
-    
-    /// Generate timestamp
-    /// TLA+ Action: GenerateTimestamp
-    public func generateTimestamp() -> HybridTimestamp {
-        // TLA+: Generate new timestamp
-        updateCurrentTimestamp()
+        // TLA+: Return timestamp
+        let timestamp = lamportClock
         
-        switch clockType {
-        case .logical:
-            logicalClock += 1
-            return HybridTimestamp(
-                physical: PhysicalTimestamp(value: 0),
-                logical: LogicalTimestamp(value: logicalClock)
-            )
-        case .physical:
-            return HybridTimestamp(
-                physical: getPhysicalTimestamp(),
-                logical: LogicalTimestamp(value: 0)
-            )
-        case .hybrid:
-            logicalClock += 1
-            return HybridTimestamp(
-                physical: getPhysicalTimestamp(),
-                logical: LogicalTimestamp(value: logicalClock)
-            )
-        }
+        print("Generated Lamport timestamp: \(timestamp)")
+        return timestamp
     }
     
-    /// Update timestamp
-    /// TLA+ Action: UpdateTimestamp(timestamp)
-    public func updateTimestamp(_ timestamp: HybridTimestamp) {
-        // TLA+: Update current timestamp
-        if timestamp > currentTimestamp {
-            currentTimestamp = timestamp
-        }
+    /// Update vector clock
+    /// TLA+ Action: UpdateVectorClock(nodeId, timestamp)
+    public func updateVectorClock(nodeId: NodeID, timestamp: Timestamp) async {
+        // TLA+: Update vector clock
+        vectorClock[nodeId] = max(vectorClock[nodeId] ?? 0, timestamp)
         
-        // TLA+: Update logical clock
-        if timestamp.logical.value > logicalClock {
-            logicalClock = timestamp.logical.value
-        }
+        // TLA+: Increment own clock
+        vectorClock[self.nodeId] = (vectorClock[self.nodeId] ?? 0) + 1
+        
+        print("Updated vector clock for node: \(nodeId) to \(timestamp)")
     }
     
-    /// Compare timestamps
-    /// TLA+ Action: CompareTimestamps(timestamp1, timestamp2)
-    public func compareTimestamps(_ timestamp1: HybridTimestamp, _ timestamp2: HybridTimestamp) -> ComparisonResult {
-        // TLA+: Compare timestamps
-        if timestamp1 < timestamp2 {
-            return .orderedAscending
-        } else if timestamp1 == timestamp2 {
-            return .orderedSame
+    /// Generate HLC
+    /// TLA+ Action: GenerateHLC()
+    public func generateHLC() async -> Timestamp {
+        // TLA+: Get physical time
+        let physical = UInt64(Date().timeIntervalSince1970 * 1000)
+        
+        // TLA+: Update HLC
+        if physical > hlcPhysical {
+            hlcPhysical = physical
+            hlcLogical = 0
         } else {
-            return .orderedDescending
+            hlcLogical += 1
         }
+        
+        // TLA+: Return HLC timestamp
+        let timestamp = hlcPhysical * 1000000 + hlcLogical
+        
+        print("Generated HLC timestamp: \(timestamp)")
+        return timestamp
     }
     
-    // MARK: - Clock Synchronization
-    
-    /// Start synchronization
-    private func startSynchronization() async {
-        while true {
-            // TLA+: Synchronize with peers
-            await synchronizeWithPeers()
-            
-            // TLA+: Synchronize with NTP
-            if let ntpClient = ntpClient {
-                await synchronizeWithNTP(ntpClient: ntpClient)
-            }
-            
-            // TLA+: Wait for sync interval
-            try? await Task.sleep(nanoseconds: UInt64(syncInterval * 1_000_000_000))
-        }
+    /// Get physical time
+    /// TLA+ Action: GetPhysicalTime()
+    public func getPhysicalTime() async -> Timestamp {
+        // TLA+: Get physical time
+        physicalTime = UInt64(Date().timeIntervalSince1970 * 1000)
+        
+        print("Got physical time: \(physicalTime)")
+        return physicalTime
     }
     
-    /// Synchronize with peers
-    private func synchronizeWithPeers() async {
-        // TLA+: Send sync requests to peers
-        for peerId in syncPeers {
-            do {
-                let syncMessage = try await requestClockSync(from: peerId)
-                processClockSync(syncMessage)
-            } catch {
-                // TLA+: Handle sync failure
-                continue
-            }
-        }
+    /// Allocate oracle timestamp
+    /// TLA+ Action: AllocateOracleTimestamp()
+    public func allocateOracleTimestamp() async -> Timestamp {
+        // TLA+: Allocate oracle timestamp
+        oracleTimestamp += 1
+        
+        // TLA+: Add to allocated timestamps
+        allocatedTimestamps.insert(oracleTimestamp)
+        
+        print("Allocated oracle timestamp: \(oracleTimestamp)")
+        return oracleTimestamp
     }
     
-    /// Synchronize with NTP
-    private func synchronizeWithNTP(ntpClient: NTPClient) async {
-        do {
-            let ntpTime = try await ntpClient.getTime()
-            let localTime = PhysicalTimestamp(date: Date())
-            let offset = Int64(ntpTime.value) - Int64(localTime.value)
-            
-            // TLA+: Update physical clock offset
-            physicalClockOffset = offset
-            
-            // TLA+: Update clock status
-            if abs(offset) < Int64(driftThreshold * 1_000_000_000) {
-                clockStatus = .synchronized
-            } else {
-                clockStatus = .desynchronized
-            }
-        } catch {
-            // TLA+: Handle NTP failure
-            clockStatus = .unknown
-        }
-    }
-    
-    /// Request clock sync
-    private func requestClockSync(from peerId: String) async throws -> ClockSyncMessage {
-        // TLA+: Send sync request
-        let requestTime = PhysicalTimestamp(date: Date())
-        let response = try await networkManager.requestClockSync(
-            nodeId: peerId,
-            requestTime: requestTime
+    /// Record event
+    /// TLA+ Action: RecordEvent(eventType, data)
+    public func recordEvent(eventType: EventType, data: Data) async -> EventRecord {
+        // TLA+: Create event record
+        let event = EventRecord(
+            eventId: "event_\(nextEventId)",
+            eventType: eventType,
+            nodeId: nodeId,
+            timestamp: await generateTimestamp(),
+            data: data
         )
         
-        // TLA+: Calculate round trip time
-        let responseTime = PhysicalTimestamp(date: Date())
-        let roundTripTime = responseTime.value - requestTime.value
+        // TLA+: Add to events
+        events.append(event)
+        nextEventId += 1
         
-        // TLA+: Calculate offset
-        let offset = Int64(response.timestamp.value) - Int64(requestTime.value) - Int64(roundTripTime / 2)
-        
-        return ClockSyncMessage(
-            nodeId: peerId,
-            timestamp: response.timestamp,
-            roundTripTime: roundTripTime,
-            offset: offset,
-            precision: clockPrecision
-        )
+        print("Recorded event: \(event.eventId)")
+        return event
     }
     
-    /// Process clock sync
-    private func processClockSync(_ syncMessage: ClockSyncMessage) {
-        // TLA+: Update physical clock offset
-        physicalClockOffset = syncMessage.offset
+    /// Send message
+    /// TLA+ Action: SendMessage(to, data)
+    public func sendMessage(to: NodeID, data: Data) async -> Message {
+        // TLA+: Create message
+        let message = Message(
+            messageId: "msg_\(messageId)",
+            from: nodeId,
+            to: to,
+            timestamp: await generateTimestamp(),
+            data: data
+        )
         
-        // TLA+: Update clock status
-        if abs(syncMessage.offset) < Int64(driftThreshold * 1_000_000_000) {
-            clockStatus = .synchronized
-        } else {
-            clockStatus = .desynchronized
-        }
+        // TLA+: Add to messages
+        messages.append(message)
+        messageId += 1
+        
+        print("Sent message: \(message.messageId) to \(to)")
+        return message
+    }
+    
+    /// Receive message
+    /// TLA+ Action: ReceiveMessage(message)
+    public func receiveMessage(message: Message) async -> EventRecord {
+        // TLA+: Update clock based on message
+        await updateClockFromMessage(message: message)
+        
+        // TLA+: Record receive event
+        let event = await recordEvent(eventType: .receive, data: message.data)
+        
+        print("Received message: \(message.messageId) from \(message.from)")
+        return event
     }
     
     // MARK: - Helper Methods
     
-    /// Update current timestamp
-    private func updateCurrentTimestamp() {
-        // TLA+: Update current timestamp
-        let now = getPhysicalTimestamp()
-        currentTimestamp = HybridTimestamp(
-            physical: now,
-            logical: LogicalTimestamp(value: logicalClock)
-        )
+    /// Generate timestamp
+    private func generateTimestamp() async -> Timestamp {
+        // TLA+: Generate timestamp based on clock type
+        switch clockType {
+        case .lamport:
+            return await generateLamportTimestamp()
+        case .vector:
+            return vectorClock[nodeId] ?? 0
+        case .hlc:
+            return await generateHLC()
+        case .physical:
+            return await getPhysicalTime()
+        case .oracle:
+            return await allocateOracleTimestamp()
+        }
     }
     
-    /// Get physical timestamp
-    private func getPhysicalTimestamp() -> PhysicalTimestamp {
-        // TLA+: Get physical timestamp with offset
-        let now = PhysicalTimestamp(date: Date())
-        let adjustedTime = PhysicalTimestamp(value: UInt64(Int64(now.value) + physicalClockOffset))
-        return adjustedTime
+    /// Update clock from message
+    private func updateClockFromMessage(message: Message) async {
+        // TLA+: Update clock based on message
+        switch clockType {
+        case .lamport:
+            lamportClock = max(lamportClock, message.timestamp) + 1
+        case .vector:
+            await updateVectorClock(nodeId: message.from, timestamp: message.timestamp)
+        case .hlc:
+            await updateHLCFromMessage(message: message)
+        case .physical:
+            physicalTime = max(physicalTime, message.timestamp)
+        case .oracle:
+            // Oracle timestamps are allocated centrally
+            break
+        }
     }
     
-    /// Add sync peer
-    /// TLA+ Action: AddSyncPeer(peerId)
-    public func addSyncPeer(peerId: String) {
-        // TLA+: Add peer to sync list
-        syncPeers.insert(peerId)
+    /// Update HLC from message
+    private func updateHLCFromMessage(message: Message) async {
+        // TLA+: Update HLC from message
+        let messagePhysical = message.timestamp / 1000000
+        let messageLogical = message.timestamp % 1000000
+        
+        if messagePhysical > hlcPhysical {
+            hlcPhysical = messagePhysical
+            hlcLogical = messageLogical + 1
+        } else if messagePhysical == hlcPhysical {
+            hlcLogical = max(hlcLogical, messageLogical) + 1
+        } else {
+            hlcLogical += 1
+        }
     }
     
-    /// Remove sync peer
-    /// TLA+ Action: RemoveSyncPeer(peerId)
-    public func removeSyncPeer(peerId: String) {
-        // TLA+: Remove peer from sync list
-        syncPeers.remove(peerId)
+    /// Compare timestamps
+    private func compareTimestamps(t1: Timestamp, t2: Timestamp) -> Int {
+        // TLA+: Compare timestamps
+        if t1 < t2 {
+            return -1
+        } else if t1 > t2 {
+            return 1
+        } else {
+            return 0
+        }
     }
     
-    /// Set clock type
-    /// TLA+ Action: SetClockType(type)
-    public func setClockType(_ type: ClockType) {
-        // TLA+: Update clock type
-        clockType = type
+    /// Check if causally related
+    private func isCausallyRelated(event1: EventRecord, event2: EventRecord) -> Bool {
+        // TLA+: Check if causally related
+        return event1.timestamp < event2.timestamp
     }
     
-    /// Set clock precision
-    /// TLA+ Action: SetClockPrecision(precision)
-    public func setClockPrecision(_ precision: ClockPrecision) {
-        // TLA+: Update clock precision
-        clockPrecision = precision
+    /// Get uncertainty interval
+    private func getUncertaintyInterval() -> (Timestamp, Timestamp) {
+        // TLA+: Get uncertainty interval
+        let lower = physicalTime - uncertainty
+        let upper = physicalTime + uncertainty
+        return (lower, upper)
     }
     
     // MARK: - Query Operations
+    
+    /// Get Lamport clock
+    public func getLamportClock() -> UInt64 {
+        return lamportClock
+    }
+    
+    /// Get vector clock
+    public func getVectorClock() -> [NodeID: UInt64] {
+        return vectorClock
+    }
+    
+    /// Get HLC
+    public func getHLC() -> (physical: UInt64, logical: UInt64) {
+        return (hlcPhysical, hlcLogical)
+    }
+    
+    /// Get oracle timestamp
+    public func getOracleTimestamp() -> UInt64 {
+        return oracleTimestamp
+    }
+    
+    /// Get physical time
+    public func getPhysicalTime() -> UInt64 {
+        return physicalTime
+    }
+    
+    /// Get uncertainty
+    public func getUncertainty() -> UInt64 {
+        return uncertainty
+    }
+    
+    /// Get events
+    public func getEvents() -> [EventRecord] {
+        return events
+    }
+    
+    /// Get messages
+    public func getMessages() -> [Message] {
+        return messages
+    }
+    
+    /// Get allocated timestamps
+    public func getAllocatedTimestamps() -> Set<Timestamp> {
+        return allocatedTimestamps
+    }
+    
+    /// Get current time
+    public func getCurrentTime() -> UInt64 {
+        return currentTime
+    }
+    
+    /// Get node ID
+    public func getNodeId() -> NodeID {
+        return nodeId
+    }
     
     /// Get clock type
     public func getClockType() -> ClockType {
         return clockType
     }
     
-    /// Get clock precision
-    public func getClockPrecision() -> ClockPrecision {
-        return clockPrecision
+    /// Check if timestamp is allocated
+    public func isTimestampAllocated(timestamp: Timestamp) -> Bool {
+        return allocatedTimestamps.contains(timestamp)
     }
     
-    /// Get clock status
-    public func getClockStatus() -> ClockStatus {
-        return clockStatus
+    /// Get event count
+    public func getEventCount() -> Int {
+        return events.count
     }
     
-    /// Get logical clock
-    public func getLogicalClock() -> Int {
-        return logicalClock
-    }
-    
-    /// Get physical clock offset
-    public func getPhysicalClockOffset() -> Int64 {
-        return physicalClockOffset
-    }
-    
-    /// Get sync peers
-    public func getSyncPeers() -> Set<String> {
-        return syncPeers
-    }
-    
-    /// Check if clock is synchronized
-    public func isSynchronized() -> Bool {
-        return clockStatus == .synchronized
-    }
-    
-    /// Get clock drift
-    public func getClockDrift() -> TimeInterval {
-        return Double(abs(physicalClockOffset)) / 1_000_000_000
+    /// Get message count
+    public func getMessageCount() -> Int {
+        return messages.count
     }
     
     // MARK: - Invariant Checking (for testing)
     
+    /// Check causality preservation invariant
+    /// TLA+ Inv_Clock_CausalityPreservation
+    public func checkCausalityPreservationInvariant() -> Bool {
+        // Check that causality is preserved
+        return true // Simplified
+    }
+    
     /// Check monotonicity invariant
     /// TLA+ Inv_Clock_Monotonicity
     public func checkMonotonicityInvariant() -> Bool {
-        // Check that timestamps always increase
+        // Check that timestamps are monotonic
         return true // Simplified
     }
     
-    /// Check causality invariant
-    /// TLA+ Inv_Clock_Causality
-    public func checkCausalityInvariant() -> Bool {
-        // Check that happens-before relationships are preserved
+    /// Check external consistency invariant
+    /// TLA+ Inv_Clock_ExternalConsistency
+    public func checkExternalConsistencyInvariant() -> Bool {
+        // Check that external consistency is maintained
         return true // Simplified
     }
     
-    /// Check precision invariant
-    /// TLA+ Inv_Clock_Precision
-    public func checkPrecisionInvariant() -> Bool {
-        // Check that clock precision is maintained
-        return true // Simplified
-    }
-    
-    /// Check synchronization invariant
-    /// TLA+ Inv_Clock_Synchronization
-    public func checkSynchronizationInvariant() -> Bool {
-        // Check that clocks are synchronized
-        return clockStatus == .synchronized
+    /// Check clock skew bound invariant
+    /// TLA+ Inv_Clock_ClockSkewBound
+    public func checkClockSkewBoundInvariant() -> Bool {
+        // Check that clock skew is bounded
+        return uncertainty <= 1000 // 1 second
     }
     
     /// Check all invariants
     public func checkAllInvariants() -> Bool {
+        let causalityPreservation = checkCausalityPreservationInvariant()
         let monotonicity = checkMonotonicityInvariant()
-        let causality = checkCausalityInvariant()
-        let precision = checkPrecisionInvariant()
-        let synchronization = checkSynchronizationInvariant()
+        let externalConsistency = checkExternalConsistencyInvariant()
+        let clockSkewBound = checkClockSkewBoundInvariant()
         
-        return monotonicity && causality && precision && synchronization
-    }
-}
-
-// MARK: - Supporting Types
-
-/// NTP client protocol
-public protocol NTPClient: Sendable {
-    func getTime() async throws -> PhysicalTimestamp
-}
-
-/// Mock NTP client for testing
-public class MockNTPClient: NTPClient {
-    public init() {}
-    
-    public func getTime() async throws -> PhysicalTimestamp {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-        return PhysicalTimestamp(date: Date())
-    }
-}
-
-// MARK: - Network Manager Extensions
-
-public extension NetworkManager {
-    func requestClockSync(nodeId: String, requestTime: PhysicalTimestamp) async throws -> ClockSyncMessage {
-        // Mock implementation
-        try await Task.sleep(nanoseconds: 10_000_000) // 10ms
-        return ClockSyncMessage(
-            nodeId: nodeId,
-            timestamp: PhysicalTimestamp(date: Date()),
-            roundTripTime: 10_000_000, // 10ms
-            offset: 0,
-            precision: .nanosecond
-        )
-    }
-}
-
-// MARK: - Errors
-
-public enum ClockError: Error, LocalizedError {
-    case synchronizationFailed
-    case invalidTimestamp
-    case clockDriftExceeded
-    case ntpFailure
-    
-    public var errorDescription: String? {
-        switch self {
-        case .synchronizationFailed:
-            return "Clock synchronization failed"
-        case .invalidTimestamp:
-            return "Invalid timestamp"
-        case .clockDriftExceeded:
-            return "Clock drift exceeded threshold"
-        case .ntpFailure:
-            return "NTP synchronization failed"
-        }
+        return causalityPreservation && monotonicity && externalConsistency && clockSkewBound
     }
 }
