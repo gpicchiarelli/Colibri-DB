@@ -55,18 +55,6 @@ public struct CheckpointRecord: Codable, Sendable {
     }
 }
 
-/// WAL file header
-public struct WALFileHeader: Codable, Sendable {
-    public let magic: UInt32
-    public let version: UInt32
-    public let timestamp: UInt64
-    
-    public init() {
-        self.magic = 0x57414C44  // "WALD"
-        self.version = 1
-        self.timestamp = UInt64(Date().timeIntervalSince1970)
-    }
-}
 
 /// WAL record header
 public struct WALRecordHeader: Codable, Sendable {

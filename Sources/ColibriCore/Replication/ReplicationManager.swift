@@ -368,10 +368,10 @@ public actor ReplicationManager {
             try await applyDataChange(logEntry)
         case .commit:
             // Commit transaction
-            try await transactionManager.commit(logEntry.txID)
+            try await transactionManager.commitTransaction(txId: logEntry.txID)
         case .abort:
             // Abort transaction
-            try await transactionManager.abort(logEntry.txID)
+            try await transactionManager.abortTransaction(txId: logEntry.txID)
         case .checkpoint:
             // Apply checkpoint
             try await applyCheckpoint(logEntry)

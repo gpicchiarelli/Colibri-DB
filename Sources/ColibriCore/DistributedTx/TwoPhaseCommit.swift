@@ -32,15 +32,6 @@ import Foundation
 
 // MARK: - States
 
-/// Coordinator states (Gray 1978, Section 3.4.1)
-public enum CoordinatorState: String, Codable {
-    case idle           // No active transaction
-    case preparing      // Sent PREPARE, waiting for votes
-    case committing     // Decision to commit, sending COMMIT
-    case aborting       // Decision to abort, sending ABORT
-    case committed      // Transaction committed
-    case aborted        // Transaction aborted
-}
 
 /// Participant states (Gray 1978, Section 3.4.2)
 public enum ParticipantState: String, Codable {

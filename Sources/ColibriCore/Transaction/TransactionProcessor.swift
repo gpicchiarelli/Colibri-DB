@@ -94,11 +94,11 @@ public actor TransactionProcessor {
     private let lockManager: LockManager
     
     /// WAL manager
-    private let walManager: WALManager
+    private let walManager: TransactionWALManager
     
     // MARK: - Initialization
     
-    public init(transactionManager: TransactionManager, lockManager: LockManager, walManager: WALManager) {
+    public init(transactionManager: TransactionManager, lockManager: LockManager, walManager: TransactionWALManager) {
         self.transactionManager = transactionManager
         self.lockManager = lockManager
         self.walManager = walManager

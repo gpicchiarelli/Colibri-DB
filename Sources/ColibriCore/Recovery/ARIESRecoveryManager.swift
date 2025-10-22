@@ -119,22 +119,6 @@ public struct CheckpointRecord: Codable, Sendable, Equatable {
     }
 }
 
-/// WAL file header
-public struct WALFileHeader: Codable, Sendable, Equatable {
-    public let magicNumber: UInt32
-    public let version: UInt32
-    public let pageSize: UInt32
-    public let checksum: UInt32
-    public let timestamp: UInt64
-    
-    public init(magicNumber: UInt32, version: UInt32, pageSize: UInt32, checksum: UInt32, timestamp: UInt64) {
-        self.magicNumber = magicNumber
-        self.version = version
-        self.pageSize = pageSize
-        self.checksum = checksum
-        self.timestamp = timestamp
-    }
-}
 
 /// WAL record header
 public struct WALRecordHeader: Codable, Sendable, Equatable {
