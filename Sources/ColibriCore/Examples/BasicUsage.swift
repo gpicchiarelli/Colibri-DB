@@ -155,7 +155,7 @@ public enum BasicUsageExamples {
         let txID = try await db.beginTransaction(isolationLevel: .repeatableRead)
         
         // Create a query plan: SELECT * FROM users WHERE id > 0
-        let queryPlan: QueryPlanNode = .filter(
+        let queryPlan: PlanNode = .filter(
             predicate: { row in
                 if case .int(let id) = row["id"] {
                     return id > 0
@@ -210,7 +210,7 @@ public enum BasicUsageExamples {
         print("Transaction started: \(txID)")
         
         // Execute query
-        let queryPlan: QueryPlanNode = .scan(table: "users")
+        let queryPlan: PlanNode = .scan(table: "users")
         let results = try await connection.executeQuery(plan: queryPlan)
         print("Query returned \(results.count) rows")
         

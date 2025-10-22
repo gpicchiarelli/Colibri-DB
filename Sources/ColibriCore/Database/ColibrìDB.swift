@@ -222,7 +222,7 @@ public actor ColibrìDB {
     // MARK: - Query Execution
     
     /// Execute query
-    public func executeQuery(plan: QueryPlanNode, txID: TxID) async throws -> [Row] {
+    public func executeQuery(plan: PlanNode, txID: TxID) async throws -> [Row] {
         guard isStarted else {
             throw DBError.internalError("Database not started")
         }

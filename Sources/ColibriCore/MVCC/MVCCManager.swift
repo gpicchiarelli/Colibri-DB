@@ -137,7 +137,7 @@ public actor MVCCManager {
         globalTS += 1
         
         // TLA+: Create snapshot
-        let snapshot = Snapshot(
+        let snapshot = MVCCSnapshot(
             txId: txId,
             timestamp: globalTS,
             activeTransactions: activeTx,
@@ -198,10 +198,13 @@ public actor MVCCManager {
         
         // TLA+: Create new version
         let version = Version(
-            txId: txId,
             value: value,
-            timestamp: globalTS,
-            isDeleted: false,
+            beginTx: txId,
+            endTx: 0,
+            beginTS: globalTS,
+            endTS: 0,
+            createdBy: txId,
+            deletedBy: 0
             nextVersion: nil
         )
         
@@ -326,10 +329,6 @@ public actor MVCCManager {
         return committedTx.contains(version.txId) && version.timestamp <= snapshot.timestamp
     }
     
-    /// Get snapshot
-    private func getSnapshot(txId: TxID) -> MVCCSnapshot? {
-        return snapshots[txId]
-    }
     
     // MARK: - Query Operations
     
@@ -350,7 +349,7 @@ public actor MVCCManager {
     
     /// Get snapshot
     public func getSnapshot(txId: TxID) -> MVCCSnapshot? {
-        return getSnapshot(txId: txId)
+        return snapshots[txId]
     }
     
     /// Get read set
@@ -478,11 +477,6 @@ public actor MVCCManager {
 // MARK: - Supporting Types
 
 
-/// Lock manager
-public protocol LockManager: Sendable {
-    func requestLock(txId: TxID, resource: String, mode: String) async throws
-    func releaseLock(txId: TxID, resource: String) async throws
-}
 
 /// MVCC manager error
 public enum MVCCManagerError: Error, LocalizedError {

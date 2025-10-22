@@ -58,17 +58,17 @@ public actor QueryOptimizer {
             }
         }
         
-        return bestPlan ?? .scan(table: plan.table)
+        return bestPlan ?? PlanNode(planId: "default", queryId: plan.table, rootNode: "scan", nodes: [:], cost: 0, estimatedRows: 0, estimatedCost: 0)
     }
     
     // MARK: - Plan Generation
     
     /// Generate candidate physical plans
-    private func generateCandidates(logical plan: LogicalPlan) async -> [QueryPlanNode] {
-        var candidates: [QueryPlanNode] = []
+    private func generateCandidates(logical plan: LogicalPlan) async -> [PlanNode] {
+        var candidates: [PlanNode] = []
         
         // Generate scan plans
-        candidates.append(.scan(table: plan.table))
+        candidates.append(PlanNode(planId: "scan_\(plan.table)", queryId: plan.table, rootNode: "scan", nodes: [:], cost: 0, estimatedRows: 0, estimatedCost: 0))
         
         // Generate index scan plans if applicable
         if let indexes = await catalog.getTable(plan.table)?.indexes {
@@ -114,7 +114,7 @@ public actor QueryOptimizer {
     
     /// Estimate cost of a physical plan
     /// TLA+ Function: EstimateCost(plan)
-    private func estimateCost(plan: QueryPlanNode) async -> Double {
+    private func estimateCost(plan: PlanNode) async -> Double {
         switch plan {
         case .scan(let table):
             return await estimateScanCost(table: table)
@@ -165,7 +165,7 @@ public actor QueryOptimizer {
     }
     
     /// Estimate join cost
-    private func estimateJoinCost(left: QueryPlanNode, right: QueryPlanNode) async -> Double {
+    private func estimateJoinCost(left: PlanNode, right: PlanNode) async -> Double {
         let leftCost = await estimateCost(plan: left)
         let rightCost = await estimateCost(plan: right)
         let leftCard = await estimateCardinality(plan: left)
@@ -182,7 +182,7 @@ public actor QueryOptimizer {
     }
     
     /// Estimate cardinality (row count)
-    private func estimateCardinality(plan: QueryPlanNode) async -> Int {
+    private func estimateCardinality(plan: PlanNode) async -> Int {
         switch plan {
         case .scan(let table):
             return await statistics.getRowCount(table: table)
@@ -244,7 +244,7 @@ public struct LogicalPlan {
 
 /// Query optimizer statistics manager interface
 public actor QueryOptimizerStatisticsManager {
-    private var tableStats: [String: TableStatistics] = [:]
+    private var tableStats: [String: QueryOptimizerTableStatistics] = [:]
     
     public init() {}
     
@@ -264,13 +264,13 @@ public actor QueryOptimizerStatisticsManager {
         return 10  // Estimated result pages
     }
     
-    public func updateStatistics(table: String, stats: TableStatistics) {
+    public func updateStatistics(table: String, stats: QueryOptimizerTableStatistics) {
         tableStats[table] = stats
     }
 }
 
-/// Table statistics
-public struct TableStatistics {
+/// Query optimizer table statistics
+public struct QueryOptimizerTableStatistics {
     public let pageCount: Int
     public let rowCount: Int
     public let avgRowSize: Int
