@@ -27,7 +27,7 @@ import Foundation
 // MARK: - Pipeline Stage
 
 /// Stage in the query processing pipeline
-public enum PipelineStage: String, Codable {
+public enum PipelineStage: String, Codable, Sendable {
     case parse          // SQL parsing
     case typecheck      // Type checking
     case optimize       // Query optimization

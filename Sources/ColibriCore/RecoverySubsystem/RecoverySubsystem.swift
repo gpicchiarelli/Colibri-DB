@@ -38,35 +38,7 @@ public enum RecoverySubsystemState: String, Codable {
 
 // MARK: - Backup Types
 
-/// Type of backup
-public enum BackupType: String, Codable {
-    case full           // Full database backup
-    case incremental    // Incremental (WAL only)
-}
-
-// MARK: - Backup Metadata
-
-/// Metadata for a backup
-public struct BackupMetadata: Codable {
-    public let backupId: Int
-    public let lsn: UInt64
-    public let timestamp: Date
-    public let type: BackupType
-    public let compressed: Bool
-    public let size: Int64          // Bytes
-    public let path: String
-    
-    public init(backupId: Int, lsn: UInt64, timestamp: Date = Date(),
-                type: BackupType, compressed: Bool, size: Int64, path: String) {
-        self.backupId = backupId
-        self.lsn = lsn
-        self.timestamp = timestamp
-        self.type = type
-        self.compressed = compressed
-        self.size = size
-        self.path = path
-    }
-}
+// BackupType and BackupMetadata are defined in BackupManager.swift
 
 // MARK: - WAL Segment
 
@@ -124,7 +96,7 @@ public actor RecoverySubsystem {
     private var recoveryInProgress: Bool = false
     
     // Backup management
-    private var backupMetadata: [Int: BackupMetadata] = [:]
+    private var backupMetadata: [String: BackupMetadata] = [:]
     private var nextBackupId: Int = 1
     
     // WAL archiving
@@ -196,14 +168,19 @@ public actor RecoverySubsystem {
             
             // Step 4: Create metadata
             let metadata = BackupMetadata(
-                backupId: nextBackupId,
-                lsn: checkpointLSN,
+                backupId: String(nextBackupId),
                 type: .full,
-                compressed: config.enableCompression,
+                status: .completed,
+                format: config.enableCompression ? .compressed : .native,
+                startTime: Date(),
+                endTime: Date(),
                 size: 0,  // Would calculate actual size
-                path: backupPath
+                checksum: "",
+                baseBackupId: nil,
+                tables: [],
+                lsnRange: LSNRange(start: checkpointLSN, end: checkpointLSN)
             )
-            backupMetadata[nextBackupId] = metadata
+            backupMetadata[String(nextBackupId)] = metadata
             
             // Step 5: Update state
             lastBackupLSN = checkpointLSN
@@ -247,14 +224,19 @@ public actor RecoverySubsystem {
         
         // Create metadata
         let metadata = BackupMetadata(
-            backupId: nextBackupId,
-            lsn: currentLSN,
+            backupId: String(nextBackupId),
             type: .incremental,
-            compressed: config.enableCompression,
+            status: .completed,
+            format: config.enableCompression ? .compressed : .native,
+            startTime: Date(),
+            endTime: Date(),
             size: 0,
-            path: segment.path
+            checksum: "",
+            baseBackupId: nil,
+            tables: [],
+            lsnRange: LSNRange(start: currentLSN, end: currentLSN)
         )
-        backupMetadata[nextBackupId] = metadata
+        backupMetadata[String(nextBackupId)] = metadata
         
         lastBackupLSN = currentLSN
         nextBackupId += 1
@@ -380,7 +362,7 @@ public actor RecoverySubsystem {
         return lastBackupLSN
     }
     
-    public func getBackupMetadata(backupId: Int) -> BackupMetadata? {
+    public func getBackupMetadata(backupId: String) -> BackupMetadata? {
         return backupMetadata[backupId]
     }
     

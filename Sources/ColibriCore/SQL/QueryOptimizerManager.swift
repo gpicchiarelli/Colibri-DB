@@ -629,6 +629,10 @@ public protocol StatisticsManager: Sendable {
     func updateTableStats(tableName: String, stats: TableStats) async throws
     func getColumnStats(tableName: String, columnName: String) async throws -> ColumnStats?
     func updateColumnStats(tableName: String, columnName: String, stats: ColumnStats) async throws
+    func getPageCount(table: String) async -> Int
+    func getIndexHeight(table: String, index: String) async -> Int
+    func getResultPages(table: String, index: String) async -> Int
+    func getRowCount(table: String) async -> Int
 }
 
 /// Query optimizer cost estimator
