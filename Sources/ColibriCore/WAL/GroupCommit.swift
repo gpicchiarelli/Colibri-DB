@@ -301,12 +301,68 @@ public actor GroupCommitManager {
             await flushBatch()
         }
     }
+    
+    // MARK: - Query Operations
+    
+    /// Get current commit queue size
+    public func getQueueSize() -> Int {
+        return commitQueue.count
+    }
+    
+    /// Get current batch timer value
+    public func getBatchTimer() -> Int {
+        return batchTimer
+    }
+    
+    /// Get last flush time
+    public func getLastFlushTime() -> Timestamp {
+        return lastFlushTime
+    }
+    
+    // MARK: - Invariant Checking (for testing)
+    
+    /// Check durability preserved invariant
+    /// TLA+ Inv_GC_DurabilityPreserved
+    public func checkDurabilityPreservedInvariant() -> Bool {
+        return commitQueue.allSatisfy { $0.targetLSN > flushedLSN }
+    }
+    
+    /// Check order preserved invariant
+    /// TLA+ Inv_GC_OrderPreserved
+    public func checkOrderPreservedInvariant() -> Bool {
+        for i in 0..<commitQueue.count {
+            for j in (i+1)..<commitQueue.count {
+                if commitQueue[i].targetLSN > commitQueue[j].targetLSN {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    
+    /// Check bounded wait invariant
+    /// TLA+ Inv_GC_BoundedWait
+    public func checkBoundedWaitInvariant() -> Bool {
+        let currentTime = UInt64(Date().timeIntervalSince1970 * 1000)
+        return commitQueue.allSatisfy { 
+            currentTime - $0.timestamp <= UInt64(config.maxWaitTimeMs)
+        }
+    }
+    
+    /// Check all invariants
+    public func checkAllInvariants() -> Bool {
+        let durabilityPreserved = checkDurabilityPreservedInvariant()
+        let orderPreserved = checkOrderPreservedInvariant()
+        let boundedWait = checkBoundedWaitInvariant()
+        
+        return durabilityPreserved && orderPreserved && boundedWait
+    }
 }
 
 // MARK: - Statistics
 
 /// Statistics for group commit
-public struct GroupCommitStats: Codable {
+public struct GroupCommitStats: Codable, Sendable {
     public var totalRequests: Int = 0
     public var totalBatches: Int = 0
     public var totalCommits: Int = 0
