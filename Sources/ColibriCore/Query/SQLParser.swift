@@ -6,7 +6,7 @@
 import Foundation
 
 public enum SQLToken {
-    case select, from, `where`, insert, into, values, update, set, delete
+    case select, from, where, insert, into, values, update, set, delete
     case create, table, drop, alter, index
     case and, or, not
     case equals, notEquals, lessThan, greaterThan, lessOrEqual, greaterOrEqual

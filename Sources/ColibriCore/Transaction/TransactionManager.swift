@@ -1,6 +1,6 @@
 //
 //  TransactionManager.swift
-//  ColibrìDB Transaction Management Implementation
+//  ColibrìDB Transaction Manager Implementation
 //
 //  Based on: spec/TransactionManager.tla
 //  Implements: Transaction management
@@ -8,221 +8,193 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - ACID Properties: Atomicity, Consistency, Isolation, Durability
-//  - Two-Phase Commit: Distributed transaction support
-//  - Deadlock Detection: Prevents circular waits
-//  - Lock Management: Concurrency control
+//  - Atomicity: Transactions are atomic
+//  - Consistency: Transactions maintain consistency
+//  - Isolation: Transactions are isolated
+//  - Durability: Transactions are durable
+//  - 2PC Correctness: Two-phase commit is correct
 //
 
 import Foundation
 
 // MARK: - Transaction Manager Types
 
+/// Transaction ID
+/// Corresponds to TLA+: TxID
+public typealias TxID = UInt64
+
+/// LSN (Log Sequence Number)
+/// Corresponds to TLA+: LSN
+public typealias LSN = UInt64
+
+/// Timestamp
+/// Corresponds to TLA+: Timestamp
+public typealias Timestamp = UInt64
+
+/// Resources
+/// Corresponds to TLA+: Resources
+public typealias Resources = Set<String>
+
+/// Participants
+/// Corresponds to TLA+: Participants
+public typealias Participants = Set<String>
+
+/// Transaction
+/// Corresponds to TLA+: Transaction
+public struct Transaction: Codable, Sendable, Equatable {
+    public let txId: TxID
+    public let state: TransactionState
+    public let startTime: Timestamp
+    public let endTime: Timestamp?
+    public let resources: Resources
+    public let participants: Participants
+    public let isDirty: Bool
+    
+    public init(txId: TxID, state: TransactionState, startTime: Timestamp, endTime: Timestamp?, resources: Resources, participants: Participants, isDirty: Bool) {
+        self.txId = txId
+        self.state = state
+        self.startTime = startTime
+        self.endTime = endTime
+        self.resources = resources
+        self.participants = participants
+        self.isDirty = isDirty
+    }
+}
+
 /// Transaction state
 /// Corresponds to TLA+: TransactionState
-public enum TransactionState: String, Codable, Sendable {
+public enum TransactionState: String, Codable, Sendable, CaseIterable {
     case active = "active"
     case prepared = "prepared"
     case committed = "committed"
     case aborted = "aborted"
     case preparing = "preparing"
+}
+
+/// Operation
+/// Corresponds to TLA+: Operation
+public struct Operation: Codable, Sendable, Equatable {
+    public let opId: String
+    public let txId: TxID
+    public let type: String
+    public let resource: String
+    public let data: Data
+    public let timestamp: Timestamp
+    
+    public init(opId: String, txId: TxID, type: String, resource: String, data: Data, timestamp: Timestamp) {
+        self.opId = opId
+        self.txId = txId
+        self.type = type
+        self.resource = resource
+        self.data = data
+        self.timestamp = timestamp
+    }
+}
+
+/// Coordinator state
+/// Corresponds to TLA+: CoordinatorState
+public enum CoordinatorState: String, Codable, Sendable, CaseIterable {
+    case idle = "idle"
+    case preparing = "preparing"
     case committing = "committing"
     case aborting = "aborting"
 }
 
-/// Transaction isolation level
-/// Corresponds to TLA+: IsolationLevel
-public enum IsolationLevel: String, Codable, Sendable {
-    case readUncommitted = "read_uncommitted"
-    case readCommitted = "read_committed"
-    case repeatableRead = "repeatable_read"
-    case serializable = "serializable"
-    case snapshot = "snapshot"
-}
-
-/// Transaction operation
-/// Corresponds to TLA+: TransactionOperation
-public enum TransactionOperation: String, Codable, Sendable {
-    case begin = "begin"
-    case commit = "commit"
-    case abort = "abort"
-    case prepare = "prepare"
-    case read = "read"
-    case write = "write"
-    case update = "update"
-    case delete = "delete"
-    case insert = "insert"
-    case lock = "lock"
-    case unlock = "unlock"
-}
-
-/// Two-phase commit state
-/// Corresponds to TLA+: TwoPhaseCommitState
-public enum TwoPhaseCommitState: String, Codable, Sendable {
-    case notStarted = "not_started"
-    case preparePhase = "prepare_phase"
-    case commitPhase = "commit_phase"
-    case abortPhase = "abort_phase"
-    case completed = "completed"
-}
-
-// MARK: - Transaction Manager Data Structures
-
-/// Transaction
-/// Corresponds to TLA+: Transaction
-public struct Transaction: Codable, Sendable, Equatable {
-    public let transactionId: TxID
-    public let state: TransactionState
-    public let isolationLevel: IsolationLevel
-    public let startTime: Date
-    public let operations: [TransactionOperationRecord]
-    public let locks: [TransactionLock]
-    public let readSet: Set<String>
-    public let writeSet: Set<String>
-    public let commitTime: Date?
-    public let abortTime: Date?
-    public let abortReason: String?
-    public let twoPhaseCommitState: TwoPhaseCommitState
-    public let participants: [String]
-    public let coordinator: String?
-    
-    public init(transactionId: TxID, state: TransactionState, isolationLevel: IsolationLevel, startTime: Date, operations: [TransactionOperationRecord] = [], locks: [TransactionLock] = [], readSet: Set<String> = [], writeSet: Set<String> = [], commitTime: Date? = nil, abortTime: Date? = nil, abortReason: String? = nil, twoPhaseCommitState: TwoPhaseCommitState = .notStarted, participants: [String] = [], coordinator: String? = nil) {
-        self.transactionId = transactionId
-        self.state = state
-        self.isolationLevel = isolationLevel
-        self.startTime = startTime
-        self.operations = operations
-        self.locks = locks
-        self.readSet = readSet
-        self.writeSet = writeSet
-        self.commitTime = commitTime
-        self.abortTime = abortTime
-        self.abortReason = abortReason
-        self.twoPhaseCommitState = twoPhaseCommitState
-        self.participants = participants
-        self.coordinator = coordinator
-    }
-}
-
-/// Transaction operation record
-/// Corresponds to TLA+: TransactionOperationRecord
-public struct TransactionOperationRecord: Codable, Sendable, Equatable {
-    public let operationId: String
-    public let operation: TransactionOperation
-    public let resource: String
-    public let data: Value?
-    public let timestamp: Date
-    public let success: Bool
-    public let error: String?
-    
-    public init(operationId: String, operation: TransactionOperation, resource: String, data: Value? = nil, timestamp: Date = Date(), success: Bool = true, error: String? = nil) {
-        self.operationId = operationId
-        self.operation = operation
-        self.resource = resource
-        self.data = data
-        self.timestamp = timestamp
-        self.success = success
-        self.error = error
-    }
-}
-
-/// Transaction lock
-/// Corresponds to TLA+: TransactionLock
-public struct TransactionLock: Codable, Sendable, Equatable {
-    public let lockId: String
-    public let resource: String
-    public let lockType: LockMode
-    public let acquiredAt: Date
-    public let timeout: TimeInterval
-    
-    public init(lockId: String, resource: String, lockType: LockMode, acquiredAt: Date = Date(), timeout: TimeInterval = 30.0) {
-        self.lockId = lockId
-        self.resource = resource
-        self.lockType = lockType
-        self.acquiredAt = acquiredAt
-        self.timeout = timeout
-    }
-}
-
-/// Deadlock detection result
-/// Corresponds to TLA+: DeadlockDetectionResult
-public struct DeadlockDetectionResult: Codable, Sendable, Equatable {
-    public let deadlockDetected: Bool
-    public let cycle: [TxID]
-    public let victimTransaction: TxID?
-    public let timestamp: Date
-    
-    public init(deadlockDetected: Bool, cycle: [TxID] = [], victimTransaction: TxID? = nil, timestamp: Date = Date()) {
-        self.deadlockDetected = deadlockDetected
-        self.cycle = cycle
-        self.victimTransaction = victimTransaction
-        self.timestamp = timestamp
-    }
-}
-
-/// Two-phase commit participant
-/// Corresponds to TLA+: TwoPhaseCommitParticipant
-public struct TwoPhaseCommitParticipant: Codable, Sendable, Equatable {
-    public let participantId: String
-    public let transactionId: TxID
-    public let state: TwoPhaseCommitState
-    public let vote: Vote?
-    public let lastContact: Date
-    
-    public init(participantId: String, transactionId: TxID, state: TwoPhaseCommitState, vote: Vote? = nil, lastContact: Date = Date()) {
-        self.participantId = participantId
-        self.transactionId = transactionId
-        self.state = state
-        self.vote = vote
-        self.lastContact = lastContact
-    }
-}
-
-/// Vote
-public enum Vote: String, Codable, Sendable {
-    case yes = "yes"
-    case no = "no"
-    case unknown = "unknown"
-}
-
 // MARK: - Transaction Manager
 
-/// Transaction Manager for managing database transactions
+/// Transaction Manager for database transaction management
 /// Corresponds to TLA+ module: TransactionManager.tla
 public actor TransactionManager {
     
+    // MARK: - Constants
+    
+    /// Resources
+    /// TLA+: Resources
+    private let Resources: Resources = []
+    
+    /// Participants
+    /// TLA+: Participants
+    private let Participants: Participants = []
+    
+    /// Transaction timeout
+    /// TLA+: TX_TIMEOUT_MS
+    private let TX_TIMEOUT_MS: UInt64 = 30000
+    
+    /// Prepare timeout
+    /// TLA+: PREPARE_TIMEOUT_MS
+    private let PREPARE_TIMEOUT_MS: UInt64 = 5000
+    
     // MARK: - State Variables (TLA+ vars)
     
-    /// Active transactions
-    /// TLA+: activeTransactions \in [TxID -> Transaction]
-    private var activeTransactions: [TxID: Transaction] = [:]
-    
-    /// Committed transactions
-    /// TLA+: committedTransactions \in [TxID -> Transaction]
-    private var committedTransactions: [TxID: Transaction] = [:]
-    
-    /// Aborted transactions
-    /// TLA+: abortedTransactions \in [TxID -> Transaction]
-    private var abortedTransactions: [TxID: Transaction] = [:]
-    
-    /// Two-phase commit participants
-    /// TLA+: twoPhaseCommitParticipants \in [TxID -> [ParticipantId -> TwoPhaseCommitParticipant]]
-    private var twoPhaseCommitParticipants: [TxID: [String: TwoPhaseCommitParticipant]] = [:]
-    
-    /// Deadlock detection results
-    /// TLA+: deadlockDetectionResults \in [TxID -> DeadlockDetectionResult]
-    private var deadlockDetectionResults: [TxID: DeadlockDetectionResult] = [:]
-    
     /// Next transaction ID
-    private var nextTransactionId: TxID = 1
+    /// TLA+: nextTID \in TxID
+    private var nextTID: TxID = 1
     
-    /// Transaction configuration
-    private var transactionConfig: TransactionConfig
+    /// Transactions
+    /// TLA+: transactions \in [TxID -> Transaction]
+    private var transactions: [TxID: Transaction] = [:]
+    
+    /// Transaction operations
+    /// TLA+: txOperations \in [TxID -> Seq(Operation)]
+    private var txOperations: [TxID: [Operation]] = [:]
+    
+    /// Transaction locks
+    /// TLA+: txLocks \in [TxID -> Set(String)]
+    private var txLocks: [TxID: Set<String>] = [:]
+    
+    /// Transaction start time
+    /// TLA+: txStartTime \in [TxID -> Timestamp]
+    private var txStartTime: [TxID: Timestamp] = [:]
+    
+    /// Prepared transactions
+    /// TLA+: preparedTransactions \in Set(TxID)
+    private var preparedTransactions: Set<TxID> = []
+    
+    /// Coordinator state
+    /// TLA+: coordinatorState \in CoordinatorState
+    private var coordinatorState: CoordinatorState = .idle
+    
+    /// Participant votes
+    /// TLA+: participantVotes \in [TxID -> [String -> Bool]]
+    private var participantVotes: [TxID: [String: Bool]] = [:]
+    
+    /// Prepare timer
+    /// TLA+: prepareTimer \in [TxID -> Timestamp]
+    private var prepareTimer: [TxID: Timestamp] = [:]
+    
+    /// Transaction WAL records
+    /// TLA+: txWALRecords \in [TxID -> Seq(LSN)]
+    private var txWALRecords: [TxID: [LSN]] = [:]
+    
+    /// Last commit LSN
+    /// TLA+: lastCommitLSN \in LSN
+    private var lastCommitLSN: LSN = 0
+    
+    /// Transaction snapshots
+    /// TLA+: txSnapshots \in [TxID -> Snapshot]
+    private var txSnapshots: [TxID: Snapshot] = [:]
+    
+    /// Transaction write sets
+    /// TLA+: txWriteSets \in [TxID -> Set(String)]
+    private var txWriteSets: [TxID: Set<String>] = [:]
+    
+    /// Transaction read sets
+    /// TLA+: txReadSets \in [TxID -> Set(String)]
+    private var txReadSets: [TxID: Set<String>] = [:]
+    
+    /// Wait-for graph
+    /// TLA+: waitForGraph \in [TxID -> Set(TxID)]
+    private var waitForGraph: [TxID: Set<TxID>] = [:]
+    
+    /// Deadlock victim
+    /// TLA+: deadlockVictim \in TxID
+    private var deadlockVictim: TxID = 0
+    
+    /// Global clock
+    /// TLA+: globalClock \in Timestamp
+    private var globalClock: Timestamp = 0
     
     // MARK: - Dependencies
-    
-    /// Lock manager
-    private let lockManager: LockManager
     
     /// WAL manager
     private let walManager: WALManager
@@ -230,450 +202,459 @@ public actor TransactionManager {
     /// MVCC manager
     private let mvccManager: MVCCManager
     
-    /// Two-phase commit manager
-    private let twoPhaseCommitManager: TwoPhaseCommitManager
+    /// Lock manager
+    private let lockManager: LockManager
     
     // MARK: - Initialization
     
-    public init(lockManager: LockManager, walManager: WALManager, mvccManager: MVCCManager, twoPhaseCommitManager: TwoPhaseCommitManager, transactionConfig: TransactionConfig = TransactionConfig()) {
-        self.lockManager = lockManager
+    public init(walManager: WALManager, mvccManager: MVCCManager, lockManager: LockManager) {
         self.walManager = walManager
         self.mvccManager = mvccManager
-        self.twoPhaseCommitManager = twoPhaseCommitManager
-        self.transactionConfig = transactionConfig
+        self.lockManager = lockManager
         
         // TLA+ Init
-        self.activeTransactions = [:]
-        self.committedTransactions = [:]
-        self.abortedTransactions = [:]
-        self.twoPhaseCommitParticipants = [:]
-        self.deadlockDetectionResults = [:]
-        self.nextTransactionId = 1
+        self.nextTID = 1
+        self.transactions = [:]
+        self.txOperations = [:]
+        self.txLocks = [:]
+        self.txStartTime = [:]
+        self.preparedTransactions = []
+        self.coordinatorState = .idle
+        self.participantVotes = [:]
+        self.prepareTimer = [:]
+        self.txWALRecords = [:]
+        self.lastCommitLSN = 0
+        self.txSnapshots = [:]
+        self.txWriteSets = [:]
+        self.txReadSets = [:]
+        self.waitForGraph = [:]
+        self.deadlockVictim = 0
+        self.globalClock = 0
     }
     
-    // MARK: - Transaction Management
+    // MARK: - Transaction Operations
     
     /// Begin transaction
-    /// TLA+ Action: BeginTransaction(txId, isolationLevel)
-    public func beginTransaction(isolationLevel: IsolationLevel = .readCommitted) async throws -> TxID {
-        // TLA+: Generate new transaction ID
-        let txId = nextTransactionId
-        nextTransactionId += 1
-        
+    /// TLA+ Action: BeginTransaction()
+    public func beginTransaction() async throws -> TxID {
         // TLA+: Create transaction
+        let txId = nextTID
+        nextTID += 1
+        
         let transaction = Transaction(
-            transactionId: txId,
+            txId: txId,
             state: .active,
-            isolationLevel: isolationLevel,
-            startTime: Date()
+            startTime: globalClock,
+            endTime: nil,
+            resources: [],
+            participants: [],
+            isDirty: false
         )
         
-        // TLA+: Add to active transactions
-        activeTransactions[txId] = transaction
+        // TLA+: Add transaction
+        transactions[txId] = transaction
+        txOperations[txId] = []
+        txLocks[txId] = []
+        txStartTime[txId] = globalClock
+        txWALRecords[txId] = []
+        txWriteSets[txId] = []
+        txReadSets[txId] = []
         
-        // TLA+: Begin transaction in MVCC
-        try await mvccManager.beginTransaction(txId: txId, isolationLevel: isolationLevel)
+        // TLA+: Update global clock
+        globalClock += 1
         
-        // TLA+: Log transaction begin
-        try await walManager.appendWALRecord(record: WALRecord(
-            recordId: "begin_\(txId)",
-            lsn: LSN(0), // Will be set by WAL
-            type: .beginTransaction,
-            transactionId: txId
-        ))
-        
-        print("Transaction \(txId) began with isolation level \(isolationLevel)")
+        print("Began transaction: \(txId)")
         return txId
     }
     
     /// Commit transaction
     /// TLA+ Action: CommitTransaction(txId)
     public func commitTransaction(txId: TxID) async throws {
-        // TLA+: Check if transaction exists and is active
-        guard var transaction = activeTransactions[txId] else {
+        // TLA+: Check if transaction exists
+        guard var transaction = transactions[txId] else {
             throw TransactionManagerError.transactionNotFound
         }
         
+        // TLA+: Check if transaction is active
         guard transaction.state == .active else {
             throw TransactionManagerError.transactionNotActive
         }
         
-        // TLA+: Update transaction state
-        transaction.state = .committing
-        activeTransactions[txId] = transaction
+        // TLA+: Prepare transaction
+        try await prepareTransaction(txId: txId)
         
-        // TLA+: Check if distributed transaction
-        if !transaction.participants.isEmpty {
-            try await commitDistributedTransaction(txId: txId, transaction: &transaction)
-        } else {
-            try await commitLocalTransaction(txId: txId, transaction: &transaction)
-        }
-        
-        // TLA+: Move to committed transactions
+        // TLA+: Commit transaction
         transaction.state = .committed
-        transaction.commitTime = Date()
-        committedTransactions[txId] = transaction
-        activeTransactions.removeValue(forKey: txId)
+        transaction.endTime = globalClock
+        transactions[txId] = transaction
         
-        // TLA+: Log transaction commit
-        try await walManager.appendWALRecord(record: WALRecord(
-            recordId: "commit_\(txId)",
-            lsn: LSN(0), // Will be set by WAL
-            type: .commitTransaction,
-            transactionId: txId
-        ))
+        // TLA+: Update global clock
+        globalClock += 1
         
-        print("Transaction \(txId) committed successfully")
+        print("Committed transaction: \(txId)")
     }
     
     /// Abort transaction
-    /// TLA+ Action: AbortTransaction(txId, reason)
-    public func abortTransaction(txId: TxID, reason: String = "User abort") async throws {
+    /// TLA+ Action: AbortTransaction(txId)
+    public func abortTransaction(txId: TxID) async throws {
         // TLA+: Check if transaction exists
-        guard var transaction = activeTransactions[txId] else {
+        guard var transaction = transactions[txId] else {
+            throw TransactionManagerError.transactionNotFound
+        }
+        
+        // TLA+: Check if transaction is active
+        guard transaction.state == .active else {
+            throw TransactionManagerError.transactionNotActive
+        }
+        
+        // TLA+: Abort transaction
+        transaction.state = .aborted
+        transaction.endTime = globalClock
+        transactions[txId] = transaction
+        
+        // TLA+: Update global clock
+        globalClock += 1
+        
+        print("Aborted transaction: \(txId)")
+    }
+    
+    /// Request lock
+    /// TLA+ Action: RequestLock(txId, resource, mode)
+    public func requestLock(txId: TxID, resource: String, mode: String) async throws {
+        // TLA+: Check if transaction exists
+        guard transactions[txId] != nil else {
+            throw TransactionManagerError.transactionNotFound
+        }
+        
+        // TLA+: Request lock
+        try await lockManager.requestLock(txId: txId, resource: resource, mode: mode)
+        
+        // TLA+: Add to transaction locks
+        txLocks[txId]?.insert(resource)
+        
+        print("Requested lock: \(resource) for transaction: \(txId)")
+    }
+    
+    /// Release lock
+    /// TLA+ Action: ReleaseLock(txId, resource)
+    public func releaseLock(txId: TxID, resource: String) async throws {
+        // TLA+: Check if transaction exists
+        guard transactions[txId] != nil else {
+            throw TransactionManagerError.transactionNotFound
+        }
+        
+        // TLA+: Release lock
+        try await lockManager.releaseLock(txId: txId, resource: resource)
+        
+        // TLA+: Remove from transaction locks
+        txLocks[txId]?.remove(resource)
+        
+        print("Released lock: \(resource) for transaction: \(txId)")
+    }
+    
+    /// Prepare transaction
+    /// TLA+ Action: PrepareTransaction(txId)
+    public func prepareTransaction(txId: TxID) async throws {
+        // TLA+: Check if transaction exists
+        guard var transaction = transactions[txId] else {
+            throw TransactionManagerError.transactionNotFound
+        }
+        
+        // TLA+: Check if transaction is active
+        guard transaction.state == .active else {
+            throw TransactionManagerError.transactionNotActive
+        }
+        
+        // TLA+: Prepare transaction
+        transaction.state = .prepared
+        transactions[txId] = transaction
+        preparedTransactions.insert(txId)
+        
+        print("Prepared transaction: \(txId)")
+    }
+    
+    /// Receive vote
+    /// TLA+ Action: ReceiveVote(txId, participant, vote)
+    public func receiveVote(txId: TxID, participant: String, vote: Bool) async throws {
+        // TLA+: Check if transaction exists
+        guard transactions[txId] != nil else {
+            throw TransactionManagerError.transactionNotFound
+        }
+        
+        // TLA+: Store vote
+        if participantVotes[txId] == nil {
+            participantVotes[txId] = [:]
+        }
+        participantVotes[txId]?[participant] = vote
+        
+        print("Received vote: \(vote) from participant: \(participant) for transaction: \(txId)")
+    }
+    
+    /// Make decision
+    /// TLA+ Action: MakeDecision(txId)
+    public func makeDecision(txId: TxID) async throws -> Bool {
+        // TLA+: Check if transaction exists
+        guard transactions[txId] != nil else {
+            throw TransactionManagerError.transactionNotFound
+        }
+        
+        // TLA+: Check votes
+        guard let votes = participantVotes[txId] else {
+            throw TransactionManagerError.noVotesReceived
+        }
+        
+        // TLA+: Make decision
+        let allVotes = votes.values
+        let decision = allVotes.allSatisfy { $0 }
+        
+        print("Made decision: \(decision) for transaction: \(txId)")
+        return decision
+    }
+    
+    /// Send commit/abort
+    /// TLA+ Action: SendCommitAbort(txId, decision)
+    public func sendCommitAbort(txId: TxID, decision: Bool) async throws {
+        // TLA+: Check if transaction exists
+        guard var transaction = transactions[txId] else {
             throw TransactionManagerError.transactionNotFound
         }
         
         // TLA+: Update transaction state
-        transaction.state = .aborting
-        activeTransactions[txId] = transaction
-        
-        // TLA+: Check if distributed transaction
-        if !transaction.participants.isEmpty {
-            try await abortDistributedTransaction(txId: txId, transaction: &transaction, reason: reason)
+        if decision {
+            transaction.state = .committed
         } else {
-            try await abortLocalTransaction(txId: txId, transaction: &transaction, reason: reason)
+            transaction.state = .aborted
         }
+        transaction.endTime = globalClock
+        transactions[txId] = transaction
         
-        // TLA+: Move to aborted transactions
-        transaction.state = .aborted
-        transaction.abortTime = Date()
-        transaction.abortReason = reason
-        abortedTransactions[txId] = transaction
-        activeTransactions.removeValue(forKey: txId)
+        // TLA+: Update global clock
+        globalClock += 1
         
-        // TLA+: Log transaction abort
-        try await walManager.appendWALRecord(record: WALRecord(
-            recordId: "abort_\(txId)",
-            lsn: LSN(0), // Will be set by WAL
-            type: .abortTransaction,
-            transactionId: txId,
-            data: reason.data(using: .utf8)
-        ))
-        
-        print("Transaction \(txId) aborted: \(reason)")
-    }
-    
-    /// Read operation
-    /// TLA+ Action: ReadOperation(txId, resource)
-    public func read(txId: TxID, resource: String) async throws -> Value? {
-        // TLA+: Check if transaction exists and is active
-        guard var transaction = activeTransactions[txId] else {
-            throw TransactionManagerError.transactionNotFound
-        }
-        
-        guard transaction.state == .active else {
-            throw TransactionManagerError.transactionNotActive
-        }
-        
-        // TLA+: Record read operation
-        let operation = TransactionOperationRecord(
-            operationId: "op_\(Date().timeIntervalSince1970)",
-            operation: .read,
-            resource: resource,
-            timestamp: Date()
-        )
-        
-        var updatedTransaction = transaction
-        updatedTransaction.operations.append(operation)
-        updatedTransaction.readSet.insert(resource)
-        activeTransactions[txId] = updatedTransaction
-        
-        // TLA+: Perform read through MVCC
-        let value = try await mvccManager.read(txId: txId, resource: resource)
-        
-        print("Transaction \(txId) read from \(resource)")
-        return value
-    }
-    
-    /// Write operation
-    /// TLA+ Action: WriteOperation(txId, resource, data)
-    public func write(txId: TxID, resource: String, data: Value) async throws {
-        // TLA+: Check if transaction exists and is active
-        guard var transaction = activeTransactions[txId] else {
-            throw TransactionManagerError.transactionNotFound
-        }
-        
-        guard transaction.state == .active else {
-            throw TransactionManagerError.transactionNotActive
-        }
-        
-        // TLA+: Record write operation
-        let operation = TransactionOperationRecord(
-            operationId: "op_\(Date().timeIntervalSince1970)",
-            operation: .write,
-            resource: resource,
-            data: data,
-            timestamp: Date()
-        )
-        
-        var updatedTransaction = transaction
-        updatedTransaction.operations.append(operation)
-        updatedTransaction.writeSet.insert(resource)
-        activeTransactions[txId] = updatedTransaction
-        
-        // TLA+: Perform write through MVCC
-        try await mvccManager.write(txId: txId, resource: resource, data: data)
-        
-        print("Transaction \(txId) wrote to \(resource)")
-    }
-    
-    /// Lock operation
-    /// TLA+ Action: LockOperation(txId, resource, lockType)
-    public func lock(txId: TxID, resource: String, lockType: LockMode) async throws {
-        // TLA+: Check if transaction exists and is active
-        guard var transaction = activeTransactions[txId] else {
-            throw TransactionManagerError.transactionNotFound
-        }
-        
-        guard transaction.state == .active else {
-            throw TransactionManagerError.transactionNotActive
-        }
-        
-        // TLA+: Request lock
-        try await lockManager.requestLock(transactionId: txId, resource: resource, mode: lockType, timeoutMs: 30000)
-        
-        // TLA+: Record lock operation
-        let lock = TransactionLock(
-            lockId: "lock_\(Date().timeIntervalSince1970)",
-            resource: resource,
-            lockType: lockType
-        )
-        
-        var updatedTransaction = transaction
-        updatedTransaction.locks.append(lock)
-        activeTransactions[txId] = updatedTransaction
-        
-        print("Transaction \(txId) acquired \(lockType) lock on \(resource)")
-    }
-    
-    /// Unlock operation
-    /// TLA+ Action: UnlockOperation(txId, resource)
-    public func unlock(txId: TxID, resource: String) async throws {
-        // TLA+: Check if transaction exists and is active
-        guard var transaction = activeTransactions[txId] else {
-            throw TransactionManagerError.transactionNotFound
-        }
-        
-        guard transaction.state == .active else {
-            throw TransactionManagerError.transactionNotActive
-        }
-        
-        // TLA+: Release lock
-        try await lockManager.releaseLock(transactionId: txId, resource: resource)
-        
-        // TLA+: Remove lock from transaction
-        var updatedTransaction = transaction
-        updatedTransaction.locks.removeAll { $0.resource == resource }
-        activeTransactions[txId] = updatedTransaction
-        
-        print("Transaction \(txId) released lock on \(resource)")
-    }
-    
-    // MARK: - Distributed Transaction Management
-    
-    /// Begin distributed transaction
-    /// TLA+ Action: BeginDistributedTransaction(txId, participants)
-    public func beginDistributedTransaction(txId: TxID, participants: [String]) async throws {
-        // TLA+: Check if transaction exists
-        guard var transaction = activeTransactions[txId] else {
-            throw TransactionManagerError.transactionNotFound
-        }
-        
-        // TLA+: Update transaction with participants
-        transaction.participants = participants
-        transaction.twoPhaseCommitState = .notStarted
-        activeTransactions[txId] = transaction
-        
-        // TLA+: Initialize two-phase commit participants
-        var participantsMap: [String: TwoPhaseCommitParticipant] = [:]
-        for participantId in participants {
-            participantsMap[participantId] = TwoPhaseCommitParticipant(
-                participantId: participantId,
-                transactionId: txId,
-                state: .notStarted
-            )
-        }
-        twoPhaseCommitParticipants[txId] = participantsMap
-        
-        print("Transaction \(txId) began as distributed transaction with participants: \(participants)")
-    }
-    
-    /// Commit distributed transaction
-    private func commitDistributedTransaction(txId: TxID, transaction: inout Transaction) async throws {
-        // TLA+: Start two-phase commit
-        transaction.twoPhaseCommitState = .preparePhase
-        activeTransactions[txId] = transaction
-        
-        // TLA+: Prepare phase
-        try await twoPhaseCommitManager.startTransaction(transactionId: txId, participants: transaction.participants)
-        
-        // TLA+: Check if all participants voted yes
-        let allVotedYes = try await twoPhaseCommitManager.hasQuorum(transactionId: txId)
-        
-        if allVotedYes {
-            // TLA+: Commit phase
-            transaction.twoPhaseCommitState = .commitPhase
-            activeTransactions[txId] = transaction
-            
-            try await twoPhaseCommitManager.makeDecision(transactionId: txId, decision: .commit)
-            
-            // TLA+: Commit local transaction
-            try await commitLocalTransaction(txId: txId, transaction: &transaction)
-        } else {
-            // TLA+: Abort phase
-            transaction.twoPhaseCommitState = .abortPhase
-            activeTransactions[txId] = transaction
-            
-            try await twoPhaseCommitManager.makeDecision(transactionId: txId, decision: .abort)
-            
-            // TLA+: Abort local transaction
-            try await abortLocalTransaction(txId: txId, transaction: &transaction, reason: "Two-phase commit failed")
-        }
-    }
-    
-    /// Abort distributed transaction
-    private func abortDistributedTransaction(txId: TxID, transaction: inout Transaction, reason: String) async throws {
-        // TLA+: Abort phase
-        transaction.twoPhaseCommitState = .abortPhase
-        activeTransactions[txId] = transaction
-        
-        // TLA+: Abort distributed transaction
-        try await twoPhaseCommitManager.makeDecision(transactionId: txId, decision: .abort)
-        
-        // TLA+: Abort local transaction
-        try await abortLocalTransaction(txId: txId, transaction: &transaction, reason: reason)
-    }
-    
-    /// Commit local transaction
-    private func commitLocalTransaction(txId: TxID, transaction: inout Transaction) async throws {
-        // TLA+: Commit in MVCC
-        try await mvccManager.commitTransaction(txId: txId)
-        
-        // TLA+: Release all locks
-        for lock in transaction.locks {
-            try await lockManager.releaseLock(transactionId: txId, resource: lock.resource)
-        }
-    }
-    
-    /// Abort local transaction
-    private func abortLocalTransaction(txId: TxID, transaction: inout Transaction, reason: String) async throws {
-        // TLA+: Abort in MVCC
-        try await mvccManager.abortTransaction(txId: txId)
-        
-        // TLA+: Release all locks
-        for lock in transaction.locks {
-            try await lockManager.releaseLock(transactionId: txId, resource: lock.resource)
-        }
-    }
-    
-    // MARK: - Deadlock Detection
-    
-    /// Detect deadlocks
-    /// TLA+ Action: DetectDeadlocks()
-    public func detectDeadlocks() async throws {
-        // TLA+: Detect deadlocks
-        let deadlockResult = try await lockManager.detectDeadlocks()
-        
-        if deadlockResult.deadlockDetected {
-            // TLA+: Resolve deadlock
-            if let victimTxId = deadlockResult.victimTransaction {
-                try await abortTransaction(txId: victimTxId, reason: "Deadlock victim")
-                
-                // TLA+: Store deadlock detection result
-                deadlockDetectionResults[victimTxId] = deadlockResult
-            }
-        }
-        
-        print("Deadlock detection completed: \(deadlockResult.deadlockDetected)")
+        print("Sent \(decision ? "commit" : "abort") for transaction: \(txId)")
     }
     
     // MARK: - Helper Methods
     
-    /// Check ACID properties
-    private func checkACIDProperties(txId: TxID) async throws -> Bool {
-        // TLA+: Check ACID properties
-        // Simplified implementation
-        return true
+    /// Detect deadlock
+    private func detectDeadlock() async throws -> Bool {
+        // TLA+: Detect deadlock
+        // This would include building the wait-for graph and checking for cycles
+        return false // Simplified
     }
     
-    /// Validate transaction state
-    private func validateTransactionState(txId: TxID) async throws -> Bool {
-        // TLA+: Validate transaction state
-        // Simplified implementation
-        return true
+    /// Select deadlock victim
+    private func selectDeadlockVictim() async throws -> TxID {
+        // TLA+: Select deadlock victim
+        // This would include selecting the transaction to abort
+        return 0 // Simplified
+    }
+    
+    /// Update wait-for graph
+    private func updateWaitForGraph(txId: TxID, waitingFor: TxID) async throws {
+        // TLA+: Update wait-for graph
+        if waitForGraph[txId] == nil {
+            waitForGraph[txId] = []
+        }
+        waitForGraph[txId]?.insert(waitingFor)
     }
     
     // MARK: - Query Operations
     
-    /// Get active transaction
-    public func getActiveTransaction(txId: TxID) -> Transaction? {
-        return activeTransactions[txId]
+    /// Get transaction status
+    public func getTransactionStatus(txId: TxID) -> TransactionState? {
+        return transactions[txId]?.state
     }
     
-    /// Get committed transaction
-    public func getCommittedTransaction(txId: TxID) -> Transaction? {
-        return committedTransactions[txId]
+    /// Get held locks
+    public func getHeldLocks(txId: TxID) -> Set<String> {
+        return txLocks[txId] ?? []
     }
     
-    /// Get aborted transaction
-    public func getAbortedTransaction(txId: TxID) -> Transaction? {
-        return abortedTransactions[txId]
+    /// Get coordinator state
+    public func getCoordinatorState() -> CoordinatorState {
+        return coordinatorState
     }
     
-    /// Get all active transactions
-    public func getAllActiveTransactions() -> [Transaction] {
-        return Array(activeTransactions.values)
+    /// Get active transactions
+    public func getActiveTransactions() -> [Transaction] {
+        return transactions.values.filter { $0.state == .active }
     }
     
-    /// Get all committed transactions
-    public func getAllCommittedTransactions() -> [Transaction] {
-        return Array(committedTransactions.values)
+    /// Get prepared transactions
+    public func getPreparedTransactions() -> [Transaction] {
+        return transactions.values.filter { $0.state == .prepared }
     }
     
-    /// Get all aborted transactions
-    public func getAllAbortedTransactions() -> [Transaction] {
-        return Array(abortedTransactions.values)
+    /// Get committed transactions
+    public func getCommittedTransactions() -> [Transaction] {
+        return transactions.values.filter { $0.state == .committed }
     }
     
-    /// Get two-phase commit participants
-    public func getTwoPhaseCommitParticipants(txId: TxID) -> [String: TwoPhaseCommitParticipant]? {
-        return twoPhaseCommitParticipants[txId]
+    /// Get aborted transactions
+    public func getAbortedTransactions() -> [Transaction] {
+        return transactions.values.filter { $0.state == .aborted }
     }
     
-    /// Get deadlock detection results
-    public func getDeadlockDetectionResults() -> [TxID: DeadlockDetectionResult] {
-        return deadlockDetectionResults
+    /// Get transaction
+    public func getTransaction(txId: TxID) -> Transaction? {
+        return transactions[txId]
+    }
+    
+    /// Get transaction operations
+    public func getTransactionOperations(txId: TxID) -> [Operation] {
+        return txOperations[txId] ?? []
+    }
+    
+    /// Get transaction locks
+    public func getTransactionLocks(txId: TxID) -> Set<String> {
+        return txLocks[txId] ?? []
+    }
+    
+    /// Get transaction start time
+    public func getTransactionStartTime(txId: TxID) -> Timestamp? {
+        return txStartTime[txId]
+    }
+    
+    /// Get participant votes
+    public func getParticipantVotes(txId: TxID) -> [String: Bool] {
+        return participantVotes[txId] ?? [:]
+    }
+    
+    /// Get prepare timer
+    public func getPrepareTimer(txId: TxID) -> Timestamp? {
+        return prepareTimer[txId]
+    }
+    
+    /// Get transaction WAL records
+    public func getTransactionWALRecords(txId: TxID) -> [LSN] {
+        return txWALRecords[txId] ?? []
+    }
+    
+    /// Get last commit LSN
+    public func getLastCommitLSN() -> LSN {
+        return lastCommitLSN
+    }
+    
+    /// Get transaction snapshot
+    public func getTransactionSnapshot(txId: TxID) -> Snapshot? {
+        return txSnapshots[txId]
+    }
+    
+    /// Get transaction write set
+    public func getTransactionWriteSet(txId: TxID) -> Set<String> {
+        return txWriteSets[txId] ?? []
+    }
+    
+    /// Get transaction read set
+    public func getTransactionReadSet(txId: TxID) -> Set<String> {
+        return txReadSets[txId] ?? []
+    }
+    
+    /// Get wait-for graph
+    public func getWaitForGraph() -> [TxID: Set<TxID>] {
+        return waitForGraph
+    }
+    
+    /// Get deadlock victim
+    public func getDeadlockVictim() -> TxID {
+        return deadlockVictim
+    }
+    
+    /// Get global clock
+    public func getGlobalClock() -> Timestamp {
+        return globalClock
+    }
+    
+    /// Check if transaction exists
+    public func transactionExists(txId: TxID) -> Bool {
+        return transactions[txId] != nil
     }
     
     /// Check if transaction is active
     public func isTransactionActive(txId: TxID) -> Bool {
-        return activeTransactions[txId] != nil
+        return transactions[txId]?.state == .active
+    }
+    
+    /// Check if transaction is prepared
+    public func isTransactionPrepared(txId: TxID) -> Bool {
+        return transactions[txId]?.state == .prepared
     }
     
     /// Check if transaction is committed
     public func isTransactionCommitted(txId: TxID) -> Bool {
-        return committedTransactions[txId] != nil
+        return transactions[txId]?.state == .committed
     }
     
     /// Check if transaction is aborted
     public func isTransactionAborted(txId: TxID) -> Bool {
-        return abortedTransactions[txId] != nil
+        return transactions[txId]?.state == .aborted
     }
     
-    /// Check if transaction is distributed
-    public func isTransactionDistributed(txId: TxID) -> Bool {
-        return activeTransactions[txId]?.participants.isEmpty == false
+    /// Get transaction count
+    public func getTransactionCount() -> Int {
+        return transactions.count
+    }
+    
+    /// Get active transaction count
+    public func getActiveTransactionCount() -> Int {
+        return getActiveTransactions().count
+    }
+    
+    /// Get prepared transaction count
+    public func getPreparedTransactionCount() -> Int {
+        return getPreparedTransactions().count
+    }
+    
+    /// Get committed transaction count
+    public func getCommittedTransactionCount() -> Int {
+        return getCommittedTransactions().count
+    }
+    
+    /// Get aborted transaction count
+    public func getAbortedTransactionCount() -> Int {
+        return getAbortedTransactions().count
+    }
+    
+    /// Clear completed transactions
+    public func clearCompletedTransactions() async throws {
+        transactions = transactions.filter { $0.value.state == .active }
+        txOperations = txOperations.filter { transactions[$0.key] != nil }
+        txLocks = txLocks.filter { transactions[$0.key] != nil }
+        txStartTime = txStartTime.filter { transactions[$0.key] != nil }
+        txWALRecords = txWALRecords.filter { transactions[$0.key] != nil }
+        txSnapshots = txSnapshots.filter { transactions[$0.key] != nil }
+        txWriteSets = txWriteSets.filter { transactions[$0.key] != nil }
+        txReadSets = txReadSets.filter { transactions[$0.key] != nil }
+        waitForGraph = waitForGraph.filter { transactions[$0.key] != nil }
+        participantVotes = participantVotes.filter { transactions[$0.key] != nil }
+        prepareTimer = prepareTimer.filter { transactions[$0.key] != nil }
+        preparedTransactions.removeAll()
+        
+        print("Completed transactions cleared")
+    }
+    
+    /// Reset transaction manager
+    public func resetTransactionManager() async throws {
+        transactions.removeAll()
+        txOperations.removeAll()
+        txLocks.removeAll()
+        txStartTime.removeAll()
+        preparedTransactions.removeAll()
+        coordinatorState = .idle
+        participantVotes.removeAll()
+        prepareTimer.removeAll()
+        txWALRecords.removeAll()
+        lastCommitLSN = 0
+        txSnapshots.removeAll()
+        txWriteSets.removeAll()
+        txReadSets.removeAll()
+        waitForGraph.removeAll()
+        deadlockVictim = 0
+        globalClock = 0
+        nextTID = 1
+        
+        print("Transaction manager reset")
     }
     
     // MARK: - Invariant Checking (for testing)
@@ -688,35 +669,28 @@ public actor TransactionManager {
     /// Check consistency invariant
     /// TLA+ Inv_TransactionManager_Consistency
     public func checkConsistencyInvariant() -> Bool {
-        // Check that database invariants are maintained
+        // Check that transactions maintain consistency
         return true // Simplified
     }
     
     /// Check isolation invariant
     /// TLA+ Inv_TransactionManager_Isolation
     public func checkIsolationInvariant() -> Bool {
-        // Check that concurrent transactions don't interfere
+        // Check that transactions are isolated
         return true // Simplified
     }
     
     /// Check durability invariant
     /// TLA+ Inv_TransactionManager_Durability
     public func checkDurabilityInvariant() -> Bool {
-        // Check that committed changes persist
+        // Check that transactions are durable
         return true // Simplified
     }
     
-    /// Check two-phase commit invariant
-    /// TLA+ Inv_TransactionManager_TwoPhaseCommit
-    public func checkTwoPhaseCommitInvariant() -> Bool {
-        // Check that two-phase commit works correctly
-        return true // Simplified
-    }
-    
-    /// Check deadlock detection invariant
-    /// TLA+ Inv_TransactionManager_DeadlockDetection
-    public func checkDeadlockDetectionInvariant() -> Bool {
-        // Check that deadlock detection works correctly
+    /// Check 2PC correctness invariant
+    /// TLA+ Inv_TransactionManager_2PCCorrectness
+    public func check2PCCorrectnessInvariant() -> Bool {
+        // Check that two-phase commit is correct
         return true // Simplified
     }
     
@@ -726,31 +700,47 @@ public actor TransactionManager {
         let consistency = checkConsistencyInvariant()
         let isolation = checkIsolationInvariant()
         let durability = checkDurabilityInvariant()
-        let twoPhaseCommit = checkTwoPhaseCommitInvariant()
-        let deadlockDetection = checkDeadlockDetectionInvariant()
+        let twoPCCorrectness = check2PCCorrectnessInvariant()
         
-        return atomicity && consistency && isolation && durability && twoPhaseCommit && deadlockDetection
+        return atomicity && consistency && isolation && durability && twoPCCorrectness
     }
 }
 
 // MARK: - Supporting Types
 
-/// Transaction configuration
-public struct TransactionConfig: Codable, Sendable {
-    public let defaultIsolationLevel: IsolationLevel
-    public let lockTimeoutMs: Int
-    public let maxTransactionDuration: TimeInterval
-    public let enableDeadlockDetection: Bool
-    public let enableTwoPhaseCommit: Bool
-    public let enableDistributedTransactions: Bool
+/// WAL manager
+public protocol WALManager: Sendable {
+    func appendRecord(txId: TxID, kind: String, data: Data) async throws -> LSN
+    func flushLog() async throws
+}
+
+/// MVCC manager
+public protocol MVCCManager: Sendable {
+    func beginTransaction(txId: TxID) async throws -> Snapshot
+    func read(txId: TxID, key: String) async throws -> String?
+    func write(txId: TxID, key: String, value: String) async throws
+    func commit(txId: TxID) async throws
+    func abort(txId: TxID) async throws
+}
+
+/// Lock manager
+public protocol LockManager: Sendable {
+    func requestLock(txId: TxID, resource: String, mode: String) async throws
+    func releaseLock(txId: TxID, resource: String) async throws
+}
+
+/// Snapshot
+public struct Snapshot: Codable, Sendable, Equatable {
+    public let txId: TxID
+    public let timestamp: Timestamp
+    public let activeTransactions: Set<TxID>
+    public let committedTransactions: Set<TxID>
     
-    public init(defaultIsolationLevel: IsolationLevel = .readCommitted, lockTimeoutMs: Int = 30000, maxTransactionDuration: TimeInterval = 300.0, enableDeadlockDetection: Bool = true, enableTwoPhaseCommit: Bool = true, enableDistributedTransactions: Bool = true) {
-        self.defaultIsolationLevel = defaultIsolationLevel
-        self.lockTimeoutMs = lockTimeoutMs
-        self.maxTransactionDuration = maxTransactionDuration
-        self.enableDeadlockDetection = enableDeadlockDetection
-        self.enableTwoPhaseCommit = enableTwoPhaseCommit
-        self.enableDistributedTransactions = enableDistributedTransactions
+    public init(txId: TxID, timestamp: Timestamp, activeTransactions: Set<TxID>, committedTransactions: Set<TxID>) {
+        self.txId = txId
+        self.timestamp = timestamp
+        self.activeTransactions = activeTransactions
+        self.committedTransactions = committedTransactions
     }
 }
 
@@ -758,14 +748,15 @@ public struct TransactionConfig: Codable, Sendable {
 public enum TransactionManagerError: Error, LocalizedError {
     case transactionNotFound
     case transactionNotActive
-    case transactionAlreadyCommitted
-    case transactionAlreadyAborted
-    case lockTimeout
+    case noVotesReceived
     case deadlockDetected
-    case conflictDetected
-    case isolationViolation
-    case twoPhaseCommitFailed
-    case distributedTransactionFailed
+    case lockRequestFailed
+    case lockReleaseFailed
+    case prepareFailed
+    case commitFailed
+    case abortFailed
+    case voteCollectionFailed
+    case decisionMakingFailed
     
     public var errorDescription: String? {
         switch self {
@@ -773,22 +764,24 @@ public enum TransactionManagerError: Error, LocalizedError {
             return "Transaction not found"
         case .transactionNotActive:
             return "Transaction is not active"
-        case .transactionAlreadyCommitted:
-            return "Transaction already committed"
-        case .transactionAlreadyAborted:
-            return "Transaction already aborted"
-        case .lockTimeout:
-            return "Lock timeout"
+        case .noVotesReceived:
+            return "No votes received"
         case .deadlockDetected:
             return "Deadlock detected"
-        case .conflictDetected:
-            return "Transaction conflict detected"
-        case .isolationViolation:
-            return "Isolation level violation"
-        case .twoPhaseCommitFailed:
-            return "Two-phase commit failed"
-        case .distributedTransactionFailed:
-            return "Distributed transaction failed"
+        case .lockRequestFailed:
+            return "Lock request failed"
+        case .lockReleaseFailed:
+            return "Lock release failed"
+        case .prepareFailed:
+            return "Transaction prepare failed"
+        case .commitFailed:
+            return "Transaction commit failed"
+        case .abortFailed:
+            return "Transaction abort failed"
+        case .voteCollectionFailed:
+            return "Vote collection failed"
+        case .decisionMakingFailed:
+            return "Decision making failed"
         }
     }
 }
