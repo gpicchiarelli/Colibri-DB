@@ -556,8 +556,8 @@ public protocol SQLProcessorQueryPlanner: Sendable {
     func generatePlan(queryId: String, query: String) async throws -> QueryPlan
 }
 
-/// Query executor
-public protocol QueryExecutor: Sendable {
+/// SQL processor query executor
+public protocol SQLProcessorQueryExecutor: Sendable {
     func executeQuery(statement: SQLStatement, plan: QueryPlan) async throws -> ExecutionResult
 }
 
