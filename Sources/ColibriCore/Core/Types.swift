@@ -160,7 +160,7 @@ public enum IsolationLevel: String, Codable, Sendable {
 
 /// Lock modes for concurrency control
 /// Corresponds to TLA+: CoreLockMode == {"S", "X"}
-public enum CoreCoreLockMode: String, Codable, Sendable {
+public enum CoreLockMode: String, Codable, Sendable {
     case shared = "S"
     case exclusive = "X"
     case intentShared = "IS"
@@ -342,6 +342,7 @@ public enum DBError: Error, Sendable {
     case notNullViolation
     case ioError(String)
     case internalError(String)
+    case custom(String)
 }
 
 // MARK: - Result Type

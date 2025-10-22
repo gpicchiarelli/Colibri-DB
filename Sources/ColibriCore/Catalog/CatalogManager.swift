@@ -76,6 +76,13 @@ public struct ForeignKeyReference: Codable, Sendable, Equatable {
     }
 }
 
+/// Constraint type
+public enum ConstraintType: String, Codable, Sendable {
+    case check = "check"
+    case unique = "unique"
+    case notNull = "not_null"
+}
+
 /// Constraint metadata
 public struct ConstraintMetadata: Codable, Sendable, Equatable {
     public let type: ConstraintType

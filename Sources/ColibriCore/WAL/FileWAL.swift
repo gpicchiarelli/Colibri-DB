@@ -149,7 +149,7 @@ public actor FileWAL {
         nextLSN += 1
         
         // Check if we need group commit flush (size-based)
-        if pendingRecords.count >= config.threshold {
+        if pendingRecords.count >= config.maxBatchSize {
             try flush()
         }
         
@@ -190,6 +190,11 @@ public actor FileWAL {
         
         // Reset group commit timer
         groupCommitTimer = 0
+    }
+    
+    /// Flush all pending records to disk (async version)
+    public func flush() async throws {
+        try flush()
     }
     
     /// Apply a WAL record to data pages (write page to disk)
