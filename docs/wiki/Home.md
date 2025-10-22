@@ -10,45 +10,45 @@ Colibrì DB è un database relazionale moderno e performante progettato specific
 
 ## 🚀 Inizia Subito
 
-- **[Quick Start](/wiki/Quick-Start.html)** - Installa e configura Colibrì DB in 5 minuti
-- **[Architettura](/architecture.html)** - Scopri come funziona internamente
-- **[API Reference](/wiki/API-Reference.html)** - Documentazione completa delle API
+- **[Quick Start](Quick-Start.md)** - Installa e configura Colibrì DB in 5 minuti
+- **[Architettura](Architecture.md)** - Scopri come funziona internamente
+- **[API Reference](API-Reference.md)** - Documentazione completa delle API
 
 ## 📚 Documentazione
 
 ### Fondamenti
-- **[Relational Principles](/wiki/Part-01-Foundations/01-Relational-Principles.html)** - Principi del modello relazionale
-- **[SQL Algebra](/wiki/Part-01-Foundations/02-Algebra-SQL.html)** - Algebra relazionale e SQL
-- **[Transaction Theory](/wiki/Part-01-Foundations/03-Transactions-Theory.html)** - Teoria delle transazioni ACID
-- **[Storage Principles](/wiki/Part-01-Foundations/04-Storage-Principles.html)** - Principi di storage e persistenza
+- **[Relational Principles](Part-01-Foundations/01-Relational-Principles.md)** - Principi del modello relazionale
+- **[SQL Algebra](Part-01-Foundations/02-Algebra-SQL.md)** - Algebra relazionale e SQL
+- **[Transaction Theory](Part-01-Foundations/03-Transactions-Theory.md)** - Teoria delle transazioni ACID
+- **[Storage Principles](Part-01-Foundations/04-Storage-Principles.md)** - Principi di storage e persistenza
 
 ### Core Engine
-- **[WAL and Recovery](/wiki/Part-02-Core-Engine/01-WAL-and-Recovery.html)** - Write-Ahead Log e recovery
-- **[Buffer Pool](/wiki/Part-02-Core-Engine/02-BufferPool.html)** - Gestione della memoria
-- **[Heap Storage](/wiki/Part-02-Core-Engine/03-Heap-Storage.html)** - Storage su heap
-- **[B-Tree Indexes](/wiki/Part-02-Core-Engine/04-BTree-Indexes.html)** - Indici B-Tree
-- **[MVCC Concurrency](/wiki/Part-02-Core-Engine/05-MVCC-Concurrency.html)** - Controllo concorrenza MVCC
+- **[WAL and Recovery](Part-02-Core-Engine/01-WAL-and-Recovery.md)** - Write-Ahead Log e recovery
+- **[Buffer Pool](Part-02-Core-Engine/02-BufferPool.md)** - Gestione della memoria
+- **[Heap Storage](Part-02-Core-Engine/03-Heap-Storage.md)** - Storage su heap
+- **[B-Tree Indexes](Part-02-Core-Engine/04-BTree-Indexes.md)** - Indici B-Tree
+- **[MVCC Concurrency](Part-02-Core-Engine/05-MVCC-Concurrency.md)** - Controllo concorrenza MVCC
 
 ### Query Processing
-- **[SQL Parser](/wiki/Part-03-Query/01-SQL-Parser.html)** - Parsing delle query SQL
-- **[Logical Planning](/wiki/Part-03-Query/02-Logical-Planning.html)** - Pianificazione logica
-- **[Physical Planning](/wiki/Part-03-Query/03-Physical-Planning.html)** - Pianificazione fisica
-- **[Execution Engine](/wiki/Part-03-Query/04-Execution-Engine.html)** - Motore di esecuzione
-- **[Advanced Features](/wiki/Part-03-Query/05-Advanced-Features.html)** - Funzionalità avanzate
+- **[SQL Parser](Part-03-Query/01-SQL-Parser.md)** - Parsing delle query SQL
+- **[Logical Planning](Part-03-Query/02-Logical-Planning.md)** - Pianificazione logica
+- **[Physical Planning](Part-03-Query/03-Physical-Planning.md)** - Pianificazione fisica
+- **[Execution Engine](Part-03-Query/04-Execution-Engine.md)** - Motore di esecuzione
+- **[Advanced Features](Part-03-Query/05-Advanced-Features.md)** - Funzionalità avanzate
 
 ### Metadata e Server
-- **[Metadata Management](/wiki/Part-04-Metadata/)** - Gestione metadati
-- **[Server Architecture](/wiki/Part-05-Server/)** - Architettura del server
+- **[Metadata Management](Part-04-Metadata/)** - Gestione metadati
+- **[Server Architecture](Part-05-Server/)** - Architettura del server
 
 ### Tooling e Testing
-- **[Development Tools](/wiki/Part-06-Tooling/)** - Strumenti di sviluppo
-- **[Testing Framework](/wiki/Part-07-Testing/)** - Framework di testing
+- **[Development Tools](Part-06-Tooling/)** - Strumenti di sviluppo
+- **[Testing Framework](Part-07-Testing/)** - Framework di testing
 
 ## 🔬 Specifiche Formali
 
 Colibrì DB utilizza specifiche TLA+ per verificare formalmente le proprietà di sicurezza e liveness:
 
-- **[Specifiche TLA+](/tla-specifications.html)** - Panoramica delle specifiche formali
+- **[Specifiche TLA+](../tla-specifications.html)** - Panoramica delle specifiche formali
 - **[WAL Specification](/spec/WAL.tla)** - Specifica del Write-Ahead Log
 - **[Consensus Protocol](/spec/ConsensusProtocol.tla)** - Protocollo di consenso Raft
 - **[Two-Phase Commit](/spec/TwoPhaseCommit.tla)** - Commit distribuito

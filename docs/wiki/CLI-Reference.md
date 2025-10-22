@@ -802,6 +802,6 @@ colibridb> \commit
 
 **🔧 CLI Reference Colibrì DB** - *Comandi completi per gestire il database*
 
-[← Configurazione]({{ site.baseurl }}/wiki/Configuration) • [API Reference →]({{ site.baseurl }}/wiki/API-Reference)
+[← Configurazione](Configuration.md) • [API Reference →](API-Reference.md)
 
 </div>

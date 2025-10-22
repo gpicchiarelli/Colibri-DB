@@ -42,3 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - File-backed heap storage (insert/scan) and minimal WAL
 - Persistent index catalog and recovery
 - Aligned documentation (README, index docs, storage/indexes/WAL/concurrency modules, CLI guide)
+
+### Changed
+- Improved documentation structure and consistency
+- Enhanced code formatting and linting
+
+### Fixed
+- Resolved duplicate content in markdown files
+- Fixed inconsistent formatting across documentation

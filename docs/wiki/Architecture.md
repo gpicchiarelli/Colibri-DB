@@ -320,10 +320,10 @@ colibri_active_transactions 42
 
 Per maggiori dettagli sui singoli componenti:
 
-- **[WAL & Recovery]({{ '/wiki/Part-02-Core-Engine/01-WAL-and-Recovery' | relative_url }})** - Sistema di logging e recovery
-- **[Buffer Pool]({{ '/wiki/Part-02-Core-Engine/02-BufferPool' | relative_url }})** - Gestione cache e memoria
-- **[B+Tree Indexes]({{ '/wiki/Part-02-Core-Engine/04-BTree-Indexes' | relative_url }})** - Implementazione indici
-- **[MVCC]({{ '/wiki/Part-02-Core-Engine/05-MVCC-Concurrency' | relative_url }})** - Controllo concorrenza
+- **[WAL & Recovery](Part-02-Core-Engine/01-WAL-and-Recovery.md)** - Sistema di logging e recovery
+- **[Buffer Pool](Part-02-Core-Engine/02-BufferPool.md)** - Gestione cache e memoria
+- **[B+Tree Indexes](Part-02-Core-Engine/04-BTree-Indexes.md)** - Implementazione indici
+- **[MVCC](Part-02-Core-Engine/05-MVCC-Concurrency.md)** - Controllo concorrenza
 
 <div class="alert alert-info">
 <strong>💡 Nota:</strong> L'architettura di Colibrì DB è in continua evoluzione. Consulta regolarmente la documentazione per gli aggiornamenti più recenti.

@@ -208,9 +208,9 @@ SELECT * FROM demo;"></textarea>
 
 ## 📚 Prossimi Passi
 
-- **[API Reference]({{ '/wiki/API-Reference' | relative_url }})** - Documentazione completa API
-- **[Performance]({{ '/wiki/Performance' | relative_url }})** - Ottimizzazione e tuning
-- **[Troubleshooting]({{ '/wiki/Troubleshooting' | relative_url }})** - Risoluzione problemi
+- **[API Reference](API-Reference.md)** - Documentazione completa API
+- **[Performance](Performance.md)** - Ottimizzazione e tuning
+- **[Troubleshooting](Troubleshooting.md)** - Risoluzione problemi
 
 <script>
 function executeSQL() {

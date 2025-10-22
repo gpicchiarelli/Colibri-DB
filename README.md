@@ -3,7 +3,6 @@
 > **Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2 con verifica formale TLA+**
 
 **ColibrìDB** è un database relazionale completo implementato in Swift 6.2 con verifica formale TLA+. Il progetto combina rigorosità accademica con implementazione pratica, offrendo un RDBMS production-ready con 69 specifiche TLA+ formali e oltre 15.000 linee di codice Swift.
-=======
 [![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/ci.yml?branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibri-DB/actions/workflows/ci.yml)
 [![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/codeql.yml?label=CodeQL&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibri-DB/actions/workflows/codeql.yml)
 ![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg?style=flat-square)
