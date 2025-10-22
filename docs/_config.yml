@@ -1,15 +1,24 @@
 # Colibrì DB Documentation Site Configuration
+# Optimized for GitHub Pages
 
 # Site settings
 title: "Colibrì DB"
-description: "RDBMS sperimentale ad alte prestazioni per macOS con architettura modulare e verifiche formali complete"
-baseurl: ""
+description: "RDBMS professionale per macOS con architettura modulare e verifiche formali complete"
+baseurl: "/Colibri-DB"  # Nome del repository
 url: "https://gpicchiarelli.github.io"
 
 # Build settings
 markdown: kramdown
 highlighter: rouge
 theme: minima
+
+# GitHub Pages specific settings
+github: [metadata]
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+  - jekyll-github-metadata
 
 # Collections
 collections:
@@ -30,12 +39,6 @@ defaults:
     values:
       layout: "doc"
 
-# Plugins
-plugins:
-  - jekyll-feed
-  - jekyll-sitemap
-  - jekyll-seo-tag
-
 # SEO
 author: "Colibrì DB Team"
 twitter:
@@ -48,22 +51,6 @@ social:
   links:
     - https://github.com/gpicchiarelli/Colibri-DB
 
-# Navigation
-navigation:
-  - title: "Home"
-    url: "/"
-  - title: "Architecture"
-    url: "/architecture"
-  - title: "TLA+ Specifications"
-    url: "/tla-specifications"
-  - title: "Quick Start"
-    url: "/wiki/Quick-Start/"
-  - title: "API Reference"
-    url: "/wiki/API-Reference/"
-  - title: "GitHub"
-    url: "https://github.com/gpicchiarelli/Colibri-DB"
-    external: true
-
 # Exclude from build
 exclude:
   - Gemfile
@@ -73,6 +60,9 @@ exclude:
   - node_modules/
   - package.json
   - package-lock.json
+  - .gitignore
+  - .git/
+  - .github/
 
 # Include in build
 include:
@@ -100,3 +90,6 @@ kramdown:
 # Rouge syntax highlighting
 rouge:
   theme: github
+
+# Jekyll 4.0+ compatibility
+timezone: UTC

@@ -1,216 +1,137 @@
-# Colibrì DB Documentation Site
+# Colibrì DB Documentation
 
-Sito web moderno per la documentazione di Colibrì DB, un RDBMS sperimentale ad alte prestazioni per macOS.
+Questo è il sito di documentazione per Colibrì DB, un RDBMS professionale per macOS scritto in Swift 6.2.
 
-## 🚀 Caratteristiche
+## 🚀 Quick Start
 
-- **Design Moderno**: Interfaccia ispirata ad Apple e GitHub con design system coerente
-- **Responsive**: Ottimizzato per desktop, tablet e mobile
-- **Performance**: Caricamento veloce con CSS ottimizzato e font system
-- **SEO**: Meta tag completi e struttura semantica
-- **Accessibilità**: Controlli di accessibilità e navigazione keyboard-friendly
+Il sito è configurato per funzionare con GitHub Pages e Jekyll.
 
-## 📁 Struttura
+### Sviluppo Locale
+
+```bash
+# Installa le dipendenze
+bundle install
+
+# Avvia il server di sviluppo
+bundle exec jekyll serve
+
+# Il sito sarà disponibile su http://localhost:4000
+```
+
+### Build per Produzione
+
+```bash
+# Build del sito
+bundle exec jekyll build
+
+# I file generati saranno nella cartella _site/
+```
+
+## 📁 Struttura del Sito
 
 ```
 docs/
-├── _config.yml              # Configurazione Jekyll
-├── _layouts/
-│   └── default.html         # Layout principale
-├── index.html               # Homepage
-├── architecture.html        # Pagina architettura
-├── tla-specifications.html  # Pagina specifiche TLA+
-├── wiki/                    # Documentazione wiki
-└── README.md               # Questo file
+├── _config.yml          # Configurazione Jekyll
+├── _layouts/            # Layout HTML
+│   ├── default.html     # Layout principale
+│   └── doc.html         # Layout per documentazione
+├── _includes/           # Include HTML riutilizzabili
+├── assets/              # CSS, JS, immagini
+│   └── css/
+│       └── main.css     # Stili principali
+├── wiki/                # Documentazione wiki
+├── index.html           # Homepage
+├── architecture.html    # Pagina architettura
+├── tla-specifications.html # Specifiche TLA+
+└── Gemfile             # Dipendenze Ruby
 ```
 
 ## 🎨 Design System
 
-### Colori
-- **Primary**: #000000 (Nero)
-- **Secondary**: #007AFF (Blu Apple)
-- **Accent**: #FF6B35 (Arancione)
-- **Success**: #34C759 (Verde)
-- **Warning**: #FF9500 (Arancione)
-- **Error**: #FF3B30 (Rosso)
+Il sito utilizza un design system moderno con:
 
-### Tipografia
-- **Font System**: -apple-system, BlinkMacSystemFont, 'SF Pro Display'
-- **Font Mono**: 'SF Mono', Monaco, 'Cascadia Code'
+- **Colori**: Palette professionale con primary, secondary, accent
+- **Tipografia**: Inter per testi, JetBrains Mono per codice
+- **Layout**: Grid system responsive
+- **Componenti**: Card, bottoni, sezioni modulari
+- **Animazioni**: Transizioni fluide e micro-interazioni
 
-### Spacing
-- **xs**: 0.25rem
-- **sm**: 0.5rem
-- **md**: 1rem
-- **lg**: 1.5rem
-- **xl**: 2rem
-- **2xl**: 3rem
-- **3xl**: 4rem
-- **4xl**: 6rem
+## 🔧 Configurazione
 
-## 📱 Pagine
+### GitHub Pages
 
-### Homepage (`index.html`)
-- Hero section con call-to-action
-- Caratteristiche principali del database
-- Architettura modulare
-- Moduli implementati
-- Quick start con esempi di codice
-- Performance target
-- Call-to-action finale
+Il sito è configurato per funzionare automaticamente con GitHub Pages:
 
-### Architettura (`architecture.html`)
-- Panoramica architettura a livelli
-- Diagramma modulare interattivo
-- Specifiche TLA+ complete
-- Dettagli moduli con esempi di codice
-- Tab interattivi per ogni modulo
+1. Push del codice su GitHub
+2. Abilita GitHub Pages nelle impostazioni del repository
+3. Seleziona "Deploy from a branch" e scegli `main` / `docs`
+4. Il sito sarà disponibile su `https://gpicchiarelli.github.io/Colibri-DB`
 
-### TLA+ Specifications (`tla-specifications.html`)
-- Statistiche verifiche formali
-- Grid moduli TLA+ con status
-- Esempi di codice TLA+
-- Risultati verifica TLC
-- Invarianti e proprietà di liveness
+### Variabili d'Ambiente
 
-## 🛠️ Sviluppo
-
-### Prerequisiti
-- Ruby 2.7+
-- Jekyll 4.0+
-- Bundler
-
-### Installazione
-```bash
-# Clona il repository
-git clone https://github.com/gpicchiarelli/Colibri-DB.git
-cd Colibri-DB/docs
-
-# Installa dipendenze
-bundle install
-
-# Avvia server locale
-bundle exec jekyll serve
-
-# Apri http://localhost:4000
-```
-
-### Build Produzione
-```bash
-# Build per produzione
-bundle exec jekyll build
-
-# Output in _site/
-```
+- `baseurl`: `/Colibri-DB` (nome del repository)
+- `url`: `https://gpicchiarelli.github.io`
 
 ## 📝 Contenuti
 
-### Moduli Documentati
-1. **Schema Evolution** - Gestione evoluzione schema
-2. **Statistics Maintenance** - Aggiornamento statistiche
-3. **Connection Pooling** - Gestione pool connessioni
-4. **Memory Management** - Gestione memoria avanzata
-5. **Compression** - Compressione dati
-6. **Monitoring** - Sistema di monitoraggio
-7. **Backup & Restore** - Sistema backup completo
-8. **Point-in-Time Recovery** - Recovery temporale
+### Aggiungere Nuove Pagine
 
-### Specifiche TLA+
-- 149 specifiche TLA+ complete
-- Invarianti di sicurezza verificate
-- Proprietà di liveness garantite
-- Model checking automatico con TLC
+1. Crea un file `.html` o `.md` nella root di `docs/`
+2. Aggiungi il front matter YAML:
 
-## 🎯 Obiettivi
+```yaml
+---
+layout: default
+title: "Titolo Pagina"
+description: "Descrizione per SEO"
+---
+```
 
-### Performance
-- Caricamento < 2 secondi
-- Lighthouse Score > 90
-- Core Web Vitals ottimali
+### Aggiungere Documentazione Wiki
 
-### SEO
-- Meta tag completi
-- Struttura semantica
-- Sitemap automatica
-- Open Graph tags
-
-### Accessibilità
-- WCAG 2.1 AA compliance
-- Navigazione keyboard
-- Screen reader friendly
-- Contrasto colori ottimale
-
-## 🔧 Personalizzazione
-
-### Aggiungere Pagine
-1. Crea file HTML in root
-2. Usa layout `default`
-3. Aggiungi navigazione in `_config.yml`
-
-### Modificare Stili
-1. Modifica CSS inline nelle pagine
-2. Per stili globali, aggiorna `_layouts/default.html`
-3. Usa variabili CSS per consistenza
-
-### Aggiungere Moduli
-1. Aggiungi card in `modules-grid`
-2. Crea sezione dettagli in `module-details`
-3. Aggiungi tab in `module-tabs`
-
-## 📊 Analytics
-
-Il sito è configurato per:
-- Google Analytics (se configurato)
-- Jekyll SEO Tag
-- Sitemap automatica
-- Feed RSS
+1. Crea un file `.md` nella cartella `wiki/`
+2. Il layout `doc` sarà applicato automaticamente
+3. I link funzioneranno come `/wiki/nome-pagina/`
 
 ## 🚀 Deploy
 
-### GitHub Pages
-```bash
-# Push su branch gh-pages
-git subtree push --prefix docs origin gh-pages
-```
+### Automatico (GitHub Pages)
 
-### Netlify
+Il deploy è automatico quando pushi su GitHub.
+
+### Manuale
+
 ```bash
-# Build command
+# Build
 bundle exec jekyll build
 
-# Publish directory
-_site
+# Upload della cartella _site/ al tuo server
 ```
 
-### Vercel
+## 🐛 Troubleshooting
+
+### Errori Comuni
+
+1. **CSS non caricato**: Verifica che `baseurl` sia corretto
+2. **Link non funzionanti**: Controlla i percorsi relativi
+3. **Jekyll non funziona**: Esegui `bundle install`
+
+### Debug
+
 ```bash
-# Build command
-bundle exec jekyll build
+# Build con debug
+bundle exec jekyll build --verbose
 
-# Output directory
-_site
+# Serve con debug
+bundle exec jekyll serve --verbose --trace
 ```
 
-## 📄 Licenza
+## 📚 Risorse
 
-Questo sito è parte del progetto Colibrì DB e segue la stessa licenza del progetto principale.
-
-## 🤝 Contribuire
-
-1. Fork del repository
-2. Crea branch per feature
-3. Modifica documentazione
-4. Testa localmente
-5. Crea pull request
-
-## 📞 Supporto
-
-- **Issues**: [GitHub Issues](https://github.com/gpicchiarelli/Colibri-DB/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/gpicchiarelli/Colibri-DB/discussions)
-- **Email**: support@colibridb.dev
+- [Jekyll Documentation](https://jekyllrb.com/docs/)
+- [GitHub Pages](https://pages.github.com/)
+- [Liquid Template Language](https://shopify.github.io/liquid/)
 
 ---
 
-**Autore**: Colibrì DB Team  
-**Data**: 2025-10-22  
-**Versione**: 1.0.0
+**Colibrì DB** - RDBMS professionale per macOS con verifiche formali complete.

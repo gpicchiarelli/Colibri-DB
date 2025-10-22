@@ -496,7 +496,7 @@ public actor QueryExecutor {
     
     // MARK: - Helper Methods
     
-    private func compareValues(_ v1: Value, _ v2: Value) -> Int {
+    private nonisolated func compareValues(_ v1: Value, _ v2: Value) -> Int {
         switch (v1, v2) {
         case (.int(let a), .int(let b)):
             return a < b ? -1 : (a > b ? 1 : 0)
