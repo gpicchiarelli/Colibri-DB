@@ -46,16 +46,7 @@ public enum ATTStatus: String, Codable {
 
 // MARK: - Active Transaction Table Entry
 
-/// Entry in Active Transaction Table (ATT)
-public struct ATTEntry: Codable {
-    public var lastLSN: UInt64
-    public var status: ATTStatus
-    
-    public init(lastLSN: UInt64, status: ATTStatus) {
-        self.lastLSN = lastLSN
-        self.status = status
-    }
-}
+// ATTEntry is defined in ARIESRecoveryManager.swift
 
 // MARK: - Undo Record
 
