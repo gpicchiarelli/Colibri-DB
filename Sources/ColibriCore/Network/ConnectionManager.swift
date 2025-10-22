@@ -86,8 +86,8 @@ public struct WorkerThread: Codable {
 
 // MARK: - Session
 
-/// Database session
-public struct Session: Codable {
+/// Database connection session
+public struct ConnectionSession: Codable {
     public let sid: Int
     public let connectionId: Int
     public var transactionId: Int?

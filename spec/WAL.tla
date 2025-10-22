@@ -229,7 +229,7 @@ Next ==
   \/ GroupCommitTimeout
   \/ TickGroupCommitTimer
   \/ \E pid \in ModifiablePages: ApplyToDataPage(pid)
-  \/ \E pid \in ModifiablePages, lsn \in LSN: UpdatePageLSN(pid, lsn)
+  \/ \E pid \in ModifiablePages, lsn \in LSNs: UpdatePageLSN(pid, lsn)
   \/ Checkpoint
   \/ Crash
   \/ Recover
@@ -251,7 +251,7 @@ Inv_WAL_LogBeforeData ==
 \* (Formalized: wal never shrinks, only grows)
 Inv_WAL_DurabilityInvariant ==
   \A i \in DOMAIN wal:
-    /\ wal[i].lsn \in LSN
+    /\ wal[i].lsn \in LSNs
     /\ i > 1 => wal[i].lsn > wal[i-1].lsn
 
 \* Invariant 3: Total Order of LSNs

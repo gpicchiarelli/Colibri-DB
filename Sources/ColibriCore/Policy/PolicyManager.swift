@@ -17,9 +17,9 @@ import Foundation
 
 // MARK: - Policy Types
 
-/// Policy type
+/// Policy manager policy type
 /// Corresponds to TLA+: PolicyType
-public enum PolicyType: String, Codable, Sendable, CaseIterable {
+public enum PolicyManagerPolicyType: String, Codable, Sendable, CaseIterable {
     case security = "security"
     case resource = "resource"
     case dataRetention = "dataRetention"
@@ -31,7 +31,7 @@ public enum PolicyType: String, Codable, Sendable, CaseIterable {
 /// Corresponds to TLA+: PolicyRule
 public struct PolicyRule: Codable, Sendable, Equatable {
     public let ruleId: String
-    public let policyType: PolicyType
+    public let policyType: PolicyManagerPolicyType
     public let name: String
     public let description: String
     public let condition: String
@@ -39,7 +39,7 @@ public struct PolicyRule: Codable, Sendable, Equatable {
     public let priority: Int
     public let isActive: Bool
     
-    public init(ruleId: String, policyType: PolicyType, name: String, description: String, condition: String, action: String, priority: Int, isActive: Bool) {
+    public init(ruleId: String, policyType: PolicyManagerPolicyType, name: String, description: String, condition: String, action: String, priority: Int, isActive: Bool) {
         self.ruleId = ruleId
         self.policyType = policyType
         self.name = name

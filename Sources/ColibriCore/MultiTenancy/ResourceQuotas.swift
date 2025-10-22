@@ -52,7 +52,7 @@ public actor ResourceQuotaManager {
     public func setQuota(database: String, quota: ResourceQuota) {
         quotas[database] = quota
         if usage[database] == nil {
-            usage[database] = ResourceUsage()
+            usage[database] = MultiTenancyResourceUsage()
         }
     }
     
@@ -107,7 +107,7 @@ public actor ResourceQuotaManager {
     }
     
     /// Release resource
-    public func release(database: String, resource: ResourceType, amount: Int) {
+    public func release(database: String, resource: MultiTenancyResourceType, amount: Int) {
         guard var currentUsage = usage[database] else {
             return
         }
@@ -128,7 +128,7 @@ public actor ResourceQuotaManager {
     }
     
     /// Get current usage
-    public func getUsage(database: String) -> ResourceUsage? {
+    public func getUsage(database: String) -> MultiTenancyResourceUsage? {
         return usage[database]
     }
 }

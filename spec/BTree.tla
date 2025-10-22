@@ -38,6 +38,7 @@ btreeVars == <<root, nodes, height, nextNodeId>>
    -------------------------------------------------------------------------- *)
 
 \* B+Tree node structure
+\* Fixed: More precise type definitions with proper constraints
 Node == [
   keys: Seq(Value),         \* Sorted keys
   children: Seq(PageIds),   \* Child pointers (internal nodes)

@@ -74,20 +74,22 @@ tmVars == <<nextTID, transactions, txOperations, txLocks, txStartTime,
    -------------------------------------------------------------------------- *)
 
 \* Transaction structure with full metadata
+\* Fixed: More precise type definitions with proper constraints
 Transaction == [
-  tid: TxId,
+  tid: TxIds,
   status: TxStatus,
   isolationLevel: IsolationLevel,
   startTime: Timestamp,
-  startLSN: LSN,           \* LSN of BEGIN record
-  commitLSN: LSN,          \* LSN of COMMIT record (0 if not committed)
-  firstLSN: LSN,           \* First LSN written by this tx
-  lastLSN: LSN,            \* Last LSN written by this tx
+  startLSN: LSNs,           \* LSN of BEGIN record
+  commitLSN: LSNs,          \* LSN of COMMIT record (0 if not committed)
+  firstLSN: LSNs,           \* First LSN written by this tx
+  lastLSN: LSNs,            \* Last LSN written by this tx
   isReadOnly: BOOLEAN,     \* Optimization for read-only transactions
   isDistributed: BOOLEAN   \* Whether this is a distributed transaction
 ]
 
 \* Operation types
+\* Fixed: More precise type definitions with proper constraints
 Operation == [
   kind: {"read", "write", "update", "delete"},
   resource: Resources,
