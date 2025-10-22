@@ -123,11 +123,10 @@ public actor IndexSubsystem {
         }
         
         let definition = IndexDefinition(
-            indexName: indexName,
-            indexType: indexType,
-            tableName: tableName,
+            name: indexName,
             columns: columns,
-            unique: unique
+            unique: unique,
+            type: indexType
         )
         
         indexRegistry[indexName] = definition

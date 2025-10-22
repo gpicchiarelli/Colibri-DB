@@ -153,26 +153,11 @@ public struct WindowRow: Codable {
     }
 }
 
-/// Generic value type
-public enum Value: Codable, Hashable {
-    case null
-    case int(Int64)
-    case double(Double)
-    case string(String)
-    case bool(Bool)
-    
-    public var asDouble: Double? {
-        switch self {
-        case .int(let i): return Double(i)
-        case .double(let d): return d
-        default: return nil
-        }
-    }
-}
+// Value type is defined in Core/Types.swift
 
 /// Window function definition
 public struct WindowFunction {
-    public let `func`: WindowFunc
+    public let func: WindowFunc
     public let spec: WindowSpec
     public let targetColumn: String
     public let offset: Int              // For LAG/LEAD/NTH_VALUE

@@ -26,31 +26,7 @@ public typealias TxID = UInt64
 /// Corresponds to TLA+: Timestamp
 public typealias Timestamp = UInt64
 
-/// Key
-/// Corresponds to TLA+: Key
-public typealias Key = String
-
-/// Value
-/// Corresponds to TLA+: Value
-public typealias Value = String
-
-/// Version
-/// Corresponds to TLA+: Version
-public struct Version: Codable, Sendable, Equatable {
-    public let txId: TxID
-    public let value: Value
-    public let timestamp: Timestamp
-    public let isDeleted: Bool
-    public let nextVersion: TxID?
-    
-    public init(txId: TxID, value: Value, timestamp: Timestamp, isDeleted: Bool, nextVersion: TxID?) {
-        self.txId = txId
-        self.value = value
-        self.timestamp = timestamp
-        self.isDeleted = isDeleted
-        self.nextVersion = nextVersion
-    }
-}
+// Types are defined in Core/Types.swift and MVCCTypes.swift
 
 /// Snapshot
 /// Corresponds to TLA+: Snapshot

@@ -21,7 +21,7 @@ import Foundation
 /// B+Tree node type
 /// Corresponds to TLA+: BTreeNodeType
 public enum BTreeNodeType: String, Codable, Sendable {
-    case `internal` = "internal"
+    case internal = "internal"
     case leaf = "leaf"
 }
 

@@ -32,14 +32,7 @@ public enum TransactionState: String, Codable, Sendable, CaseIterable {
     case preparing = "preparing"
 }
 
-/// Isolation level
-/// Corresponds to TLA+: IsolationLevel
-public enum IsolationLevel: String, Codable, Sendable, CaseIterable {
-    case readUncommitted = "read_uncommitted"
-    case readCommitted = "read_committed"
-    case repeatableRead = "repeatable_read"
-    case serializable = "serializable"
-}
+// IsolationLevel is defined in Core/Types.swift
 
 /// Transaction metrics
 /// Corresponds to TLA+: TransactionMetrics
