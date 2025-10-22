@@ -53,9 +53,9 @@ public enum ServerState: String, Codable, Sendable, CaseIterable {
     case leader = "leader"
 }
 
-/// Message type
+/// Raft message type
 /// Corresponds to TLA+: MessageType
-public enum MessageType: String, Codable, Sendable, CaseIterable {
+public enum RaftMessageType: String, Codable, Sendable, CaseIterable {
     case requestVote = "requestVote"
     case voteResponse = "voteResponse"
     case appendEntries = "appendEntries"

@@ -51,9 +51,9 @@ public enum ParticipantState: String, Codable, Sendable, CaseIterable {
     case aborted = "aborted"
 }
 
-/// Message type
+/// Two-phase commit message type
 /// Corresponds to TLA+: MessageType
-public enum MessageType: String, Codable, Sendable, CaseIterable {
+public enum TwoPhaseCommitMessageType: String, Codable, Sendable, CaseIterable {
     case prepare = "prepare"
     case vote = "vote"
     case commit = "commit"
@@ -64,14 +64,14 @@ public enum MessageType: String, Codable, Sendable, CaseIterable {
 /// Message
 /// Corresponds to TLA+: Message
 public struct Message: Codable, Sendable, Equatable {
-    public let messageType: MessageType
+    public let messageType: TwoPhaseCommitMessageType
     public let from: String
     public let to: String
     public let transactionId: TransactionID
     public let data: Data
     public let timestamp: UInt64
     
-    public init(messageType: MessageType, from: String, to: String, transactionId: TransactionID, data: Data, timestamp: UInt64) {
+    public init(messageType: TwoPhaseCommitMessageType, from: String, to: String, transactionId: TransactionID, data: Data, timestamp: UInt64) {
         self.messageType = messageType
         self.from = from
         self.to = to
