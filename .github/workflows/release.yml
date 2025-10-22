@@ -76,15 +76,21 @@ jobs:
       
       - name: Create Release
         id: create_release
-        uses: actions/create-release@v1
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          IS_PRERELEASE="${{ contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'rc') }}"
+          
+          # Create release using GitHub CLI
+          gh release create "$VERSION" \
+            --title "ColibrìDB $VERSION" \
+            --notes-file changelog.txt \
+            --prerelease="$IS_PRERELEASE" \
+            --generate-notes
+          
+          # Get upload URL for assets
+          echo "upload_url=$(gh api repos/${{ github.repository }}/releases/latest --jq '.upload_url')" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.get_version.outputs.version }}
-          release_name: ColibrìDB ${{ steps.get_version.outputs.version }}
-          body_path: changelog.txt
-          draft: false
-          prerelease: ${{ contains(steps.get_version.outputs.version, 'alpha') || contains(steps.get_version.outputs.version, 'beta') || contains(steps.get_version.outputs.version, 'rc') }}
 
   # ============================================================================
   # Build Binaries
@@ -202,24 +208,21 @@ jobs:
           shasum -a 256 "${PACKAGE_NAME}.tar.gz" > "${PACKAGE_NAME}.tar.gz.sha256"
       
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+        run: |
+          VERSION="${{ needs.create-release.outputs.version }}"
+          ARCH="${{ matrix.arch }}"
+          
+          # Upload binary
+          gh release upload "$VERSION" \
+            "colibridb-${VERSION}-macos-${ARCH}.tar.gz" \
+            --clobber
+          
+          # Upload checksum
+          gh release upload "$VERSION" \
+            "colibridb-${VERSION}-macos-${ARCH}.tar.gz.sha256" \
+            --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./colibridb-${{ needs.create-release.outputs.version }}-macos-${{ matrix.arch }}.tar.gz
-          asset_name: colibridb-${{ needs.create-release.outputs.version }}-macos-${{ matrix.arch }}.tar.gz
-          asset_content_type: application/gzip
-      
-      - name: Upload Checksum
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./colibridb-${{ needs.create-release.outputs.version }}-macos-${{ matrix.arch }}.tar.gz.sha256
-          asset_name: colibridb-${{ needs.create-release.outputs.version }}-macos-${{ matrix.arch }}.tar.gz.sha256
-          asset_content_type: text/plain
 
   # ============================================================================
   # Generate SBOM
@@ -249,24 +252,16 @@ jobs:
           syft . -o cyclonedx-json > sbom.cyclonedx.json
       
       - name: Upload SBOM to Release
-        uses: actions/upload-release-asset@v1
+        run: |
+          VERSION="${{ needs.create-release.outputs.version }}"
+          
+          # Upload SBOM files
+          gh release upload "$VERSION" \
+            "sbom.json" \
+            "sbom.spdx.json" \
+            --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./sbom.json
-          asset_name: colibridb-${{ needs.create-release.outputs.version }}-sbom.json
-          asset_content_type: application/json
-      
-      - name: Upload SPDX SBOM
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./sbom.spdx.json
-          asset_name: colibridb-${{ needs.create-release.outputs.version }}-sbom.spdx.json
-          asset_content_type: application/json
 
   # ============================================================================
   # Sign Binaries (Optional - requires signing certificate)
