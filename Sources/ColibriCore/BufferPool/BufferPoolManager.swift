@@ -27,9 +27,9 @@ public typealias PageID = UInt64
 /// Corresponds to TLA+: LSN
 public typealias LSN = UInt64
 
-/// Page
-/// Corresponds to TLA+: Page
-public struct Page: Codable, Sendable, Equatable {
+
+/// Buffer pool page
+public struct BufferPage: Codable, Sendable, Equatable {
     public let pageId: PageID
     public let data: Data
     public let lsn: LSN
@@ -70,7 +70,7 @@ public actor BufferPoolManager {
     
     /// Cache
     /// TLA+: cache \in [PageID -> Page]
-    private var cache: [PageID: Page] = [:]
+    private var cache: [PageID: BufferPage] = [:]
     
     /// Disk
     /// TLA+: disk \in [PageID -> Page]
