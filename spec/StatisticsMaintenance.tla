@@ -28,7 +28,7 @@
   Version: 1.0.0
 *)
 
-EXTENDS CORE, INTERFACES, DISK_FORMAT, Naturals, Sequences, FiniteSets, TLC
+EXTENDS CORE, Naturals, Sequences, FiniteSets, TLC
 
 CONSTANTS
   MaxHistogramBuckets,    \* Maximum number of histogram buckets

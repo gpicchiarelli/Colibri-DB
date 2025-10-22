@@ -416,6 +416,7 @@ ValidateConstraint(constraint, schemaVersion) ==
     [] "unique" -> ValidateUniqueConstraint(constraint, schemaVersion)
     [] "check" -> ValidateCheckConstraint(constraint, schemaVersion)
     [] "foreign_key" -> ValidateForeignKeyConstraint(constraint, schemaVersion)
+    OTHERWISE -> FALSE
   ENDCASE
 
 \* Validate NOT NULL constraint
