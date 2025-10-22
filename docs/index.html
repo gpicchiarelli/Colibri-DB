@@ -5,733 +5,628 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 ---
 
 <style>
-/* Clean, minimal homepage styles */
+/* Modern Design System */
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --secondary: #7c3aed;
+  --accent: #f59e0b;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  --white: #ffffff;
+  --black: #000000;
+  
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  --radius: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  
+  --transition: all 0.2s ease-in-out;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  color: var(--gray-800);
+  background: var(--white);
+  font-size: 16px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+/* Hero Section */
 .hero {
-    padding: 4rem 0;
-    text-align: center;
-    background: #ffffff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: var(--white);
+  padding: 6rem 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><radialGradient id="a" cx="50%" cy="50%"><stop offset="0%" stop-color="%23ffffff" stop-opacity="0.1"/><stop offset="100%" stop-color="%23ffffff" stop-opacity="0"/></radialGradient></defs><circle cx="200" cy="200" r="300" fill="url(%23a)"/><circle cx="800" cy="800" r="400" fill="url(%23a)"/></svg>');
+  opacity: 0.3;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
 }
 
 .hero h1 {
-    font-size: 3rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin-bottom: 1rem;
-    line-height: 1.2;
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  font-weight: 800;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 .hero-subtitle {
-    font-size: 1.5rem;
-    color: #4a5568;
-    margin-bottom: 1.5rem;
-    font-weight: 400;
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
+  margin-bottom: 2rem;
+  opacity: 0.9;
+  font-weight: 300;
 }
 
 .hero-description {
-    font-size: 1.125rem;
-    color: #718096;
-    margin-bottom: 2rem;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-    line-height: 1.6;
+  font-size: 1.125rem;
+  margin-bottom: 3rem;
+  opacity: 0.8;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.hero-badges {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
+.badges {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 3rem;
 }
 
 .badge {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    background: #f7fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #4a5568;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 2rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+  transition: var(--transition);
 }
 
-.badge.swift { background: #1a202c; color: #ffffff; border-color: #1a202c; }
-.badge.macos { background: #2d3748; color: #ffffff; border-color: #2d3748; }
-.badge.performance { background: #38a169; color: #ffffff; border-color: #38a169; }
-.badge.tla { background: #dd6b20; color: #ffffff; border-color: #dd6b20; }
+.badge:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
 
-.hero-actions {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    flex-wrap: wrap;
+.cta-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.375rem;
-    font-weight: 500;
-    font-size: 1rem;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-    min-width: 140px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.875rem 2rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: var(--transition);
+  border: 2px solid transparent;
+  min-width: 160px;
+  gap: 0.5rem;
 }
 
 .btn-primary {
-    background: #3182ce;
-    color: #ffffff;
-    border-color: #3182ce;
+  background: var(--white);
+  color: var(--primary);
+  border-color: var(--white);
 }
 
 .btn-primary:hover {
-    background: #2c5aa0;
-    border-color: #2c5aa0;
-    text-decoration: none;
+  background: var(--gray-100);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  text-decoration: none;
 }
 
 .btn-secondary {
-    background: #ffffff;
-    color: #3182ce;
-    border-color: #3182ce;
+  background: transparent;
+  color: var(--white);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .btn-secondary:hover {
-    background: #edf2f7;
-    text-decoration: none;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--white);
+  text-decoration: none;
 }
 
-/* Sections */
-.section {
-    padding: 3rem 0;
+/* Features Section */
+.features {
+  padding: 6rem 0;
+  background: var(--gray-50);
 }
 
-.section-alt {
-    background: #f7fafc;
+.section-header {
+  text-align: center;
+  margin-bottom: 4rem;
 }
 
 .section-title {
-    text-align: center;
-    font-size: 2rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin-bottom: 1rem;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 1rem;
 }
 
 .section-subtitle {
-    text-align: center;
-    font-size: 1.125rem;
-    color: #718096;
-    margin-bottom: 2rem;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+  font-size: 1.25rem;
+  color: var(--gray-600);
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-/* Features Grid */
 .features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    margin-top: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
 }
 
 .feature-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    transition: all 0.2s ease;
+  background: var(--white);
+  padding: 2rem;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+  border: 1px solid var(--gray-200);
 }
 
 .feature-card:hover {
-    border-color: #3182ce;
-    box-shadow: 0 4px 12px rgba(49, 130, 206, 0.1);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
 }
 
 .feature-icon {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    display: block;
+  font-size: 3rem;
+  margin-bottom: 1.5rem;
+  display: block;
 }
 
 .feature-card h3 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin-bottom: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: 1rem;
 }
 
 .feature-card p {
-    color: #4a5568;
-    margin-bottom: 1rem;
-    line-height: 1.6;
+  color: var(--gray-600);
+  margin-bottom: 1.5rem;
+  line-height: 1.7;
 }
 
 .feature-list {
-    list-style: none;
-    padding: 0;
+  list-style: none;
 }
 
 .feature-list li {
-    padding: 0.25rem 0;
-    color: #4a5568;
-    position: relative;
-    padding-left: 1.25rem;
-    font-size: 0.875rem;
+  padding: 0.5rem 0;
+  color: var(--gray-700);
+  position: relative;
+  padding-left: 1.5rem;
 }
 
 .feature-list li::before {
-    content: "✓";
-    position: absolute;
-    left: 0;
-    color: #38a169;
-    font-weight: 600;
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--success);
+  font-weight: 600;
 }
 
-/* Architecture */
+/* Architecture Section */
+.architecture {
+  padding: 6rem 0;
+  background: var(--white);
+}
+
 .architecture-diagram {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
-    padding: 2rem;
-    margin: 1.5rem 0;
+  background: var(--gray-50);
+  border-radius: var(--radius-xl);
+  padding: 3rem;
+  margin: 3rem 0;
+  border: 1px solid var(--gray-200);
 }
 
 .arch-layer {
-    background: #f7fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.375rem;
-    padding: 1rem;
-    margin: 0.75rem 0;
-    transition: all 0.2s ease;
+  background: var(--white);
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin: 1rem 0;
+  transition: var(--transition);
+  position: relative;
 }
 
 .arch-layer:hover {
-    border-color: #3182ce;
-    background: #edf2f7;
+  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
 }
 
 .arch-layer h4 {
-    color: #1a202c;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    font-size: 1rem;
+  color: var(--gray-900);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 1.125rem;
 }
 
 .arch-layer p {
-    color: #4a5568;
-    font-size: 0.875rem;
-    margin-bottom: 0;
+  color: var(--gray-600);
+  font-size: 0.875rem;
+  margin: 0;
 }
 
-/* Modules */
-.modules-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
-}
-
-.module-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 0.5rem;
-    padding: 1.25rem;
-    transition: all 0.2s ease;
-}
-
-.module-card:hover {
-    border-color: #3182ce;
-    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.1);
-}
-
-.module-card h4 {
-    color: #1a202c;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    font-size: 1rem;
-}
-
-.module-card p {
-    color: #4a5568;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    margin-bottom: 0.75rem;
-}
-
-.module-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-}
-
-.module-tag {
-    background: #edf2f7;
-    color: #4a5568;
-    padding: 0.125rem 0.5rem;
-    border-radius: 0.25rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-/* Quick Start */
-.quick-start-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-    align-items: start;
-}
-
-.quick-start-content h2 {
-    font-size: 1.75rem;
-    font-weight: 600;
-    color: #1a202c;
-    margin-bottom: 1rem;
-}
-
-.quick-start-content p {
-    color: #4a5568;
-    margin-bottom: 1.5rem;
-    line-height: 1.6;
-}
-
-.code-block {
-    background: #1a202c;
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-    font-size: 0.875rem;
-    line-height: 1.6;
-    color: #e2e8f0;
-    overflow-x: auto;
-}
-
-.code-block pre {
-    margin: 0;
-}
-
-/* Performance */
+/* Performance Section */
 .performance {
-    background: #1a202c;
-    color: #ffffff;
+  padding: 6rem 0;
+  background: var(--gray-900);
+  color: var(--white);
 }
 
 .performance .section-title {
-    color: #ffffff;
+  color: var(--white);
 }
 
 .performance-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2rem;
+  margin-top: 3rem;
 }
 
 .performance-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 0.5rem;
-    padding: 1.5rem;
-    text-align: center;
-    transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  transition: var(--transition);
 }
 
 .performance-card:hover {
-    background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-4px);
 }
 
 .performance-number {
-    font-size: 2rem;
-    font-weight: 600;
-    color: #68d391;
-    display: block;
-    margin-bottom: 0.5rem;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 0.5rem;
 }
 
 .performance-label {
-    color: #a0aec0;
-    font-size: 0.875rem;
-    font-weight: 500;
+  color: var(--gray-300);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
-/* CTA */
+/* CTA Section */
 .cta {
-    background: #3182ce;
-    color: #ffffff;
-    text-align: center;
+  padding: 6rem 0;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: var(--white);
+  text-align: center;
 }
 
 .cta h2 {
-    font-size: 1.75rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  margin-bottom: 1rem;
 }
 
 .cta p {
-    font-size: 1.125rem;
-    margin-bottom: 1.5rem;
-    opacity: 0.9;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.cta .btn {
-    background: #ffffff;
-    color: #3182ce;
-    border-color: #ffffff;
-}
-
-.cta .btn:hover {
-    background: #f7fafc;
-    text-decoration: none;
+  font-size: 1.25rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-    .hero h1 { font-size: 2.5rem; }
-    .hero-subtitle { font-size: 1.25rem; }
-    .hero-actions { flex-direction: column; align-items: center; }
-    .btn { width: 100%; max-width: 280px; }
-    .quick-start-grid { grid-template-columns: 1fr; gap: 1.5rem; }
-    .performance-grid { grid-template-columns: repeat(2, 1fr); }
-    .features-grid { grid-template-columns: 1fr; }
-    .modules-grid { grid-template-columns: 1fr; }
+  .hero {
+    padding: 4rem 0;
+  }
+  
+  .cta-buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .btn {
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .performance-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 480px) {
-    .hero { padding: 2rem 0; }
-    .section { padding: 2rem 0; }
-    .hero h1 { font-size: 2rem; }
-    .performance-grid { grid-template-columns: 1fr; }
+  .performance-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .badges {
+    gap: 0.5rem;
+  }
+  
+  .badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+  }
 }
 </style>
 
 <!-- Hero Section -->
 <section class="hero">
-    <div class="container">
-        <h1>Colibrì DB</h1>
-        <p class="hero-subtitle">RDBMS Sperimentale in Swift</p>
-        <p class="hero-description">
-            Un database relazionale moderno scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon 
-            con architettura modulare completa e specifiche TLA+ formali.
-        </p>
-        
-        <div class="hero-badges">
-            <span class="badge swift">Swift 6.2</span>
-            <span class="badge macos">macOS</span>
-            <span class="badge performance">Alta Performance</span>
-            <span class="badge tla">TLA+ Verified</span>
-        </div>
-        
-        <div class="hero-actions">
-            <a href="{{ site.baseurl }}/wiki/Quick-Start/" class="btn btn-primary">
-                Inizia Subito
-            </a>
-            <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-secondary" target="_blank">
-                GitHub
-            </a>
-        </div>
+  <div class="container">
+    <div class="hero-content">
+      <h1>Colibrì DB</h1>
+      <p class="hero-subtitle">RDBMS Sperimentale in Swift</p>
+      <p class="hero-description">
+        Un database relazionale moderno scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon 
+        con architettura modulare completa e specifiche TLA+ formali.
+      </p>
+      
+      <div class="badges">
+        <span class="badge">Swift 6.2</span>
+        <span class="badge">macOS</span>
+        <span class="badge">Apple Silicon</span>
+        <span class="badge">TLA+ Verified</span>
+      </div>
+      
+      <div class="cta-buttons">
+        <a href="{{ site.baseurl }}/wiki/Quick-Start/" class="btn btn-primary">
+          🚀 Inizia Subito
+        </a>
+        <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-secondary" target="_blank">
+          📚 GitHub
+        </a>
+      </div>
     </div>
+  </div>
 </section>
 
 <!-- Features Section -->
-<section class="section">
-    <div class="container">
-        <h2 class="section-title">Caratteristiche Principali</h2>
-        <p class="section-subtitle">
-            Un database moderno progettato per performance, affidabilità e facilità d'uso
-        </p>
-        
-        <div class="features-grid">
-            <div class="feature-card">
-                <span class="feature-icon">⚡</span>
-                <h3>Performance Ottimizzate</h3>
-                <p>Architettura progettata per sfruttare al meglio Apple Silicon e macOS, con buffer pool intelligente e indici B+Tree ottimizzati.</p>
-                <ul class="feature-list">
-                    <li>Buffer Pool con algoritmo LRU avanzato</li>
-                    <li>Indici B+Tree con split/merge automatici</li>
-                    <li>Query optimizer con statistiche in tempo reale</li>
-                    <li>Compressione dati integrata</li>
-                </ul>
-            </div>
-            
-            <div class="feature-card">
-                <span class="feature-icon">🔒</span>
-                <h3>Sicurezza e Affidabilità</h3>
-                <p>MVCC, WAL e recovery automatico garantiscono la consistenza dei dati anche in caso di crash del sistema.</p>
-                <ul class="feature-list">
-                    <li>Multi-Version Concurrency Control (MVCC)</li>
-                    <li>Write-Ahead Logging (WAL)</li>
-                    <li>Recovery automatico post-crash</li>
-                    <li>Transazioni ACID complete</li>
-                </ul>
-            </div>
-            
-            <div class="feature-card">
-                <span class="feature-icon">🏗️</span>
-                <h3>Architettura Modulare</h3>
-                <p>Design modulare che separa storage, query engine, transazioni e networking per massima flessibilità e manutenibilità.</p>
-                <ul class="feature-list">
-                    <li>Storage engine pluggable</li>
-                    <li>Query planner estendibile</li>
-                    <li>API REST completa</li>
-                    <li>CLI integrata</li>
-                </ul>
-            </div>
-            
-            <div class="feature-card">
-                <span class="feature-icon">📊</span>
-                <h3>SQL Completo</h3>
-                <p>Supporto completo per SQL standard con estensioni moderne per analisi e reporting avanzati.</p>
-                <ul class="feature-list">
-                    <li>Parser SQL con AST ottimizzato</li>
-                    <li>Window functions e CTE</li>
-                    <li>Subquery e join complessi</li>
-                    <li>Funzioni aggregate personalizzate</li>
-                </ul>
-            </div>
-            
-            <div class="feature-card">
-                <span class="feature-icon">🔬</span>
-                <h3>Verifica Formale</h3>
-                <p>Specifiche TLA+ formali per garantire la correttezza degli algoritmi critici del database.</p>
-                <ul class="feature-list">
-                    <li>Specifiche TLA+ per MVCC</li>
-                    <li>Verifica proprietà ACID</li>
-                    <li>Modelli di concorrenza</li>
-                    <li>Test di regressione automatici</li>
-                </ul>
-            </div>
-            
-            <div class="feature-card">
-                <span class="feature-icon">🛠️</span>
-                <h3>Tooling Avanzato</h3>
-                <p>Strumenti di sviluppo, monitoraggio e debugging integrati per semplificare la gestione del database.</p>
-                <ul class="feature-list">
-                    <li>Dashboard di monitoraggio real-time</li>
-                    <li>Profiler per query lente</li>
-                    <li>Backup e restore automatici</li>
-                    <li>Logging strutturato</li>
-                </ul>
-            </div>
-        </div>
+<section class="features">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Caratteristiche Principali</h2>
+      <p class="section-subtitle">
+        Un database moderno progettato per performance, affidabilità e facilità d'uso
+      </p>
     </div>
+    
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">⚡</span>
+        <h3>Performance Ottimizzate</h3>
+        <p>Architettura progettata per sfruttare al meglio Apple Silicon e macOS, con buffer pool intelligente e indici B+Tree ottimizzati.</p>
+        <ul class="feature-list">
+          <li>Buffer Pool con algoritmo LRU avanzato</li>
+          <li>Indici B+Tree con split/merge automatici</li>
+          <li>Query optimizer con statistiche in tempo reale</li>
+          <li>Compressione dati integrata</li>
+        </ul>
+      </div>
+      
+      <div class="feature-card">
+        <span class="feature-icon">🔒</span>
+        <h3>Sicurezza e Affidabilità</h3>
+        <p>MVCC, WAL e recovery automatico garantiscono la consistenza dei dati anche in caso di crash del sistema.</p>
+        <ul class="feature-list">
+          <li>Multi-Version Concurrency Control (MVCC)</li>
+          <li>Write-Ahead Logging (WAL)</li>
+          <li>Recovery automatico post-crash</li>
+          <li>Transazioni ACID complete</li>
+        </ul>
+      </div>
+      
+      <div class="feature-card">
+        <span class="feature-icon">🏗️</span>
+        <h3>Architettura Modulare</h3>
+        <p>Design modulare che separa storage, query engine, transazioni e networking per massima flessibilità e manutenibilità.</p>
+        <ul class="feature-list">
+          <li>Storage engine pluggable</li>
+          <li>Query planner estendibile</li>
+          <li>API REST completa</li>
+          <li>CLI integrata</li>
+        </ul>
+      </div>
+      
+      <div class="feature-card">
+        <span class="feature-icon">📊</span>
+        <h3>SQL Completo</h3>
+        <p>Supporto completo per SQL standard con estensioni moderne per analisi e reporting avanzati.</p>
+        <ul class="feature-list">
+          <li>Parser SQL con AST ottimizzato</li>
+          <li>Window functions e CTE</li>
+          <li>Subquery e join complessi</li>
+          <li>Funzioni aggregate personalizzate</li>
+        </ul>
+      </div>
+      
+      <div class="feature-card">
+        <span class="feature-icon">🔬</span>
+        <h3>Verifica Formale</h3>
+        <p>Specifiche TLA+ formali per garantire la correttezza degli algoritmi critici del database.</p>
+        <ul class="feature-list">
+          <li>Specifiche TLA+ per MVCC</li>
+          <li>Verifica proprietà ACID</li>
+          <li>Modelli di concorrenza</li>
+          <li>Test di regressione automatici</li>
+        </ul>
+      </div>
+      
+      <div class="feature-card">
+        <span class="feature-icon">🛠️</span>
+        <h3>Tooling Avanzato</h3>
+        <p>Strumenti di sviluppo, monitoraggio e debugging integrati per semplificare la gestione del database.</p>
+        <ul class="feature-list">
+          <li>Dashboard di monitoraggio real-time</li>
+          <li>Profiler per query lente</li>
+          <li>Backup e restore automatici</li>
+          <li>Logging strutturato</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- Architecture Section -->
-<section class="section section-alt">
-    <div class="container">
-        <h2 class="section-title">Architettura Modulare</h2>
-        <p class="section-subtitle">
-            Design modulare con separazione delle responsabilità e interfacce ben definite
-        </p>
-        
-        <div class="architecture-diagram">
-            <div class="arch-layer">
-                <h4>SQL Interface & CLI</h4>
-                <p>Parser SQL completo, CLI amministrativa e interfacce programmatiche Swift</p>
-            </div>
-            <div class="arch-layer">
-                <h4>Query Processor</h4>
-                <p>Planner cost-based, operatori Volcano e ottimizzazione query</p>
-            </div>
-            <div class="arch-layer">
-                <h4>Transaction Manager</h4>
-                <p>MVCC, lock manager e livelli di isolamento</p>
-            </div>
-            <div class="arch-layer">
-                <h4>Index Manager</h4>
-                <p>B+Tree, indici pluggabili e validazione online</p>
-            </div>
-            <div class="arch-layer">
-                <h4>Storage Engine</h4>
-                <p>Heap storage, buffer pool e WAL con recovery</p>
-            </div>
-        </div>
+<section class="architecture">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Architettura Modulare</h2>
+      <p class="section-subtitle">
+        Design modulare con separazione delle responsabilità e interfacce ben definite
+      </p>
     </div>
-</section>
-
-<!-- Modules Section -->
-<section class="section">
-    <div class="container">
-        <h2 class="section-title">Moduli Implementati</h2>
-        <p class="section-subtitle">
-            Architettura modulare con componenti principali e specifiche TLA+ complete
-        </p>
-        
-        <div class="modules-grid">
-            <div class="module-card">
-                <h4>Schema Evolution</h4>
-                <p>Gestione evoluzione schema database con migrazioni online e compatibilità backward/forward.</p>
-                <div class="module-tags">
-                    <span class="module-tag">DDL</span>
-                    <span class="module-tag">Migration</span>
-                </div>
-            </div>
-            
-            <div class="module-card">
-                <h4>Statistics Maintenance</h4>
-                <p>Aggiornamento statistiche per query optimizer con histogrammi e distribuzione valori.</p>
-                <div class="module-tags">
-                    <span class="module-tag">Optimizer</span>
-                    <span class="module-tag">Histogram</span>
-                </div>
-            </div>
-            
-            <div class="module-card">
-                <h4>Connection Pooling</h4>
-                <p>Gestione pool connessioni con multi-tenancy e load balancing per milioni di connessioni.</p>
-                <div class="module-tags">
-                    <span class="module-tag">Pool</span>
-                    <span class="module-tag">Multi-tenant</span>
-                </div>
-            </div>
-            
-            <div class="module-card">
-                <h4>Memory Management</h4>
-                <p>Gestione memoria avanzata con arena allocator e garbage collection automatico.</p>
-                <div class="module-tags">
-                    <span class="module-tag">Memory</span>
-                    <span class="module-tag">GC</span>
-                </div>
-            </div>
-            
-            <div class="module-card">
-                <h4>Compression</h4>
-                <p>Compressione dati con algoritmi pluggabili e ottimizzazione storage.</p>
-                <div class="module-tags">
-                    <span class="module-tag">Compression</span>
-                    <span class="module-tag">Storage</span>
-                </div>
-            </div>
-            
-            <div class="module-card">
-                <h4>Monitoring</h4>
-                <p>Sistema di monitoraggio con metriche Prometheus e health check automatici.</p>
-                <div class="module-tags">
-                    <span class="module-tag">Metrics</span>
-                    <span class="module-tag">Prometheus</span>
-                    <span class="module-tag">TLA+</span>
-                </div>
-            </div>
-            
-            <div class="module-card">
-                <h4>Backup & Restore</h4>
-                <p>Sistema completo di backup con compressione e restore incrementale.</p>
-                <div class="module-tags">
-                    <span class="module-tag">Backup</span>
-                    <span class="module-tag">Recovery</span>
-                </div>
-            </div>
-            
-            <div class="module-card">
-                <h4>Point-in-Time Recovery</h4>
-                <p>Recovery temporale con WAL replay e restore a timestamp specifici.</p>
-                <div class="module-tags">
-                    <span class="module-tag">PITR</span>
-                    <span class="module-tag">WAL</span>
-                </div>
-            </div>
-        </div>
+    
+    <div class="architecture-diagram">
+      <div class="arch-layer">
+        <h4>SQL Interface & CLI</h4>
+        <p>Parser SQL completo, CLI amministrativa e interfacce programmatiche Swift</p>
+      </div>
+      <div class="arch-layer">
+        <h4>Query Processor</h4>
+        <p>Planner cost-based, operatori Volcano e ottimizzazione query</p>
+      </div>
+      <div class="arch-layer">
+        <h4>Transaction Manager</h4>
+        <p>MVCC, lock manager e livelli di isolamento</p>
+      </div>
+      <div class="arch-layer">
+        <h4>Index Manager</h4>
+        <p>B+Tree, indici pluggabili e validazione online</p>
+      </div>
+      <div class="arch-layer">
+        <h4>Storage Engine</h4>
+        <p>Heap storage, buffer pool e WAL con recovery</p>
+      </div>
     </div>
-</section>
-
-<!-- Quick Start Section -->
-<section class="section section-alt">
-    <div class="container">
-        <div class="quick-start-grid">
-            <div class="quick-start-content">
-                <h2>Inizia in 30 Secondi</h2>
-                <p>
-                    Colibrì DB è progettato per essere semplice da installare e utilizzare. 
-                    Con pochi comandi puoi avere un database completo in esecuzione sul tuo Mac.
-                </p>
-                <div class="hero-actions">
-                    <a href="{{ site.baseurl }}/wiki/Quick-Start/" class="btn btn-primary">
-                        Guida Completa
-                    </a>
-                    <a href="{{ site.baseurl }}/wiki/API-Reference/" class="btn btn-secondary">
-                        API Reference
-                    </a>
-                </div>
-            </div>
-            
-            <div class="code-block">
-                <pre><code><span class="code-comment"># Clona e compila</span>
-<span class="code-keyword">git</span> <span class="code-function">clone</span> <span class="code-string">https://github.com/gpicchiarelli/Colibri-DB.git</span>
-<span class="code-keyword">cd</span> Colibri-DB
-<span class="code-keyword">swift</span> <span class="code-function">build</span>
-
-<span class="code-comment"># Avvia la CLI</span>
-<span class="code-function">.build/debug/coldb</span>
-
-<span class="code-comment"># Crea una tabella e inserisci dati</span>
-<span class="code-keyword">\create</span> <span class="code-function">table</span> <span class="code-string">users</span>
-<span class="code-keyword">\insert</span> <span class="code-string">users id=1,name=Alice,age=25</span>
-<span class="code-keyword">\select</span> <span class="code-string">* FROM users WHERE name = 'Alice'</span>
-
-<span class="code-comment"># Verifica le specifiche TLA+</span>
-<span class="code-keyword">make</span> <span class="code-function">tla-check</span></code></pre>
-            </div>
-        </div>
-    </div>
+  </div>
 </section>
 
 <!-- Performance Section -->
 <section class="performance">
-    <div class="container">
-        <h2 class="section-title">Performance Target</h2>
-        <p class="section-subtitle">
-            Obiettivi di performance per database enterprise su Apple Silicon
-        </p>
-        
-        <div class="performance-grid">
-            <div class="performance-card">
-                <span class="performance-number">10K+</span>
-                <span class="performance-label">Operazioni WAL/sec</span>
-            </div>
-            <div class="performance-card">
-                <span class="performance-number">1M+</span>
-                <span class="performance-label">B+Tree Lookups/sec</span>
-            </div>
-            <div class="performance-card">
-                <span class="performance-number">1K+</span>
-                <span class="performance-label">Transazioni/sec</span>
-            </div>
-            <div class="performance-card">
-                <span class="performance-number">95%+</span>
-                <span class="performance-label">Buffer Hit Rate</span>
-            </div>
-            <div class="performance-card">
-                <span class="performance-number">149</span>
-                <span class="performance-label">Specifiche TLA+</span>
-            </div>
-            <div class="performance-card">
-                <span class="performance-number">8</span>
-                <span class="performance-label">Moduli Principali</span>
-            </div>
-        </div>
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Performance Target</h2>
+      <p class="section-subtitle">
+        Obiettivi di performance per database enterprise su Apple Silicon
+      </p>
     </div>
+    
+    <div class="performance-grid">
+      <div class="performance-card">
+        <span class="performance-number">10K+</span>
+        <span class="performance-label">Operazioni WAL/sec</span>
+      </div>
+      <div class="performance-card">
+        <span class="performance-number">1M+</span>
+        <span class="performance-label">B+Tree Lookups/sec</span>
+      </div>
+      <div class="performance-card">
+        <span class="performance-number">1K+</span>
+        <span class="performance-label">Transazioni/sec</span>
+      </div>
+      <div class="performance-card">
+        <span class="performance-number">95%+</span>
+        <span class="performance-label">Buffer Hit Rate</span>
+      </div>
+      <div class="performance-card">
+        <span class="performance-number">149</span>
+        <span class="performance-label">Specifiche TLA+</span>
+      </div>
+      <div class="performance-card">
+        <span class="performance-number">8</span>
+        <span class="performance-label">Moduli Principali</span>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- CTA Section -->
 <section class="cta">
-    <div class="container">
-        <h2>Pronto a Esplorare Colibrì DB?</h2>
-        <p>
-            Unisciti alla community di sviluppatori che stanno costruendo il futuro dei database su macOS. 
-            Contribuisci al progetto o inizia a sperimentare oggi stesso.
-        </p>
-        <div class="hero-actions">
-            <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn" target="_blank">
-                Contribuisci su GitHub
-            </a>
-        </div>
+  <div class="container">
+    <h2>Pronto a Esplorare Colibrì DB?</h2>
+    <p>
+      Unisciti alla community di sviluppatori che stanno costruendo il futuro dei database su macOS. 
+      Contribuisci al progetto o inizia a sperimentare oggi stesso.
+    </p>
+    <div class="cta-buttons">
+      <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-primary" target="_blank">
+        🌟 Contribuisci su GitHub
+      </a>
+      <a href="{{ site.baseurl }}/wiki/Quick-Start/" class="btn btn-secondary">
+        📖 Inizia Subito
+      </a>
     </div>
+  </div>
 </section>

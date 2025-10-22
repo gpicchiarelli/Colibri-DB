@@ -67,9 +67,9 @@ public struct JoinState: Codable, Sendable, Equatable {
 public struct AggregationState: Codable, Sendable, Equatable {
     public let function: String
     public let column: String
-    public let currentValue: Value
+    public var currentValue: Value
     public let count: Int
-    public let isComplete: Bool
+    public var isComplete: Bool
     public let timestamp: UInt64
     
     public init(function: String, column: String, currentValue: Value, count: Int, isComplete: Bool, timestamp: UInt64) {
@@ -89,7 +89,7 @@ public struct SortState: Codable, Sendable, Equatable {
     public let order: String
     public let currentIndex: Int
     public let sortedTuples: [Tuple]
-    public let isComplete: Bool
+    public var isComplete: Bool
     public let timestamp: UInt64
     
     public init(column: String, order: String, currentIndex: Int, sortedTuples: [Tuple], isComplete: Bool, timestamp: UInt64) {
@@ -374,17 +374,17 @@ public actor SQLQueryExecutorManager {
                     aggState.count = inputTuples.count
                 case "sum":
                     let sum = inputTuples.compactMap { Int($0.first ?? "0") }.reduce(0, +)
-                    aggState.currentValue = String(sum)
+                    aggState.currentValue = .int(Int64(sum))
                 case "avg":
                     let sum = inputTuples.compactMap { Int($0.first ?? "0") }.reduce(0, +)
                     let avg = sum / inputTuples.count
-                    aggState.currentValue = String(avg)
+                    aggState.currentValue = .int(Int64(avg))
                 case "min":
                     let min = inputTuples.compactMap { Int($0.first ?? "0") }.min() ?? 0
-                    aggState.currentValue = String(min)
+                    aggState.currentValue = .int(Int64(min))
                 case "max":
                     let max = inputTuples.compactMap { Int($0.first ?? "0") }.max() ?? 0
-                    aggState.currentValue = String(max)
+                    aggState.currentValue = .int(Int64(max))
                 default:
                     break
                 }

@@ -25,7 +25,7 @@ public protocol QueryPlannerStatisticsManager: Sendable {
 
 /// Query node
 /// Corresponds to TLA+: QueryNode
-public struct QueryNode: Codable, Sendable, Equatable {
+public struct QueryNode: Codable, Sendable, Equatable, Hashable {
     public let nodeId: String
     public let nodeType: String
     public let children: [String]

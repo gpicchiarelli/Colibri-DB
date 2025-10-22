@@ -4,7 +4,7 @@
 title: "Colibrì DB"
 description: "RDBMS sperimentale ad alte prestazioni per macOS con architettura modulare e verifiche formali complete"
 baseurl: ""
-url: "https://colibridb.dev"
+url: "https://gpicchiarelli.github.io"
 
 # Build settings
 markdown: kramdown
@@ -57,9 +57,9 @@ navigation:
   - title: "TLA+ Specifications"
     url: "/tla-specifications"
   - title: "Quick Start"
-    url: "/wiki/Quick-Start"
+    url: "/wiki/Quick-Start/"
   - title: "API Reference"
-    url: "/wiki/API-Reference"
+    url: "/wiki/API-Reference/"
   - title: "GitHub"
     url: "https://github.com/gpicchiarelli/Colibri-DB"
     external: true

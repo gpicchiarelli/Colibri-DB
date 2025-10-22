@@ -6,236 +6,323 @@
     <title>{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}</title>
     <meta name="description" content="{{ page.description | default: site.description }}">
     
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ site.url }}{{ page.url }}">
+    <!-- Open Graph -->
     <meta property="og:title" content="{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}">
     <meta property="og:description" content="{{ page.description | default: site.description }}">
-    <meta property="og:image" content="{{ site.url }}/assets/og-image.png">
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="{{ site.url }}{{ page.url }}">
-    <meta property="twitter:title" content="{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}">
-    <meta property="twitter:description" content="{{ page.description | default: site.description }}">
-    <meta property="twitter:image" content="{{ site.url }}/assets/og-image.png">
-
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ site.url }}{{ page.url }}">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{% if page.title %}{{ page.title }} - {% endif %}{{ site.title }}">
+    <meta name="twitter:description" content="{{ page.description | default: site.description }}">
+    
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
-
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐦</text></svg>">
+    
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Styles -->
-    <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}">
+    
     <style>
-        /* Clean, minimal design system */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* Modern Design System */
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #7c3aed;
+            --accent: #f59e0b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --white: #ffffff;
+            --black: #000000;
+            
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+            
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            
+            --radius: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            
+            --transition: all 0.2s ease-in-out;
+        }
         
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif; 
-            line-height: 1.7; 
-            color: #2d3748; 
-            background: #ffffff; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            color: var(--gray-800);
+            background: var(--white);
             font-size: 16px;
         }
         
-        .container { 
-            max-width: 1000px; 
-            margin: 0 auto; 
-            padding: 0 1.5rem; 
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
         }
         
-        /* Clean Navigation */
-        .nav { 
-            background: #ffffff; 
-            border-bottom: 1px solid #e2e8f0; 
-            position: sticky; 
-            top: 0; 
-            z-index: 100; 
-            padding: 1rem 0; 
+        /* Navigation */
+        .nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--gray-200);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            padding: 1rem 0;
+            transition: var(--transition);
         }
         
-        .nav-content { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
+        .nav-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
-        .logo { 
-            display: flex; 
-            align-items: center; 
-            gap: 0.5rem; 
-            text-decoration: none; 
-            font-size: 1.25rem; 
-            font-weight: 600; 
-            color: #1a202c; 
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            transition: var(--transition);
         }
         
-        .logo:hover { color: #3182ce; }
-        
-        .desktop-nav { 
-            display: flex; 
-            gap: 2rem; 
-            list-style: none; 
-            align-items: center; 
+        .logo:hover {
+            color: var(--primary);
+            text-decoration: none;
         }
         
-        .nav-link { 
-            color: #4a5568; 
-            text-decoration: none; 
-            font-weight: 500; 
-            padding: 0.5rem 1rem; 
-            border-radius: 0.375rem; 
-            transition: all 0.2s ease; 
+        .logo-icon {
+            font-size: 1.75rem;
         }
         
-        .nav-link:hover { 
-            color: #3182ce; 
-            background-color: #edf2f7; 
+        .desktop-nav {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+            align-items: center;
         }
         
-        .mobile-menu-toggle { 
-            display: none; 
-            flex-direction: column; 
-            gap: 0.25rem; 
-            background: none; 
-            border: none; 
-            cursor: pointer; 
-            padding: 0.5rem; 
+        .nav-link {
+            color: var(--gray-600);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            transition: var(--transition);
+            position: relative;
         }
         
-        .hamburger-line { 
-            width: 24px; 
-            height: 2px; 
-            background-color: #4a5568; 
-            border-radius: 1px; 
+        .nav-link:hover {
+            color: var(--primary);
+            background: var(--gray-100);
+            text-decoration: none;
         }
         
-        .mobile-nav { 
-            display: none; 
-            position: absolute; 
-            top: 100%; 
-            left: 0; 
-            right: 0; 
-            background: #ffffff; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 0.5rem; 
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); 
-            margin-top: 0.5rem; 
-            padding: 1rem; 
-            z-index: 90; 
+        .nav-link.external {
+            color: var(--primary);
         }
         
-        .mobile-nav.active { display: block; }
-        
-        .mobile-nav-links { 
-            list-style: none; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 0.5rem; 
+        .nav-link.external:hover {
+            background: var(--gray-100);
         }
         
-        .mobile-nav-link { 
-            color: #4a5568; 
-            text-decoration: none; 
-            font-weight: 500; 
-            padding: 0.75rem 1rem; 
-            border-radius: 0.375rem; 
-            transition: all 0.2s ease; 
+        .mobile-menu-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 0.25rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: var(--radius);
+            transition: var(--transition);
         }
         
-        .mobile-nav-link:hover { 
-            color: #3182ce; 
-            background-color: #edf2f7; 
+        .mobile-menu-toggle:hover {
+            background: var(--gray-100);
         }
         
-        .main { 
-            min-height: calc(100vh - 100px); 
+        .hamburger-line {
+            width: 24px;
+            height: 2px;
+            background-color: var(--gray-600);
+            border-radius: 1px;
+            transition: var(--transition);
         }
         
-        /* Clean Footer */
-        .footer { 
-            background: #f7fafc; 
-            color: #4a5568; 
-            padding: 3rem 0 2rem; 
-            margin-top: 4rem; 
-            border-top: 1px solid #e2e8f0; 
+        .mobile-menu-toggle.active .hamburger-line:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
         }
         
-        .footer-content { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-            gap: 2rem; 
-            margin-bottom: 2rem; 
+        .mobile-menu-toggle.active .hamburger-line:nth-child(2) {
+            opacity: 0;
         }
         
-        .footer-title { 
-            color: #1a202c; 
-            margin-bottom: 1rem; 
-            font-size: 1.125rem; 
-            font-weight: 600; 
+        .mobile-menu-toggle.active .hamburger-line:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
         }
         
-        .footer-description { 
-            color: #718096; 
-            font-size: 0.875rem; 
-            line-height: 1.6; 
-            margin-bottom: 1rem; 
+        .mobile-nav {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--white);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            margin-top: 0.5rem;
+            padding: 1rem;
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: var(--transition);
         }
         
-        .footer-links { 
-            list-style: none; 
-            display: flex; 
-            flex-direction: column; 
-            gap: 0.5rem; 
+        .mobile-nav.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
         }
         
-        .footer-link { 
-            color: #718096; 
-            text-decoration: none; 
-            font-size: 0.875rem; 
-            line-height: 1.6; 
-            padding: 0.25rem 0; 
-            transition: all 0.2s ease; 
+        .mobile-nav-links {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
         
-        .footer-link:hover { 
-            color: #3182ce; 
+        .mobile-nav-link {
+            color: var(--gray-600);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            transition: var(--transition);
+            display: block;
         }
         
-        .footer-bottom { 
-            border-top: 1px solid #e2e8f0; 
-            padding-top: 1.5rem; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            flex-wrap: wrap; 
-            gap: 1rem; 
+        .mobile-nav-link:hover {
+            color: var(--primary);
+            background: var(--gray-100);
+            text-decoration: none;
         }
         
-        .footer-copyright { 
-            color: #a0aec0; 
-            font-size: 0.875rem; 
+        .mobile-nav-link.external {
+            color: var(--primary);
         }
         
-        .footer-version { 
-            color: #a0aec0; 
-            font-size: 0.75rem; 
-            font-family: 'SF Mono', Monaco, monospace; 
+        /* Main Content */
+        .main {
+            min-height: calc(100vh - 80px);
+        }
+        
+        /* Footer */
+        .footer {
+            background: var(--gray-900);
+            color: var(--white);
+            padding: 4rem 0 2rem;
+            margin-top: 4rem;
+        }
+        
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .footer-title {
+            color: var(--white);
+            margin-bottom: 1rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+        
+        .footer-description {
+            color: var(--gray-300);
+            font-size: 0.875rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        .footer-links {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .footer-link {
+            color: var(--gray-300);
+            text-decoration: none;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            padding: 0.25rem 0;
+            transition: var(--transition);
+        }
+        
+        .footer-link:hover {
+            color: var(--white);
+            text-decoration: none;
+        }
+        
+        .footer-bottom {
+            border-top: 1px solid var(--gray-800);
+            padding-top: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .footer-copyright {
+            color: var(--gray-400);
+            font-size: 0.875rem;
+        }
+        
+        .footer-version {
+            color: var(--gray-500);
+            font-size: 0.75rem;
+            font-family: var(--font-mono);
         }
         
         /* Typography */
         h1, h2, h3, h4, h5, h6 {
             font-weight: 600;
             line-height: 1.3;
-            color: #1a202c;
+            color: var(--gray-900);
             margin-bottom: 1rem;
         }
         
@@ -247,11 +334,11 @@
         p {
             margin-bottom: 1.5rem;
             line-height: 1.7;
-            color: #4a5568;
+            color: var(--gray-700);
         }
         
         a {
-            color: #3182ce;
+            color: var(--primary);
             text-decoration: none;
         }
         
@@ -261,21 +348,21 @@
         
         /* Code */
         code {
-            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+            font-family: var(--font-mono);
             font-size: 0.875em;
-            background-color: #f7fafc;
+            background-color: var(--gray-100);
             padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;
-            color: #e53e3e;
+            color: var(--error);
             font-weight: 500;
         }
         
         pre {
-            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-            background-color: #1a202c;
-            color: #e2e8f0;
+            font-family: var(--font-mono);
+            background-color: var(--gray-900);
+            color: var(--gray-100);
             padding: 1.5rem;
-            border-radius: 0.5rem;
+            border-radius: var(--radius);
             overflow-x: auto;
             margin: 1.5rem 0;
             font-size: 0.875rem;
@@ -298,7 +385,7 @@
         li {
             margin-bottom: 0.5rem;
             line-height: 1.6;
-            color: #4a5568;
+            color: var(--gray-700);
         }
         
         /* Tables */
@@ -306,21 +393,21 @@
             width: 100%;
             border-collapse: collapse;
             margin: 1.5rem 0;
-            border-radius: 0.5rem;
+            border-radius: var(--radius);
             overflow: hidden;
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--gray-200);
         }
         
         th, td {
             padding: 0.75rem 1rem;
             text-align: left;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--gray-200);
         }
         
         th {
-            background-color: #f7fafc;
+            background-color: var(--gray-50);
             font-weight: 600;
-            color: #1a202c;
+            color: var(--gray-900);
             font-size: 0.875rem;
         }
         
@@ -329,26 +416,65 @@
         }
         
         tr:hover {
-            background-color: #f7fafc;
+            background-color: var(--gray-50);
         }
         
         /* Images */
         img {
             max-width: 100%;
             height: auto;
-            border-radius: 0.5rem;
+            border-radius: var(--radius);
         }
         
         /* Responsive */
         @media (max-width: 768px) {
-            .desktop-nav { display: none; }
-            .mobile-menu-toggle { display: flex; }
-            .mobile-nav { display: block; }
-            .footer-content { grid-template-columns: 1fr; gap: 1.5rem; }
-            .footer-bottom { flex-direction: column; text-align: center; gap: 0.5rem; }
-            .container { padding: 0 1rem; }
+            .desktop-nav {
+                display: none;
+            }
+            
+            .mobile-menu-toggle {
+                display: flex;
+            }
+            
+            .mobile-nav {
+                display: block;
+            }
+            
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .footer-bottom {
+                flex-direction: column;
+                text-align: center;
+                gap: 0.5rem;
+            }
+            
+            .container {
+                padding: 0 1rem;
+            }
+            
             h1 { font-size: 2rem; }
             h2 { font-size: 1.75rem; }
+        }
+        
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+        
+        /* Focus styles */
+        :focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
         }
     </style>
 </head>
@@ -363,14 +489,14 @@
                 </a>
                 
                 <!-- Desktop Navigation -->
-                <ul class="nav-links desktop-nav">
+                <ul class="desktop-nav">
                     <li><a href="{{ site.baseurl }}/" class="nav-link">Home</a></li>
                     <li><a href="{{ site.baseurl }}/architecture" class="nav-link">Architecture</a></li>
                     <li><a href="{{ site.baseurl }}/tla-specifications" class="nav-link">TLA+</a></li>
                     <li><a href="{{ site.baseurl }}/wiki/Quick-Start/" class="nav-link">Quick Start</a></li>
                     <li><a href="{{ site.baseurl }}/wiki/API-Reference/" class="nav-link">API</a></li>
                     <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank" class="nav-link external">
-                        GitHub <span class="external-icon">↗</span>
+                        GitHub ↗
                     </a></li>
                 </ul>
                 
@@ -391,7 +517,7 @@
                     <li><a href="{{ site.baseurl }}/wiki/Quick-Start/" class="mobile-nav-link">Quick Start</a></li>
                     <li><a href="{{ site.baseurl }}/wiki/API-Reference/" class="mobile-nav-link">API</a></li>
                     <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank" class="mobile-nav-link external">
-                        GitHub <span class="external-icon">↗</span>
+                        GitHub ↗
                     </a></li>
                 </ul>
             </div>
@@ -407,57 +533,46 @@
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
-                <div class="footer-section">
+                <div>
                     <h3 class="footer-title">Colibrì DB</h3>
                     <p class="footer-description">
-                        RDBMS sperimentale ad alte prestazioni per macOS con architettura modulare 
-                        e verifiche formali complete.
+                        Un database relazionale moderno scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon 
+                        con architettura modulare completa e specifiche TLA+ formali.
                     </p>
-                    <div class="footer-social">
-                        <a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank" class="social-link">
-                            <span class="social-icon">📱</span>
-                            GitHub
-                        </a>
-                    </div>
                 </div>
                 
-                <div class="footer-section">
+                <div>
                     <h3 class="footer-title">Documentazione</h3>
                     <ul class="footer-links">
                         <li><a href="{{ site.baseurl }}/architecture" class="footer-link">Architettura</a></li>
                         <li><a href="{{ site.baseurl }}/tla-specifications" class="footer-link">TLA+ Specifications</a></li>
-                        <li><a href="{{ site.baseurl }}/wiki/Quick-Start" class="footer-link">Quick Start</a></li>
-                        <li><a href="{{ site.baseurl }}/wiki/API-Reference" class="footer-link">API Reference</a></li>
+                        <li><a href="{{ site.baseurl }}/wiki/Quick-Start/" class="footer-link">Quick Start</a></li>
+                        <li><a href="{{ site.baseurl }}/wiki/API-Reference/" class="footer-link">API Reference</a></li>
                     </ul>
                 </div>
                 
-                <div class="footer-section">
+                <div>
                     <h3 class="footer-title">Community</h3>
                     <ul class="footer-links">
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/issues" target="_blank" class="footer-link">Issues</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/discussions" target="_blank" class="footer-link">Discussions</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md" target="_blank" class="footer-link">Contribuire</a></li>
-                    </ul>
-                </div>
-                
-                <div class="footer-section">
-                    <h3 class="footer-title">Risorse</h3>
-                    <ul class="footer-links">
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE" target="_blank" class="footer-link">Licenza</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CHANGELOG.md" target="_blank" class="footer-link">Changelog</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/SECURITY.md" target="_blank" class="footer-link">Sicurezza</a></li>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB" class="footer-link">GitHub</a></li>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/issues" class="footer-link">Issues</a></li>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/discussions" class="footer-link">Discussions</a></li>
+                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE" class="footer-link">Licenza</a></li>
                     </ul>
                 </div>
             </div>
             
             <div class="footer-bottom">
-                <p class="footer-copyright">&copy; 2025 Colibrì DB Team. Tutti i diritti riservati.</p>
-                <p class="footer-version">Versione 1.0.0 - Swift 6.2</p>
+                <div class="footer-copyright">
+                    © 2024 Colibrì DB. Tutti i diritti riservati.
+                </div>
+                <div class="footer-version">
+                    v1.0.0-beta
+                </div>
             </div>
         </div>
     </footer>
 
-    <!-- JavaScript -->
     <script>
         // Mobile menu toggle
         document.addEventListener('DOMContentLoaded', function() {
@@ -469,24 +584,24 @@
                     mobileNav.classList.toggle('active');
                     mobileMenuToggle.classList.toggle('active');
                 });
-            }
-            
-            // Close mobile menu when clicking on a link
-            const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
-            mobileNavLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    mobileNav.classList.remove('active');
-                    mobileMenuToggle.classList.remove('active');
+                
+                // Close mobile menu when clicking on a link
+                const mobileNavLinks = document.querySelectorAll('.mobile-nav-link');
+                mobileNavLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        mobileNav.classList.remove('active');
+                        mobileMenuToggle.classList.remove('active');
+                    });
                 });
-            });
-            
-            // Close mobile menu when clicking outside
-            document.addEventListener('click', function(event) {
-                if (!mobileNav.contains(event.target) && !mobileMenuToggle.contains(event.target)) {
-                    mobileNav.classList.remove('active');
-                    mobileMenuToggle.classList.remove('active');
-                }
-            });
+                
+                // Close mobile menu when clicking outside
+                document.addEventListener('click', function(event) {
+                    if (!mobileNav.contains(event.target) && !mobileMenuToggle.contains(event.target)) {
+                        mobileNav.classList.remove('active');
+                        mobileMenuToggle.classList.remove('active');
+                    }
+                });
+            }
         });
     </script>
 </body>
