@@ -23,22 +23,6 @@
 
 import Foundation
 
-// MARK: - Commit Request
-
-/// Commit request from a transaction
-/// Corresponds to TLA+: CommitRequest
-public struct CommitRequest: Codable, Sendable {
-    public let tid: TxID
-    public let targetLSN: LSN
-    public let timestamp: Timestamp
-    
-    public init(tid: TxID, targetLSN: LSN, timestamp: Timestamp) {
-        self.tid = tid
-        self.targetLSN = targetLSN
-        self.timestamp = timestamp
-    }
-}
-
 // MARK: - Group Commit Configuration
 
 /// Configuration for group commit optimization
@@ -118,7 +102,9 @@ public actor GroupCommitManager {
         self.flushedLSN = 0
         
         if config.enabled {
-            startTimer()
+            Task {
+                await startTimer()
+            }
         }
     }
     
@@ -154,9 +140,9 @@ public actor GroupCommitManager {
                 do {
                     try await flushCallback(targetLSN)
                     flushedLSN = max(flushedLSN, targetLSN)
-                    completion(.success(targetLSN))
+                    completion(Result<LSN, Error>.success(targetLSN))
                 } catch {
-                    completion(.failure(error))
+                    completion(Result<LSN, Error>.failure(error))
                 }
             }
             return
@@ -233,7 +219,7 @@ public actor GroupCommitManager {
             // Complete all commits in batch
             for request in batch {
                 if let handler = completionHandlers[request.tid] {
-                    handler(.success(maxLSN))
+                    handler(Result<LSN, Error>.success(maxLSN))
                     completionHandlers.removeValue(forKey: request.tid)
                 }
             }
@@ -253,7 +239,7 @@ public actor GroupCommitManager {
             // Flush failed - fail all commits in batch
             for request in batch {
                 if let handler = completionHandlers[request.tid] {
-                    handler(.failure(error))
+                    handler(Result<LSN, Error>.failure(error))
                     completionHandlers.removeValue(forKey: request.tid)
                 }
             }

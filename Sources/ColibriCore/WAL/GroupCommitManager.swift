@@ -17,22 +17,14 @@ import Foundation
 
 // MARK: - Group Commit Types
 
-/// LSN (Log Sequence Number)
-/// Corresponds to TLA+: LSN
-public typealias LSN = UInt64
-
-/// Transaction ID
-/// Corresponds to TLA+: TxID
-public typealias TxID = UInt64
-
 /// Commit request
 /// Corresponds to TLA+: CommitRequest
 public struct CommitRequest: Codable, Sendable, Equatable {
     public let tid: TxID
     public let targetLSN: LSN
-    public let timestamp: UInt64
+    public let timestamp: Timestamp
     
-    public init(tid: TxID, targetLSN: LSN, timestamp: UInt64) {
+    public init(tid: TxID, targetLSN: LSN, timestamp: Timestamp) {
         self.tid = tid
         self.targetLSN = targetLSN
         self.timestamp = timestamp

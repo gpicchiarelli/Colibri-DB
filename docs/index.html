@@ -1,632 +1,275 @@
 ---
 layout: default
-title: Colibrì DB - RDBMS Sperimentale in Swift
-description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon con architettura modulare completa
+title: Colibrì DB – RDBMS in Swift basato su codice verificato
+description: Colibrì DB integra BufferPool, FileWAL, MVCCManager, QueryExecutor e i sottosistemi distribuiti implementati nel sorgente Swift per offrire un RDBMS sperimentale formale e ad alte prestazioni.
 ---
 
-<style>
-/* Modern Design System */
-:root {
-  --primary: #2563eb;
-  --primary-dark: #1d4ed8;
-  --secondary: #7c3aed;
-  --accent: #f59e0b;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --gray-50: #f9fafb;
-  --gray-100: #f3f4f6;
-  --gray-200: #e5e7eb;
-  --gray-300: #d1d5db;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
-  --gray-600: #4b5563;
-  --gray-700: #374151;
-  --gray-800: #1f2937;
-  --gray-900: #111827;
-  --white: #ffffff;
-  --black: #000000;
-  
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-  
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  
-  --radius: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  
-  --transition: all 0.2s ease-in-out;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: var(--font-sans);
-  line-height: 1.6;
-  color: var(--gray-800);
-  background: var(--white);
-  font-size: 16px;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 1rem;
-}
-
-/* Hero Section */
-.hero {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: var(--white);
-  padding: 6rem 0;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><radialGradient id="a" cx="50%" cy="50%"><stop offset="0%" stop-color="%23ffffff" stop-opacity="0.1"/><stop offset="100%" stop-color="%23ffffff" stop-opacity="0"/></radialGradient></defs><circle cx="200" cy="200" r="300" fill="url(%23a)"/><circle cx="800" cy="800" r="400" fill="url(%23a)"/></svg>');
-  opacity: 0.3;
-}
-
-.hero-content {
-  position: relative;
-  z-index: 1;
-}
-
-.hero h1 {
-  font-size: clamp(2.5rem, 8vw, 4rem);
-  font-weight: 800;
-  margin-bottom: 1.5rem;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
-
-.hero-subtitle {
-  font-size: clamp(1.25rem, 4vw, 1.5rem);
-  margin-bottom: 2rem;
-  opacity: 0.9;
-  font-weight: 300;
-}
-
-.hero-description {
-  font-size: 1.125rem;
-  margin-bottom: 3rem;
-  opacity: 0.8;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.badges {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 3rem;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 2rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  backdrop-filter: blur(10px);
-  transition: var(--transition);
-}
-
-.badge:hover {
-  background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-}
-
-.cta-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.875rem 2rem;
-  border-radius: var(--radius);
-  font-weight: 600;
-  font-size: 1rem;
-  text-decoration: none;
-  transition: var(--transition);
-  border: 2px solid transparent;
-  min-width: 160px;
-  gap: 0.5rem;
-}
-
-.btn-primary {
-  background: var(--white);
-  color: var(--primary);
-  border-color: var(--white);
-}
-
-.btn-primary:hover {
-  background: var(--gray-100);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-  text-decoration: none;
-}
-
-.btn-secondary {
-  background: transparent;
-  color: var(--white);
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--white);
-  text-decoration: none;
-}
-
-/* Features Section */
-.features {
-  padding: 6rem 0;
-  background: var(--gray-50);
-}
-
-.section-header {
-  text-align: center;
-  margin-bottom: 4rem;
-}
-
-.section-title {
-  font-size: clamp(2rem, 5vw, 3rem);
-  font-weight: 700;
-  color: var(--gray-900);
-  margin-bottom: 1rem;
-}
-
-.section-subtitle {
-  font-size: 1.25rem;
-  color: var(--gray-600);
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 2rem;
-}
-
-.feature-card {
-  background: var(--white);
-  padding: 2rem;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow);
-  transition: var(--transition);
-  border: 1px solid var(--gray-200);
-}
-
-.feature-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-xl);
-}
-
-.feature-icon {
-  font-size: 3rem;
-  margin-bottom: 1.5rem;
-  display: block;
-}
-
-.feature-card h3 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--gray-900);
-  margin-bottom: 1rem;
-}
-
-.feature-card p {
-  color: var(--gray-600);
-  margin-bottom: 1.5rem;
-  line-height: 1.7;
-}
-
-.feature-list {
-  list-style: none;
-}
-
-.feature-list li {
-  padding: 0.5rem 0;
-  color: var(--gray-700);
-  position: relative;
-  padding-left: 1.5rem;
-}
-
-.feature-list li::before {
-  content: "✓";
-  position: absolute;
-  left: 0;
-  color: var(--success);
-  font-weight: 600;
-}
-
-/* Architecture Section */
-.architecture {
-  padding: 6rem 0;
-  background: var(--white);
-}
-
-.architecture-diagram {
-  background: var(--gray-50);
-  border-radius: var(--radius-xl);
-  padding: 3rem;
-  margin: 3rem 0;
-  border: 1px solid var(--gray-200);
-}
-
-.arch-layer {
-  background: var(--white);
-  border: 2px solid var(--gray-200);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  margin: 1rem 0;
-  transition: var(--transition);
-  position: relative;
-}
-
-.arch-layer:hover {
-  border-color: var(--primary);
-  box-shadow: var(--shadow-md);
-}
-
-.arch-layer h4 {
-  color: var(--gray-900);
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-  font-size: 1.125rem;
-}
-
-.arch-layer p {
-  color: var(--gray-600);
-  font-size: 0.875rem;
-  margin: 0;
-}
-
-/* Performance Section */
-.performance {
-  padding: 6rem 0;
-  background: var(--gray-900);
-  color: var(--white);
-}
-
-.performance .section-title {
-  color: var(--white);
-}
-
-.performance-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 2rem;
-  margin-top: 3rem;
-}
-
-.performance-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-  text-align: center;
-  backdrop-filter: blur(10px);
-  transition: var(--transition);
-}
-
-.performance-card:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-4px);
-}
-
-.performance-number {
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--accent);
-  display: block;
-  margin-bottom: 0.5rem;
-}
-
-.performance-label {
-  color: var(--gray-300);
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-/* CTA Section */
-.cta {
-  padding: 6rem 0;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-  color: var(--white);
-  text-align: center;
-}
-
-.cta h2 {
-  font-size: clamp(2rem, 5vw, 3rem);
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-.cta p {
-  font-size: 1.25rem;
-  margin-bottom: 2rem;
-  opacity: 0.9;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .hero {
-    padding: 4rem 0;
-  }
-  
-  .cta-buttons {
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .btn {
-    width: 100%;
-    max-width: 300px;
-  }
-  
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .performance-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 480px) {
-  .performance-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .badges {
-    gap: 0.5rem;
-  }
-  
-  .badge {
-    font-size: 0.75rem;
-    padding: 0.375rem 0.75rem;
-  }
-}
-</style>
-
-<!-- Hero Section -->
-<section class="hero">
-  <div class="container">
-    <div class="hero-content">
-      <h1>Colibrì DB</h1>
-      <p class="hero-subtitle">RDBMS Sperimentale in Swift</p>
-      <p class="hero-description">
-        Un database relazionale moderno scritto in Swift 6.2, ottimizzato per macOS e Apple Silicon 
-        con architettura modulare completa e specifiche TLA+ formali.
+<section class="hero hero--home">
+  <div class="shell hero__inner">
+    <div class="hero__content">
+      <span class="hero__eyebrow">Derivato da Sources/ColibriCore</span>
+      <h1 class="hero__title">Un RDBMS Swift con stack formale end-to-end</h1>
+      <p class="hero__lede">
+        L'attore <code>ColibrìDB</code> definito in <code>Sources/ColibriCore/Database/ColibrìDB.swift</code> compone
+        <code>BufferPool.swift</code>, <code>FileWAL.swift</code>, <code>MVCCManager.swift</code> e <code>QueryExecutor.swift</code>
+        per fornire concorrenza snapshot, WAL ARIES e ottimizzazione fisica senza sacrificare la leggibilità del codice Swift 6.2.
       </p>
-      
-      <div class="badges">
-        <span class="badge">Swift 6.2</span>
-        <span class="badge">macOS</span>
-        <span class="badge">Apple Silicon</span>
-        <span class="badge">TLA+ Verified</span>
+      <div class="hero__actions">
+        <a class="btn btn--primary" href="{{ '/architecture.html' | relative_url }}">Leggi l'architettura →</a>
+        <a class="btn btn--ghost" href="https://github.com/gpicchiarelli/Colibri-DB/tree/main/Sources" target="_blank" rel="noreferrer">Apri il sorgente ↗</a>
       </div>
-      
-      <div class="cta-buttons">
-        <a href="{{ site.baseurl }}/wiki/Quick-Start/" class="btn btn-primary">
-          🚀 Inizia Subito
-        </a>
-        <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-secondary" target="_blank">
-          📚 GitHub
-        </a>
-      </div>
+      <ul class="metric-list">
+        <li class="metric">
+          <span class="metric__label">Storage</span>
+          <p class="metric__value">
+            <code>BufferPool/BufferPool.swift</code> implementa clock-sweep, <code>Storage/HeapTable.swift</code>
+            gestisce pagine a slot e <code>WAL/FileWAL.swift</code> applica ARIES con group commit.
+          </p>
+        </li>
+        <li class="metric">
+          <span class="metric__label">Consistenza</span>
+          <p class="metric__value">
+            <code>Transaction/LockManager.swift</code> e <code>Transaction/TransactionManager.swift</code> coordinano lock intent,
+            mentre <code>MVCC/MVCCManager.swift</code> assicura snapshot isolation e garbage collection.
+          </p>
+        </li>
+        <li class="metric">
+          <span class="metric__label">SQL Pipeline</span>
+          <p class="metric__value">
+            <code>SQL/SQLProcessor.swift</code>, <code>Planner/QueryPlanner.swift</code> e
+            <code>Query/QueryExecutor.swift</code> coprono parsing, pianificazione cost-based e operatori fisici.
+          </p>
+        </li>
+      </ul>
+    </div>
+    <aside class="hero__panel">
+      <h2>Capacità distribuite dal codice</h2>
+      <ul>
+        <li><code>Consensus/RaftConsensusManager.swift</code> fornisce elezione del leader e replica log-sicura.</li>
+        <li><code>TwoPhaseCommit/TwoPhaseCommitManager.swift</code> coordina commit atomici tra nodi.</li>
+        <li><code>Sharding/ShardingManager.swift</code> e <code>Replication/ReplicationManager.swift</code> orchestrano partizionamento e copie calde.</li>
+        <li><code>DistributedQuery/DistributedQuery.swift</code> spinge i piani SQL oltre i confini del cluster.</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<section class="section">
+  <div class="shell">
+    <header class="section__header">
+      <span class="section__eyebrow">Layer dal repository</span>
+      <h2 class="section__title">Architettura modulare con responsabilità nette</h2>
+      <p class="section__lede">
+        Ogni directory del core Swift racchiude un sottosistema isolato: dagli heap slotted a MVCC, dai cataloghi
+        alla sicurezza. La segmentazione permette di ricondurre ogni feature direttamente al file sorgente e alla
+        rispettiva specifica TLA+.
+      </p>
+    </header>
+    <div class="grid grid--three">
+      <article class="card">
+        <span class="badge">Storage &amp; WAL</span>
+        <h3 class="card__title">Buffering e durabilità</h3>
+        <p class="card__body">
+          <code>BufferPool.swift</code> gestisce pin, dirty set e clock-hand; <code>StorageManager.swift</code> incapsula IO
+          su disco; <code>FileWAL.swift</code> mantiene il log sequenziale e checkpointing ARIES.
+        </p>
+        <ul class="card__list">
+          <li><code>Storage/HeapTable.swift</code> gestisce slot, free space e tombstone.</li>
+          <li><code>WAL/FileWAL.swift</code> traccia <abbr title="Log Sequence Number">LSN</abbr>, DPT e group commit.</li>
+          <li><code>Recovery/ARIESRecovery.swift</code> rigioca REDO/UNDO con controllo idempotente.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <span class="badge">Transazioni</span>
+        <h3 class="card__title">Gestione della concorrenza</h3>
+        <p class="card__body">
+          In <code>Transaction/TransactionManager.swift</code> convivono lifecycle, commit e abort; <code>LockManager.swift</code>
+          implementa grafi wait-for e fairness; <code>MVCCManager.swift</code> costruisce snapshot e version chain.
+        </p>
+        <ul class="card__list">
+          <li><code>Constraints</code> valida chiavi e foreign key a livello di catalogo.</li>
+          <li><code>MultiTenancy/ConnectionPooling.swift</code> offre pool elastico con eviction temporale.</li>
+          <li><code>Security/Authentication.swift</code> e <code>Security/RolesPermissions.swift</code> gestiscono RBAC.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <span class="badge">Query Engine</span>
+        <h3 class="card__title">Dalla pianificazione all'esecuzione</h3>
+        <p class="card__body">
+          <code>SQL/SQLProcessor.swift</code> traduce la sintassi; <code>Planner/QueryPlanner.swift</code> produce piani logici;
+          <code>QueryExecutor.swift</code> offre scan, join hash/sort-merge, aggregazioni e sorting.
+        </p>
+        <ul class="card__list">
+          <li><code>Indexes/IndexManager.swift</code> supporta B-Tree, hash, bitmap e full-text.</li>
+          <li><code>Optimization/OptimizationManager.swift</code> applica strategie su query, IO e memoria.</li>
+          <li><code>Statistics</code> alimenta il planner con cardinalità e distribuzioni.</li>
+        </ul>
+      </article>
     </div>
   </div>
 </section>
 
-<!-- Features Section -->
-<section class="features">
-  <div class="container">
-    <div class="section-header">
-      <h2 class="section-title">Caratteristiche Principali</h2>
-      <p class="section-subtitle">
-        Un database moderno progettato per performance, affidabilità e facilità d'uso
+<section class="section section--muted">
+  <div class="shell">
+    <header class="section__header">
+      <span class="section__eyebrow">Percorso di una query</span>
+      <h2 class="section__title">Pipeline SQL tracciabile file per file</h2>
+      <p class="section__lede">
+        L'esecuzione attraversa componenti Swift espliciti: dal parsing nel modulo SQL, alla pianificazione, sino al
+        commit sullo storage con sincronizzazione WAL.
       </p>
-    </div>
-    
-    <div class="features-grid">
-      <div class="feature-card">
-        <span class="feature-icon">⚡</span>
-        <h3>Performance Ottimizzate</h3>
-        <p>Architettura progettata per sfruttare al meglio Apple Silicon e macOS, con buffer pool intelligente e indici B+Tree ottimizzati.</p>
-        <ul class="feature-list">
-          <li>Buffer Pool con algoritmo LRU avanzato</li>
-          <li>Indici B+Tree con split/merge automatici</li>
-          <li>Query optimizer con statistiche in tempo reale</li>
-          <li>Compressione dati integrata</li>
+    </header>
+    <div class="grid grid--two">
+      <div class="card card--soft">
+        <h3 class="card__title">1. Parsing e normalizzazione</h3>
+        <p class="card__body">
+          <code>SQL/SQLProcessor.swift</code> gestisce il ciclo parse → validate → rewrite e popola il catalogo attraverso
+          <code>Catalog/Catalog.swift</code> e <code>CatalogManager.swift</code>.
+        </p>
+        <ul class="card__list">
+          <li><code>SQL/ConstraintManager.swift</code> applica vincoli dichiarativi.</li>
+          <li><code>Core/Types.swift</code> definisce il sistema di tipi relazionali.</li>
         </ul>
       </div>
-      
-      <div class="feature-card">
-        <span class="feature-icon">🔒</span>
-        <h3>Sicurezza e Affidabilità</h3>
-        <p>MVCC, WAL e recovery automatico garantiscono la consistenza dei dati anche in caso di crash del sistema.</p>
-        <ul class="feature-list">
-          <li>Multi-Version Concurrency Control (MVCC)</li>
-          <li>Write-Ahead Logging (WAL)</li>
-          <li>Recovery automatico post-crash</li>
-          <li>Transazioni ACID complete</li>
+      <div class="card card--soft">
+        <h3 class="card__title">2. Pianificazione e ottimizzazione</h3>
+        <p class="card__body">
+          <code>Planner/QueryPlanner.swift</code> costruisce albero logico; <code>Optimization/OptimizationManager.swift</code>
+          valuta strategie e costi, arricchiti da <code>Statistics</code> e <code>Performance</code>.
+        </p>
+        <ul class="card__list">
+          <li><code>Query/PreparedStatements.swift</code> riduce overhead per workload ripetuti.</li>
+          <li><code>Indexes</code> fornisce metadati di selettività e access path.</li>
         </ul>
       </div>
-      
-      <div class="feature-card">
-        <span class="feature-icon">🏗️</span>
-        <h3>Architettura Modulare</h3>
-        <p>Design modulare che separa storage, query engine, transazioni e networking per massima flessibilità e manutenibilità.</p>
-        <ul class="feature-list">
-          <li>Storage engine pluggable</li>
-          <li>Query planner estendibile</li>
-          <li>API REST completa</li>
-          <li>CLI integrata</li>
+      <div class="card card--soft">
+        <h3 class="card__title">3. Esecuzione fisica</h3>
+        <p class="card__body">
+          <code>Query/QueryExecutor.swift</code> orchestralizza pipeline, buffer e operatori; raccoglie statistiche runtime
+          e richiama <code>TransactionManager</code> per commit/abort.
+        </p>
+        <ul class="card__list">
+          <li><code>Engine</code> integra esecuzione, scheduling e feedback.</li>
+          <li><code>Performance</code> aggiorna metriche per l'ottimizzatore.</li>
         </ul>
       </div>
-      
-      <div class="feature-card">
-        <span class="feature-icon">📊</span>
-        <h3>SQL Completo</h3>
-        <p>Supporto completo per SQL standard con estensioni moderne per analisi e reporting avanzati.</p>
-        <ul class="feature-list">
-          <li>Parser SQL con AST ottimizzato</li>
-          <li>Window functions e CTE</li>
-          <li>Subquery e join complessi</li>
-          <li>Funzioni aggregate personalizzate</li>
-        </ul>
-      </div>
-      
-      <div class="feature-card">
-        <span class="feature-icon">🔬</span>
-        <h3>Verifica Formale</h3>
-        <p>Specifiche TLA+ formali per garantire la correttezza degli algoritmi critici del database.</p>
-        <ul class="feature-list">
-          <li>Specifiche TLA+ per MVCC</li>
-          <li>Verifica proprietà ACID</li>
-          <li>Modelli di concorrenza</li>
-          <li>Test di regressione automatici</li>
-        </ul>
-      </div>
-      
-      <div class="feature-card">
-        <span class="feature-icon">🛠️</span>
-        <h3>Tooling Avanzato</h3>
-        <p>Strumenti di sviluppo, monitoraggio e debugging integrati per semplificare la gestione del database.</p>
-        <ul class="feature-list">
-          <li>Dashboard di monitoraggio real-time</li>
-          <li>Profiler per query lente</li>
-          <li>Backup e restore automatici</li>
-          <li>Logging strutturato</li>
+      <div class="card card--soft">
+        <h3 class="card__title">4. Scrittura durabile</h3>
+        <p class="card__body">
+          <code>WAL/FileWAL.swift</code> serializza record con prevLSN, <code>Recovery/ARIESRecovery.swift</code> gestisce redo/undo
+          e <code>BufferPool</code> esegue flush rispettando il log-before-data.
+        </p>
+        <ul class="card__list">
+          <li><code>Recovery/PointInTimeRecovery.swift</code> abilita ripristino temporale.</li>
+          <li><code>Storage/VACUUM.swift</code> pulisce versioni obsolete.</li>
         </ul>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Architecture Section -->
-<section class="architecture">
-  <div class="container">
-    <div class="section-header">
-      <h2 class="section-title">Architettura Modulare</h2>
-      <p class="section-subtitle">
-        Design modulare con separazione delle responsabilità e interfacce ben definite
+<section class="section section--contrast">
+  <div class="shell">
+    <header class="section__header section__header--center">
+      <span class="section__eyebrow">Distribuzione e resilienza</span>
+      <h2 class="section__title">Consenso, coordinamento e replica nativi</h2>
+      <p class="section__lede">
+        I moduli distribuiti dichiarano invarianti direttamente nel codice: consenso Raft, commit a due fasi, query
+        distribuite e controlli di salute centralizzati.
       </p>
-    </div>
-    
-    <div class="architecture-diagram">
-      <div class="arch-layer">
-        <h4>SQL Interface & CLI</h4>
-        <p>Parser SQL completo, CLI amministrativa e interfacce programmatiche Swift</p>
+    </header>
+    <div class="highlight-grid">
+      <div class="highlight">
+        <strong>Consenso</strong>
+        <p><code>Consensus/RaftConsensusManager.swift</code> mantiene log matching, election safety e gestione timer.</p>
       </div>
-      <div class="arch-layer">
-        <h4>Query Processor</h4>
-        <p>Planner cost-based, operatori Volcano e ottimizzazione query</p>
+      <div class="highlight">
+        <strong>Transazioni globali</strong>
+        <p><code>TwoPhaseCommit/TwoPhaseCommitManager.swift</code> governa prepare/commit/abort con messaggistica esplicita.</p>
       </div>
-      <div class="arch-layer">
-        <h4>Transaction Manager</h4>
-        <p>MVCC, lock manager e livelli di isolamento</p>
+      <div class="highlight">
+        <strong>Replica &amp; Sharding</strong>
+        <p><code>Replication/ReplicationManager.swift</code> e <code>Sharding/ShardingManager.swift</code> definiscono layout di partizioni e repliche.</p>
       </div>
-      <div class="arch-layer">
-        <h4>Index Manager</h4>
-        <p>B+Tree, indici pluggabili e validazione online</p>
-      </div>
-      <div class="arch-layer">
-        <h4>Storage Engine</h4>
-        <p>Heap storage, buffer pool e WAL con recovery</p>
+      <div class="highlight">
+        <strong>Query distribuite</strong>
+        <p><code>DistributedQuery/DistributedQuery.swift</code> coordina pianificazione federata e merge dei risultati.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Performance Section -->
-<section class="performance">
-  <div class="container">
-    <div class="section-header">
-      <h2 class="section-title">Performance Target</h2>
-      <p class="section-subtitle">
-        Obiettivi di performance per database enterprise su Apple Silicon
+<section class="section">
+  <div class="shell">
+    <header class="section__header">
+      <span class="section__eyebrow">Operatività guidata dal codice</span>
+      <h2 class="section__title">Monitoring, sicurezza e tooling immediatamente disponibili</h2>
+      <p class="section__lede">
+        Le funzionalità di gestione non sono accessorie: vivono accanto ai percorsi critici ed espongono API per CLI e server.
       </p>
-    </div>
-    
-    <div class="performance-grid">
-      <div class="performance-card">
-        <span class="performance-number">10K+</span>
-        <span class="performance-label">Operazioni WAL/sec</span>
-      </div>
-      <div class="performance-card">
-        <span class="performance-number">1M+</span>
-        <span class="performance-label">B+Tree Lookups/sec</span>
-      </div>
-      <div class="performance-card">
-        <span class="performance-number">1K+</span>
-        <span class="performance-label">Transazioni/sec</span>
-      </div>
-      <div class="performance-card">
-        <span class="performance-number">95%+</span>
-        <span class="performance-label">Buffer Hit Rate</span>
-      </div>
-      <div class="performance-card">
-        <span class="performance-number">149</span>
-        <span class="performance-label">Specifiche TLA+</span>
-      </div>
-      <div class="performance-card">
-        <span class="performance-number">8</span>
-        <span class="performance-label">Moduli Principali</span>
-      </div>
+    </header>
+    <div class="grid grid--three">
+      <article class="card">
+        <span class="badge">Monitoraggio</span>
+        <h3 class="card__title">Metriche e health check</h3>
+        <p class="card__body">
+          <code>Monitoring/Monitor.swift</code> registra gauge, histogram e summary; integra soglie e valutazioni di stato
+          complessivo interrogando <code>ColibrìDB.getStatistics()</code>.
+        </p>
+        <ul class="card__list">
+          <li><code>Performance/Benchmarking.swift</code> e <code>Statistics/StatisticsMaintenance.swift</code> producono insight per tuning.</li>
+          <li><code>Policy</code> e <code>Security</code> applicano limiti e audit.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <span class="badge">Backup &amp; Recovery</span>
+        <h3 class="card__title">Protezione dei dati</h3>
+        <p class="card__body">
+          <code>Backup/BackupManager.swift</code> gestisce snapshot e cataloghi; <code>Recovery/ARIESRecoveryManager.swift</code>
+          esegue analisi, redo e undo aderendo alle invarianti TLA+.
+        </p>
+        <ul class="card__list">
+          <li><code>ErrorRecovery</code> cattura path di fault con retry controllato.</li>
+          <li><code>Policy/PolicyManager.swift</code> gestisce quote e criteri di retention.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <span class="badge">Tooling</span>
+        <h3 class="card__title">Servizi e CLI</h3>
+        <p class="card__body">
+          <code>ColibriServer/Server.swift</code> espone un server HTTP concorrente via <code>Network</code>;
+          <code>Sources/coldb/main.swift</code> delega al modulo <code>ColibriCLI</code> per automazioni da terminale.
+        </p>
+        <ul class="card__list">
+          <li><code>Platform/MemoryManagement.swift</code> gestisce pool e quote.</li>
+          <li><code>Testing</code> contiene scenari end-to-end e generatori di workload.</li>
+        </ul>
+      </article>
     </div>
   </div>
 </section>
 
-<!-- CTA Section -->
-<section class="cta">
-  <div class="container">
-    <h2>Pronto a Esplorare Colibrì DB?</h2>
-    <p>
-      Unisciti alla community di sviluppatori che stanno costruendo il futuro dei database su macOS. 
-      Contribuisci al progetto o inizia a sperimentare oggi stesso.
-    </p>
-    <div class="cta-buttons">
-      <a href="https://github.com/gpicchiarelli/Colibri-DB" class="btn btn-primary" target="_blank">
-        🌟 Contribuisci su GitHub
-      </a>
-      <a href="{{ site.baseurl }}/wiki/Quick-Start/" class="btn btn-secondary">
-        📖 Inizia Subito
-      </a>
+<section class="section section--muted">
+  <div class="shell">
+    <header class="section__header section__header--center">
+      <span class="section__eyebrow">Per iniziare</span>
+      <h2 class="section__title">Esplora le specifiche TLA+ e il wiki generato dal codice</h2>
+      <p class="section__lede">
+        Ogni sottosistema Swift rimanda a un modulo TLA+. Consulta le pagine dedicate per navigare tra invarianti,
+        proprietà di sicurezza e guide operative derivate direttamente dal repository.
+      </p>
+    </header>
+    <div class="highlight-grid">
+      <div class="highlight">
+        <strong>Specifiche</strong>
+        <p>Scopri i moduli formali per WAL, consensus, 2PC e MVCC.</p>
+        <a class="btn btn--subtle" href="{{ '/tla-specifications.html' | relative_url }}">Vai alle specifiche →</a>
+      </div>
+      <div class="highlight">
+        <strong>Wiki</strong>
+        <p>Il wiki in <code>docs/wiki</code> viene renderizzato tramite <code>doc.html</code> usando il nuovo layout.</p>
+        <a class="btn btn--subtle" href="{{ '/wiki/Home.html' | relative_url }}">Apri il wiki →</a>
+      </div>
     </div>
   </div>
 </section>
