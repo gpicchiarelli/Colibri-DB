@@ -1,0 +1,131 @@
+name: Dependabot Auto-merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # ============================================================================
+  # Auto-merge Dependabot PRs
+  # ============================================================================
+  auto-merge:
+    name: Auto-merge Dependabot PRs
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      
+      - name: Checkout Code
+        uses: actions/checkout@v5
+      
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: '6.0'
+      
+      - name: Cache Swift PM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-dependabot-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-dependabot-
+      
+      - name: Build and Test
+        run: |
+          swift build --configuration debug
+          swift test --parallel
+      
+      - name: Check for Breaking Changes
+        run: |
+          echo "🔍 Checking for potential breaking changes..."
+          
+          # Check if this is a major version update
+          if [[ "${{ github.event.pull_request.title }}" =~ ^Bump.*from.*to.*[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "⚠️ Major version update detected - manual review required"
+            exit 1
+          fi
+          
+          # Check if this is a Swift version update
+          if [[ "${{ github.event.pull_request.title }}" =~ Swift.*version ]]; then
+            echo "⚠️ Swift version update detected - manual review required"
+            exit 1
+          fi
+          
+          echo "✅ No breaking changes detected"
+      
+      - name: Auto-merge PR
+        if: success()
+        run: |
+          echo "🤖 Auto-merging Dependabot PR..."
+          
+          # Enable auto-merge
+          gh pr merge ${{ github.event.pull_request.number }} \
+            --auto \
+            --squash \
+            --delete-branch \
+            --subject "chore: ${{ github.event.pull_request.title }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Comment on PR
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "🤖 **Dependabot Auto-merge**
+            
+            This PR has been automatically merged after passing all checks:
+            
+            ✅ Build successful
+            ✅ Tests passed
+            ✅ No breaking changes detected
+            
+            The dependency update is now live! 🚀"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================================================
+  # Manual Review Required
+  # ============================================================================
+  manual-review:
+    name: Manual Review Required
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]' && failure()
+    
+    steps:
+      - name: Comment on PR
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "⚠️ **Manual Review Required**
+            
+            This Dependabot PR requires manual review because:
+            
+            - Major version update detected, OR
+            - Swift version update detected, OR
+            - Build/test failures occurred
+            
+            Please review the changes and merge manually if appropriate.
+            
+            **Review checklist:**
+            - [ ] Check changelog for breaking changes
+            - [ ] Verify compatibility with current codebase
+            - [ ] Test the changes locally if needed
+            - [ ] Update documentation if required"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Add Labels
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} \
+            --add-label "dependencies,needs-review"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

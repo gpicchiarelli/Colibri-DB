@@ -1,0 +1,245 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly on Monday at 6 AM
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  # ============================================================================
+  # Dependency Security Scan
+  # ============================================================================
+  dependency-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+          disable-sudo: true
+      
+      - name: Checkout Code
+        uses: actions/checkout@v5
+      
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: '6.0'
+      
+      - name: Cache Swift PM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-security-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-security-
+      
+      - name: Resolve Dependencies
+        run: swift package resolve
+      
+      - name: Run Trivy Security Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'HIGH,CRITICAL'
+      
+      - name: Upload Trivy Results
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Check for High/Critical Vulnerabilities
+        run: |
+          if [ -f "trivy-results.sarif" ]; then
+            HIGH_CRITICAL=$(jq '.runs[0].results[] | select(.level == "error" or .level == "warning") | .level' trivy-results.sarif | wc -l)
+            
+            if [ "$HIGH_CRITICAL" -gt 0 ]; then
+              echo "❌ Found $HIGH_CRITICAL high/critical security vulnerabilities"
+              echo "::error::Security scan found $HIGH_CRITICAL high/critical vulnerabilities"
+              exit 1
+            else
+              echo "✅ No high/critical security vulnerabilities found"
+            fi
+          else
+            echo "⚠️ No security scan results found"
+          fi
+
+  # ============================================================================
+  # Secret Scanning
+  # ============================================================================
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      
+      - name: Checkout Code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Full history for better secret detection
+      
+      - name: Run TruffleHog Secret Scanner
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+      
+      - name: Run GitLeaks Secret Scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  # ============================================================================
+  # License Compliance
+  # ============================================================================
+  license-compliance:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      
+      - name: Checkout Code
+        uses: actions/checkout@v5
+      
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: '6.0'
+      
+      - name: Check License Compliance
+        run: |
+          echo "🔍 Checking license compliance..."
+          
+          # Check if LICENSE file exists
+          if [ ! -f "LICENSE" ]; then
+            echo "❌ LICENSE file not found"
+            exit 1
+          fi
+          
+          # Check for license headers in source files
+          MISSING_LICENSE=0
+          for file in $(find Sources -name "*.swift" -type f); do
+            if ! head -n 10 "$file" | grep -q "Copyright\|License"; then
+              echo "⚠️ Missing license header in $file"
+              MISSING_LICENSE=$((MISSING_LICENSE + 1))
+            fi
+          done
+          
+          if [ $MISSING_LICENSE -gt 0 ]; then
+            echo "❌ Found $MISSING_LICENSE files without license headers"
+            exit 1
+          fi
+          
+          echo "✅ License compliance check passed"
+
+  # ============================================================================
+  # Security Headers Check
+  # ============================================================================
+  security-headers:
+    name: Security Headers Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+      
+      - name: Checkout Code
+        uses: actions/checkout@v5
+      
+      - name: Check Security Headers
+        run: |
+          echo "🔍 Checking security headers and configurations..."
+          
+          # Check for security-related files
+          SECURITY_FILES=(
+            "SECURITY.md"
+            ".github/SECURITY.md"
+            ".github/workflows/security.yml"
+            ".github/workflows/codeql.yml"
+          )
+          
+          for file in "${SECURITY_FILES[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✅ Found $file"
+            else
+              echo "⚠️ Missing $file"
+            fi
+          done
+          
+          # Check for security policies in README
+          if [ -f "README.md" ]; then
+            if grep -qi "security\|vulnerability\|report" README.md; then
+              echo "✅ Security information found in README"
+            else
+              echo "⚠️ Consider adding security information to README"
+            fi
+          fi
+
+  # ============================================================================
+  # Final Security Status
+  # ============================================================================
+  security-status:
+    name: Security Status Check
+    runs-on: ubuntu-latest
+    needs:
+      - dependency-scan
+      - secret-scan
+      - license-compliance
+      - security-headers
+    if: always()
+    
+    steps:
+      - name: Check Security Status
+        run: |
+          echo "🔒 Security Audit Summary"
+          echo "========================"
+          echo ""
+          echo "Dependency Scan: ${{ needs.dependency-scan.result }}"
+          echo "Secret Scan: ${{ needs.secret-scan.result }}"
+          echo "License Compliance: ${{ needs.license-compliance.result }}"
+          echo "Security Headers: ${{ needs.security-headers.result }}"
+          echo ""
+          
+          if [[ "${{ needs.dependency-scan.result }}" == "success" ]] && \
+             [[ "${{ needs.secret-scan.result }}" == "success" ]] && \
+             [[ "${{ needs.license-compliance.result }}" == "success" ]] && \
+             [[ "${{ needs.security-headers.result }}" == "success" ]]; then
+            echo "✅ All security checks passed!"
+            exit 0
+          else
+            echo "❌ Some security checks failed"
+            exit 1
+          fi

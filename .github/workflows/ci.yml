@@ -83,7 +83,7 @@ jobs:
           xcrun llvm-cov export \
             -format=lcov \
             -instr-profile=.build/debug/codecov/default.profdata \
-            .build/debug/ColibriCorePackageTests.xctest/Contents/MacOS/ColibriCorePackageTests \
+            .build/debug/ColibriCoreTests.xctest/Contents/MacOS/ColibriCoreTests \
             > coverage.lcov
       
       - name: Generate Coverage Report (JSON)
@@ -91,7 +91,7 @@ jobs:
           xcrun llvm-cov export \
             -format=text \
             -instr-profile=.build/debug/codecov/default.profdata \
-            .build/debug/ColibriCorePackageTests.xctest/Contents/MacOS/ColibriCorePackageTests \
+            .build/debug/ColibriCoreTests.xctest/Contents/MacOS/ColibriCoreTests \
             > coverage.json
       
       - name: Generate Coverage Report (HTML)
@@ -99,7 +99,7 @@ jobs:
           xcrun llvm-cov show \
             -format=html \
             -instr-profile=.build/debug/codecov/default.profdata \
-            .build/debug/ColibriCorePackageTests.xctest/Contents/MacOS/ColibriCorePackageTests \
+            .build/debug/ColibriCoreTests.xctest/Contents/MacOS/ColibriCoreTests \
             -output-dir=coverage-html
       
       - name: Upload Test Results
