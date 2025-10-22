@@ -42,8 +42,6 @@
 
 ## 🎯 Manifesto del Progetto
 
-**ColibrìDB** rappresenta una rivoluzione nell'ingegneria dei database: il primo RDBMS production-ready implementato in Swift con verifica formale completa attraverso specifiche TLA+.
-
 ### La Nostra Visione
 
 Crediamo che la **correttezza formale** e l'**implementazione pratica** non debbano essere in conflitto. ColibrìDB dimostra che è possibile costruire sistemi complessi con:
