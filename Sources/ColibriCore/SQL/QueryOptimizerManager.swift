@@ -93,8 +93,8 @@ public actor QueryOptimizerManager {
     // MARK: - State Variables (TLA+ vars)
     
     /// Query plan
-    /// TLA+: queryPlan \in Seq(PlanNode)
-    private var queryPlan: [PlanNode] = []
+    /// TLA+: queryPlan \in Seq(QueryNode)
+    private var queryPlan: [QueryNode] = []
     
     /// Cost model
     /// TLA+: costModel \in CostModel

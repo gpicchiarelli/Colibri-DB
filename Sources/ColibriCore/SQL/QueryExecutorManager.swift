@@ -26,9 +26,9 @@ public typealias Tuple = [Value]
 /// Corresponds to TLA+: ScanState
 public struct ScanState: Codable, Sendable, Equatable {
     public let tableName: String
-    public let currentRID: RID
+    public var currentRID: RID
     public let endRID: RID
-    public let isComplete: Bool
+    public var isComplete: Bool
     public let timestamp: UInt64
     
     public init(tableName: String, currentRID: RID, endRID: RID, isComplete: Bool, timestamp: UInt64) {
@@ -46,9 +46,9 @@ public struct JoinState: Codable, Sendable, Equatable {
     public let leftTable: String
     public let rightTable: String
     public let joinType: String
-    public let currentLeftRID: RID
-    public let currentRightRID: RID
-    public let isComplete: Bool
+    public var currentLeftRID: RID
+    public var currentRightRID: RID
+    public var isComplete: Bool
     public let timestamp: UInt64
     
     public init(leftTable: String, rightTable: String, joinType: String, currentLeftRID: RID, currentRightRID: RID, isComplete: Bool, timestamp: UInt64) {
@@ -68,7 +68,7 @@ public struct AggregationState: Codable, Sendable, Equatable {
     public let function: String
     public let column: String
     public var currentValue: Value
-    public let count: Int
+    public var count: Int
     public var isComplete: Bool
     public let timestamp: UInt64
     
@@ -137,14 +137,14 @@ public actor SQLQueryExecutorManager {
     // MARK: - Dependencies
     
     /// Storage manager
-    private let storageManager: StorageManager
+    private let storageManager: any StorageManager
     
     /// Index manager
-    private let indexManager: IndexManager
+    private let indexManager: any IndexManager
     
     // MARK: - Initialization
     
-    public init(storageManager: StorageManager, indexManager: IndexManager) {
+    public init(storageManager: any StorageManager, indexManager: any IndexManager) {
         self.storageManager = storageManager
         self.indexManager = indexManager
         
@@ -188,8 +188,8 @@ public actor SQLQueryExecutorManager {
             leftTable: leftTable,
             rightTable: rightTable,
             joinType: joinType,
-            currentLeftRID: 0,
-            currentRightRID: 0,
+            currentLeftRID: RID(pageID: 0, slotID: 0),
+            currentRightRID: RID(pageID: 0, slotID: 0),
             isComplete: false,
             timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
         )
@@ -210,7 +210,7 @@ public actor SQLQueryExecutorManager {
         let aggState = AggregationState(
             function: function,
             column: column,
-            currentValue: "",
+            currentValue: Value.string(""),
             count: 0,
             isComplete: false,
             timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
@@ -272,8 +272,8 @@ public actor SQLQueryExecutorManager {
         switch operatorType {
         case "scan":
             let tableName = params["tableName"] as? String ?? ""
-            let startRID = params["startRID"] as? RID ?? 0
-            let endRID = params["endRID"] as? RID ?? 0
+            let startRID = params["startRID"] as? RID ?? RID(pageID: 0, slotID: 0)
+            let endRID = params["endRID"] as? RID ?? RID(pageID: 0, slotID: 0)
             try await executeScan(operatorId: operatorId, tableName: tableName, startRID: startRID, endRID: endRID)
         case "join":
             let leftTable = params["leftTable"] as? String ?? ""
@@ -317,7 +317,7 @@ public actor SQLQueryExecutorManager {
             }
             
             // TLA+: Update current RID
-            scanState.currentRID += 1
+            scanState.currentRID = scanState.currentRID + 1
             
             // TLA+: Check if complete
             if scanState.currentRID >= scanState.endRID {
@@ -347,8 +347,8 @@ public actor SQLQueryExecutorManager {
                 }
                 
                 // TLA+: Update RIDs
-                joinState.currentLeftRID += 1
-                joinState.currentRightRID += 1
+                joinState.currentLeftRID = joinState.currentLeftRID + 1
+                joinState.currentRightRID = joinState.currentRightRID + 1
             } else {
                 joinState.isComplete = true
             }
@@ -603,20 +603,6 @@ public actor SQLQueryExecutorManager {
 }
 
 // MARK: - Supporting Types
-
-/// Storage manager
-public protocol StorageManager: Sendable {
-    func readTuple(tableName: String, rid: RID) async throws -> Tuple?
-    func writeTuple(tableName: String, rid: RID, tuple: Tuple) async throws
-    func deleteTuple(tableName: String, rid: RID) async throws
-}
-
-/// Index manager
-public protocol IndexManager: Sendable {
-    func createIndex(tableName: String, column: String) async throws
-    func dropIndex(tableName: String, column: String) async throws
-    func searchIndex(tableName: String, column: String, value: Value) async throws -> [RID]
-}
 
 /// SQL query executor manager error
 public enum SQLQueryExecutorManagerError: Error, LocalizedError {

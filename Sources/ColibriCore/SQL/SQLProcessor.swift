@@ -106,15 +106,15 @@ public struct ExecutionResult: Codable, Sendable, Equatable {
 /// SQL metrics
 /// Corresponds to TLA+: SQLMetrics
 public struct SQLMetrics: Codable, Sendable, Equatable {
-    public let totalStatements: Int
-    public let successfulStatements: Int
-    public let failedStatements: Int
-    public let averageExecutionTime: Double
-    public let totalExecutionTime: Double
-    public let cacheHitRate: Double
-    public let parseTime: Double
-    public let planTime: Double
-    public let executeTime: Double
+    public var totalStatements: Int
+    public var successfulStatements: Int
+    public var failedStatements: Int
+    public var averageExecutionTime: Double
+    public var totalExecutionTime: Double
+    public var cacheHitRate: Double
+    public var parseTime: Double
+    public var planTime: Double
+    public var executeTime: Double
     
     public init(totalStatements: Int, successfulStatements: Int, failedStatements: Int, averageExecutionTime: Double, totalExecutionTime: Double, cacheHitRate: Double, parseTime: Double, planTime: Double, executeTime: Double) {
         self.totalStatements = totalStatements
@@ -383,21 +383,6 @@ public actor SQLProcessor {
     }
     
     // MARK: - Query Operations
-    
-    /// Get execution result
-    public func getExecutionResult(statementId: String) -> ExecutionResult? {
-        return getExecutionResult(statementId: statementId)
-    }
-    
-    /// Get SQL metrics
-    public func getSQLMetrics() -> SQLMetrics {
-        return getSQLMetrics()
-    }
-    
-    /// Get statement cache size
-    public func getStatementCacheSize() -> Int {
-        return getStatementCacheSize()
-    }
     
     /// Get all query plans
     public func getAllQueryPlans() -> [QueryPlan] {

@@ -31,13 +31,48 @@ public typealias Timestamp = UInt64
 
 /// Record Identifier - points to a tuple location in a page
 /// Corresponds to TLA+: RID == [pageId: PageId, slotId: Nat]
-public struct RID: Hashable, Codable, Sendable {
+public struct RID: Hashable, Codable, Sendable, Comparable {
     public let pageID: PageID
     public let slotID: UInt32
     
     public init(pageID: PageID, slotID: UInt32) {
         self.pageID = pageID
         self.slotID = slotID
+    }
+    
+    // MARK: - Comparable conformance
+    public static func < (lhs: RID, rhs: RID) -> Bool {
+        if lhs.pageID != rhs.pageID {
+            return lhs.pageID < rhs.pageID
+        }
+        return lhs.slotID < rhs.slotID
+    }
+    
+    public static func <= (lhs: RID, rhs: RID) -> Bool {
+        return lhs < rhs || lhs == rhs
+    }
+    
+    public static func >= (lhs: RID, rhs: RID) -> Bool {
+        return !(lhs < rhs)
+    }
+    
+    public static func > (lhs: RID, rhs: RID) -> Bool {
+        return !(lhs <= rhs)
+    }
+    
+    // MARK: - Arithmetic operations
+    public static func + (lhs: RID, rhs: Int) -> RID {
+        return RID(pageID: lhs.pageID, slotID: UInt32(Int(lhs.slotID) + rhs))
+    }
+    
+    public static func += (lhs: inout RID, rhs: Int) {
+        lhs = lhs + rhs
+    }
+    
+    // MARK: - ExpressibleByIntegerLiteral conformance
+    public init(integerLiteral value: Int) {
+        self.pageID = 0
+        self.slotID = UInt32(value)
     }
 }
 
@@ -84,6 +119,16 @@ public enum Value: Hashable, Codable, Sendable {
     public var isNull: Bool {
         if case .null = self { return true }
         return false
+    }
+    
+    // MARK: - ExpressibleByStringLiteral conformance
+    public init(stringLiteral value: String) {
+        self = .string(value)
+    }
+    
+    // MARK: - ExpressibleByIntegerLiteral conformance
+    public init(integerLiteral value: Int) {
+        self = .int(Int64(value))
     }
 }
 
