@@ -392,36 +392,24 @@ public actor BufferManager {
         return dirtyPages.contains(pageId)
     }
     
-    /// Get buffer pool size
-    private func getBufferPoolSize() -> Int {
-        return bufferPool.count
-    }
     
-    /// Get free frame count
-    private func getFreeFrameCount() -> Int {
-        return freeFrames.count
-    }
     
-    /// Get dirty page count
-    private func getDirtyPageCount() -> Int {
-        return dirtyPages.count
-    }
     
     // MARK: - Query Operations
     
     /// Get buffer pool size
     public func getBufferPoolSize() -> Int {
-        return getBufferPoolSize()
+        return bufferPool.count
     }
     
     /// Get free frame count
     public func getFreeFrameCount() -> Int {
-        return getFreeFrameCount()
+        return bufferPool.count - pinnedPages.count
     }
     
     /// Get dirty page count
     public func getDirtyPageCount() -> Int {
-        return getDirtyPageCount()
+        return dirtyPages.count
     }
     
     /// Get buffer metrics

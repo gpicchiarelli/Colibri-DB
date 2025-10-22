@@ -1,0 +1,34 @@
+---
+layout: default
+title: Test Jekyll
+description: Pagina di test per verificare che Jekyll funzioni
+---
+
+# Test Jekyll
+
+Questa è una pagina di test per verificare che Jekyll funzioni correttamente.
+
+## Variabili Jekyll
+
+- **Site Title**: {{ site.title }}
+- **Site Description**: {{ site.description }}
+- **Site URL**: {{ site.url }}
+- **Base URL**: {{ site.baseurl }}
+- **Page URL**: {{ page.url }}
+
+## Link di Test
+
+- [Home]({{ '/' | relative_url }})
+- [Architettura]({{ '/architecture.html' | relative_url }})
+- [TLA+]({{ '/tla-specifications.html' | relative_url }})
+- [Wiki]({{ '/wiki/Home.html' | relative_url }})
+
+## Asset di Test
+
+Il CSS dovrebbe essere caricato correttamente se vedi questo testo stilizzato.
+
+## Data e Ora
+
+Data di build: {{ site.time | date: "%Y-%m-%d %H:%M:%S" }}
+
+Se vedi questa pagina con lo stile applicato, Jekyll funziona correttamente! 🎉

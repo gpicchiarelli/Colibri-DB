@@ -32,12 +32,6 @@ public protocol WALRecord: Codable, Sendable {
 
 
 
-/// Disk manager
-public protocol DiskManager: Sendable {
-    func readPage(pageId: PageID) async throws -> Data
-    func writePage(pageId: PageID, data: Data) async throws
-    func deletePage(pageId: PageID) async throws
-}
 
 // MARK: - WAL Manager
 

@@ -152,7 +152,7 @@ public struct SortKey: Sendable {
     public let column: Int
     public let order: SortOrder
     
-    public enum SortOrder: String {
+    public enum SortOrder: String, Sendable {
         case ascending = "ASC"
         case descending = "DESC"
     }
