@@ -34,6 +34,7 @@ public typealias TxID = UInt64
 /// Recovery phase
 /// Corresponds to TLA+: Phase
 public enum RecoveryPhase: String, Codable, Sendable, CaseIterable {
+    case idle = "idle"
     case analysis = "analysis"
     case redo = "redo"
     case undo = "undo"

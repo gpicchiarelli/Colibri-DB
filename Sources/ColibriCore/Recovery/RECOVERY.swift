@@ -32,14 +32,7 @@ import Foundation
 
 // MARK: - Recovery Phase
 
-/// Phase of ARIES recovery
-public enum RecoveryPhase: String, Codable {
-    case idle       // Not recovering
-    case analysis   // Analysis phase
-    case redo       // Redo phase
-    case undo       // Undo phase
-    case done       // Recovery complete
-}
+// RecoveryPhase is defined in ARIESRecoveryManager.swift
 
 // MARK: - Transaction Status
 

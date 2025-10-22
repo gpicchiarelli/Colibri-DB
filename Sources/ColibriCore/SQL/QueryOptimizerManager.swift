@@ -366,9 +366,10 @@ public actor QueryOptimizerManager {
     
     /// Calculate scan cost
     /// TLA+ Function: CalculateScanCost(node)
-    private func calculateScanCost(node: PlanNode) async throws -> Double {
+    private func calculateScanCost(node: QueryNode) async throws -> Double {
         // TLA+: Calculate scan cost
-        let tableStats = statistics[node.tableName]
+        let tableName = node.properties["tableName"] ?? ""
+        let tableStats = statistics[tableName]
         let rowCount = tableStats?.rowCount ?? 0
         let pageCount = tableStats?.pageCount ?? 0
         
@@ -383,16 +384,16 @@ public actor QueryOptimizerManager {
     
     /// Calculate join cost
     /// TLA+ Function: CalculateJoinCost(node)
-    private func calculateJoinCost(node: PlanNode) async throws -> Double {
+    private func calculateJoinCost(node: QueryNode) async throws -> Double {
         // TLA+: Calculate join cost
-        let leftCardinality = node.cardinality
-        let rightCardinality = node.cardinality
+        let leftCardinality = Int(node.properties["cardinality"] ?? "0") ?? 0
+        let rightCardinality = Int(node.properties["cardinality"] ?? "0") ?? 0
         
         // TLA+: Nested loop join cost
         let nestedLoopCost = Double(leftCardinality * rightCardinality) * 0.001
         
         // TLA+: Hash join cost
-        let hashJoinCost = Double((leftCardinality ?? 0) + (rightCardinality ?? 0)) * 0.01
+        let hashJoinCost = Double(leftCardinality + rightCardinality) * 0.01
         
         return min(nestedLoopCost, hashJoinCost)
     }
