@@ -18,21 +18,6 @@ import Foundation
 
 // MARK: - Hash Index Types
 
-/// Hash entry for the index
-public struct HashEntry: Codable, Sendable {
-    public let key: Value
-    public let rid: RID
-    public let deleted: Bool
-    public let timestamp: UInt64
-    
-    public init(key: Value, rid: RID, deleted: Bool = false, timestamp: UInt64) {
-        self.key = key
-        self.rid = rid
-        self.deleted = deleted
-        self.timestamp = timestamp
-    }
-}
-
 // MARK: - Hash Index Manager
 
 /// Hash Index Manager for database indexing

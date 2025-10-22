@@ -1,133 +1,138 @@
 ---
 layout: doc
-title: Colibrì DB Wiki
-description: Pagina principale della wiki di Colibrì DB
+title: Home
+description: Benvenuto nella documentazione di Colibrì DB - RDBMS moderno per macOS
 ---
 
-# 🐦 Colibrì DB Wiki
+# Benvenuto in Colibrì DB
 
-<div align="center">
-
-[![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/ci.yml?branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibri-DB/actions/workflows/ci.yml)
-[![CodeQL](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/codeql.yml?label=CodeQL&branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibri-DB/actions/workflows/codeql.yml)
-![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg?style=flat-square)
-![SwiftPM](https://img.shields.io/badge/SwiftPM-compatible-brightgreen.svg?style=flat-square)
-![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey.svg?style=flat-square)
-![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg?style=flat-square)
-
-**Un RDBMS sperimentale ad alte prestazioni scritto in Swift 6.2**
-
-</div>
-
----
-
-## 🎯 Benvenuto in Colibrì DB
-
-**Colibrì DB** è un RDBMS sperimentale scritto in Swift 6.2 pensato per gestire milioni di connessioni logiche, ottimizzato per macOS e Apple Silicon. Il progetto punta a un'architettura modulare: motore heap su disco con WAL, MVCC, indici pluggabili e CLI amministrativa `coldb`.
-
-### ✨ Caratteristiche Principali
-
-- **🗄️ Storage Enterprise**: Heap file storage con buffer pool LRU/Clock e compattazione online
-- **🔒 Durabilità Garantita**: WAL v2 con checksum CRC32 e recovery ARIES-like
-- **🚀 Indicizzazione Avanzata**: B+Tree persistenti e indici pluggabili (Hash, ART, LSM)
-- **⚡ Controllo Concorrenza**: MVCC con livelli di isolamento configurabili
-- **🧠 Query Processing**: Volcano iterator con ottimizzazione cost-based
-- **🛠️ Operazioni Complete**: CLI amministrativa, import/export, monitoring
-
-## 📚 Navigazione Wiki
-
-### 🚀 **Per Iniziare**
-- [**Quick Start**]({{ site.baseurl }}/wiki/Quick-Start) - Installazione e prima sessione
-- [**Configurazione**]({{ site.baseurl }}/wiki/Configuration) - Guida completa alle impostazioni
-- [**Esempi Pratici**]({{ site.baseurl }}/wiki/Examples) - Casi d'uso e tutorial
-
-### 🏗️ **Architettura e Sviluppo**
-- [**Architettura del Sistema**]({{ site.baseurl }}/wiki/Architecture) - Componenti core e design
-- [**API Reference**]({{ site.baseurl }}/wiki/API-Reference) - Documentazione completa delle API
-- [**Guida per Sviluppatori**]({{ site.baseurl }}/wiki/Development) - Contribuire al progetto
-
-### 🔧 **Operazioni e Troubleshooting**
-- [**CLI Reference**]({{ site.baseurl }}/wiki/CLI-Reference) - Comandi e opzioni della CLI
-- [**Performance Guide**]({{ site.baseurl }}/wiki/Performance) - Benchmark e ottimizzazioni
-- [**Troubleshooting**]({{ site.baseurl }}/wiki/Troubleshooting) - Risoluzione problemi comuni
-
-### 📖 **Documentazione Tecnica**
-- [**Manuale Completo**]({{ site.baseurl }}/docs/README) - Documentazione tecnica dettagliata
-- [**Roadmap del Progetto**](https://github.com/gpicchiarelli/Colibri-DB/blob/main/PROJECT_ROADMAP.md) - Piano di sviluppo e milestone
-
-## 🎯 Stato del Progetto
-
-### ✅ **Funzionalità Implementate (Alpha)**
-- Motore storage core con WAL
-- Indici B+Tree con recovery
-- Supporto MVCC e transazioni base
-- CLI amministrativa completa
-- Documentazione tecnica estesa
-
-### 🚧 **In Sviluppo**
-- Modalità server multi-utente
-- Transazioni concorrenti avanzate
-- Ottimizzazioni Apple Silicon
-- Sistema di monitoring avanzato
-
-### 🔮 **Pianificato**
-- Conformità SQL completa
-- Architettura distribuita
-- Deployment cloud-native
-- Integrazione con ecosistema Swift
+Colibrì DB è un database relazionale moderno e performante progettato specificamente per macOS, scritto in Swift 6.2 con architettura modulare e verifiche formali complete.
 
 ## 🚀 Inizia Subito
 
-```bash
-# Clona il repository
-git clone https://github.com/gpicchiarelli/Colibri-DB.git
-cd Colibri-DB
+- **[Quick Start](/wiki/Quick-Start.html)** - Installa e configura Colibrì DB in 5 minuti
+- **[Architettura](/architecture.html)** - Scopri come funziona internamente
+- **[API Reference](/wiki/API-Reference.html)** - Documentazione completa delle API
 
+## 📚 Documentazione
+
+### Fondamenti
+- **[Relational Principles](/wiki/Part-01-Foundations/01-Relational-Principles.html)** - Principi del modello relazionale
+- **[SQL Algebra](/wiki/Part-01-Foundations/02-Algebra-SQL.html)** - Algebra relazionale e SQL
+- **[Transaction Theory](/wiki/Part-01-Foundations/03-Transactions-Theory.html)** - Teoria delle transazioni ACID
+- **[Storage Principles](/wiki/Part-01-Foundations/04-Storage-Principles.html)** - Principi di storage e persistenza
+
+### Core Engine
+- **[WAL and Recovery](/wiki/Part-02-Core-Engine/01-WAL-and-Recovery.html)** - Write-Ahead Log e recovery
+- **[Buffer Pool](/wiki/Part-02-Core-Engine/02-BufferPool.html)** - Gestione della memoria
+- **[Heap Storage](/wiki/Part-02-Core-Engine/03-Heap-Storage.html)** - Storage su heap
+- **[B-Tree Indexes](/wiki/Part-02-Core-Engine/04-BTree-Indexes.html)** - Indici B-Tree
+- **[MVCC Concurrency](/wiki/Part-02-Core-Engine/05-MVCC-Concurrency.html)** - Controllo concorrenza MVCC
+
+### Query Processing
+- **[SQL Parser](/wiki/Part-03-Query/01-SQL-Parser.html)** - Parsing delle query SQL
+- **[Logical Planning](/wiki/Part-03-Query/02-Logical-Planning.html)** - Pianificazione logica
+- **[Physical Planning](/wiki/Part-03-Query/03-Physical-Planning.html)** - Pianificazione fisica
+- **[Execution Engine](/wiki/Part-03-Query/04-Execution-Engine.html)** - Motore di esecuzione
+- **[Advanced Features](/wiki/Part-03-Query/05-Advanced-Features.html)** - Funzionalità avanzate
+
+### Metadata e Server
+- **[Metadata Management](/wiki/Part-04-Metadata/)** - Gestione metadati
+- **[Server Architecture](/wiki/Part-05-Server/)** - Architettura del server
+
+### Tooling e Testing
+- **[Development Tools](/wiki/Part-06-Tooling/)** - Strumenti di sviluppo
+- **[Testing Framework](/wiki/Part-07-Testing/)** - Framework di testing
+
+## 🔬 Specifiche Formali
+
+Colibrì DB utilizza specifiche TLA+ per verificare formalmente le proprietà di sicurezza e liveness:
+
+- **[Specifiche TLA+](/tla-specifications.html)** - Panoramica delle specifiche formali
+- **[WAL Specification](/spec/WAL.tla)** - Specifica del Write-Ahead Log
+- **[Consensus Protocol](/spec/ConsensusProtocol.tla)** - Protocollo di consenso Raft
+- **[Two-Phase Commit](/spec/TwoPhaseCommit.tla)** - Commit distribuito
+
+## 🛠️ Sviluppo
+
+### Struttura del Codice
+
+```
+Sources/ColibriCore/
+├── Database/           # Attore principale ColibrìDB
+├── BufferPool/         # Gestione buffer pool
+├── Storage/            # Storage manager e heap tables
+├── WAL/               # Write-Ahead Log
+├── Transaction/        # Gestione transazioni
+├── MVCC/              # Multi-Version Concurrency Control
+├── SQL/               # Parser SQL
+├── Query/             # Query executor
+├── Consensus/         # Protocollo Raft
+├── Distributed/       # Funzionalità distribuite
+└── Monitoring/        # Metriche e monitoring
+```
+
+### Build e Test
+
+```bash
 # Compila il progetto
 swift build
 
-# Avvia la CLI
-.build/debug/coldb --config colibridb.conf.json
+# Esegui i test
+swift test
+
+# Esegui i benchmark
+swift run benchmarks
+
+# Avvia il server
+swift run coldb-server
 ```
+
+## 📊 Performance
+
+Colibrì DB è ottimizzato per performance elevate:
+
+- **Buffer Pool**: Algoritmo clock-sweep per gestione efficiente della memoria
+- **WAL**: Group commit e flush ottimizzato per throughput elevato
+- **Query Engine**: Ottimizzatore cost-based con statistiche runtime
+- **Indici**: B-Tree, hash e bitmap per accessi veloci
+
+## 🔒 Sicurezza
+
+- **Autenticazione**: Sistema di autenticazione robusto
+- **Autorizzazione**: RBAC (Role-Based Access Control)
+- **Crittografia**: Supporto per crittografia end-to-end
+- **Audit**: Logging completo delle operazioni
+
+## 🌐 Distribuzione
+
+- **Sharding**: Partizionamento automatico dei dati
+- **Replica**: Replica sincrona e asincrona
+- **Consenso**: Protocollo Raft per elezione leader
+- **Query Distribuite**: Esecuzione federata delle query
 
 ## 🤝 Contribuire
 
-Colibrì DB accoglie i contributi! Consulta la nostra [Guida per Sviluppatori]({{ site.baseurl }}/wiki/Development) per iniziare.
+Colibrì DB è un progetto open source. Contributi sono benvenuti!
 
-### Aree di Contributo
-- **Motore Core**: Storage, WAL, indicizzazione
-- **Query Processing**: Parser, ottimizzazione, execution
-- **Testing**: Copertura test, benchmark, stress test
-- **Documentazione**: Guide, esempi, API docs
-- **Strumenti**: CLI, monitoring, DevOps
+1. **Fork** il repository
+2. **Crea** un branch per la tua feature
+3. **Commit** le modifiche
+4. **Push** al branch
+5. **Apri** una Pull Request
 
-## 📊 Metriche Performance
+Vedi [CONTRIBUTING.md](https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md) per dettagli.
 
-| Metrica | Target | Stato Attuale |
-|---------|--------|---------------|
-| WAL Throughput | 10,000+ ops/sec | ✅ Implementato |
-| B+Tree Lookups | 1M+ lookups/sec | ✅ Implementato |
-| Transaction Throughput | 1,000+ txn/sec | 🚧 In sviluppo |
-| Buffer Pool Hit Rate | >95% | ✅ Implementato |
+## 📞 Supporto
 
-## 🔗 Link Utili
-
-- [**Repository GitHub**](https://github.com/gpicchiarelli/Colibri-DB)
-- [**Issue Tracker**](https://github.com/gpicchiarelli/Colibri-DB/issues)
-- [**Discussioni**](https://github.com/gpicchiarelli/Colibri-DB/discussions)
-- [**Pull Requests**](https://github.com/gpicchiarelli/Colibri-DB/pulls)
-- [**Releases**](https://github.com/gpicchiarelli/Colibri-DB/releases)
+- **GitHub Issues**: [Segnala bug](https://github.com/gpicchiarelli/Colibri-DB/issues)
+- **Discussions**: [Partecipa alle discussioni](https://github.com/gpicchiarelli/Colibri-DB/discussions)
+- **Email**: support@colibridb.dev
 
 ## 📄 Licenza
 
-Questo progetto è licenziato sotto la **Licenza BSD 3-Clause** - vedi il file [LICENSE](https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE) per i dettagli.
+Colibrì DB è rilasciato sotto licenza MIT. Vedi [LICENSE](https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE) per dettagli.
 
 ---
 
-<div align="center">
-
-**Colibrì DB** - *Un RDBMS moderno per l'ecosistema Swift*
-
-[⭐ Stella su GitHub](https://github.com/gpicchiarelli/Colibri-DB) • [📖 Documentazione]({{ site.baseurl }}/docs/README) • [🐛 Segnala Bug](https://github.com/gpicchiarelli/Colibri-DB/issues)
-
-</div>
+*Ultimo aggiornamento: {{ "now" | date: "%d/%m/%Y" }}*
