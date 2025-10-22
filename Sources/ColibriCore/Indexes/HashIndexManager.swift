@@ -18,45 +18,10 @@ import Foundation
 
 // MARK: - Hash Index Types
 
-/// LSN (Log Sequence Number)
-/// Corresponds to TLA+: LSN
-public typealias LSN = UInt64
-
-/// Page ID
-/// Corresponds to TLA+: PageID
-public typealias PageID = UInt64
-
-/// Transaction ID
-/// Corresponds to TLA+: TxID
-public typealias TxID = UInt64
-
-/// RID (Record ID)
-/// Corresponds to TLA+: RID
-public typealias RID = UInt64
-
-/// Value
-/// Corresponds to TLA+: Value
-public typealias Value = String
-
 /// Key
 /// Corresponds to TLA+: Key
 public typealias Key = Value
 
-/// Hash entry
-/// Corresponds to TLA+: HashEntry
-public struct HashEntry: Codable, Sendable, Equatable {
-    public let key: Key
-    public let rid: RID
-    public let deleted: Bool
-    public let timestamp: UInt64
-    
-    public init(key: Key, rid: RID, deleted: Bool, timestamp: UInt64) {
-        self.key = key
-        self.rid = rid
-        self.deleted = deleted
-        self.timestamp = timestamp
-    }
-}
 
 // MARK: - Hash Index Manager
 
@@ -289,52 +254,6 @@ public actor HashIndexManager {
         return false
     }
     
-    /// Get entry count
-    /// TLA+ Function: GetEntryCount()
-    private func getEntryCount() -> Int {
-        return numEntries
-    }
-    
-    /// Get bucket count
-    /// TLA+ Function: GetBucketCount()
-    private func getBucketCount() -> Int {
-        return numBuckets
-    }
-    
-    /// Get load factor
-    /// TLA+ Function: GetLoadFactor()
-    private func getLoadFactor() -> Int {
-        return loadFactor
-    }
-    
-    /// Check if unique
-    /// TLA+ Function: IsUnique()
-    private func isUniqueIndex() -> Bool {
-        return isUnique
-    }
-    
-    /// Clear index
-    /// TLA+ Function: ClearIndex()
-    private func clearIndex() async throws {
-        buckets.removeAll()
-        numEntries = 0
-        numBuckets = INITIAL_BUCKETS
-        loadFactor = 0
-        
-        // TLA+: Initialize buckets
-        for i in 0..<INITIAL_BUCKETS {
-            buckets[i] = nil
-        }
-        
-        print("Index cleared")
-    }
-    
-    /// Reset index
-    /// TLA+ Function: ResetIndex()
-    private func resetIndex() async throws {
-        try await clearIndex()
-        print("Index reset")
-    }
     
     // MARK: - Query Operations
     
@@ -431,12 +350,16 @@ public actor HashIndexManager {
     
     /// Clear index
     public func clearIndex() async throws {
-        try await clearIndex()
+        buckets.removeAll()
+        numEntries = 0
+        numBuckets = Self.initialBuckets
+        print("Index cleared")
     }
     
     /// Reset index
     public func resetIndex() async throws {
-        try await resetIndex()
+        try await clearIndex()
+        print("Index reset")
     }
     
     // MARK: - Invariant Checking (for testing)

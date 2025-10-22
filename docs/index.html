@@ -5,14 +5,10 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 ---
 
 <style>
-/* Import the main CSS variables */
-@import url('/assets/css/main.css');
-
-/* Homepage-specific styles */
-/* Homepage-specific styles */
+/* Complete inline styles for homepage */
 .hero {
-    background: var(--gradient-hero);
-    padding: var(--space-24) 0;
+    background: linear-gradient(135deg, #FAFAFA 0%, #FFFFFF 100%);
+    padding: 6rem 0;
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -37,18 +33,18 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 
 .hero h1 {
     font-size: clamp(3rem, 8vw, 6rem);
-    font-weight: var(--font-light);
-    color: var(--primary);
-    margin-bottom: var(--space-6);
+    font-weight: 300;
+    color: #000000;
+    margin-bottom: 1.5rem;
     letter-spacing: -0.03em;
     line-height: 1.1;
 }
 
 .hero-subtitle {
     font-size: clamp(1.5rem, 4vw, 2.5rem);
-    color: var(--gray-700);
-    margin-bottom: var(--space-8);
-    font-weight: var(--font-light);
+    color: #636366;
+    margin-bottom: 2rem;
+    font-weight: 300;
     max-width: 900px;
     margin-left: auto;
     margin-right: auto;
@@ -56,8 +52,8 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 
 .hero-description {
     font-size: clamp(1.125rem, 2.5vw, 1.25rem);
-    color: var(--gray-600);
-    margin-bottom: var(--space-12);
+    color: #8E8E93;
+    margin-bottom: 3rem;
     max-width: 800px;
     margin-left: auto;
     margin-right: auto;
@@ -68,38 +64,38 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap: var(--space-3);
-    margin-bottom: var(--space-12);
+    gap: 0.75rem;
+    margin-bottom: 3rem;
 }
 
 .badge {
     display: inline-flex;
     align-items: center;
-    padding: var(--space-3) var(--space-4);
-    background: var(--white);
-    border: 1px solid var(--gray-300);
-    border-radius: var(--radius-full);
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
-    color: var(--gray-700);
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-base);
+    padding: 0.75rem 1rem;
+    background: #FFFFFF;
+    border: 1px solid #D1D1D6;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #636366;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
 }
 
 .badge:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.badge.swift { background: var(--primary); color: var(--white); border-color: var(--primary); }
-.badge.macos { background: var(--gray-800); color: var(--white); border-color: var(--gray-800); }
-.badge.performance { background: var(--success); color: var(--white); border-color: var(--success); }
-.badge.tla { background: var(--accent); color: var(--white); border-color: var(--accent); }
+.badge.swift { background: #000000; color: #FFFFFF; border-color: #000000; }
+.badge.macos { background: #48484A; color: #FFFFFF; border-color: #48484A; }
+.badge.performance { background: #34C759; color: #FFFFFF; border-color: #34C759; }
+.badge.tla { background: #FF6B35; color: #FFFFFF; border-color: #FF6B35; }
 
 .hero-actions {
     display: flex;
     justify-content: center;
-    gap: var(--space-4);
+    gap: 1rem;
     flex-wrap: wrap;
 }
 
@@ -107,62 +103,62 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: var(--space-4) var(--space-8);
-    border-radius: var(--radius-xl);
-    font-weight: var(--font-medium);
-    font-size: var(--text-base);
+    padding: 1rem 2rem;
+    border-radius: 0.75rem;
+    font-weight: 500;
+    font-size: 1rem;
     text-decoration: none;
-    transition: all var(--transition-base);
+    transition: all 0.2s ease;
     border: 1px solid transparent;
     min-width: 180px;
     height: 56px;
-    gap: var(--space-2);
+    gap: 0.5rem;
 }
 
 .btn-primary {
-    background: var(--primary);
-    color: var(--white);
-    border-color: var(--primary);
+    background: #000000;
+    color: #FFFFFF;
+    border-color: #000000;
 }
 
 .btn-primary:hover {
-    background: var(--primary-light);
+    background: #333333;
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .btn-secondary {
-    background: var(--white);
-    color: var(--primary);
-    border-color: var(--gray-300);
+    background: #FFFFFF;
+    color: #000000;
+    border-color: #D1D1D6;
 }
 
 .btn-secondary:hover {
-    background: var(--gray-50);
-    border-color: var(--gray-400);
+    background: #FAFAFA;
+    border-color: #C7C7CC;
     transform: translateY(-2px);
 }
 
 /* Features Section */
 .features {
-    padding: var(--space-24) 0;
-    background: var(--white);
+    padding: 6rem 0;
+    background: #FFFFFF;
 }
 
 .section-title {
     text-align: center;
     font-size: clamp(2.5rem, 5vw, 3.5rem);
-    font-weight: var(--font-light);
-    color: var(--primary);
-    margin-bottom: var(--space-8);
+    font-weight: 300;
+    color: #000000;
+    margin-bottom: 2rem;
     letter-spacing: -0.02em;
 }
 
 .section-subtitle {
     text-align: center;
-    font-size: var(--text-xl);
-    color: var(--gray-600);
-    margin-bottom: var(--space-12);
+    font-size: 1.25rem;
+    color: #8E8E93;
+    margin-bottom: 3rem;
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
@@ -171,17 +167,17 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 .features-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: var(--space-8);
-    margin-top: var(--space-12);
+    gap: 2rem;
+    margin-top: 3rem;
 }
 
 .feature-card {
-    background: var(--white);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-2xl);
-    padding: var(--space-8);
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-slow);
+    background: #FFFFFF;
+    border: 1px solid #E5E5E5;
+    border-radius: 1rem;
+    padding: 2rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
 }
@@ -193,15 +189,15 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
     left: 0;
     right: 0;
     height: 4px;
-    background: var(--gradient-secondary);
+    background: linear-gradient(135deg, #007AFF 0%, #5AC8FA 100%);
     transform: scaleX(0);
-    transition: transform var(--transition-slow);
+    transition: transform 0.3s ease;
 }
 
 .feature-card:hover {
     transform: translateY(-8px);
-    box-shadow: var(--shadow-xl);
-    border-color: var(--gray-300);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+    border-color: #D1D1D6;
 }
 
 .feature-card:hover::before {
@@ -210,22 +206,22 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 
 .feature-icon {
     font-size: 3rem;
-    margin-bottom: var(--space-4);
+    margin-bottom: 1rem;
     display: block;
 }
 
 .feature-card h3 {
-    font-size: var(--text-xl);
-    font-weight: var(--font-semibold);
-    color: var(--primary);
-    margin-bottom: var(--space-4);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #000000;
+    margin-bottom: 1rem;
 }
 
 .feature-card p {
-    color: var(--gray-600);
-    margin-bottom: var(--space-4);
+    color: #8E8E93;
+    margin-bottom: 1rem;
     line-height: 1.6;
-    font-size: var(--text-base);
+    font-size: 1rem;
 }
 
 .feature-list {
@@ -234,197 +230,197 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 }
 
 .feature-list li {
-    padding: var(--space-2) 0;
-    color: var(--gray-700);
+    padding: 0.5rem 0;
+    color: #636366;
     position: relative;
-    padding-left: var(--space-6);
-    font-size: var(--text-sm);
+    padding-left: 1.5rem;
+    font-size: 0.875rem;
 }
 
 .feature-list li::before {
     content: "→";
     position: absolute;
     left: 0;
-    color: var(--secondary);
-    font-weight: var(--font-bold);
+    color: #007AFF;
+    font-weight: 600;
 }
 
 /* Architecture Section */
 .architecture {
-    background: var(--gray-50);
-    padding: var(--space-24) 0;
+    background: #FAFAFA;
+    padding: 6rem 0;
 }
 
 .architecture-diagram {
-    background: var(--white);
-    border-radius: var(--radius-2xl);
-    padding: var(--space-12);
-    margin: var(--space-8) 0;
-    border: 1px solid var(--gray-200);
-    box-shadow: var(--shadow-md);
+    background: #FFFFFF;
+    border-radius: 1rem;
+    padding: 3rem;
+    margin: 2rem 0;
+    border: 1px solid #E5E5E5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .arch-layer {
-    background: var(--white);
-    border: 2px solid var(--gray-300);
-    border-radius: var(--radius-xl);
-    padding: var(--space-6);
-    margin: var(--space-4) 0;
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-base);
+    background: #FFFFFF;
+    border: 2px solid #D1D1D6;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
     position: relative;
 }
 
 .arch-layer:hover {
-    border-color: var(--secondary);
+    border-color: #007AFF;
     transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .arch-layer h4 {
-    color: var(--primary);
-    margin-bottom: var(--space-3);
-    font-weight: var(--font-semibold);
+    color: #000000;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    font-size: var(--text-lg);
+    gap: 0.75rem;
+    font-size: 1.125rem;
 }
 
 .arch-layer p {
-    color: var(--gray-600);
-    font-size: var(--text-sm);
+    color: #8E8E93;
+    font-size: 0.875rem;
 }
 
 .arch-layer .layer-number {
-    background: var(--secondary);
-    color: var(--white);
+    background: #007AFF;
+    color: #FFFFFF;
     width: 32px;
     height: 32px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--text-sm);
-    font-weight: var(--font-bold);
+    font-size: 0.875rem;
+    font-weight: 700;
 }
 
 /* Modules Section */
 .modules {
-    padding: var(--space-24) 0;
-    background: var(--white);
+    padding: 6rem 0;
+    background: #FFFFFF;
 }
 
 .modules-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: var(--space-6);
-    margin-top: var(--space-12);
+    gap: 1.5rem;
+    margin-top: 3rem;
 }
 
 .module-card {
-    background: var(--white);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-xl);
-    padding: var(--space-6);
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-base);
+    background: #FFFFFF;
+    border: 1px solid #E5E5E5;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
 }
 
 .module-card:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-md);
-    border-color: var(--gray-300);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #D1D1D6;
 }
 
 .module-card h4 {
-    color: var(--primary);
-    margin-bottom: var(--space-3);
-    font-weight: var(--font-semibold);
-    font-size: var(--text-lg);
+    color: #000000;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    font-size: 1.125rem;
 }
 
 .module-card p {
-    color: var(--gray-600);
-    font-size: var(--text-sm);
+    color: #8E8E93;
+    font-size: 0.875rem;
     line-height: 1.5;
-    margin-bottom: var(--space-4);
+    margin-bottom: 1rem;
 }
 
 .module-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2);
-    margin-top: var(--space-3);
+    gap: 0.5rem;
+    margin-top: 0.75rem;
 }
 
 .module-tag {
-    background: var(--gray-100);
-    color: var(--gray-700);
-    padding: var(--space-1) var(--space-3);
-    border-radius: var(--radius-lg);
-    font-size: var(--text-xs);
-    font-weight: var(--font-medium);
+    background: #F5F5F5;
+    color: #636366;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
 }
 
 /* Quick Start Section */
 .quick-start {
-    background: var(--gray-50);
-    padding: var(--space-24) 0;
+    background: #FAFAFA;
+    padding: 6rem 0;
 }
 
 .quick-start-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--space-12);
+    gap: 3rem;
     align-items: center;
 }
 
 .quick-start-content h2 {
     font-size: clamp(2rem, 4vw, 2.75rem);
-    font-weight: var(--font-light);
-    color: var(--primary);
-    margin-bottom: var(--space-6);
+    font-weight: 300;
+    color: #000000;
+    margin-bottom: 1.5rem;
 }
 
 .quick-start-content p {
-    color: var(--gray-600);
-    margin-bottom: var(--space-6);
-    font-size: var(--text-lg);
+    color: #8E8E93;
+    margin-bottom: 1.5rem;
+    font-size: 1.125rem;
     line-height: 1.7;
 }
 
 .code-block {
-    background: var(--gray-900);
-    border-radius: var(--radius-xl);
-    padding: var(--space-8);
-    font-family: var(--font-mono);
-    font-size: var(--text-sm);
+    background: #1C1C1E;
+    border-radius: 0.75rem;
+    padding: 2rem;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+    font-size: 0.875rem;
     line-height: 1.6;
-    color: var(--gray-100);
+    color: #F5F5F5;
     overflow-x: auto;
-    box-shadow: var(--shadow-xl);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
     position: relative;
 }
 
 .code-block::before {
     content: '';
     position: absolute;
-    top: var(--space-4);
-    left: var(--space-4);
+    top: 1rem;
+    left: 1rem;
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    background: var(--error);
-    box-shadow: 20px 0 0 var(--warning), 40px 0 0 var(--success);
+    background: #FF3B30;
+    box-shadow: 20px 0 0 #FF9500, 40px 0 0 #34C759;
 }
 
 .code-block pre {
     margin: 0;
-    padding-top: var(--space-6);
+    padding-top: 1.5rem;
 }
 
-.code-comment { color: var(--gray-500); }
+.code-comment { color: #AEAEB2; }
 .code-keyword { color: #FF79C6; }
 .code-string { color: #F1FA8C; }
 .code-function { color: #50FA7B; }
@@ -432,30 +428,30 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 
 /* Performance Section */
 .performance {
-    background: var(--gray-900);
-    color: var(--white);
-    padding: var(--space-24) 0;
+    background: #1C1C1E;
+    color: #FFFFFF;
+    padding: 6rem 0;
 }
 
 .performance .section-title {
-    color: var(--white);
+    color: #FFFFFF;
 }
 
 .performance-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: var(--space-8);
-    margin-top: var(--space-12);
+    gap: 2rem;
+    margin-top: 3rem;
 }
 
 .performance-card {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-xl);
-    padding: var(--space-8);
+    border-radius: 0.75rem;
+    padding: 2rem;
     text-align: center;
     backdrop-filter: blur(10px);
-    transition: all var(--transition-base);
+    transition: all 0.2s ease;
 }
 
 .performance-card:hover {
@@ -465,35 +461,35 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 
 .performance-number {
     font-size: 3rem;
-    font-weight: var(--font-light);
-    color: var(--success);
+    font-weight: 300;
+    color: #34C759;
     display: block;
-    margin-bottom: var(--space-3);
+    margin-bottom: 0.75rem;
 }
 
 .performance-label {
-    color: var(--gray-300);
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
+    color: #D1D1D6;
+    font-size: 0.875rem;
+    font-weight: 500;
 }
 
 /* CTA Section */
 .cta {
-    background: var(--gradient-primary);
-    color: var(--white);
-    padding: var(--space-24) 0;
+    background: linear-gradient(135deg, #000000 0%, #333333 100%);
+    color: #FFFFFF;
+    padding: 6rem 0;
     text-align: center;
 }
 
 .cta h2 {
     font-size: clamp(2rem, 4vw, 2.75rem);
-    font-weight: var(--font-light);
-    margin-bottom: var(--space-6);
+    font-weight: 300;
+    margin-bottom: 1.5rem;
 }
 
 .cta p {
-    font-size: var(--text-lg);
-    margin-bottom: var(--space-8);
+    font-size: 1.125rem;
+    margin-bottom: 2rem;
     opacity: 0.9;
     max-width: 600px;
     margin-left: auto;
@@ -501,13 +497,13 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 }
 
 .cta .btn {
-    background: var(--white);
-    color: var(--primary);
-    border-color: var(--white);
+    background: #FFFFFF;
+    color: #000000;
+    border-color: #FFFFFF;
 }
 
 .cta .btn:hover {
-    background: var(--gray-100);
+    background: #F5F5F5;
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
 }
@@ -515,7 +511,7 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 /* Responsive Design */
 @media (max-width: 768px) {
     .hero {
-        padding: var(--space-16) 0;
+        padding: 4rem 0;
     }
     
     .hero-actions {
@@ -530,17 +526,17 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
     
     .features-grid {
         grid-template-columns: 1fr;
-        gap: var(--space-6);
+        gap: 1.5rem;
     }
     
     .quick-start-grid {
         grid-template-columns: 1fr;
-        gap: var(--space-8);
+        gap: 2rem;
     }
     
     .performance-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: var(--space-4);
+        gap: 1rem;
     }
     
     .modules-grid {
@@ -550,12 +546,12 @@ description: Un database relazionale moderno scritto in Swift 6.2, ottimizzato p
 
 @media (max-width: 480px) {
     .hero-badges {
-        gap: var(--space-2);
+        gap: 0.5rem;
     }
     
     .badge {
-        font-size: var(--text-xs);
-        padding: var(--space-2) var(--space-3);
+        font-size: 0.75rem;
+        padding: 0.5rem 0.75rem;
     }
     
     .performance-grid {

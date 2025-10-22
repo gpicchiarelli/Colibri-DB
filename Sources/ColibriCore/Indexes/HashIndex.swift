@@ -24,11 +24,13 @@ public struct HashEntry: Codable, Sendable, Equatable {
     public let key: Value
     public let rid: RID
     public let deleted: Bool
+    public let timestamp: UInt64
     
-    public init(key: Value, rid: RID, deleted: Bool) {
+    public init(key: Value, rid: RID, deleted: Bool, timestamp: UInt64 = 0) {
         self.key = key
         self.rid = rid
         self.deleted = deleted
+        self.timestamp = timestamp
     }
 }
 

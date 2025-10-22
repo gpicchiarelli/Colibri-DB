@@ -18,26 +18,6 @@ import Foundation
 
 // MARK: - Query Executor Types
 
-/// LSN (Log Sequence Number)
-/// Corresponds to TLA+: LSN
-public typealias LSN = UInt64
-
-/// Page ID
-/// Corresponds to TLA+: PageID
-public typealias PageID = UInt64
-
-/// Transaction ID
-/// Corresponds to TLA+: TxID
-public typealias TxID = UInt64
-
-/// RID (Record ID)
-/// Corresponds to TLA+: RID
-public typealias RID = UInt64
-
-/// Value
-/// Corresponds to TLA+: Value
-public typealias Value = String
-
 /// Tuple
 /// Corresponds to TLA+: Tuple
 public typealias Tuple = [Value]
