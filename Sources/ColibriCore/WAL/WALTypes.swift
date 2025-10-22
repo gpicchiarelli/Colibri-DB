@@ -174,14 +174,14 @@ public struct WALFileHeader: Codable, Sendable {
     public let pageSize: UInt32
     
     public init(pageSize: UInt32 = UInt32(PAGE_SIZE)) {
-        self.magic = WALFileHeader.magic
-        self.version = WALFileHeader.version
+        self.magic = Self.magic
+        self.version = Self.version
         self.createdAt = Date()
         self.pageSize = pageSize
     }
     
     public var isValid: Bool {
-        return magic == WALFileHeader.magic && version == WALFileHeader.version
+        return magic == Self.magic && version == Self.version
     }
 }
 
@@ -238,22 +238,6 @@ public struct WALRecordWithPayload: Codable, Sendable {
     }
 }
 
-// MARK: - Group Commit Configuration
-
-/// Group commit configuration
-/// Based on TLA+ spec: GROUP_COMMIT_THRESHOLD and GROUP_COMMIT_TIMEOUT_MS
-public struct GroupCommitConfig: Sendable {
-    /// Maximum number of pending records before forced flush
-    public let threshold: Int
-    
-    /// Maximum wait time (ms) before forced flush
-    public let timeoutMs: Int
-    
-    public init(threshold: Int = 8, timeoutMs: Int = 10) {
-        self.threshold = threshold
-        self.timeoutMs = timeoutMs
-    }
-}
 
 // MARK: - Dirty Page Table (DPT)
 

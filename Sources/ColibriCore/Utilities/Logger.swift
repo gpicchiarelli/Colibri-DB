@@ -12,7 +12,7 @@ public enum LogLevel: Int {
     case fatal = 4
 }
 
-public struct LogEntry {
+public struct LoggerEntry {
     public let level: LogLevel
     public let message: String
     public let timestamp: Date
@@ -35,7 +35,7 @@ public struct LogEntry {
 public actor Logger {
     public static let shared = Logger()
     
-    private var entries: [LogEntry] = []
+    private var entries: [LoggerEntry] = []
     private var minimumLevel: LogLevel = .info
     private let maxEntries = 10000
     
@@ -57,7 +57,7 @@ public actor Logger {
             return
         }
         
-        let entry = LogEntry(
+        let entry = LoggerEntry(
             level: level,
             message: message,
             component: component,
@@ -75,7 +75,7 @@ public actor Logger {
         printEntry(entry)
     }
     
-    private func printEntry(_ entry: LogEntry) {
+    private func printEntry(_ entry: LoggerEntry) {
         let levelStr: String
         switch entry.level {
         case .debug: levelStr = "DEBUG"
@@ -92,7 +92,7 @@ public actor Logger {
         print("[\(timeStr)] [\(levelStr)] [\(entry.component)] \(entry.message)")
     }
     
-    public func getEntries(level: LogLevel? = nil, component: String? = nil) -> [LogEntry] {
+    public func getEntries(level: LogLevel? = nil, component: String? = nil) -> [LoggerEntry] {
         var filtered = entries
         
         if let level = level {
