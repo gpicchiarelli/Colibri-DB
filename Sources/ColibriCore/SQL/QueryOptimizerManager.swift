@@ -22,31 +22,6 @@ import Foundation
 /// Corresponds to TLA+: Tuple
 public typealias Tuple = [Value]
 
-/// Plan node
-/// Corresponds to TLA+: PlanNode
-public struct PlanNode: Codable, Sendable, Equatable {
-    public let nodeId: String
-    public let operatorType: String
-    public let tableName: String
-    public let columns: [String]
-    public let predicate: String
-    public let cost: Double
-    public let cardinality: Int
-    public let selectivity: Double
-    public let timestamp: UInt64
-    
-    public init(nodeId: String, operatorType: String, tableName: String, columns: [String], predicate: String, cost: Double, cardinality: Int, selectivity: Double, timestamp: UInt64) {
-        self.nodeId = nodeId
-        self.operatorType = operatorType
-        self.tableName = tableName
-        self.columns = columns
-        self.predicate = predicate
-        self.cost = cost
-        self.cardinality = cardinality
-        self.selectivity = selectivity
-        self.timestamp = timestamp
-    }
-}
 
 /// Cost model
 /// Corresponds to TLA+: CostModel
@@ -130,12 +105,12 @@ public actor QueryOptimizerManager {
     private var statistics: [String: TableStats] = [:]
     
     /// Explored plans
-    /// TLA+: exploredPlans \in Set(Seq(PlanNode))
-    private var exploredPlans: Set<[PlanNode]> = []
+    /// TLA+: exploredPlans \in Set(Seq(QueryNode))
+    private var exploredPlans: Set<[QueryNode]> = []
     
     /// Best plan
-    /// TLA+: bestPlan \in Seq(PlanNode)
-    private var bestPlan: [PlanNode] = []
+    /// TLA+: bestPlan \in Seq(QueryNode)
+    private var bestPlan: [QueryNode] = []
     
     /// DP table
     /// TLA+: dpTable \in [String -> Double]
@@ -230,7 +205,7 @@ public actor QueryOptimizerManager {
     
     /// Estimate cost
     /// TLA+ Action: EstimateCost(plan)
-    public func estimateCost(plan: [PlanNode]) async throws -> Double {
+    public func estimateCost(plan: [QueryNode]) async throws -> Double {
         // TLA+: Calculate total cost
         var totalCost = 0.0
         
@@ -417,16 +392,16 @@ public actor QueryOptimizerManager {
         let nestedLoopCost = Double(leftCardinality * rightCardinality) * 0.001
         
         // TLA+: Hash join cost
-        let hashJoinCost = Double(leftCardinality + rightCardinality) * 0.01
+        let hashJoinCost = Double((leftCardinality ?? 0) + (rightCardinality ?? 0)) * 0.01
         
         return min(nestedLoopCost, hashJoinCost)
     }
     
     /// Calculate aggregation cost
     /// TLA+ Function: CalculateAggregationCost(node)
-    private func calculateAggregationCost(node: PlanNode) async throws -> Double {
+    private func calculateAggregationCost(node: QueryNode) async throws -> Double {
         // TLA+: Calculate aggregation cost
-        let inputCardinality = node.cardinality
+        let inputCardinality = Int(node.properties["cardinality"] ?? "0") ?? 0
         
         // TLA+: CPU cost for aggregation
         let cpuCost = Double(inputCardinality) * 0.01
@@ -436,9 +411,9 @@ public actor QueryOptimizerManager {
     
     /// Calculate sort cost
     /// TLA+ Function: CalculateSortCost(node)
-    private func calculateSortCost(node: PlanNode) async throws -> Double {
+    private func calculateSortCost(node: QueryNode) async throws -> Double {
         // TLA+: Calculate sort cost
-        let inputCardinality = node.cardinality
+        let inputCardinality = Int(node.properties["cardinality"] ?? "0") ?? 0
         
         // TLA+: CPU cost for sorting
         let cpuCost = Double(inputCardinality) * log2(Double(inputCardinality)) * 0.01
@@ -494,9 +469,9 @@ public actor QueryOptimizerManager {
     
     /// Select best plan
     /// TLA+ Function: SelectBestPlan()
-    private func selectBestPlan() async throws -> [PlanNode] {
+    private func selectBestPlan() async throws -> [QueryNode] {
         var bestCost = Double.infinity
-        var bestPlan: [PlanNode] = []
+        var bestPlan: [QueryNode] = []
         
         for plan in exploredPlans {
             let cost = try await estimateCost(plan: plan)
@@ -511,17 +486,18 @@ public actor QueryOptimizerManager {
     
     /// Compute cardinality
     /// TLA+ Function: ComputeCardinality(node)
-    private func computeCardinality(node: PlanNode) async throws -> Int {
+    private func computeCardinality(node: QueryNode) async throws -> Int {
         // TLA+: Compute cardinality based on node type
-        switch node.operatorType {
+        switch node.nodeType {
         case "scan":
-            return statistics[node.tableName]?.rowCount ?? 0
+            let tableName = node.properties["tableName"] ?? ""
+            return statistics[tableName]?.rowCount ?? 0
         case "join":
-            return node.cardinality
+            return Int(node.properties["cardinality"] ?? "0") ?? 0
         case "aggregation":
             return 1
         case "sort":
-            return node.cardinality
+            return Int(node.properties["cardinality"] ?? "0") ?? 0
         default:
             return 0
         }
@@ -529,9 +505,10 @@ public actor QueryOptimizerManager {
     
     /// Compute selectivity
     /// TLA+ Function: ComputeSelectivity(node)
-    private func computeSelectivity(node: PlanNode) async throws -> Double {
+    private func computeSelectivity(node: QueryNode) async throws -> Double {
         // TLA+: Compute selectivity based on predicate
-        if node.predicate.isEmpty {
+        let predicate = node.properties["predicate"] ?? ""
+        if predicate.isEmpty {
             return 1.0
         }
         
@@ -549,7 +526,7 @@ public actor QueryOptimizerManager {
     // MARK: - Query Operations
     
     /// Get best plan
-    public func getBestPlan() -> [PlanNode] {
+    public func getBestPlan() -> [QueryNode] {
         return bestPlan
     }
     
@@ -559,7 +536,7 @@ public actor QueryOptimizerManager {
     }
     
     /// Get plan cost
-    public func getPlanCost(plan: [PlanNode]) async throws -> Double {
+    public func getPlanCost(plan: [QueryNode]) async throws -> Double {
         return try await estimateCost(plan: plan)
     }
     
@@ -574,7 +551,7 @@ public actor QueryOptimizerManager {
     }
     
     /// Get explored plans
-    public func getExploredPlans() -> Set<[PlanNode]> {
+    public func getExploredPlans() -> Set<[QueryNode]> {
         return exploredPlans
     }
     
