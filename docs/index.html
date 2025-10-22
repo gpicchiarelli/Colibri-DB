@@ -189,18 +189,22 @@ description: Colibrì DB integra BufferPool, FileWAL, MVCCManager, QueryExecutor
     </header>
     <div class="highlight-grid">
       <div class="highlight">
+        <div class="highlight__icon">🤝</div>
         <strong>Consenso</strong>
         <p><code>Consensus/RaftConsensusManager.swift</code> mantiene log matching, election safety e gestione timer.</p>
       </div>
       <div class="highlight">
+        <div class="highlight__icon">🔄</div>
         <strong>Transazioni globali</strong>
         <p><code>TwoPhaseCommit/TwoPhaseCommitManager.swift</code> governa prepare/commit/abort con messaggistica esplicita.</p>
       </div>
       <div class="highlight">
+        <div class="highlight__icon">📊</div>
         <strong>Replica &amp; Sharding</strong>
         <p><code>Replication/ReplicationManager.swift</code> e <code>Sharding/ShardingManager.swift</code> definiscono layout di partizioni e repliche.</p>
       </div>
       <div class="highlight">
+        <div class="highlight__icon">🌐</div>
         <strong>Query distribuite</strong>
         <p><code>DistributedQuery/DistributedQuery.swift</code> coordina pianificazione federata e merge dei risultati.</p>
       </div>
