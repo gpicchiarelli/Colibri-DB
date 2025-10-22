@@ -200,14 +200,14 @@ public actor TransactionManager {
     private let walManager: WALManager
     
     /// MVCC manager
-    private let mvccManager: MVCCManager
+    private let mvccManager: TransactionMVCCManager
     
     /// Lock manager
     private let lockManager: LockManager
     
     // MARK: - Initialization
     
-    public init(walManager: WALManager, mvccManager: MVCCManager, lockManager: LockManager) {
+    public init(walManager: WALManager, mvccManager: TransactionMVCCManager, lockManager: LockManager) {
         self.walManager = walManager
         self.mvccManager = mvccManager
         self.lockManager = lockManager
@@ -714,8 +714,8 @@ public protocol WALManager: Sendable {
     func flushLog() async throws
 }
 
-/// MVCC manager
-public protocol MVCCManager: Sendable {
+/// Transaction manager MVCC protocol
+public protocol TransactionMVCCManager: Sendable {
     func beginTransaction(txId: TxID) async throws -> Snapshot
     func read(txId: TxID, key: String) async throws -> String?
     func write(txId: TxID, key: String, value: String) async throws

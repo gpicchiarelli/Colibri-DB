@@ -30,6 +30,13 @@
 
 import Foundation
 
+/// Query executor transaction manager protocol
+public protocol QueryExecutorTransactionManager: Sendable {
+    func beginTransaction() async throws -> TxID
+    func commitTransaction(txId: TxID) async throws
+    func abortTransaction(txId: TxID) async throws
+}
+
 // MARK: - Tuple Structure
 
 /// Tuple with values and RID (TLA+: Tuple)
@@ -178,13 +185,13 @@ public actor QueryExecutor {
     private var pipelineActive: [Int: Bool] = [:]
     
     // Dependencies
-    private let transactionManager: TransactionManager
+    private let transactionManager: QueryExecutorTransactionManager
     private let catalog: Catalog
     
     // Statistics
     private var stats: QueryExecutorStats = QueryExecutorStats()
     
-    public init(transactionManager: TransactionManager, catalog: Catalog) {
+    public init(transactionManager: QueryExecutorTransactionManager, catalog: Catalog) {
         self.transactionManager = transactionManager
         self.catalog = catalog
     }

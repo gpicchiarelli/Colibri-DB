@@ -477,12 +477,6 @@ public actor MVCCManager {
 
 // MARK: - Supporting Types
 
-/// Transaction manager
-public protocol TransactionManager: Sendable {
-    func beginTransaction() async throws -> TxID
-    func commitTransaction(txId: TxID) async throws
-    func abortTransaction(txId: TxID) async throws
-}
 
 /// Lock manager
 public protocol LockManager: Sendable {

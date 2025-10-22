@@ -106,7 +106,7 @@ public struct SortState: Codable, Sendable, Equatable {
 
 /// Query Executor Manager for database query execution
 /// Corresponds to TLA+ module: QueryExecutor.tla
-public actor QueryExecutorManager {
+public actor SQLQueryExecutorManager {
     
     // MARK: - State Variables (TLA+ vars)
     
