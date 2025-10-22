@@ -22,9 +22,6 @@ import Foundation
 /// Corresponds to TLA+: NodeID
 public typealias NodeID = String
 
-/// Timestamp
-/// Corresponds to TLA+: Timestamp
-public typealias Timestamp = UInt64
 
 /// Clock type
 /// Corresponds to TLA+: ClockType

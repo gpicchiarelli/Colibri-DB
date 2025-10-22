@@ -18,9 +18,6 @@ import Foundation
 
 // MARK: - Lock Manager Types
 
-/// Transaction ID
-/// Corresponds to TLA+: TxID
-public typealias TxID = UInt64
 
 /// Resource
 /// Corresponds to TLA+: Resource

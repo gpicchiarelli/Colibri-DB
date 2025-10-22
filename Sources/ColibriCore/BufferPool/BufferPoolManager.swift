@@ -19,9 +19,6 @@ import Foundation
 
 // MARK: - Buffer Pool Types
 
-/// Page ID
-/// Corresponds to TLA+: PageID
-public typealias PageID = UInt64
 
 
 

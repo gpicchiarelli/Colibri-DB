@@ -568,7 +568,7 @@ public enum CastRule: String, Codable {
 }
 
 /// Expression for type checking
-public struct Expression {
+public class Expression: @unchecked Sendable {
     public enum Kind {
         case literal
         case columnRef
@@ -581,8 +581,8 @@ public struct Expression {
     public let value: SQLValue
     public let columnName: String?
     public let operatorName: String?
-    public let left: BoxedExpression?
-    public let right: BoxedExpression?
+    public let left: Expression?
+    public let right: Expression?
     public let functionName: String?
     public let arguments: [Expression]?
     public let source: Expression?

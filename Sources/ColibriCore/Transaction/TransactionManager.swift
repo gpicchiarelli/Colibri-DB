@@ -19,14 +19,8 @@ import Foundation
 
 // MARK: - Transaction Manager Types
 
-/// Transaction ID
-/// Corresponds to TLA+: TxID
-public typealias TxID = UInt64
 
 
-/// Timestamp
-/// Corresponds to TLA+: Timestamp
-public typealias Timestamp = UInt64
 
 /// Resources
 /// Corresponds to TLA+: Resources

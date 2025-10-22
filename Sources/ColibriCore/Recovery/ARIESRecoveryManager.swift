@@ -20,13 +20,7 @@ import Foundation
 // MARK: - ARIES Recovery Types
 
 
-/// Page ID
-/// Corresponds to TLA+: PageID
-public typealias PageID = UInt64
 
-/// Transaction ID
-/// Corresponds to TLA+: TxID
-public typealias TxID = UInt64
 
 /// Recovery phase
 /// Corresponds to TLA+: Phase

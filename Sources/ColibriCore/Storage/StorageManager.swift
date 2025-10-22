@@ -17,9 +17,6 @@ import Foundation
 
 // MARK: - Storage Types
 
-/// Page ID
-/// Corresponds to TLA+: PageID
-public typealias PageID = UInt64
 
 /// Record ID
 /// Corresponds to TLA+: RecordID
