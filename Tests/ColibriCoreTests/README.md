@@ -15,6 +15,7 @@ La suite di test è organizzata in diverse categorie:
 
 ### 🔍 Test Query
 - **SQLParserTests**: Test per il parser SQL e tokenizzazione
+- **QueryOptimizerTests**: Test per ottimizzazione cost-based delle query
 
 ### 🌐 Test Distribuiti
 - **DistributedTests**: Test per consenso Raft, replicazione e sharding
@@ -23,12 +24,24 @@ La suite di test è organizzata in diverse categorie:
 ### 🔒 Test Sicurezza
 - **SecurityTests**: Test per autenticazione, autorizzazione e sicurezza
 
+### 🗂️ Test Gestione Dati
+- **IndexSubsystemTests**: Test per gestione unificata di tutti i tipi di indici
+- **MultiDatabaseCatalogTests**: Test per gestione multi-database
+- **VACUUMTests**: Test per pulizia e deframmentazione
+- **StatisticsMaintenanceTests**: Test per statistiche del query optimizer
+
+### 🧪 Test Resilienza
+- **ChaosEngineeringTests**: Test per chaos engineering e resilienza
+
 ### 🔗 Test Integrazione
 - **IntegrationTests**: Test end-to-end per verificare il funzionamento completo del sistema
 
 ### ⚡ Test Performance
 - **PerformanceTests**: Test per performance, benchmark e ottimizzazione
 - **StressTests**: Test per condizioni di stress e scenari estremi
+
+### 🔧 Test Moduli Aggiuntivi
+- **AdditionalModulesTests**: Test per tutti i moduli aggiuntivi identificati
 
 ## 🚀 Esecuzione dei Test
 
