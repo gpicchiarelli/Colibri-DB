@@ -74,7 +74,7 @@ public actor BufferPoolManager {
     
     /// Disk
     /// TLA+: disk \in [PageID -> Page]
-    private var disk: [PageID: Page] = [:]
+    private var disk: [PageID: BufferPage] = [:]
     
     /// Dirty pages
     /// TLA+: dirty \in Set(PageID)
@@ -129,7 +129,7 @@ public actor BufferPoolManager {
     
     /// Get page
     /// TLA+ Action: GetPage(pageId)
-    public func getPage(pageId: PageID) async throws -> Page {
+    public func getPage(pageId: PageID) async throws -> BufferPage {
         // TLA+: Check if page is in cache
         if let page = cache[pageId] {
             // TLA+: Update LRU order
@@ -144,7 +144,7 @@ public actor BufferPoolManager {
         
         // TLA+: Page miss - read from disk
         let pageData = try await diskManager.readPage(pageId: pageId)
-        let page = Page(
+        let page = BufferPage(
             pageId: pageId,
             data: pageData,
             lsn: 0,
@@ -164,7 +164,7 @@ public actor BufferPoolManager {
     
     /// Put page
     /// TLA+ Action: PutPage(pageId, page)
-    public func putPage(pageId: PageID, page: Page) async throws {
+    public func putPage(pageId: PageID, page: BufferPage) async throws {
         // TLA+: Check if page is in cache
         if cache[pageId] != nil {
             // TLA+: Update page
@@ -374,7 +374,7 @@ public actor BufferPoolManager {
     }
     
     /// Get page
-    public func getPage(pageId: PageID) -> Page? {
+    public func getPage(pageId: PageID) -> BufferPage? {
         return cache[pageId]
     }
     
