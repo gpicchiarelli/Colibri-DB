@@ -104,7 +104,7 @@ public struct ConnectionSession: Codable {
 // MARK: - Configuration
 
 /// Connection manager configuration
-public struct ConnectionManagerConfig {
+public struct ConnectionManagerConfig: Sendable {
     public let maxConnections: Int
     public let maxThreads: Int
     public let maxSessionTimeout: TimeInterval
