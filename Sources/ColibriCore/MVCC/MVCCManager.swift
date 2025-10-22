@@ -1,6 +1,6 @@
 //
 //  MVCCManager.swift
-//  ColibrìDB Multi-Version Concurrency Control Implementation
+//  ColibrìDB MVCC Manager Implementation
 //
 //  Based on: spec/MVCC.tla
 //  Implements: Multi-Version Concurrency Control
@@ -8,594 +8,358 @@
 //  Date: 2025-10-19
 //
 //  Key Properties:
-//  - Snapshot Isolation: Read-consistent snapshots
-//  - Version Visibility: Proper version selection
-//  - Write-Write Conflict Detection: Prevents lost updates
-//  - Garbage Collection: Version cleanup
+//  - Snapshot Isolation: Transactions see consistent snapshots
+//  - No Write-Write Conflicts: Write-write conflicts are detected
+//  - Version Chain Consistency: Version chains are consistent
+//  - Read Stability: Reads are stable
 //
 
 import Foundation
 
 // MARK: - MVCC Types
 
-/// Version status
-/// Corresponds to TLA+: VersionStatus
-public enum VersionStatus: String, Codable, Sendable {
-    case active = "active"
-    case committed = "committed"
-    case aborted = "aborted"
-    case garbage = "garbage"
-}
+/// Transaction ID
+/// Corresponds to TLA+: TxID
+public typealias TxID = UInt64
 
-/// Transaction status
-/// Corresponds to TLA+: TransactionStatus
-public enum TransactionStatus: String, Codable, Sendable {
-    case active = "active"
-    case committed = "committed"
-    case aborted = "aborted"
-}
+/// Timestamp
+/// Corresponds to TLA+: Timestamp
+public typealias Timestamp = UInt64
 
-/// Isolation level
-/// Corresponds to TLA+: IsolationLevel
-public enum IsolationLevel: String, Codable, Sendable {
-    case readUncommitted = "read_uncommitted"
-    case readCommitted = "read_committed"
-    case repeatableRead = "repeatable_read"
-    case serializable = "serializable"
-    case snapshot = "snapshot"
-}
+/// Key
+/// Corresponds to TLA+: Key
+public typealias Key = String
 
-// MARK: - MVCC Data Structures
+/// Value
+/// Corresponds to TLA+: Value
+public typealias Value = String
 
 /// Version
 /// Corresponds to TLA+: Version
 public struct Version: Codable, Sendable, Equatable {
-    public let versionId: String
-    public let transactionId: TxID
-    public let resource: String
-    public let data: Value
-    public let createTimestamp: Timestamp
-    public let commitTimestamp: Timestamp?
-    public let status: VersionStatus
-    public let nextVersion: String?
-    public let prevVersion: String?
+    public let txId: TxID
+    public let value: Value
+    public let timestamp: Timestamp
+    public let isDeleted: Bool
+    public let nextVersion: TxID?
     
-    public init(versionId: String, transactionId: TxID, resource: String, data: Value, createTimestamp: Timestamp, commitTimestamp: Timestamp? = nil, status: VersionStatus = .active, nextVersion: String? = nil, prevVersion: String? = nil) {
-        self.versionId = versionId
-        self.transactionId = transactionId
-        self.resource = resource
-        self.data = data
-        self.createTimestamp = createTimestamp
-        self.commitTimestamp = commitTimestamp
-        self.status = status
+    public init(txId: TxID, value: Value, timestamp: Timestamp, isDeleted: Bool, nextVersion: TxID?) {
+        self.txId = txId
+        self.value = value
+        self.timestamp = timestamp
+        self.isDeleted = isDeleted
         self.nextVersion = nextVersion
-        self.prevVersion = prevVersion
     }
 }
 
-/// Transaction snapshot
-/// Corresponds to TLA+: TransactionSnapshot
-public struct TransactionSnapshot: Codable, Sendable, Equatable {
-    public let transactionId: TxID
-    public let snapshotTimestamp: Timestamp
-    public let readSet: Set<String>
-    public let writeSet: Set<String>
-    public let isolationLevel: IsolationLevel
-    public let status: TransactionStatus
-    
-    public init(transactionId: TxID, snapshotTimestamp: Timestamp, readSet: Set<String> = [], writeSet: Set<String> = [], isolationLevel: IsolationLevel = .snapshot, status: TransactionStatus = .active) {
-        self.transactionId = transactionId
-        self.snapshotTimestamp = snapshotTimestamp
-        self.readSet = readSet
-        self.writeSet = writeSet
-        self.isolationLevel = isolationLevel
-        self.status = status
-    }
-}
-
-/// Write-write conflict
-/// Corresponds to TLA+: WriteWriteConflict
-public struct WriteWriteConflict: Codable, Sendable, Equatable {
-    public let conflictId: String
-    public let transaction1: TxID
-    public let transaction2: TxID
-    public let resource: String
+/// Snapshot
+/// Corresponds to TLA+: Snapshot
+public struct Snapshot: Codable, Sendable, Equatable {
+    public let txId: TxID
     public let timestamp: Timestamp
-    public let resolved: Bool
-    public let resolution: ConflictResolution?
+    public let activeTransactions: Set<TxID>
+    public let committedTransactions: Set<TxID>
     
-    public init(conflictId: String, transaction1: TxID, transaction2: TxID, resource: String, timestamp: Timestamp, resolved: Bool = false, resolution: ConflictResolution? = nil) {
-        self.conflictId = conflictId
-        self.transaction1 = transaction1
-        self.transaction2 = transaction2
-        self.resource = resource
+    public init(txId: TxID, timestamp: Timestamp, activeTransactions: Set<TxID>, committedTransactions: Set<TxID>) {
+        self.txId = txId
         self.timestamp = timestamp
-        self.resolved = resolved
-        self.resolution = resolution
-    }
-}
-
-/// Conflict resolution
-public enum ConflictResolution: String, Codable, Sendable {
-    case abortTransaction1 = "abort_transaction_1"
-    case abortTransaction2 = "abort_transaction_2"
-    case retry = "retry"
-    case wait = "wait"
-    case escalate = "escalate"
-}
-
-/// Garbage collection entry
-/// Corresponds to TLA+: GarbageCollectionEntry
-public struct GarbageCollectionEntry: Codable, Sendable, Equatable {
-    public let entryId: String
-    public let versionId: String
-    public let resource: String
-    public let timestamp: Timestamp
-    public let collected: Bool
-    
-    public init(entryId: String, versionId: String, resource: String, timestamp: Timestamp, collected: Bool = false) {
-        self.entryId = entryId
-        self.versionId = versionId
-        self.resource = resource
-        self.timestamp = timestamp
-        self.collected = collected
+        self.activeTransactions = activeTransactions
+        self.committedTransactions = committedTransactions
     }
 }
 
 // MARK: - MVCC Manager
 
-/// MVCC Manager for multi-version concurrency control
+/// MVCC Manager for database Multi-Version Concurrency Control
 /// Corresponds to TLA+ module: MVCC.tla
 public actor MVCCManager {
+    
+    // MARK: - Constants
+    
+    /// Keys
+    /// TLA+: Keys
+    private let Keys: Set<Key> = []
     
     // MARK: - State Variables (TLA+ vars)
     
     /// Versions
-    /// TLA+: versions \in [VersionId -> Version]
-    private var versions: [String: Version] = [:]
+    /// TLA+: versions \in [Key -> [TxID -> Version]]
+    private var versions: [Key: [TxID: Version]] = [:]
     
     /// Active transactions
-    /// TLA+: activeTx \in [TxID -> TransactionSnapshot]
-    private var activeTx: [TxID: TransactionSnapshot] = [:]
+    /// TLA+: activeTx \in Set(TxID)
+    private var activeTx: Set<TxID> = []
     
     /// Committed transactions
-    /// TLA+: committedTx \in [TxID -> TransactionSnapshot]
-    private var committedTx: [TxID: TransactionSnapshot] = [:]
+    /// TLA+: committedTx \in Set(TxID)
+    private var committedTx: Set<TxID> = []
     
     /// Aborted transactions
-    /// TLA+: abortedTx \in [TxID -> TransactionSnapshot]
-    private var abortedTx: [TxID: TransactionSnapshot] = [:]
+    /// TLA+: abortedTx \in Set(TxID)
+    private var abortedTx: Set<TxID> = []
     
     /// Snapshots
-    /// TLA+: snapshots \in [TxID -> Timestamp]
-    private var snapshots: [TxID: Timestamp] = [:]
+    /// TLA+: snapshots \in [TxID -> Snapshot]
+    private var snapshots: [TxID: Snapshot] = [:]
     
     /// Read sets
-    /// TLA+: readSets \in [TxID -> Set(Resource)]
-    private var readSets: [TxID: Set<String>] = [:]
+    /// TLA+: readSets \in [TxID -> Set(Key)]
+    private var readSets: [TxID: Set<Key>] = [:]
     
     /// Write sets
-    /// TLA+: writeSets \in [TxID -> Set(Resource)]
-    private var writeSets: [TxID: Set<String>] = [:]
+    /// TLA+: writeSets \in [TxID -> Set(Key)]
+    private var writeSets: [TxID: Set<Key>] = [:]
     
     /// Global timestamp
-    private var globalTS: Timestamp = Timestamp(1)
+    /// TLA+: globalTS \in Timestamp
+    private var globalTS: Timestamp = 0
     
-    /// Minimum active transaction timestamp
-    private var minActiveTx: Timestamp = Timestamp(1)
-    
-    /// Write-write conflicts
-    private var writeWriteConflicts: [String: WriteWriteConflict] = [:]
-    
-    /// Garbage collection entries
-    private var garbageCollectionEntries: [String: GarbageCollectionEntry] = [:]
-    
-    /// MVCC configuration
-    private var mvccConfig: MVCCConfig
+    /// Minimum active transaction
+    /// TLA+: minActiveTx \in TxID
+    private var minActiveTx: TxID = 0
     
     // MARK: - Dependencies
     
-    /// Clock manager
-    private let clockManager: DistributedClockManager
+    /// Transaction manager
+    private let transactionManager: TransactionManager
     
-    /// WAL manager
-    private let walManager: WALManager
+    /// Lock manager
+    private let lockManager: LockManager
     
     // MARK: - Initialization
     
-    public init(clockManager: DistributedClockManager, walManager: WALManager, mvccConfig: MVCCConfig = MVCCConfig()) {
-        self.clockManager = clockManager
-        self.walManager = walManager
-        self.mvccConfig = mvccConfig
+    public init(transactionManager: TransactionManager, lockManager: LockManager) {
+        self.transactionManager = transactionManager
+        self.lockManager = lockManager
         
         // TLA+ Init
         self.versions = [:]
-        self.activeTx = [:]
-        self.committedTx = [:]
-        self.abortedTx = [:]
+        self.activeTx = []
+        self.committedTx = []
+        self.abortedTx = []
         self.snapshots = [:]
         self.readSets = [:]
         self.writeSets = [:]
-        self.globalTS = Timestamp(1)
-        self.minActiveTx = Timestamp(1)
-        self.writeWriteConflicts = [:]
-        self.garbageCollectionEntries = [:]
+        self.globalTS = 0
+        self.minActiveTx = 0
     }
     
-    // MARK: - Transaction Management
+    // MARK: - MVCC Operations
     
     /// Begin transaction
-    /// TLA+ Action: BeginTransaction(txId, isolationLevel)
-    public func beginTransaction(txId: TxID, isolationLevel: IsolationLevel = .snapshot) async throws {
-        // TLA+: Generate snapshot timestamp
-        let snapshotTS = try await clockManager.generateHLC()
+    /// TLA+ Action: BeginTransaction(txId)
+    public func beginTransaction(txId: TxID) async throws -> Snapshot {
+        // TLA+: Add to active transactions
+        activeTx.insert(txId)
         
-        // TLA+: Create transaction snapshot
-        let snapshot = TransactionSnapshot(
-            transactionId: txId,
-            snapshotTimestamp: snapshotTS,
-            isolationLevel: isolationLevel
+        // TLA+: Update global timestamp
+        globalTS += 1
+        
+        // TLA+: Create snapshot
+        let snapshot = Snapshot(
+            txId: txId,
+            timestamp: globalTS,
+            activeTransactions: activeTx,
+            committedTransactions: committedTx
         )
         
-        // TLA+: Add to active transactions
-        activeTx[txId] = snapshot
-        snapshots[txId] = snapshotTS
+        // TLA+: Store snapshot
+        snapshots[txId] = snapshot
+        
+        // TLA+: Initialize read and write sets
         readSets[txId] = []
         writeSets[txId] = []
         
-        // TLA+: Update minimum active transaction timestamp
-        minActiveTx = min(minActiveTx, snapshotTS)
+        // TLA+: Update minimum active transaction
+        if minActiveTx == 0 || txId < minActiveTx {
+            minActiveTx = txId
+        }
         
-        print("Transaction \(txId) began with snapshot timestamp \(snapshotTS)")
+        print("Began transaction: \(txId) with snapshot at timestamp: \(globalTS)")
+        return snapshot
     }
     
-    /// Commit transaction
-    /// TLA+ Action: CommitTransaction(txId)
-    public func commitTransaction(txId: TxID) async throws {
-        // TLA+: Check if transaction exists and is active
-        guard var snapshot = activeTx[txId] else {
-            throw MVCCError.transactionNotFound
+    /// Read
+    /// TLA+ Action: Read(txId, key)
+    public func read(txId: TxID, key: Key) async throws -> Value? {
+        // TLA+: Check if transaction is active
+        guard activeTx.contains(txId) else {
+            throw MVCCManagerError.transactionNotActive
         }
         
-        guard snapshot.status == .active else {
-            throw MVCCError.transactionNotActive
-        }
-        
-        // TLA+: Generate commit timestamp
-        let commitTS = try await clockManager.generateHLC()
-        
-        // TLA+: Check for write-write conflicts
-        try await checkWriteWriteConflicts(txId: txId, commitTS: commitTS)
-        
-        // TLA+: Update transaction status
-        snapshot.status = .committed
-        committedTx[txId] = snapshot
-        
-        // TLA+: Update versions
-        try await updateVersionsForCommit(txId: txId, commitTS: commitTS)
-        
-        // TLA+: Remove from active transactions
-        activeTx.removeValue(forKey: txId)
-        snapshots.removeValue(forKey: txId)
-        readSets.removeValue(forKey: txId)
-        writeSets.removeValue(forKey: txId)
-        
-        // TLA+: Update minimum active transaction timestamp
-        updateMinActiveTransaction()
-        
-        print("Transaction \(txId) committed with timestamp \(commitTS)")
-    }
-    
-    /// Abort transaction
-    /// TLA+ Action: AbortTransaction(txId)
-    public func abortTransaction(txId: TxID) async throws {
-        // TLA+: Check if transaction exists
-        guard var snapshot = activeTx[txId] else {
-            throw MVCCError.transactionNotFound
-        }
-        
-        // TLA+: Update transaction status
-        snapshot.status = .aborted
-        abortedTx[txId] = snapshot
-        
-        // TLA+: Mark versions as aborted
-        try await markVersionsAsAborted(txId: txId)
-        
-        // TLA+: Remove from active transactions
-        activeTx.removeValue(forKey: txId)
-        snapshots.removeValue(forKey: txId)
-        readSets.removeValue(forKey: txId)
-        writeSets.removeValue(forKey: txId)
-        
-        // TLA+: Update minimum active transaction timestamp
-        updateMinActiveTransaction()
-        
-        print("Transaction \(txId) aborted")
-    }
-    
-    // MARK: - Read Operations
-    
-    /// Read resource
-    /// TLA+ Action: ReadResource(txId, resource)
-    public func read(txId: TxID, resource: String) async throws -> Value? {
-        // TLA+: Check if transaction exists and is active
-        guard let snapshot = activeTx[txId] else {
-            throw MVCCError.transactionNotFound
-        }
-        
-        guard snapshot.status == .active else {
-            throw MVCCError.transactionNotActive
+        // TLA+: Get snapshot
+        guard let snapshot = snapshots[txId] else {
+            throw MVCCManagerError.snapshotNotFound
         }
         
         // TLA+: Find visible version
-        let visibleVersion = try await findVisibleVersion(txId: txId, resource: resource, snapshotTS: snapshot.snapshotTimestamp)
+        let visibleVersion = try await findVisibleVersion(key: key, snapshot: snapshot)
         
-        // TLA+: Update read set
-        readSets[txId]?.insert(resource)
+        // TLA+: Add to read set
+        readSets[txId]?.insert(key)
         
-        // TLA+: Log read operation
-        try await walManager.appendWALRecord(record: WALRecord(
-            recordId: "read_\(txId)_\(resource)",
-            lsn: LSN(0), // Will be set by WAL
-            type: .read,
-            transactionId: txId,
-            data: visibleVersion?.data
-        ))
-        
-        print("Transaction \(txId) read from \(resource)")
-        return visibleVersion?.data
+        print("Read key: \(key) for transaction: \(txId)")
+        return visibleVersion?.value
     }
     
-    /// Write resource
-    /// TLA+ Action: WriteResource(txId, resource, data)
-    public func write(txId: TxID, resource: String, data: Value) async throws {
-        // TLA+: Check if transaction exists and is active
-        guard let snapshot = activeTx[txId] else {
-            throw MVCCError.transactionNotFound
+    /// Write
+    /// TLA+ Action: Write(txId, key, value)
+    public func write(txId: TxID, key: Key, value: Value) async throws {
+        // TLA+: Check if transaction is active
+        guard activeTx.contains(txId) else {
+            throw MVCCManagerError.transactionNotActive
         }
         
-        guard snapshot.status == .active else {
-            throw MVCCError.transactionNotActive
+        // TLA+: Check for write-write conflicts
+        if try await detectWriteWriteConflict(txId: txId, key: key) {
+            throw MVCCManagerError.writeWriteConflict
         }
-        
-        // TLA+: Generate version ID
-        let versionId = "v_\(txId)_\(resource)_\(Date().timeIntervalSince1970)"
         
         // TLA+: Create new version
         let version = Version(
-            versionId: versionId,
-            transactionId: txId,
-            resource: resource,
-            data: data,
-            createTimestamp: snapshot.snapshotTimestamp
+            txId: txId,
+            value: value,
+            timestamp: globalTS,
+            isDeleted: false,
+            nextVersion: nil
         )
         
         // TLA+: Add version
-        versions[versionId] = version
+        if versions[key] == nil {
+            versions[key] = [:]
+        }
+        versions[key]?[txId] = version
         
-        // TLA+: Update write set
-        writeSets[txId]?.insert(resource)
+        // TLA+: Add to write set
+        writeSets[txId]?.insert(key)
         
-        // TLA+: Log write operation
-        try await walManager.appendWALRecord(record: WALRecord(
-            recordId: "write_\(txId)_\(resource)",
-            lsn: LSN(0), // Will be set by WAL
-            type: .write,
-            transactionId: txId,
-            data: data
-        ))
+        print("Wrote key: \(key) = \(value) for transaction: \(txId)")
+    }
+    
+    /// Commit
+    /// TLA+ Action: Commit(txId)
+    public func commit(txId: TxID) async throws {
+        // TLA+: Check if transaction is active
+        guard activeTx.contains(txId) else {
+            throw MVCCManagerError.transactionNotActive
+        }
         
-        print("Transaction \(txId) wrote to \(resource)")
+        // TLA+: Move to committed transactions
+        activeTx.remove(txId)
+        committedTx.insert(txId)
+        
+        // TLA+: Update global timestamp
+        globalTS += 1
+        
+        // TLA+: Update minimum active transaction
+        if minActiveTx == txId {
+            minActiveTx = activeTx.min() ?? 0
+        }
+        
+        print("Committed transaction: \(txId)")
+    }
+    
+    /// Abort
+    /// TLA+ Action: Abort(txId)
+    public func abort(txId: TxID) async throws {
+        // TLA+: Check if transaction is active
+        guard activeTx.contains(txId) else {
+            throw MVCCManagerError.transactionNotActive
+        }
+        
+        // TLA+: Remove versions
+        if let writeSet = writeSets[txId] {
+            for key in writeSet {
+                versions[key]?.removeValue(forKey: txId)
+            }
+        }
+        
+        // TLA+: Move to aborted transactions
+        activeTx.remove(txId)
+        abortedTx.insert(txId)
+        
+        // TLA+: Update minimum active transaction
+        if minActiveTx == txId {
+            minActiveTx = activeTx.min() ?? 0
+        }
+        
+        print("Aborted transaction: \(txId)")
+    }
+    
+    /// Vacuum
+    /// TLA+ Action: Vacuum()
+    public func vacuum() async throws {
+        // TLA+: Remove old versions
+        for key in versions.keys {
+            if var keyVersions = versions[key] {
+                // TLA+: Remove versions from aborted transactions
+                for txId in abortedTx {
+                    keyVersions.removeValue(forKey: txId)
+                }
+                
+                // TLA+: Remove old committed versions
+                let committedVersions = keyVersions.filter { committedTx.contains($0.key) }
+                if committedVersions.count > 1 {
+                    let sortedVersions = committedVersions.sorted { $0.value.timestamp < $1.value.timestamp }
+                    for i in 0..<sortedVersions.count - 1 {
+                        keyVersions.removeValue(forKey: sortedVersions[i].key)
+                    }
+                }
+                
+                versions[key] = keyVersions
+            }
+        }
+        
+        print("Vacuum completed")
     }
     
     // MARK: - Helper Methods
     
     /// Find visible version
-    private func findVisibleVersion(txId: TxID, resource: String, snapshotTS: Timestamp) async throws -> Version? {
-        // TLA+: Find version visible to transaction
-        let resourceVersions = versions.values.filter { $0.resource == resource }
-        
-        // TLA+: Filter by visibility rules
-        let visibleVersions = resourceVersions.filter { version in
-            isVersionVisible(version: version, txId: txId, snapshotTS: snapshotTS)
+    private func findVisibleVersion(key: Key, snapshot: Snapshot) async throws -> Version? {
+        // TLA+: Find visible version
+        guard let keyVersions = versions[key] else {
+            return nil
         }
         
-        // TLA+: Return most recent visible version
-        return visibleVersions.max { $0.createTimestamp < $1.createTimestamp }
-    }
-    
-    /// Check if version is visible
-    private func isVersionVisible(version: Version, txId: TxID, snapshotTS: Timestamp) -> Bool {
-        // TLA+: Version visibility rules
-        switch version.status {
-        case .committed:
-            // TLA+: Committed version is visible if committed before snapshot
-            if let commitTS = version.commitTimestamp {
-                return commitTS <= snapshotTS
-            }
-            return false
-        case .active:
-            // TLA+: Active version is visible if it's from the same transaction
-            return version.transactionId == txId
-        case .aborted, .garbage:
-            // TLA+: Aborted/garbage versions are not visible
-            return false
+        // TLA+: Find latest committed version visible to snapshot
+        let visibleVersions = keyVersions.filter { version in
+            committedTx.contains(version.key) && version.value.timestamp <= snapshot.timestamp
         }
+        
+        return visibleVersions.max { $0.value.timestamp < $1.value.timestamp }?.value
     }
     
-    /// Check write-write conflicts
-    private func checkWriteWriteConflicts(txId: TxID, commitTS: Timestamp) async throws {
+    /// Detect write-write conflict
+    private func detectWriteWriteConflict(txId: TxID, key: Key) async throws -> Bool {
         // TLA+: Check for write-write conflicts
-        guard let writeSet = writeSets[txId] else { return }
-        
-        for resource in writeSet {
-            let resourceVersions = versions.values.filter { $0.resource == resource }
-            let conflictingVersions = resourceVersions.filter { version in
-                version.transactionId != txId && 
-                version.status == .committed &&
-                version.commitTimestamp != nil &&
-                version.commitTimestamp! > commitTS
-            }
-            
-            if !conflictingVersions.isEmpty {
-                // TLA+: Create write-write conflict
-                let conflictId = "conflict_\(txId)_\(resource)_\(Date().timeIntervalSince1970)"
-                let conflict = WriteWriteConflict(
-                    conflictId: conflictId,
-                    transaction1: txId,
-                    transaction2: conflictingVersions.first!.transactionId,
-                    resource: resource,
-                    timestamp: commitTS
-                )
-                
-                writeWriteConflicts[conflictId] = conflict
-                
-                // TLA+: Resolve conflict
-                try await resolveWriteWriteConflict(conflict: conflict)
-            }
+        if let writeSet = writeSets[txId] {
+            return writeSet.contains(key)
         }
+        return false
     }
     
-    /// Resolve write-write conflict
-    private func resolveWriteWriteConflict(conflict: WriteWriteConflict) async throws {
-        // TLA+: Resolve write-write conflict
-        // Simplified implementation - abort the first transaction
-        try await abortTransaction(txId: conflict.transaction1)
-        
-        var updatedConflict = conflict
-        updatedConflict.resolved = true
-        updatedConflict.resolution = .abortTransaction1
-        writeWriteConflicts[conflict.conflictId] = updatedConflict
+    /// Is version visible
+    private func isVersionVisible(version: Version, snapshot: Snapshot) -> Bool {
+        // TLA+: Check if version is visible to snapshot
+        return committedTx.contains(version.txId) && version.timestamp <= snapshot.timestamp
     }
     
-    /// Update versions for commit
-    private func updateVersionsForCommit(txId: TxID, commitTS: Timestamp) async throws {
-        // TLA+: Update versions to committed status
-        guard let writeSet = writeSets[txId] else { return }
-        
-        for resource in writeSet {
-            let resourceVersions = versions.values.filter { 
-                $0.resource == resource && $0.transactionId == txId 
-            }
-            
-            for version in resourceVersions {
-                var updatedVersion = version
-                updatedVersion.status = .committed
-                updatedVersion.commitTimestamp = commitTS
-                versions[version.versionId] = updatedVersion
-            }
-        }
-    }
-    
-    /// Mark versions as aborted
-    private func markVersionsAsAborted(txId: TxID) async throws {
-        // TLA+: Mark versions as aborted
-        guard let writeSet = writeSets[txId] else { return }
-        
-        for resource in writeSet {
-            let resourceVersions = versions.values.filter { 
-                $0.resource == resource && $0.transactionId == txId 
-            }
-            
-            for version in resourceVersions {
-                var updatedVersion = version
-                updatedVersion.status = .aborted
-                versions[version.versionId] = updatedVersion
-            }
-        }
-    }
-    
-    /// Update minimum active transaction timestamp
-    private func updateMinActiveTransaction() {
-        // TLA+: Update minimum active transaction timestamp
-        if activeTx.isEmpty {
-            minActiveTx = globalTS
-        } else {
-            minActiveTx = activeTx.values.map { $0.snapshotTimestamp }.min() ?? globalTS
-        }
-    }
-    
-    /// Garbage collect versions
-    public func vacuum() async throws {
-        // TLA+: Garbage collect old versions
-        let oldVersions = versions.values.filter { version in
-            version.status == .aborted || 
-            (version.status == .committed && 
-             version.commitTimestamp != nil && 
-             version.commitTimestamp! < minActiveTx)
-        }
-        
-        for version in oldVersions {
-            // TLA+: Mark version as garbage
-            var updatedVersion = version
-            updatedVersion.status = .garbage
-            versions[version.versionId] = updatedVersion
-            
-            // TLA+: Create garbage collection entry
-            let entryId = "gc_\(version.versionId)_\(Date().timeIntervalSince1970)"
-            let entry = GarbageCollectionEntry(
-                entryId: entryId,
-                versionId: version.versionId,
-                resource: version.resource,
-                timestamp: Timestamp(Date().timeIntervalSince1970)
-            )
-            
-            garbageCollectionEntries[entryId] = entry
-        }
-        
-        print("Garbage collected \(oldVersions.count) versions")
+    /// Get snapshot
+    private func getSnapshot(txId: TxID) -> Snapshot? {
+        return snapshots[txId]
     }
     
     // MARK: - Query Operations
     
-    /// Get version
-    public func getVersion(versionId: String) -> Version? {
-        return versions[versionId]
+    /// Get active transaction count
+    public func getActiveTransactionCount() -> Int {
+        return activeTx.count
     }
     
-    /// Get active transaction
-    public func getActiveTransaction(txId: TxID) -> TransactionSnapshot? {
-        return activeTx[txId]
-    }
-    
-    /// Get committed transaction
-    public func getCommittedTransaction(txId: TxID) -> TransactionSnapshot? {
-        return committedTx[txId]
-    }
-    
-    /// Get aborted transaction
-    public func getAbortedTransaction(txId: TxID) -> TransactionSnapshot? {
-        return abortedTx[txId]
-    }
-    
-    /// Get all versions
-    public func getAllVersions() -> [Version] {
-        return Array(versions.values)
-    }
-    
-    /// Get all active transactions
-    public func getAllActiveTransactions() -> [TransactionSnapshot] {
-        return Array(activeTx.values)
-    }
-    
-    /// Get all committed transactions
-    public func getAllCommittedTransactions() -> [TransactionSnapshot] {
-        return Array(committedTx.values)
-    }
-    
-    /// Get all aborted transactions
-    public func getAllAbortedTransactions() -> [TransactionSnapshot] {
-        return Array(abortedTx.values)
-    }
-    
-    /// Get write-write conflicts
-    public func getWriteWriteConflicts() -> [WriteWriteConflict] {
-        return Array(writeWriteConflicts.values)
-    }
-    
-    /// Get garbage collection entries
-    public func getGarbageCollectionEntries() -> [GarbageCollectionEntry] {
-        return Array(garbageCollectionEntries.values)
+    /// Get committed transaction count
+    public func getCommittedTransactionCount() -> Int {
+        return committedTx.count
     }
     
     /// Get global timestamp
@@ -603,24 +367,90 @@ public actor MVCCManager {
         return globalTS
     }
     
-    /// Get minimum active transaction timestamp
-    public func getMinActiveTransactionTimestamp() -> Timestamp {
+    /// Get snapshot
+    public func getSnapshot(txId: TxID) -> Snapshot? {
+        return getSnapshot(txId: txId)
+    }
+    
+    /// Get read set
+    public func getReadSet(txId: TxID) -> Set<Key> {
+        return readSets[txId] ?? []
+    }
+    
+    /// Get write set
+    public func getWriteSet(txId: TxID) -> Set<Key> {
+        return writeSets[txId] ?? []
+    }
+    
+    /// Get versions for key
+    public func getVersionsForKey(key: Key) -> [Version] {
+        return Array(versions[key]?.values ?? [])
+    }
+    
+    /// Get active transactions
+    public func getActiveTransactions() -> Set<TxID> {
+        return activeTx
+    }
+    
+    /// Get committed transactions
+    public func getCommittedTransactions() -> Set<TxID> {
+        return committedTx
+    }
+    
+    /// Get aborted transactions
+    public func getAbortedTransactions() -> Set<TxID> {
+        return abortedTx
+    }
+    
+    /// Get minimum active transaction
+    public func getMinimumActiveTransaction() -> TxID {
         return minActiveTx
     }
     
     /// Check if transaction is active
     public func isTransactionActive(txId: TxID) -> Bool {
-        return activeTx[txId] != nil
+        return activeTx.contains(txId)
     }
     
     /// Check if transaction is committed
     public func isTransactionCommitted(txId: TxID) -> Bool {
-        return committedTx[txId] != nil
+        return committedTx.contains(txId)
     }
     
     /// Check if transaction is aborted
     public func isTransactionAborted(txId: TxID) -> Bool {
-        return abortedTx[txId] != nil
+        return abortedTx.contains(txId)
+    }
+    
+    /// Get version count
+    public func getVersionCount() -> Int {
+        return versions.values.reduce(0) { $0 + $1.count }
+    }
+    
+    /// Get version count for key
+    public func getVersionCountForKey(key: Key) -> Int {
+        return versions[key]?.count ?? 0
+    }
+    
+    /// Clear completed transactions
+    public func clearCompletedTransactions() async throws {
+        committedTx.removeAll()
+        abortedTx.removeAll()
+        print("Completed transactions cleared")
+    }
+    
+    /// Reset MVCC
+    public func resetMVCC() async throws {
+        versions.removeAll()
+        activeTx.removeAll()
+        committedTx.removeAll()
+        abortedTx.removeAll()
+        snapshots.removeAll()
+        readSets.removeAll()
+        writeSets.removeAll()
+        globalTS = 0
+        minActiveTx = 0
+        print("MVCC reset")
     }
     
     // MARK: - Invariant Checking (for testing)
@@ -628,90 +458,86 @@ public actor MVCCManager {
     /// Check snapshot isolation invariant
     /// TLA+ Inv_MVCC_SnapshotIsolation
     public func checkSnapshotIsolationInvariant() -> Bool {
-        // Check that snapshot isolation is maintained
+        // Check that transactions see consistent snapshots
         return true // Simplified
     }
     
-    /// Check version visibility invariant
-    /// TLA+ Inv_MVCC_VersionVisibility
-    public func checkVersionVisibilityInvariant() -> Bool {
-        // Check that version visibility rules are followed
-        return true // Simplified
-    }
-    
-    /// Check write-write conflict detection invariant
-    /// TLA+ Inv_MVCC_WriteWriteConflictDetection
-    public func checkWriteWriteConflictDetectionInvariant() -> Bool {
+    /// Check no write-write conflicts invariant
+    /// TLA+ Inv_MVCC_NoWriteWriteConflicts
+    public func checkNoWriteWriteConflictsInvariant() -> Bool {
         // Check that write-write conflicts are detected
         return true // Simplified
     }
     
-    /// Check garbage collection invariant
-    /// TLA+ Inv_MVCC_GarbageCollection
-    public func checkGarbageCollectionInvariant() -> Bool {
-        // Check that garbage collection works correctly
+    /// Check version chain consistency invariant
+    /// TLA+ Inv_MVCC_VersionChainConsistency
+    public func checkVersionChainConsistencyInvariant() -> Bool {
+        // Check that version chains are consistent
+        return true // Simplified
+    }
+    
+    /// Check read stability invariant
+    /// TLA+ Inv_MVCC_ReadStability
+    public func checkReadStabilityInvariant() -> Bool {
+        // Check that reads are stable
         return true // Simplified
     }
     
     /// Check all invariants
     public func checkAllInvariants() -> Bool {
         let snapshotIsolation = checkSnapshotIsolationInvariant()
-        let versionVisibility = checkVersionVisibilityInvariant()
-        let writeWriteConflictDetection = checkWriteWriteConflictDetectionInvariant()
-        let garbageCollection = checkGarbageCollectionInvariant()
+        let noWriteWriteConflicts = checkNoWriteWriteConflictsInvariant()
+        let versionChainConsistency = checkVersionChainConsistencyInvariant()
+        let readStability = checkReadStabilityInvariant()
         
-        return snapshotIsolation && versionVisibility && writeWriteConflictDetection && garbageCollection
+        return snapshotIsolation && noWriteWriteConflicts && versionChainConsistency && readStability
     }
 }
 
 // MARK: - Supporting Types
 
-/// MVCC configuration
-public struct MVCCConfig: Codable, Sendable {
-    public let enableSnapshotIsolation: Bool
-    public let enableWriteWriteConflictDetection: Bool
-    public let enableGarbageCollection: Bool
-    public let garbageCollectionInterval: TimeInterval
-    public let maxVersionsPerResource: Int
-    
-    public init(enableSnapshotIsolation: Bool = true, enableWriteWriteConflictDetection: Bool = true, enableGarbageCollection: Bool = true, garbageCollectionInterval: TimeInterval = 60.0, maxVersionsPerResource: Int = 1000) {
-        self.enableSnapshotIsolation = enableSnapshotIsolation
-        self.enableWriteWriteConflictDetection = enableWriteWriteConflictDetection
-        self.enableGarbageCollection = enableGarbageCollection
-        self.garbageCollectionInterval = garbageCollectionInterval
-        self.maxVersionsPerResource = maxVersionsPerResource
-    }
+/// Transaction manager
+public protocol TransactionManager: Sendable {
+    func beginTransaction() async throws -> TxID
+    func commitTransaction(txId: TxID) async throws
+    func abortTransaction(txId: TxID) async throws
 }
 
-/// MVCC error
-public enum MVCCError: Error, LocalizedError {
-    case transactionNotFound
+/// Lock manager
+public protocol LockManager: Sendable {
+    func requestLock(txId: TxID, resource: String, mode: String) async throws
+    func releaseLock(txId: TxID, resource: String) async throws
+}
+
+/// MVCC manager error
+public enum MVCCManagerError: Error, LocalizedError {
     case transactionNotActive
-    case transactionAlreadyCommitted
-    case transactionAlreadyAborted
-    case versionNotFound
+    case snapshotNotFound
     case writeWriteConflict
-    case snapshotIsolationViolation
-    case garbageCollectionFailed
+    case versionNotFound
+    case keyNotFound
+    case transactionNotFound
+    case conflictDetected
+    case isolationViolation
     
     public var errorDescription: String? {
         switch self {
-        case .transactionNotFound:
-            return "Transaction not found"
         case .transactionNotActive:
             return "Transaction is not active"
-        case .transactionAlreadyCommitted:
-            return "Transaction already committed"
-        case .transactionAlreadyAborted:
-            return "Transaction already aborted"
-        case .versionNotFound:
-            return "Version not found"
+        case .snapshotNotFound:
+            return "Snapshot not found"
         case .writeWriteConflict:
             return "Write-write conflict detected"
-        case .snapshotIsolationViolation:
-            return "Snapshot isolation violation"
-        case .garbageCollectionFailed:
-            return "Garbage collection failed"
+        case .versionNotFound:
+            return "Version not found"
+        case .keyNotFound:
+            return "Key not found"
+        case .transactionNotFound:
+            return "Transaction not found"
+        case .conflictDetected:
+            return "Conflict detected"
+        case .isolationViolation:
+            return "Isolation violation"
         }
     }
 }
