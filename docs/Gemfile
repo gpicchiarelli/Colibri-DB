@@ -1,8 +1,11 @@
-# Gemfile per GitHub Pages - Compatibile con Ruby 3.1+
+# Gemfile per GitHub Pages - Compatibile con Ruby 2.6+ e 3.1+
 source "https://rubygems.org"
 
-# Jekyll core
-gem "jekyll", "~> 4.3"
+# Ruby version (compatibile con GitHub Actions)
+ruby ">= 2.6.0"
+
+# Jekyll core (versione compatibile)
+gem "jekyll", "~> 4.2"
 
 # Jekyll plugins supportati da GitHub Pages
 gem "jekyll-feed", "~> 0.12"
@@ -13,8 +16,8 @@ gem "jekyll-github-metadata", "~> 2.16"
 # Markdown processor
 gem "kramdown-parser-gfm", "~> 1.1"
 
-# Syntax highlighting
-gem "rouge", "~> 4.0"
+# Syntax highlighting (versione compatibile)
+gem "rouge", "~> 3.26"
 
 # Development gems
 group :development do
