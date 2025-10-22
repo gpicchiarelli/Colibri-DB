@@ -18,6 +18,20 @@ import Foundation
 
 // MARK: - Hash Index Types
 
+/// Hash entry for the index
+public struct HashEntry: Codable, Sendable {
+    public let key: Value
+    public let rid: RID
+    public let deleted: Bool
+    public let timestamp: UInt64
+    
+    public init(key: Value, rid: RID, deleted: Bool = false, timestamp: UInt64) {
+        self.key = key
+        self.rid = rid
+        self.deleted = deleted
+        self.timestamp = timestamp
+    }
+}
 
 // MARK: - Hash Index Manager
 
@@ -51,7 +65,7 @@ public actor HashIndexManager {
     
     /// Number of buckets
     /// TLA+: numBuckets \in Nat
-    private var numBuckets: Int = 0
+    private var numBuckets: Int = 16
     
     /// Load factor
     /// TLA+: loadFactor \in Nat
@@ -63,38 +77,33 @@ public actor HashIndexManager {
     
     // MARK: - Initialization
     
+    /// Initialize hash index manager
+    /// TLA+: Init
     public init(isUnique: Bool = false) {
-        // TLA+ Init
-        self.buckets = [:]
-        self.numEntries = 0
-        self.numBuckets = INITIAL_BUCKETS
-        self.loadFactor = 0
         self.isUnique = isUnique
+        self.numBuckets = INITIAL_BUCKETS
+        self.numEntries = 0
+        self.loadFactor = 0
         
-        // TLA+: Initialize buckets
-        for i in 0..<INITIAL_BUCKETS {
+        // Initialize buckets
+        for i in 0..<numBuckets {
             buckets[i] = nil
         }
     }
     
-    // MARK: - Core Operations
+    // MARK: - Public Interface
     
-    /// Insert
-    /// TLA+ Action: Insert(key, rid)
-    public func insert(key: Key, rid: RID) async throws {
+    /// Insert a key-value pair
+    /// TLA+: Insert
+    public func insert(key: Value, rid: RID) async throws {
         // TLA+: Check if key already exists (for unique index)
         if isUnique {
-            if let existingRid = try await search(key: key) {
+            if let _ = try await search(key: key) {
                 throw HashIndexManagerError.duplicateKey
             }
         }
         
-        // TLA+: Check if resize is needed
-        if loadFactor >= MAX_LOAD_FACTOR {
-            try await resize()
-        }
-        
-        // TLA+: Find insertion position
+        // TLA+: Find position to insert
         let position = try await findInsertPosition(key: key)
         
         // TLA+: Insert entry
@@ -111,13 +120,15 @@ public actor HashIndexManager {
         // TLA+: Update load factor
         try await updateLoadFactor()
         
-        print("Inserted key: \(key), rid: \(rid)")
+        // TLA+: Check if resize is needed
+        if loadFactor > MAX_LOAD_FACTOR {
+            try await resize()
+        }
     }
     
-    /// Search
-    /// TLA+ Action: Search(key)
-    public func search(key: Key) async throws -> RID? {
-        // TLA+: Find entry
+    /// Search for a key
+    /// TLA+: Search
+    public func search(key: Value) async throws -> RID? {
         let position = try await findEntryPosition(key: key)
         
         if let entry = buckets[position] {
@@ -129,10 +140,9 @@ public actor HashIndexManager {
         return nil
     }
     
-    /// Delete
-    /// TLA+ Action: Delete(key)
-    public func delete(key: Key) async throws {
-        // TLA+: Find entry
+    /// Delete a key
+    /// TLA+: Delete
+    public func delete(key: Value) async throws {
         let position = try await findEntryPosition(key: key)
         
         if let entry = buckets[position] {
@@ -147,18 +157,17 @@ public actor HashIndexManager {
                 
                 buckets[position] = deletedEntry
                 numEntries -= 1
+                
+                // TLA+: Update load factor
+                try await updateLoadFactor()
             }
-        }
-            
-            // TLA+: Update load factor
-            try await updateLoadFactor()
-            
-            print("Deleted key: \(key)")
         }
     }
     
-    /// Resize
-    /// TLA+ Action: Resize()
+    // MARK: - Private Methods
+    
+    /// Resize the hash table
+    /// TLA+: Resize
     public func resize() async throws {
         // TLA+: Double the number of buckets
         let oldBuckets = buckets
@@ -172,9 +181,9 @@ public actor HashIndexManager {
             buckets[i] = nil
         }
         
-        // TLA+: Rehash entries
-        for i in 0..<oldNumBuckets {
-            if let entry = oldBuckets[i] {
+        // TLA+: Rehash all entries
+        for (_, entry) in oldBuckets {
+            if let entry = entry {
                 if !entry.deleted {
                     let newPosition = try await findInsertPosition(key: entry.key)
                     buckets[newPosition] = entry
@@ -188,11 +197,9 @@ public actor HashIndexManager {
         print("Resized to \(numBuckets) buckets")
     }
     
-    // MARK: - Helper Methods
-    
-    /// Find insert position
-    /// TLA+ Function: FindInsertPosition(key)
-    private func findInsertPosition(key: Key) async throws -> Int {
+    /// Find position to insert a key
+    /// TLA+: FindInsertPosition
+    private func findInsertPosition(key: Value) async throws -> Int {
         let hash = try await hash(key: key)
         var position = hash % numBuckets
         var probes = 0
@@ -210,9 +217,9 @@ public actor HashIndexManager {
         return position
     }
     
-    /// Find entry position
-    /// TLA+ Function: FindEntryPosition(key)
-    private func findEntryPosition(key: Key) async throws -> Int {
+    /// Find position of an existing key
+    /// TLA+: FindEntryPosition
+    private func findEntryPosition(key: Value) async throws -> Int {
         let hash = try await hash(key: key)
         var position = hash % numBuckets
         var probes = 0
@@ -229,27 +236,28 @@ public actor HashIndexManager {
         return position
     }
     
-    /// Hash function
-    /// TLA+ Function: Hash(key)
-    private func hash(key: Key) async throws -> Int {
+    /// Hash a key
+    /// TLA+: Hash
+    private func hash(key: Value) async throws -> Int {
         // TLA+: Simple hash function
         var hash = 0
-        for char in key {
+        let keyString = String(describing: key)
+        for char in keyString {
             hash = (hash * 31 + Int(char.asciiValue ?? 0)) % Int.max
         }
         return abs(hash)
     }
     
     /// Update load factor
-    /// TLA+ Function: UpdateLoadFactor()
+    /// TLA+: UpdateLoadFactor
     private func updateLoadFactor() async throws {
         // TLA+: Calculate load factor
         loadFactor = (numEntries * 100) / numBuckets
     }
     
     /// Check if key exists
-    /// TLA+ Function: KeyExists(key)
-    private func keyExists(key: Key) async throws -> Bool {
+    /// TLA+: KeyExists
+    private func keyExists(key: Value) async throws -> Bool {
         let position = try await findEntryPosition(key: key)
         if let entry = buckets[position], !entry.deleted && entry.key == key {
             return true
@@ -257,8 +265,7 @@ public actor HashIndexManager {
         return false
     }
     
-    
-    // MARK: - Query Operations
+    // MARK: - Statistics and Monitoring
     
     /// Get statistics
     public func getStatistics() -> [String: Any] {
@@ -351,6 +358,8 @@ public actor HashIndexManager {
         ]
     }
     
+    // MARK: - Maintenance Operations
+    
     /// Clear index
     public func clearIndex() async throws {
         buckets.removeAll()
@@ -359,13 +368,7 @@ public actor HashIndexManager {
         print("Index cleared")
     }
     
-    /// Reset index
-    public func resetIndex() async throws {
-        try await clearIndex()
-        print("Index reset")
-    }
-    
-    // MARK: - Invariant Checking (for testing)
+    // MARK: - TLA+ Invariants
     
     /// Check load factor invariant
     /// TLA+ Inv_HashIndex_LoadFactor
@@ -383,7 +386,7 @@ public actor HashIndexManager {
         }
         
         // Check for duplicate keys
-        var seenKeys: Set<Key> = []
+        var seenKeys: Set<Value> = []
         for (_, entry) in buckets {
             if let entry = entry, !entry.deleted {
                 if seenKeys.contains(entry.key) {
@@ -419,6 +422,7 @@ public actor HashIndexManager {
         
         return loadFactor && uniqueness && collisionHandling && deterministicHashing
     }
+}
 
 // MARK: - Supporting Types
 

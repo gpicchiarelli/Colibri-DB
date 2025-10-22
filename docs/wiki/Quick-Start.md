@@ -1,299 +1,204 @@
 ---
 layout: doc
-title: Quick Start Guide
-description: Inizia con Colibrì DB in meno di 5 minuti. Installazione, configurazione e primi passi con il database.
-category: Getting Started
-difficulty: Beginner
-version: 0.1.0
+title: Quick Start
+description: Inizia subito con Colibrì DB - installazione, configurazione e primi passi
 ---
 
-# 🚀 Quick Start Guide
+# Quick Start
 
-Benvenuto in Colibrì DB! Questa guida ti aiuterà a installare e configurare il database in meno di 5 minuti.
+Benvenuto in Colibrì DB! Questa guida ti aiuterà a iniziare rapidamente con il nostro RDBMS sperimentale in Swift.
 
-## 📋 Prerequisiti
+## Installazione
 
-Prima di iniziare, assicurati di avere:
+### Prerequisiti
 
-- **macOS 13.0+** (Ventura o successivo)
-- **Swift 6.2** o toolchain compatibile
-- **Xcode 15.0+** (opzionale, per sviluppo)
-- **Git** per clonare il repository
-- **Almeno 2GB** di spazio libero su disco
+- macOS 12.0 o superiore
+- Xcode 15.0 o superiore
+- Swift 6.2
 
-<div class="alert alert-info">
-<strong>💡 Suggerimento:</strong> Colibrì DB è ottimizzato per Apple Silicon (M1/M2/M3), ma funziona anche su Intel Mac.
-</div>
-
-## ⚡ Installazione Rapida
-
-### 1. Clona il Repository
+### Installazione tramite Swift Package Manager
 
 ```bash
 # Clona il repository
 git clone https://github.com/gpicchiarelli/Colibri-DB.git
 cd Colibri-DB
 
-# Verifica la versione Swift
-swift --version
-```
-
-### 2. Compila il Progetto
-
-```bash
-# Compila in modalità release per performance ottimali
-swift build -c release
-
-# Oppure in modalità debug per sviluppo
+# Compila il progetto
 swift build
+
+# Esegui i test
+swift test
 ```
 
-<div class="alert alert-success">
-<strong>✅ Compilazione riuscita!</strong> Se tutto è andato bene, dovresti vedere il messaggio di successo.
-</div>
+## Primi Passi
 
-### 3. Verifica l'Installazione
+### 1. Avvia il Server
 
 ```bash
-# Testa la CLI
-.build/release/coldb --version
-
-# Output atteso:
-# Colibrì DB v0.1.0-alpha
-# Swift 6.2 - macOS 13.0+
+# Avvia il server Colibrì DB
+swift run coldb-server
 ```
 
-## 🎯 Prima Sessione
+Il server sarà disponibile su `http://localhost:8080`
 
-### Avvia la CLI Interattiva
+### 2. Connettiti con il CLI
 
 ```bash
-# Avvia Colibrì DB in modalità interattiva
-.build/release/coldb
-
-# Vedrai il prompt:
-# coldb> 
+# Usa il client da riga di comando
+swift run coldb
 ```
 
-### Comandi Base
-
-Una volta nella CLI, prova questi comandi:
+### 3. Crea il tuo primo database
 
 ```sql
--- Visualizza informazioni sul database
-\info
+-- Crea un database
+CREATE DATABASE myapp;
 
--- Crea la tua prima tabella
-\create table users
+-- Usa il database
+USE myapp;
+
+-- Crea una tabella
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE
+);
 
 -- Inserisci alcuni dati
-\insert users id=1,name="Alice",age=25,email="alice@example.com"
-\insert users id=2,name="Bob",age=30,email="bob@example.com"
-\insert users id=3,name="Charlie",age=35,email="charlie@example.com"
+INSERT INTO users (name, email) VALUES 
+    ('Alice', 'alice@example.com'),
+    ('Bob', 'bob@example.com');
 
--- Visualizza tutti i dati
-\select * FROM users
-
--- Crea un indice per performance
-\create index idx_users_name ON users(name) USING BTree
-
--- Cerca usando l'indice
-\index search users idx_users_name "Alice"
-
--- Query con filtri
-\select * FROM users WHERE age > 25
+-- Esegui una query
+SELECT * FROM users WHERE name LIKE 'A%';
 ```
 
-### Operazioni Avanzate
+## Caratteristiche Principali
+
+### 🚀 Performance
+- Buffer pool con algoritmo clock-sweep
+- WAL (Write-Ahead Log) con ARIES
+- Ottimizzatore di query cost-based
+
+### 🔒 Concorrenza
+- MVCC (Multi-Version Concurrency Control)
+- Lock manager con deadlock detection
+- Snapshot isolation
+
+### 🌐 Distribuzione
+- Consenso Raft integrato
+- Sharding automatico
+- Replica sincrona e asincrona
+
+### 📊 Monitoring
+- Metriche in tempo reale
+- Health check automatici
+- Dashboard di performance
+
+## Esempi Avanzati
+
+### Transazioni Distribuite
 
 ```sql
--- Inizia una transazione
-\begin
+-- Inizia una transazione distribuita
+BEGIN DISTRIBUTED TRANSACTION;
 
--- Aggiorna un record
-\update users SET age=26 WHERE id=1
+-- Operazioni su shard diversi
+INSERT INTO users_shard1 (name) VALUES ('Alice');
+INSERT INTO orders_shard2 (user_id, amount) VALUES (1, 99.99);
 
--- Elimina un record
-\delete FROM users WHERE id=3
-
--- Conferma le modifiche
-\commit
-
--- Visualizza statistiche performance
-\stats
-
--- Esegui manutenzione
-\vacuum
+-- Commit atomico
+COMMIT;
 ```
 
-## 📁 Configurazione
+### Backup e Recovery
+
+```bash
+# Crea un backup
+swift run coldb backup --database myapp --output backup.sql
+
+# Ripristina da backup
+swift run coldb restore --input backup.sql --database myapp_restored
+```
+
+## Configurazione
 
 ### File di Configurazione
 
-Colibrì DB usa il file `colibridb.conf.json` per la configurazione:
+Crea un file `colibridb.conf.json`:
 
 ```json
 {
-  "dataDir": "./data",
-  "maxConnectionsLogical": 1000000,
-  "maxConnectionsPhysical": 16,
-  "bufferPoolSizeBytes": 1073741824,
-  "pageSizeBytes": 8192,
-  "walEnabled": true,
-  "checksumEnabled": true,
-  "cliEnabled": true,
-  "metricsEnabled": true,
-  "serverEnabled": false,
-  "indexImplementation": "BTree",
-  "storageEngine": "FileHeap"
+  "server": {
+    "host": "localhost",
+    "port": 8080,
+    "max_connections": 100
+  },
+  "storage": {
+    "data_directory": "./data",
+    "buffer_pool_size": "256MB",
+    "wal_buffer_size": "64MB"
+  },
+  "replication": {
+    "enabled": true,
+    "replicas": 3
+  }
 }
 ```
 
-### Parametri Principali
-
-| Parametro | Descrizione | Valore Consigliato |
-|-----------|-------------|-------------------|
-| `dataDir` | Directory per i file del database | `./data` |
-| `bufferPoolSizeBytes` | Dimensione buffer pool in bytes | `1GB` per sviluppo |
-| `pageSizeBytes` | Dimensione pagina | `8192` (8KB) |
-| `walEnabled` | Abilita Write-Ahead Logging | `true` |
-| `checksumEnabled` | Abilita checksum CRC32 | `true` |
-
-### Configurazione per Sviluppo
-
-```json
-{
-  "dataDir": "./dev-data",
-  "bufferPoolSizeBytes": 268435456,
-  "pageSizeBytes": 4096,
-  "walEnabled": true,
-  "checksumEnabled": true,
-  "cliEnabled": true,
-  "metricsEnabled": true
-}
-```
-
-### Configurazione per Produzione
-
-```json
-{
-  "dataDir": "/var/lib/colibridb",
-  "bufferPoolSizeBytes": 4294967296,
-  "pageSizeBytes": 8192,
-  "walEnabled": true,
-  "checksumEnabled": true,
-  "cliEnabled": false,
-  "serverEnabled": true,
-  "metricsEnabled": true
-}
-```
-
-## 🔧 Comandi CLI Essenziali
-
-### Gestione Database
+### Variabili d'Ambiente
 
 ```bash
-# Avvia con configurazione specifica
-.build/release/coldb --config custom.conf.json
-
-# Modalità sviluppo con debug
-.build/debug/coldb-dev
-
-# Avvia server di rete
-.build/release/coldb-server --port 5432
+export COLIBRI_DB_HOST=localhost
+export COLIBRI_DB_PORT=8080
+export COLIBRI_DB_DATA_DIR=./data
 ```
 
-### Comandi Interattivi
+## Troubleshooting
 
-| Comando | Descrizione | Esempio |
-|---------|-------------|---------|
-| `\help` | Mostra aiuto | `\help` |
-| `\info` | Info database | `\info` |
-| `\tables` | Lista tabelle | `\tables` |
-| `\indexes` | Lista indici | `\indexes` |
-| `\stats` | Statistiche | `\stats` |
-| `\vacuum` | Manutenzione | `\vacuum` |
-| `\checkpoint` | Forza checkpoint | `\checkpoint` |
-| `\quit` | Esci | `\quit` |
+### Problemi Comuni
 
-### Import/Export
+**Errore: "Port already in use"**
+```bash
+# Trova il processo che usa la porta
+lsof -i :8080
+
+# Termina il processo
+kill -9 <PID>
+```
+
+**Errore: "Database locked"**
+```bash
+# Verifica i processi attivi
+swift run coldb status
+
+# Forza la chiusura delle connessioni
+swift run coldb kill-connections
+```
+
+### Log e Debug
 
 ```bash
-# Esporta dati in CSV
-\export users users.csv
+# Abilita logging dettagliato
+swift run coldb-server --log-level debug
 
-# Importa dati da CSV
-\import users users.csv
-
-# Backup completo
-\backup backup.sql
-
-# Ripristino
-\restore backup.sql
+# Visualizza i log
+tail -f logs/colibri.log
 ```
 
-## 🚨 Risoluzione Problemi
+## Prossimi Passi
 
-### Errori Comuni
+1. **Leggi l'Architettura**: Scopri come funziona internamente Colibrì DB
+2. **Esplora le Specifiche TLA+**: Comprendi le verifiche formali
+3. **Contribuisci**: Partecipa allo sviluppo del progetto
 
-**Errore: "Swift compiler not found"**
-```bash
-# Installa Xcode Command Line Tools
-xcode-select --install
+## Supporto
 
-# Oppure scarica Swift da swift.org
-```
-
-**Errore: "Permission denied"**
-```bash
-# Assicurati di avere i permessi
-chmod +x .build/release/coldb
-
-# Oppure usa sudo per directory di sistema
-sudo mkdir -p /var/lib/colibridb
-sudo chown $(whoami) /var/lib/colibridb
-```
-
-**Errore: "Database corrupted"**
-```bash
-# Ripara il database
-.build/release/coldb --repair
-
-# Oppure ricrea da backup
-.build/release/coldb --restore backup.sql
-```
-
-### Performance Issues
-
-**Database lento?**
-- Aumenta `bufferPoolSizeBytes`
-- Crea indici sulle colonne più usate
-- Esegui `\vacuum` periodicamente
-- Monitora con `\stats`
-
-**Memoria insufficiente?**
-- Riduci `bufferPoolSizeBytes`
-- Usa `pageSizeBytes` più piccole
-- Chiudi connessioni non utilizzate
-
-## 📚 Prossimi Passi
-
-Ora che hai Colibrì DB funzionante, esplora:
-
-1. **[Architettura]({{ '/wiki/Architecture' | relative_url }})** - Comprendi come funziona internamente
-2. **[API Reference]({{ '/wiki/API-Reference' | relative_url }})** - Integra nelle tue applicazioni
-3. **[Performance]({{ '/wiki/Performance' | relative_url }})** - Ottimizza per il tuo caso d'uso
-4. **[Examples]({{ '/wiki/Examples' | relative_url }})** - Esempi pratici e casi d'uso
-
-## 🤝 Supporto
-
-Hai bisogno di aiuto?
-
-- 📖 [Documentazione completa]({{ '/wiki/' | relative_url }})
-- 🐛 [Segnala bug](https://github.com/gpicchiarelli/Colibri-DB/issues)
+- 📖 [Documentazione Completa](/wiki/)
+- 🐛 [Segnala Bug](https://github.com/gpicchiarelli/Colibri-DB/issues)
 - 💬 [Discussioni](https://github.com/gpicchiarelli/Colibri-DB/discussions)
-- 📧 [Contatta il team](mailto:support@colibridb.org)
+- 📧 [Email](mailto:support@colibridb.dev)
 
-<div class="alert alert-success">
-<strong>🎉 Congratulazioni!</strong> Hai completato il setup di Colibrì DB. Sei pronto per esplorare tutte le funzionalità del database!
-</div>
+---
+
+*Hai domande? Controlla la [sezione FAQ](/wiki/Troubleshooting.html) o apri una discussione su GitHub!*

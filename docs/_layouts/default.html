@@ -58,29 +58,32 @@
     <footer class="site-footer">
       <div class="shell site-footer__grid">
         <section class="footer-block">
-          <h2 class="footer-title">Motore verificato</h2>
-          <p>Il core <code>ColibrìDB</code> orchestra <code>BufferPool.swift</code>, <code>FileWAL.swift</code> e <code>MVCCManager.swift</code> per garantire durabilità ARIES, isolamento snapshot e gestione del clock-sweep in memoria.</p>
+          <h2 class="footer-title">Colibrì DB</h2>
+          <p>RDBMS moderno e performante per macOS, con architettura modulare e verifiche formali complete. 
+             Progettato per applicazioni che richiedono consistenza, performance e scalabilità.</p>
         </section>
         <section class="footer-block">
-          <h2 class="footer-title">Distribuzione</h2>
+          <h2 class="footer-title">Risorse</h2>
           <ul class="footer-list">
-            <li><code>RaftConsensusManager.swift</code> coordina leader e repliche.</li>
-            <li><code>TwoPhaseCommitManager.swift</code> assicura commit atomici.</li>
-            <li><code>Sharding</code> e <code>Replication</code> separano partizioni e repliche calde.</li>
+            <li><a href="{{ '/wiki/Quick-Start.html' | relative_url }}">Quick Start</a></li>
+            <li><a href="{{ '/architecture.html' | relative_url }}">Architettura</a></li>
+            <li><a href="{{ '/wiki/API-Reference.html' | relative_url }}">API Reference</a></li>
+            <li><a href="{{ '/tla-specifications.html' | relative_url }}">Specifiche TLA+</a></li>
           </ul>
         </section>
         <section class="footer-block">
-          <h2 class="footer-title">Operatività</h2>
+          <h2 class="footer-title">Community</h2>
           <ul class="footer-list">
-            <li><code>Monitor.swift</code> raccoglie metriche e health check.</li>
-            <li><code>Backup</code> e <code>Recovery</code> coprono snapshot e PITR.</li>
-            <li><code>ColibriServer/Server.swift</code> espone l'API HTTP concorrente.</li>
+            <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank" rel="noreferrer">GitHub</a></li>
+            <li><a href="https://github.com/gpicchiarelli/Colibri-DB/issues" target="_blank" rel="noreferrer">Segnala Bug</a></li>
+            <li><a href="https://github.com/gpicchiarelli/Colibri-DB/discussions" target="_blank" rel="noreferrer">Discussioni</a></li>
+            <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer">Contribuisci</a></li>
           </ul>
         </section>
       </div>
       <div class="shell site-footer__bottom">
-        <span>© {{ "now" | date: "%Y" }} Colibrì DB · Swift 6.2 · Specifiche TLA+ allineate al codice sorgente.</span>
-        <a class="footer-link" href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE" target="_blank" rel="noreferrer">Licenza MIT ↗</a>
+        <span>© {{ "now" | date: "%Y" }} Colibrì DB · Swift 6.2 · Licenza MIT</span>
+        <a class="footer-link" href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/LICENSE" target="_blank" rel="noreferrer">Licenza ↗</a>
       </div>
     </footer>
   </div>

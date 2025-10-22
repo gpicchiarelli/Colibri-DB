@@ -8,11 +8,11 @@ description: Colibrì DB integra BufferPool, FileWAL, MVCCManager, QueryExecutor
   <div class="shell hero__inner">
     <div class="hero__content">
       <span class="hero__eyebrow">Derivato da Sources/ColibriCore</span>
-      <h1 class="hero__title">Un RDBMS Swift con stack formale end-to-end</h1>
+      <h1 class="hero__title">Colibrì DB: RDBMS moderno per macOS</h1>
       <p class="hero__lede">
-        L'attore <code>ColibrìDB</code> definito in <code>Sources/ColibriCore/Database/ColibrìDB.swift</code> compone
-        <code>BufferPool.swift</code>, <code>FileWAL.swift</code>, <code>MVCCManager.swift</code> e <code>QueryExecutor.swift</code>
-        per fornire concorrenza snapshot, WAL ARIES e ottimizzazione fisica senza sacrificare la leggibilità del codice Swift 6.2.
+        Un database relazionale ad alte prestazioni scritto in Swift, con architettura modulare, 
+        verifiche formali complete e supporto nativo per distribuzione e replica. Perfetto per 
+        applicazioni moderne che richiedono consistenza e performance.
       </p>
       <div class="hero__actions">
         <a class="btn btn--primary" href="{{ '/architecture.html' | relative_url }}">Architettura →</a>
@@ -21,35 +21,37 @@ description: Colibrì DB integra BufferPool, FileWAL, MVCCManager, QueryExecutor
       </div>
       <ul class="metric-list">
         <li class="metric">
-          <span class="metric__label">Storage</span>
+          <span class="metric__label">Performance</span>
           <p class="metric__value">
-            <code>BufferPool/BufferPool.swift</code> implementa clock-sweep, <code>Storage/HeapTable.swift</code>
-            gestisce pagine a slot e <code>WAL/FileWAL.swift</code> applica ARIES con group commit.
+            Buffer pool intelligente, WAL ottimizzato e indici B-Tree per query veloci. 
+            Supporto per join hash, aggregazioni e ordinamento efficiente.
           </p>
         </li>
         <li class="metric">
-          <span class="metric__label">Consistenza</span>
+          <span class="metric__label">Affidabilità</span>
           <p class="metric__value">
-            <code>Transaction/LockManager.swift</code> e <code>Transaction/TransactionManager.swift</code> coordinano lock intent,
-            mentre <code>MVCC/MVCCManager.swift</code> assicura snapshot isolation e garbage collection.
+            Transazioni ACID complete, MVCC per concorrenza senza blocchi e recovery 
+            automatico con ARIES. Dati sempre consistenti e durabili.
           </p>
         </li>
         <li class="metric">
-          <span class="metric__label">SQL Pipeline</span>
+          <span class="metric__label">Scalabilità</span>
           <p class="metric__value">
-            <code>SQL/SQLProcessor.swift</code>, <code>Planner/QueryPlanner.swift</code> e
-            <code>Query/QueryExecutor.swift</code> coprono parsing, pianificazione cost-based e operatori fisici.
+            Sharding automatico, replica Raft e query distribuite. Cresci da single-node 
+            a cluster multi-regione senza modifiche al codice.
           </p>
         </li>
       </ul>
     </div>
     <aside class="hero__panel">
-      <h2>Capacità distribuite dal codice</h2>
+      <h2>Perché scegliere Colibrì DB?</h2>
       <ul>
-        <li><code>Consensus/RaftConsensusManager.swift</code> fornisce elezione del leader e replica log-sicura.</li>
-        <li><code>TwoPhaseCommit/TwoPhaseCommitManager.swift</code> coordina commit atomici tra nodi.</li>
-        <li><code>Sharding/ShardingManager.swift</code> e <code>Replication/ReplicationManager.swift</code> orchestrano partizionamento e copie calde.</li>
-        <li><code>DistributedQuery/DistributedQuery.swift</code> spinge i piani SQL oltre i confini del cluster.</li>
+        <li>✅ <strong>Nativo macOS</strong> - Ottimizzato per l'ecosistema Apple</li>
+        <li>✅ <strong>SQL Standard</strong> - Compatibile con PostgreSQL e MySQL</li>
+        <li>✅ <strong>Verifiche Formali</strong> - Ogni componente è verificato con TLA+</li>
+        <li>✅ <strong>Open Source</strong> - Codice trasparente e community-driven</li>
+        <li>✅ <strong>Zero Config</strong> - Funziona out-of-the-box</li>
+        <li>✅ <strong>Cloud Ready</strong> - Deploy facile su AWS, GCP, Azure</li>
       </ul>
     </aside>
   </div>
@@ -253,23 +255,28 @@ description: Colibrì DB integra BufferPool, FileWAL, MVCCManager, QueryExecutor
 <section class="section section--muted">
   <div class="shell">
     <header class="section__header section__header--center">
-      <span class="section__eyebrow">Per iniziare</span>
-      <h2 class="section__title">Esplora le specifiche TLA+ e il wiki generato dal codice</h2>
+      <span class="section__eyebrow">Esempi pratici</span>
+      <h2 class="section__title">Inizia subito con Colibrì DB</h2>
       <p class="section__lede">
-        Ogni sottosistema Swift rimanda a un modulo TLA+. Consulta le pagine dedicate per navigare tra invarianti,
-        proprietà di sicurezza e guide operative derivate direttamente dal repository.
+        Dalla configurazione base alle funzionalità avanzate, scopri come integrare 
+        Colibrì DB nelle tue applicazioni Swift e non solo.
       </p>
     </header>
     <div class="highlight-grid">
       <div class="highlight">
-        <strong>Specifiche</strong>
-        <p>Scopri i moduli formali per WAL, consensus, 2PC e MVCC.</p>
-        <a class="btn btn--subtle" href="{{ '/tla-specifications.html' | relative_url }}">Vai alle specifiche →</a>
+        <strong>🚀 Quick Start</strong>
+        <p>Installa e configura Colibrì DB in meno di 5 minuti. Guida passo-passo con esempi pratici.</p>
+        <a class="btn btn--subtle" href="{{ '/wiki/Quick-Start.html' | relative_url }}">Inizia ora →</a>
       </div>
       <div class="highlight">
-        <strong>Wiki</strong>
-        <p>Il wiki in <code>docs/wiki</code> viene renderizzato tramite <code>doc.html</code> usando il nuovo layout.</p>
-        <a class="btn btn--subtle" href="{{ '/wiki/Home.html' | relative_url }}">Apri il wiki →</a>
+        <strong>📚 Documentazione</strong>
+        <p>Wiki completo con guide dettagliate, API reference e best practices per ogni scenario d'uso.</p>
+        <a class="btn btn--subtle" href="{{ '/wiki/Home.html' | relative_url }}">Esplora docs →</a>
+      </div>
+      <div class="highlight">
+        <strong>🔬 Specifiche TLA+</strong>
+        <p>Modelli formali e verifiche matematiche che garantiscono la correttezza del sistema.</p>
+        <a class="btn btn--subtle" href="{{ '/tla-specifications.html' | relative_url }}">Vedi specifiche →</a>
       </div>
     </div>
   </div>
