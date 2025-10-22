@@ -531,7 +531,7 @@ This approach might cause a memory leak. Consider using `weak` references or ens
 
 ### Per Nuovi Contributori
 
-1. **Leggi la documentazione**: Inizia con [Quick Start]({{ site.baseurl }}/wiki/Quick-Start) e [Architecture]({{ site.baseurl }}/wiki/Architecture)
+1. **Leggi la documentazione**: Inizia con [Quick Start](Quick-Start.md) e [Architecture](Architecture.md)
 2. **Esplora il codice**: Guarda i file in `Sources/ColibriCore/`
 3. **Risolvi issue semplici**: Cerca label "good first issue"
 4. **Partecipa alle discussioni**: Unisciti alle conversazioni su GitHub
@@ -549,6 +549,6 @@ This approach might cause a memory leak. Consider using `weak` references or ens
 
 **🛠️ Development Guide Colibrì DB** - *Contribuisci al futuro dei database Swift*
 
-[← API Reference]({{ site.baseurl }}/wiki/API-Reference) • [Troubleshooting →]({{ site.baseurl }}/wiki/Troubleshooting)
+[← API Reference](API-Reference.md) • [Troubleshooting →](Troubleshooting.md)
 
 </div>

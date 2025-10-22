@@ -475,10 +475,6 @@ Contribuendo a ColibrìDB, accetti che le tue modifiche siano rilasciate sotto l
 Grazie per il tuo interesse a contribuire a ColibrìDB! Ogni contributo, grande o piccolo, aiuta a rendere il progetto migliore per tutti.
 
 ---
-=======
-# Contributing to ColibrìDB
-
-Thank you for your interest in contributing to ColibrìDB! We welcome issues, proposals, and pull requests.
 
 ## Development Environment
 

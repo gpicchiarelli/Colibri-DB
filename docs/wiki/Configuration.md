@@ -570,6 +570,6 @@ echo "Buffer pool size: $buffer_pool_size bytes"
 
 **⚙️ Configurazione Colibrì DB** - *Ottimizza le performance per le tue esigenze*
 
-[← Architettura]({{ site.baseurl }}/wiki/Architecture) • [CLI Reference →]({{ site.baseurl }}/wiki/CLI-Reference)
+[← Architettura](Architecture.md) • [CLI Reference →](CLI-Reference.md)
 
 </div>
