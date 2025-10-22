@@ -39,7 +39,15 @@ let package = Package(
         .target(
             name: "ColibriCore",
             dependencies: ["CRC32Accelerator"],
-            exclude: ["README.md"]
+            exclude: [
+                "README.md",
+                "Query/QueryOptimizer.swift.backup",
+                "Security/Authentication.swift.backup",
+                "Security/Authorization.swift.backup",
+                "System/Catalog.swift.backup",
+                "Storage/Heap/HeapTable.swift.backup",
+                "Engine/TransactionManager.swift.backup"
+            ]
         ),
         .target(
             name: "ColibriCLI",
@@ -85,7 +93,8 @@ let package = Package(
             dependencies: [
                 "ColibriCore",
                 .product(name: "Testing", package: "swift-testing")
-            ]
+            ],
+            exclude: ["README.md"]
         )
     ]
 )
