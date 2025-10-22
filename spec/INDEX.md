@@ -8,7 +8,7 @@
 
 | Document | Purpose | Status |
 |----------|---------|--------|
-| **README.md** | Overview e guida getting started | ✅ |
+| **[README.md](../docs/wiki/README.md)** | Overview e guida getting started | ✅ |
 | **COMPLETE_VERIFICATION_REPORT.md** | Report finale con tutto | ✅ ⭐ |
 | **VALIDATION_CHECKLIST.md** | Checklist completa | ✅ |
 
@@ -136,7 +136,7 @@
 → Leggi `PEER_REVIEW_REPORT.md` ⭐
 
 **...iniziare con TLA+?**
-→ Leggi `README.md`
+→ Leggi [README.md](../docs/wiki/README.md)
 
 **...usare le specifiche?**
 → Leggi `VALIDATION_CHECKLIST.md`

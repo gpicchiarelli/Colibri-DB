@@ -327,7 +327,7 @@ public actor MVCCManager {
     }
     
     /// Get snapshot
-    private func getSnapshot(txId: TxID) -> Snapshot? {
+    private func getSnapshot(txId: TxID) -> MVCCSnapshot? {
         return snapshots[txId]
     }
     
@@ -349,7 +349,7 @@ public actor MVCCManager {
     }
     
     /// Get snapshot
-    public func getSnapshot(txId: TxID) -> Snapshot? {
+    public func getSnapshot(txId: TxID) -> MVCCSnapshot? {
         return getSnapshot(txId: txId)
     }
     
