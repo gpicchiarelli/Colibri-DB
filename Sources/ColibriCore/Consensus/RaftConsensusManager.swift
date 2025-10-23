@@ -348,7 +348,7 @@ public actor RaftConsensusManager {
         
         // TLA+: Update next index and match index
         for serverId in newServers {
-            nextIndex[serverId] = log.count
+            nextIndex[serverId] = UInt64(log.count)
             matchIndex[serverId] = 0
         }
         

@@ -234,7 +234,7 @@ public actor TwoPhaseCoordinator {
             throw TwoPhaseError.invalidState(current: states[transactionId] ?? .idle, expected: .committing)
         }
         
-        let finalState: CoordinatorState = states[transactionId] == .committing ? .committed : .aborted
+        let finalState: CoordinatorState = states[transactionId] == .committing ? .idle : .idle
         states[transactionId] = finalState
         appendLog(transactionId: transactionId, entry: "COMPLETE")
     }

@@ -181,11 +181,17 @@ public enum BasicUsageExamples {
             dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
         )
         
+        let databaseConfig = DatabaseConfiguration(
+            maxConnections: 100,
+            cacheSize: 1024*1024*1024,
+            walBufferSize: 8192
+        )
+        
         let serverConfig = DatabaseServer.Configuration(
             host: "127.0.0.1",
             port: 5432,
             maxConnections: 100,
-            databaseConfig: dbConfig
+            databaseConfig: databaseConfig
         )
         
         let server = try DatabaseServer(config: serverConfig)

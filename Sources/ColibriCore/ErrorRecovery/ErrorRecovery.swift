@@ -261,7 +261,7 @@ public actor ErrorRecoveryManager {
         }
         
         let checkpointId = lastCheckpointId[component, default: 0] + 1
-        let checkpoint = Checkpoint(
+        let checkpoint = ErrorRecoveryCheckpoint(
             checkpointId: checkpointId,
             component: component,
             timestamp: totalErrors,

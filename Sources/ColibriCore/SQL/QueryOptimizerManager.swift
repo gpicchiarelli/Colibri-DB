@@ -105,12 +105,12 @@ public actor QueryOptimizerManager {
     private var statistics: [String: TableStats] = [:]
     
     /// Explored plans
-    /// TLA+: exploredPlans \in Set(Seq(QueryNode))
-    private var exploredPlans: Set<[QueryNode]> = []
+    /// TLA+: exploredPlans \in Set(Seq(PlanNode))
+    private var exploredPlans: Set<[PlanNode]> = []
     
     /// Best plan
-    /// TLA+: bestPlan \in Seq(QueryNode)
-    private var bestPlan: [QueryNode] = []
+    /// TLA+: bestPlan \in Seq(PlanNode)
+    private var bestPlan: [PlanNode] = []
     
     /// DP table
     /// TLA+: dpTable \in [String -> Double]
@@ -205,7 +205,7 @@ public actor QueryOptimizerManager {
     
     /// Estimate cost
     /// TLA+ Action: EstimateCost(plan)
-    public func estimateCost(plan: [QueryNode]) async throws -> Double {
+    public func estimateCost(plan: [PlanNode]) async throws -> Double {
         // TLA+: Calculate total cost
         var totalCost = 0.0
         
@@ -360,7 +360,7 @@ public actor QueryOptimizerManager {
     
     /// Calculate node cost
     /// TLA+ Function: CalculateNodeCost(node)
-    private func calculateNodeCost(node: QueryNode) async throws -> Double {
+    private func calculateNodeCost(node: PlanNode) async throws -> Double {
         // TLA+: Calculate cost based on node type
         switch node.nodeType {
         case "scan":
@@ -378,7 +378,7 @@ public actor QueryOptimizerManager {
     
     /// Calculate scan cost
     /// TLA+ Function: CalculateScanCost(node)
-    private func calculateScanCost(node: QueryNode) async throws -> Double {
+    private func calculateScanCost(node: PlanNode) async throws -> Double {
         // TLA+: Calculate scan cost
         let tableName = node.properties["tableName"] ?? ""
         let tableStats = statistics[tableName]
@@ -396,7 +396,7 @@ public actor QueryOptimizerManager {
     
     /// Calculate join cost
     /// TLA+ Function: CalculateJoinCost(node)
-    private func calculateJoinCost(node: QueryNode) async throws -> Double {
+    private func calculateJoinCost(node: PlanNode) async throws -> Double {
         // TLA+: Calculate join cost
         let leftCardinality = Int(node.properties["cardinality"] ?? "0") ?? 0
         let rightCardinality = Int(node.properties["cardinality"] ?? "0") ?? 0
@@ -412,7 +412,7 @@ public actor QueryOptimizerManager {
     
     /// Calculate aggregation cost
     /// TLA+ Function: CalculateAggregationCost(node)
-    private func calculateAggregationCost(node: QueryNode) async throws -> Double {
+    private func calculateAggregationCost(node: PlanNode) async throws -> Double {
         // TLA+: Calculate aggregation cost
         let inputCardinality = Int(node.properties["cardinality"] ?? "0") ?? 0
         
