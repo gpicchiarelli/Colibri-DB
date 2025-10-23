@@ -106,7 +106,7 @@ public actor QueryOptimizerManager {
     
     /// Explored plans
     /// TLA+: exploredPlans \in Set(Seq(PlanNode))
-    private var exploredPlans: Set<[PlanNode]> = []
+    private var exploredPlans: [[PlanNode]] = []
     
     /// Best plan
     /// TLA+: bestPlan \in Seq(PlanNode)
@@ -199,7 +199,7 @@ public actor QueryOptimizerManager {
         
         // TLA+: Add to explored plans
         for plan in combinedPlans {
-            exploredPlans.insert(plan)
+            exploredPlans.append(plan)
         }
     }
     
@@ -252,10 +252,13 @@ public actor QueryOptimizerManager {
         let joinOrders = queryJoinOrders.map { queryNodes in
             queryNodes.map { queryNode in
                 PlanNode(
-                    nodeId: queryNode.nodeId,
-                    nodeType: queryNode.nodeType,
-                    children: queryNode.children,
-                    properties: queryNode.properties
+                    planId: queryNode.nodeId,
+                    queryId: "query",
+                    rootNode: queryNode.nodeId,
+                    nodes: [queryNode.nodeId: queryNode],
+                    cost: 0.0,
+                    estimatedRows: 0,
+                    estimatedCost: 0.0
                 )
             }
         }
@@ -362,7 +365,7 @@ public actor QueryOptimizerManager {
     /// TLA+ Function: CalculateNodeCost(node)
     private func calculateNodeCost(node: PlanNode) async throws -> Double {
         // TLA+: Calculate cost based on node type
-        switch node.nodeType {
+        switch node.rootNode {
         case "scan":
             return try await calculateScanCost(node: node)
         case "join":

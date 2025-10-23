@@ -80,35 +80,7 @@ public enum LogCategory: String, CaseIterable {
 // MARK: - Log Entry
 
 /// A structured log entry
-public struct LogEntry {
-    public let timestamp: Date
-    public let level: LogLevel
-    public let category: LogCategory
-    public let message: String
-    public let file: String
-    public let function: String
-    public let line: Int
-    public let metadata: [String: Any]?
-    
-    public init(
-        level: LogLevel,
-        category: LogCategory,
-        message: String,
-        file: String = #file,
-        function: String = #function,
-        line: Int = #line,
-        metadata: [String: Any]? = nil
-    ) {
-        self.timestamp = Date()
-        self.level = level
-        self.category = category
-        self.message = message
-        self.file = URL(fileURLWithPath: file).lastPathComponent
-        self.function = function
-        self.line = line
-        self.metadata = metadata
-    }
-}
+// LogEntry is defined in Consensus/RaftConsensusManager.swift
 
 // MARK: - Log Formatter
 
