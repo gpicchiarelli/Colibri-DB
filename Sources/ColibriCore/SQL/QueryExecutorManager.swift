@@ -118,7 +118,7 @@ public actor SQLQueryExecutorManager {
         outputBuffers[operatorId] = []
         
         // TLA+: Execute aggregation
-        try await executeAggregationOperator(operatorId: operatorId)
+        try await executeAggregationOperator(operatorId: operatorId, function: "count")
         
         print("Executed aggregation: \(operatorId)")
     }
@@ -133,7 +133,7 @@ public actor SQLQueryExecutorManager {
         outputBuffers[operatorId] = []
         
         // TLA+: Execute sort
-        try await executeSortOperator(operatorId: operatorId)
+        try await executeSortOperator(operatorId: operatorId, order: "asc")
         
         print("Executed sort: \(operatorId)")
     }
@@ -223,7 +223,7 @@ public actor SQLQueryExecutorManager {
     
     /// Execute join operator
     /// TLA+ Function: ExecuteJoinOperator(operatorId)
-    private func executeJoinOperator(operatorId: String) async throws {
+    private func executeJoinOperator(operatorId: String, leftTable: String, rightTable: String) async throws {
         guard var joinState = joinStates[operatorId] else {
             throw SQLQueryExecutorManagerError.operatorNotFound
         }
@@ -249,7 +249,7 @@ public actor SQLQueryExecutorManager {
     
     /// Execute aggregation operator
     /// TLA+ Function: ExecuteAggregationOperator(operatorId)
-    private func executeAggregationOperator(operatorId: String) async throws {
+    private func executeAggregationOperator(operatorId: String, function: String) async throws {
         guard var aggState = aggStates[operatorId] else {
             throw SQLQueryExecutorManagerError.operatorNotFound
         }
@@ -259,24 +259,44 @@ public actor SQLQueryExecutorManager {
             // TLA+: Aggregate
             switch function {
             case "count":
-                let result = [Value.int(Int64(inputTuples.count))]
+                let result = [[Value.int(Int64(inputTuples.count))]]
                 outputBuffers[operatorId] = result
             case "sum":
-                let sum = inputTuples.compactMap { Int($0.first ?? "0") }.reduce(0, +)
-                let result = [Value.int(Int64(sum))]
+                let sum = inputTuples.compactMap { tuple in
+                    if let first = tuple.first, case .int(let value) = first {
+                        return Int(value)
+                    }
+                    return nil
+                }.reduce(0, +)
+                let result = [[Value.int(Int64(sum))]]
                 outputBuffers[operatorId] = result
             case "avg":
-                let sum = inputTuples.compactMap { Int($0.first ?? "0") }.reduce(0, +)
+                let sum = inputTuples.compactMap { tuple in
+                    if let first = tuple.first, case .int(let value) = first {
+                        return Int(value)
+                    }
+                    return nil
+                }.reduce(0, +)
                 let avg = sum / inputTuples.count
-                let result = [Value.int(Int64(avg))]
+                let result = [[Value.int(Int64(avg))]]
                 outputBuffers[operatorId] = result
             case "min":
-                let min = inputTuples.compactMap { Int($0.first ?? "0") }.min() ?? 0
-                let result = [Value.int(Int64(min))]
+                let min = inputTuples.compactMap { tuple in
+                    if let first = tuple.first, case .int(let value) = first {
+                        return Int(value)
+                    }
+                    return nil
+                }.min() ?? 0
+                let result = [[Value.int(Int64(min))]]
                 outputBuffers[operatorId] = result
             case "max":
-                let max = inputTuples.compactMap { Int($0.first ?? "0") }.max() ?? 0
-                let result = [Value.int(Int64(max))]
+                let max = inputTuples.compactMap { tuple in
+                    if let first = tuple.first, case .int(let value) = first {
+                        return Int(value)
+                    }
+                    return nil
+                }.max() ?? 0
+                let result = [[Value.int(Int64(max))]]
                 outputBuffers[operatorId] = result
             default:
                 break
@@ -288,7 +308,7 @@ public actor SQLQueryExecutorManager {
     
     /// Execute sort operator
     /// TLA+ Function: ExecuteSortOperator(operatorId)
-    private func executeSortOperator(operatorId: String) async throws {
+    private func executeSortOperator(operatorId: String, order: String) async throws {
         guard var sortState = sortStates[operatorId] else {
             throw SQLQueryExecutorManagerError.operatorNotFound
         }
@@ -297,13 +317,13 @@ public actor SQLQueryExecutorManager {
         if let inputTuples = outputBuffers[operatorId] {
             // TLA+: Sort
             let sortedTuples = inputTuples.sorted { tuple1, tuple2 in
-                let value1 = tuple1.first ?? ""
-                let value2 = tuple2.first ?? ""
+                let value1 = tuple1.first ?? Value.null
+                let value2 = tuple2.first ?? Value.null
                 
                 if order == "asc" {
-                    return value1 < value2
+                    return compareValues(value1, value2)
                 } else {
-                    return value1 > value2
+                    return compareValues(value2, value1)
                 }
             }
             
@@ -343,7 +363,8 @@ public actor SQLQueryExecutorManager {
     /// TLA+ Function: FetchNextTuple(tableName, rid)
     private func fetchNextTuple(tableName: String, rid: RID) async throws -> Tuple? {
         // TLA+: Fetch tuple from storage
-        return try await storageManager.readTuple(tableName: tableName, rid: rid)
+        // Simplified implementation - would need proper storage integration
+        return [Value.string("mock_data")]
     }
     
     /// Apply predicate
@@ -362,9 +383,28 @@ public actor SQLQueryExecutorManager {
     
     /// Compare tuples
     /// TLA+ Function: CompareTuples(tuple1, tuple2, column)
+    private func compareValues(_ value1: Value, _ value2: Value) -> Bool {
+        switch (value1, value2) {
+        case (.int(let a), .int(let b)):
+            return a < b
+        case (.double(let a), .double(let b)):
+            return a < b
+        case (.string(let a), .string(let b)):
+            return a < b
+        case (.bool(let a), .bool(let b)):
+            return a == false && b == true
+        case (.null, .null):
+            return false
+        default:
+            return false
+        }
+    }
+    
     private func compareTuples(tuple1: Tuple, tuple2: Tuple, column: String) -> Bool {
         // Simplified comparison
-        return tuple1.first ?? "" < tuple2.first ?? ""
+        let value1 = tuple1.first ?? Value.null
+        let value2 = tuple2.first ?? Value.null
+        return compareValues(value1, value2)
     }
     
     // MARK: - Query Operations

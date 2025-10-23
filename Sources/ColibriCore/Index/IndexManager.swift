@@ -31,7 +31,7 @@ public struct IndexEntry: Codable, Sendable, Equatable {
     public let value: String
     public let pageId: UInt64
     public let offset: UInt64
-    public let isDeleted: Bool
+    public var isDeleted: Bool
     public let timestamp: UInt64
     
     public init(entryId: String, indexId: IndexID, key: String, value: String, pageId: UInt64, offset: UInt64, isDeleted: Bool, timestamp: UInt64) {
@@ -136,23 +136,24 @@ public actor IndexManagerActor {
     public func createIndex(metadata: IndexMetadata) async throws -> IndexID {
         // TLA+: Create index
         let index = Index(
-            indexId: metadata.indexId,
+            indexId: IndexID(0), // Generate new ID
             indexType: metadata.indexType,
             entries: [],
-            isUnique: metadata.isUnique,
-            isPrimary: metadata.isPrimary,
-            isClustered: metadata.isClustered,
-            fillFactor: metadata.fillFactor,
-            created: metadata.created,
-            lastModified: metadata.lastModified
+            isUnique: metadata.unique,
+            isPrimary: false, // Default value
+            isClustered: false, // Default value
+            fillFactor: 0.8, // Default value
+            created: UInt64(Date().timeIntervalSince1970 * 1000),
+            lastModified: UInt64(Date().timeIntervalSince1970 * 1000)
         )
         
-        indexes[metadata.indexId] = index
-        indexMetadata[metadata.indexId] = metadata
+        let indexId = IndexID(UInt64(indexes.count + 1))
+        indexes[indexId] = index
+        indexMetadata[indexId] = metadata
         
         // TLA+: Initialize metrics
         let metrics = IndexMetrics(
-            indexId: metadata.indexId,
+            indexId: indexId,
             entryCount: 0,
             size: 0,
             height: 0,
@@ -167,10 +168,10 @@ public actor IndexManagerActor {
             updateCount: 0,
             deleteCount: 0
         )
-        indexMetrics[metadata.indexId] = metrics
+        indexMetrics[indexId] = metrics
         
-        print("Created index: \(metadata.name) (ID: \(metadata.indexId))")
-        return metadata.indexId
+        print("Created index: \(metadata.name) (ID: \(indexId))")
+        return indexId
     }
     
     /// Drop index
@@ -338,15 +339,7 @@ public actor IndexManagerActor {
     
     // MARK: - Query Operations
     
-    /// Get index type
-    public func getIndexType(indexId: IndexID) -> IndexType? {
-        return getIndexType(indexId: indexId)
-    }
     
-    /// Get index metadata
-    public func getIndexMetadata(indexId: IndexID) -> IndexMetadata? {
-        return getIndexMetadata(indexId: indexId)
-    }
     
     /// Get index metrics
     public func getIndexMetrics(indexId: IndexID) -> IndexMetrics? {
@@ -516,12 +509,7 @@ public protocol StorageManager: Sendable {
     func deletePage(pageId: UInt64) async throws
 }
 
-/// Buffer manager
-public protocol BufferManager: Sendable {
-    func fetchPage(pageId: UInt64) async throws -> Page
-    func unpinPage(pageId: UInt64) async throws
-    func flushPage(pageId: UInt64) async throws
-}
+// BufferManager protocol is defined in Buffer/BufferManager.swift
 
 
 /// Index error

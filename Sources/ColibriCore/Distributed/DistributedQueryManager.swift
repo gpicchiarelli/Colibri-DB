@@ -277,20 +277,6 @@ public actor DistributedQueryManager {
         return Array(results.values)
     }
     
-    /// Check if query is complete
-    public func isQueryComplete() -> Bool {
-        return isQueryComplete()
-    }
-    
-    /// Get fragment count
-    public func getFragmentCount() -> Int {
-        return getFragmentCount()
-    }
-    
-    /// Get result count
-    public func getResultCount() -> Int {
-        return getResultCount()
-    }
     
     /// Check if has aggregated result
     public func hasAggregatedResult() -> Bool {

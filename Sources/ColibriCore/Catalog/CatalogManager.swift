@@ -229,7 +229,7 @@ public actor CatalogManager {
         // TLA+: Check for dependent indexes
         let dependentIndexes = indexes.values.filter { $0.tableName == name }
         if !dependentIndexes.isEmpty {
-            throw DBError.tableHasDependencies("Table has dependent indexes")
+            throw DBError.custom("Table has dependent indexes")
         }
         
         // TLA+: Remove table and related metadata

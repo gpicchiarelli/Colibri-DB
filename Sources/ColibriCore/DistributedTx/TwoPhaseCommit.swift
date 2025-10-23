@@ -32,9 +32,10 @@ import Foundation
 
 // MARK: - States
 
+// CoordinatorState is defined in Transaction/TransactionManager.swift
 
 /// Participant states (Gray 1978, Section 3.4.2)
-public enum ParticipantState: String, Codable {
+public enum ParticipantState: String, Codable, Sendable {
     case idle           // No active transaction
     case working        // Executing transaction operations
     case prepared       // Voted YES, waiting for decision
@@ -45,7 +46,7 @@ public enum ParticipantState: String, Codable {
 // MARK: - Messages
 
 /// Distributed transaction message types (Gray 1978)
-public enum DistributedTxMessageType: String, Codable {
+public enum MessageType: String, Codable, Sendable {
     case prepare        // Coordinator -> Participant: prepare to commit
     case voteYes        // Participant -> Coordinator: prepared successfully
     case voteNo         // Participant -> Coordinator: cannot commit
@@ -74,7 +75,7 @@ public struct TwoPhaseMessage: Codable {
 // MARK: - Decision
 
 /// Transaction decision
-public enum Decision: String, Codable {
+public enum Decision: String, Codable, Sendable {
     case none
     case commit
     case abort
@@ -134,7 +135,7 @@ public actor TwoPhaseCoordinator {
         // Update state
         states[transactionId] = .preparing
         votes[transactionId] = []
-        decisions[transactionId] = .none
+        decisions[transactionId] = Decision.none
         timeouts[transactionId] = maxTimeout
         
         // Log start
@@ -252,7 +253,7 @@ public actor TwoPhaseCoordinator {
             return
         }
         
-        guard decisions[transactionId] == .none else {
+        guard decisions[transactionId] == Decision.none else {
             return // Decision already made
         }
         
@@ -400,7 +401,7 @@ public actor TwoPhaseParticipant {
         let txnId = message.transactionId
         
         guard states[txnId] == nil || states[txnId] == .idle || states[txnId] == .working else {
-            throw TwoPhaseError.invalidState(current: states[txnId] ?? .idle, expected: .idle)
+            throw TwoPhaseError.invalidParticipantState(current: states[txnId] ?? .idle, expected: .idle)
         }
         
         // Determine vote
@@ -444,7 +445,7 @@ public actor TwoPhaseParticipant {
         let txnId = message.transactionId
         
         guard states[txnId] == .prepared || states[txnId] == .working else {
-            throw TwoPhaseError.invalidState(current: states[txnId] ?? .idle, expected: .prepared)
+            throw TwoPhaseError.invalidParticipantState(current: states[txnId] ?? .idle, expected: .prepared)
         }
         
         let decision = message.type == .commit ? Decision.commit : Decision.abort

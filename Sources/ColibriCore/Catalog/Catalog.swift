@@ -32,7 +32,7 @@ public struct CatalogIndexDefinition: Codable, Sendable {
     public let unique: Bool
     public let type: IndexType
     
-    public enum IndexType: String, Codable {
+    public enum IndexType: String, Codable, Sendable {
         case btree
         case hash
     }
@@ -73,7 +73,9 @@ public actor Catalog {
     
     public init() {
         // Initialize with system tables
-        initializeSystemTables()
+        Task {
+            await initializeSystemTables()
+        }
     }
     
     /// Initialize system tables

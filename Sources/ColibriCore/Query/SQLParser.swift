@@ -30,7 +30,7 @@ import Foundation
 // MARK: - Token Types (TLA+: TokenType)
 
 /// Token type
-public enum TokenType: String {
+public enum TokenType: String, Sendable {
     case keyword        // SELECT, FROM, WHERE
     case identifier     // table/column names
     case literal        // 'string', 123, TRUE, NULL
@@ -40,7 +40,7 @@ public enum TokenType: String {
 }
 
 /// Token structure (TLA+: Token)
-public struct Token {
+public struct Token: Sendable {
     public let type: TokenType
     public let value: String
     public let line: Int

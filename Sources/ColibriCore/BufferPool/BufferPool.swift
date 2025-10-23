@@ -103,7 +103,8 @@ public actor BufferPool {
         }
         
         // Cache miss - need to load from disk
-        var page = try diskManager.readPage(pageID)
+        let pageData = try await diskManager.readPage(pageId: pageID)
+        var page = Page(pageID: pageID, data: pageData)
         
         // Check if pool is full
         if cache.count >= poolSize {
@@ -204,7 +205,7 @@ public actor BufferPool {
         }
         
         // TLA+: disk' = [disk EXCEPT ![pid] = cache[pid]]
-        try diskManager.writePage(pageID, page: page)
+        try await diskManager.writePage(pageId: pageID, data: page.data)
         
         // TLA+: dirty' = dirty \ {pid}
         dirty.remove(pageID)
@@ -302,7 +303,7 @@ public actor BufferPool {
             }
             
             // TLA+: disk' = [disk EXCEPT ![victim] = cache[victim]]
-            try diskManager.writePage(pageID, page: page)
+            try await diskManager.writePage(pageId: pageID, data: page.data)
             
             // TLA+: dirty' = dirty \ {victim}
             dirty.remove(pageID)
@@ -429,38 +430,41 @@ public actor FileDiskManager: DiskManager {
         }
     }
     
-    public func readPage(_ pageID: PageID) throws -> Page {
+    public func readPage(pageId: PageID) async throws -> Data {
         let handle = try FileHandle(forReadingFrom: filePath)
         defer { try? handle.close() }
         
-        let offset = Int64(pageID) * Int64(PAGE_SIZE)
+        let offset = Int64(pageId) * Int64(PAGE_SIZE)
         try handle.seek(toOffset: UInt64(offset))
         
         let data = handle.readData(ofLength: PAGE_SIZE)
         guard data.count == PAGE_SIZE else {
-            // Return empty page if not found
-            return Page(pageID: pageID)
+            // Return empty data if not found
+            return Data()
         }
         
-        // Deserialize page from data
-        // For now, return a basic page
-        var page = Page(pageID: pageID)
-        page.data = data
-        return page
+        return data
     }
     
-    public func writePage(_ pageID: PageID, page: Page) throws {
+    public func writePage(pageId: PageID, data: Data) async throws {
         let handle = try FileHandle(forWritingTo: filePath)
         defer { try? handle.close() }
         
-        let offset = Int64(pageID) * Int64(PAGE_SIZE)
+        let offset = Int64(pageId) * Int64(PAGE_SIZE)
         try handle.seek(toOffset: UInt64(offset))
         
-        // Serialize page to data
-        handle.write(page.data)
+        // Write data
+        try handle.write(contentsOf: data)
         
         // Force fsync for durability
         try handle.synchronize()
+    }
+    
+    public func deletePage(pageId: PageID) async throws {
+        // For file-based storage, we don't actually delete pages
+        // Just mark them as empty by writing zeros
+        let emptyData = Data(count: PAGE_SIZE)
+        try await writePage(pageId: pageId, data: emptyData)
     }
 }
 

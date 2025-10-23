@@ -23,7 +23,7 @@ import Foundation
 // MARK: - Query Phase
 
 /// Phase of distributed query execution
-public enum QueryPhase: String, Codable {
+public enum QueryPhase: String, Codable, Sendable {
     case map        // Distribute and execute fragments
     case reduce     // Aggregate results
     case complete   // Query complete
@@ -49,7 +49,7 @@ public struct QueryFragment: Codable, Hashable {
 // MARK: - Fragment Result
 
 /// Result from executing a query fragment
-public struct FragmentResult: Codable {
+public struct FragmentResult: Codable, Hashable {
     public let fragmentId: String
     public let nodeId: String
     public let rows: [[String: DistributedValue]]

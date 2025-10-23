@@ -488,25 +488,6 @@ public actor RaftConsensusManager {
         return auditLog
     }
     
-    /// Check if is leader
-    public func isLeader() -> Bool {
-        return isLeader()
-    }
-    
-    /// Check if is follower
-    public func isFollower() -> Bool {
-        return isFollower()
-    }
-    
-    /// Check if is candidate
-    public func isCandidate() -> Bool {
-        return isCandidate()
-    }
-    
-    /// Check if has quorum
-    public func hasQuorum() -> Bool {
-        return hasQuorum()
-    }
     
     // MARK: - Invariant Checking (for testing)
     

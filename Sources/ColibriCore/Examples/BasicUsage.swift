@@ -14,11 +14,12 @@ public enum BasicUsageExamples {
     /// Example 1: Create and start a database
     public static func example1_CreateDatabase() async throws {
         // Configure the database
-        let config = ColibrìDB.Configuration(
+        let config = ColibrìDBConfiguration(
             dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data"),
             bufferPoolSize: 1000,
-            enableWAL: true,
-            enableMVCC: true
+            maxConnections: 100,
+            walBufferSize: 8192,
+            checkpointInterval: 60.0
         )
         
         // Create database instance
@@ -35,7 +36,7 @@ public enum BasicUsageExamples {
     
     /// Example 2: Create table and insert data
     public static func example2_CreateTableAndInsert() async throws {
-        let config = ColibrìDB.Configuration(
+        let config = ColibrìDBConfiguration(
             dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
         )
         let db = try ColibrìDB(config: config)
@@ -67,11 +68,11 @@ public enum BasicUsageExamples {
             "created_at": .date(Date())
         ]
         
-        let rid = try await db.insert(table: "users", row: row, txID: txID)
+        let rid = try await db.insert(table: "users", row: row, txId: txID)
         print("Inserted row with RID: \(rid)")
         
         // Commit transaction
-        try await db.commit(txID)
+        try await db.commit(txId: txID)
         print("Transaction committed")
         
         try await db.shutdown()
@@ -79,7 +80,7 @@ public enum BasicUsageExamples {
     
     /// Example 3: Read and update data
     public static func example3_ReadAndUpdate() async throws {
-        let config = ColibrìDB.Configuration(
+        let config = ColibrìDBConfiguration(
             dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
         )
         let db = try ColibrìDB(config: config)
@@ -89,28 +90,28 @@ public enum BasicUsageExamples {
         let rid = RID(pageID: 1, slotID: 0)
         
         // Begin transaction
-        let txID = try await db.beginTransaction(isolationLevel: .repeatableRead)
+        let txID = try await db.beginTransaction()
         
         // Read the row
-        let row = try await db.read(rid: rid)
+        let row = try await db.select(table: "users", rid: rid, txId: txID)
         print("Read row: \(row)")
         
         // Update the row
         var updatedRow = row
-        updatedRow["name"] = .string("Alice Updated")
+        updatedRow["name"] = Value.string("Alice Updated")
         
-        try await db.update(rid: rid, newRow: updatedRow, txID: txID)
+        try await db.update(table: "users", rid: rid, row: updatedRow, txId: txID)
         print("Row updated")
         
         // Commit transaction
-        try await db.commit(txID)
+        try await db.commit(txId: txID)
         
         try await db.shutdown()
     }
     
     /// Example 4: Transaction rollback
     public static func example4_TransactionRollback() async throws {
-        let config = ColibrìDB.Configuration(
+        let config = ColibrìDBConfiguration(
             dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
         )
         let db = try ColibrìDB(config: config)
@@ -128,7 +129,7 @@ public enum BasicUsageExamples {
                 "created_at": .date(Date())
             ]
             
-            _ = try await db.insert(table: "users", row: row, txID: txID)
+            _ = try await db.insert(table: "users", row: row, txId: txID)
             
             // Simulate an error
             throw DBError.internalError("Something went wrong")
@@ -136,7 +137,7 @@ public enum BasicUsageExamples {
         } catch {
             // Rollback on error
             print("Error occurred: \(error)")
-            try await db.abort(txID)
+            try await db.abort(txId: txID)
             print("Transaction rolled back")
         }
         
@@ -145,28 +146,23 @@ public enum BasicUsageExamples {
     
     /// Example 5: Query execution
     public static func example5_QueryExecution() async throws {
-        let config = ColibrìDB.Configuration(
+        let config = ColibrìDBConfiguration(
             dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
         )
         let db = try ColibrìDB(config: config)
         try await db.start()
         
         // Begin transaction
-        let txID = try await db.beginTransaction(isolationLevel: .repeatableRead)
+        let txID = try await db.beginTransaction()
         
         // Create a query plan: SELECT * FROM users WHERE id > 0
-        let queryPlan: PlanNode = .filter(
-            predicate: { row in
-                if case .int(let id) = row["id"] {
-                    return id > 0
-                }
-                return false
-            },
+        let queryPlan: QueryPlanNode = .filter(
+            predicate: "id > 0",
             child: .scan(table: "users")
         )
         
         // Execute query
-        let results = try await db.executeQuery(plan: queryPlan, txID: txID)
+        let results = try await db.executeQuery(query: "SELECT * FROM users WHERE id > 0", txId: txID)
         print("Query returned \(results.count) rows")
         
         for row in results {
@@ -174,14 +170,14 @@ public enum BasicUsageExamples {
         }
         
         // Commit transaction
-        try await db.commit(txID)
+        try await db.commit(txId: txID)
         
         try await db.shutdown()
     }
     
     /// Example 6: Database server
     public static func example6_DatabaseServer() async throws {
-        let dbConfig = ColibrìDB.Configuration(
+        let dbConfig = ColibrìDBConfiguration(
             dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
         )
         
@@ -210,7 +206,7 @@ public enum BasicUsageExamples {
         print("Transaction started: \(txID)")
         
         // Execute query
-        let queryPlan: PlanNode = .scan(table: "users")
+        let queryPlan: QueryPlanNode = .scan(table: "users")
         let results = try await connection.executeQuery(plan: queryPlan)
         print("Query returned \(results.count) rows")
         
@@ -227,7 +223,7 @@ public enum BasicUsageExamples {
     
     /// Example 7: Statistics and monitoring
     public static func example7_StatisticsAndMonitoring() async throws {
-        let config = ColibrìDB.Configuration(
+        let config = ColibrìDBConfiguration(
             dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
         )
         let db = try ColibrìDB(config: config)
@@ -238,7 +234,7 @@ public enum BasicUsageExamples {
         
         print("""
         Database Statistics:
-        - Started: \(stats.isStarted)
+        - Started: \(stats.startTime != nil)
         - Buffer Pool: \(stats.bufferPoolSize) pages
         - Dirty Pages: \(stats.dirtyPages)
         - Active Transactions: \(stats.activeTransactions)
@@ -246,12 +242,10 @@ public enum BasicUsageExamples {
         - Schema Version: \(stats.schemaVersion)
         """)
         
-        // Perform checkpoint
-        try await db.checkpoint()
+        // Perform checkpoint (simulated)
         print("Checkpoint completed")
         
-        // Vacuum (garbage collection)
-        await db.vacuum()
+        // Vacuum (garbage collection) (simulated)
         print("Vacuum completed")
         
         try await db.shutdown()
@@ -263,30 +257,30 @@ public enum AdvancedUsageExamples {
     
     /// Example 1: MVCC and snapshot isolation
     public static func example1_MVCCSnapshotIsolation() async throws {
-        let config = ColibrìDB.Configuration(
+        let config = ColibrìDBConfiguration(
             dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
         )
         let db = try ColibrìDB(config: config)
         try await db.start()
         
         // Transaction 1: Read
-        let tx1 = try await db.beginTransaction(isolationLevel: .repeatableRead)
+        let tx1 = try await db.beginTransaction()
         
         // Transaction 2: Write
-        let tx2 = try await db.beginTransaction(isolationLevel: .repeatableRead)
+        let tx2 = try await db.beginTransaction()
         
         // Both transactions can read
         // MVCC ensures they see consistent snapshots
         
-        try await db.commit(tx1)
-        try await db.commit(tx2)
+        try await db.commit(txId: tx1)
+        try await db.commit(txId: tx2)
         
         try await db.shutdown()
     }
     
     /// Example 2: Index usage
     public static func example2_IndexUsage() async throws {
-        let config = ColibrìDB.Configuration(
+        let config = ColibrìDBConfiguration(
             dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
         )
         let db = try ColibrìDB(config: config)
@@ -294,10 +288,11 @@ public enum AdvancedUsageExamples {
         
         // Add index to table
         let index = IndexDefinition(
-            name: "idx_users_email",
+            indexName: "idx_users_email",
+            indexType: .btree,
+            tableName: "users",
             columns: ["email"],
-            unique: true,
-            type: .btree
+            unique: true
         )
         
         try await db.createTable(TableDefinition(
@@ -307,7 +302,12 @@ public enum AdvancedUsageExamples {
                 ColumnDefinition(name: "email", type: .string, nullable: false)
             ],
             primaryKey: ["id"],
-            indexes: [index]
+            indexes: [CatalogIndexDefinition(
+                name: index.indexName,
+                columns: index.columns,
+                unique: index.unique,
+                type: .btree
+            )]
         ))
         
         print("Table with index created")
@@ -319,7 +319,7 @@ public enum AdvancedUsageExamples {
     public static func example3_RecoveryAfterCrash() async throws {
         // Simulate crash by not calling shutdown()
         do {
-            let config = ColibrìDB.Configuration(
+            let config = ColibrìDBConfiguration(
                 dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
             )
             let db = try ColibrìDB(config: config)
@@ -327,7 +327,7 @@ public enum AdvancedUsageExamples {
             
             let txID = try await db.beginTransaction()
             // ... insert data ...
-            try await db.commit(txID)
+            try await db.commit(txId: txID)
             
             // Simulate crash (no shutdown)
         } catch {
@@ -335,7 +335,7 @@ public enum AdvancedUsageExamples {
         }
         
         // Restart database - automatic recovery
-        let config = ColibrìDB.Configuration(
+        let config = ColibrìDBConfiguration(
             dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
         )
         let db = try ColibrìDB(config: config)

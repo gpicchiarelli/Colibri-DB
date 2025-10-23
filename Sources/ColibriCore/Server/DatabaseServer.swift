@@ -58,7 +58,9 @@ public actor DatabaseServer {
     
     public init(config: Configuration) throws {
         self.config = config
-        self.database = try ColibrìDB(config: ColibrìDBConfiguration())
+        self.database = try ColibrìDB(config: ColibrìDBConfiguration(
+            dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
+        ))
     }
     
     // MARK: - Server Lifecycle

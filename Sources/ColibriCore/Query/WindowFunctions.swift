@@ -290,8 +290,9 @@ public actor WindowFunctionsProcessor {
     }
     
     private func sortPartition(_ partition: [WindowRow], orderBy: [OrderSpec]) -> [WindowRow] {
+        let orderSpecs = orderBy
         return partition.sorted { r1, r2 in
-            for spec in orderBy {
+            for spec in orderSpecs {
                 let v1 = r1.values[spec.column] ?? Value.null
                 let v2 = r2.values[spec.column] ?? Value.null
                 
@@ -430,8 +431,9 @@ public actor WindowFunctionsProcessor {
         case .group, .ties:
             // Exclude peers (simplified - exclude rows with same order key values)
             let currentRow = partition[rowIdx]
+            let orderColumns = spec.orderBy.map { $0.column }
             frame = frame.filter { row in
-                !areRowsEqual(row, currentRow, columns: spec.orderBy.map { $0.column })
+                !areRowsEqual(row, currentRow, columns: orderColumns)
             }
         }
         
@@ -453,7 +455,7 @@ public actor WindowFunctionsProcessor {
     private func computeSum(frame: [WindowRow], column: String) -> Value {
         var sum: Double = 0
         for row in frame {
-            if case .double(let value) = row[column] {
+            if case .double(let value) = row.values[column] {
                 sum += value
             }
         }
@@ -465,7 +467,7 @@ public actor WindowFunctionsProcessor {
         var sum: Double = 0
         var count = 0
         for row in frame {
-            if case .double(let value) = row[column] {
+            if case .double(let value) = row.values[column] {
                 sum += value
                 count += 1
             }

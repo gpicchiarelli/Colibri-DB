@@ -26,7 +26,7 @@ import Foundation
 // MARK: - Fault Types
 
 /// Type of fault to inject
-public enum FaultType: String, Codable, CaseIterable {
+public enum FaultType: String, Codable, CaseIterable, Sendable {
     case crash              // Node crash
     case networkDelay       // Network latency spike
     case packetLoss         // Packet drop
@@ -51,7 +51,7 @@ public enum NodeState: String, Codable {
 // MARK: - Fault
 
 /// Fault instance
-public struct Fault: Codable, Hashable {
+public struct Fault: Codable, Hashable, Sendable {
     public let faultId: String
     public let nodeId: String
     public let faultType: FaultType

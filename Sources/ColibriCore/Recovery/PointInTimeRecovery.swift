@@ -27,13 +27,7 @@ import Foundation
 
 // MARK: - System States
 
-/// Database system state
-public enum SystemState: String, Codable {
-    case normal         // Normal operation
-    case recovering     // Recovery in progress
-    case crashed        // System crashed
-    case consistent     // Recovery complete, consistent state
-}
+// RecoveryState is defined in Database/ColibrìDB.swift
 
 // MARK: - Recovery Target Types
 
@@ -195,7 +189,7 @@ public actor PointInTimeRecoveryManager {
     private var redoLog: [RedoRecord] = []
     
     // System state
-    private var systemState: SystemState = .normal
+    private var systemState: RecoveryState = .notStarted
     private var currentTime: Date = Date()
     
     // Statistics
@@ -207,7 +201,7 @@ public actor PointInTimeRecoveryManager {
     
     /// Begin a new transaction
     public func beginTransaction(txnId: String) throws {
-        guard systemState == .normal else {
+        guard systemState == .notStarted else {
             throw PITRError.systemNotNormal
         }
         
@@ -229,7 +223,7 @@ public actor PointInTimeRecoveryManager {
     
     /// Update a page
     public func updatePage(txnId: String, pageId: Int, undoInfo: String, redoInfo: String) throws {
-        guard systemState == .normal else {
+        guard systemState == .notStarted else {
             throw PITRError.systemNotNormal
         }
         
@@ -252,14 +246,14 @@ public actor PointInTimeRecoveryManager {
         pageState[pageId] = page
         
         // Track in undo log
-        undoLog[txnId, default: []].append(UndoRecord(lsn: record.lsn, pageId: pageId, undoInfo: undoInfo))
+        undoLog[txnId, default: []].append(UndoRecord(lsn: record.lsn, txId: TxID(txnId), pageId: PageID(pageId), data: Data(), timestamp: UInt64(Date().timeIntervalSince1970)))
         
         stats.totalUpdates += 1
     }
     
     /// Commit a transaction
     public func commitTransaction(txnId: String) throws {
-        guard systemState == .normal else {
+        guard systemState == .notStarted else {
             throw PITRError.systemNotNormal
         }
         
@@ -282,7 +276,7 @@ public actor PointInTimeRecoveryManager {
     
     /// Abort a transaction
     public func abortTransaction(txnId: String) throws {
-        guard systemState == .normal else {
+        guard systemState == .notStarted else {
             throw PITRError.systemNotNormal
         }
         
@@ -305,7 +299,7 @@ public actor PointInTimeRecoveryManager {
     
     /// Create a savepoint
     public func createSavepoint(txnId: String, name: String) throws {
-        guard systemState == .normal else {
+        guard systemState == .notStarted else {
             throw PITRError.systemNotNormal
         }
         
@@ -324,7 +318,7 @@ public actor PointInTimeRecoveryManager {
     
     /// Rollback to savepoint
     public func rollbackToSavepoint(txnId: String, name: String) throws {
-        guard systemState == .normal else {
+        guard systemState == .notStarted else {
             throw PITRError.systemNotNormal
         }
         
@@ -345,7 +339,7 @@ public actor PointInTimeRecoveryManager {
     
     /// Create a checkpoint
     public func createCheckpoint() throws {
-        guard systemState == .normal else {
+        guard systemState == .notStarted else {
             throw PITRError.systemNotNormal
         }
         
@@ -368,17 +362,17 @@ public actor PointInTimeRecoveryManager {
     
     /// Simulate crash
     public func crash() {
-        systemState = .crashed
+        systemState = .notStarted
         activeTxns.removeAll()
     }
     
     /// Initiate recovery
     public func initiateRecovery(target: RecoveryTarget) throws {
-        guard systemState == .crashed else {
+        guard systemState == .notStarted else {
             throw PITRError.systemNotCrashed
         }
         
-        systemState = .recovering
+        systemState = .analysis
         recoveryTarget = target
         recoverySessions.insert(UUID().uuidString)
         
@@ -387,7 +381,7 @@ public actor PointInTimeRecoveryManager {
     
     /// ARIES Recovery - Analysis Phase
     public func analysisPhase() throws {
-        guard systemState == .recovering else {
+        guard systemState == .analysis else {
             throw PITRError.systemNotRecovering
         }
         
@@ -424,7 +418,7 @@ public actor PointInTimeRecoveryManager {
     
     /// ARIES Recovery - Redo Phase
     public func redoPhase() throws {
-        guard systemState == .recovering else {
+        guard systemState == .analysis else {
             throw PITRError.systemNotRecovering
         }
         
@@ -455,7 +449,7 @@ public actor PointInTimeRecoveryManager {
     
     /// ARIES Recovery - Undo Phase
     public func undoPhase() throws {
-        guard systemState == .recovering else {
+        guard systemState == .analysis else {
             throw PITRError.systemNotRecovering
         }
         
@@ -485,7 +479,7 @@ public actor PointInTimeRecoveryManager {
     
     /// Complete recovery
     public func completeRecovery() throws {
-        guard systemState == .recovering else {
+        guard systemState == .analysis else {
             throw PITRError.systemNotRecovering
         }
         
@@ -548,7 +542,7 @@ public actor PointInTimeRecoveryManager {
     
     // MARK: - Query Methods
     
-    public func getSystemState() -> SystemState {
+    public func getRecoveryState() -> RecoveryState {
         return systemState
     }
     

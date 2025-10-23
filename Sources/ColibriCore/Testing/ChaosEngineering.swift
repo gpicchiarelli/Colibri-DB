@@ -23,6 +23,13 @@
 
 import Foundation
 
+/// System health status for chaos engineering
+public enum ChaosSystemHealth: String, Codable, Sendable {
+    case healthy
+    case degraded
+    case failed
+}
+
 // MARK: - Experiment Types
 
 /// Type of chaos experiment
@@ -40,11 +47,6 @@ public enum ExperimentType: String, Codable {
 // MARK: - System Health
 
 /// Overall system health status
-public enum SystemHealthStatusStatus: String, Codable {
-    case healthy    // All systems operational
-    case degraded   // Partial functionality
-    case failed     // System non-functional
-}
 
 // MARK: - Chaos Experiment
 
@@ -108,7 +110,7 @@ public actor ChaosEngineeringManager {
     
     // System state
     private var failures: Int = 0
-    private var systemHealth: SystemHealthStatus = .healthy
+    private var systemHealth: ChaosSystemHealth = ChaosSystemHealth.healthy
     
     // Fault injection manager
     private let faultInjector: FaultInjectionManager
@@ -177,7 +179,7 @@ public actor ChaosEngineeringManager {
         // Measure outcome
         let endTime = Date()
         let recoveryTime = endTime.timeIntervalSince(startTime)
-        let systemRecovered = systemHealth == .healthy || systemHealth == startHealth
+        let systemRecovered = systemHealth == ChaosSystemHealth.healthy || systemHealth == startHealth
         
         let outcome = ExperimentOutcome(
             systemRecovered: systemRecovered,
@@ -274,7 +276,7 @@ public actor ChaosEngineeringManager {
             // Small delay before next failure
             try await Task.sleep(nanoseconds: 100_000_000) // 100ms
             
-            if systemHealth == .failed {
+            if systemHealth == ChaosSystemHealth.failed {
                 observations.append("System failed after cascading failures")
                 break
             }
@@ -374,17 +376,17 @@ public actor ChaosEngineeringManager {
     
     private func updateSystemHealthStatus() {
         if failures > maxFailures {
-            systemHealth = .failed
+            systemHealth = ChaosSystemHealth.failed
         } else if failures > 0 {
-            systemHealth = .degraded
+            systemHealth = ChaosSystemHealth.degraded
         } else {
-            systemHealth = .healthy
+            systemHealth = ChaosSystemHealth.healthy
         }
     }
     
     /// Check system resilience
     public func checkSystemResilient() -> Bool {
-        return systemHealth != .failed
+        return systemHealth != ChaosSystemHealth.failed
     }
     
     // MARK: - Query Methods
@@ -397,7 +399,7 @@ public actor ChaosEngineeringManager {
         return experiments
     }
     
-    public func getSystemHealthStatus() -> SystemHealthStatus {
+    public func getSystemHealthStatus() -> ChaosSystemHealth {
         return systemHealth
     }
     

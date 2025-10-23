@@ -29,7 +29,7 @@ import Foundation
 // MARK: - Recovery Subsystem State
 
 /// State of the recovery subsystem
-public enum RecoverySubsystemState: String, Codable {
+public enum RecoverySubsystemState: String, Codable, Sendable {
     case normal         // Normal operation
     case recovering     // Recovery in progress
     case backingUp      // Backup in progress
@@ -62,7 +62,7 @@ public struct WALSegment: Codable {
 // MARK: - Configuration
 
 /// Recovery subsystem configuration
-public struct RecoverySubsystemConfig {
+public struct RecoverySubsystemConfig: Sendable {
     public let backupIntervalLSN: UInt64
     public let maxArchivedSegments: Int
     public let compressionAlgorithm: String
@@ -274,9 +274,9 @@ public actor RecoverySubsystem {
             // Step 2: Apply incremental backups
             let incrementals = backupMetadata.values.filter {
                 $0.type == .incremental &&
-                $0.lsn > baseBackup.lsn &&
-                $0.lsn <= targetLSN
-            }.sorted { $0.lsn < $1.lsn }
+                $0.lsnRange.end > baseBackup.lsnRange.end &&
+                $0.lsnRange.end <= targetLSN
+            }.sorted { $0.lsnRange.end < $1.lsnRange.end }
             
             for incremental in incrementals {
                 try await restoreCallback(incremental.path)
@@ -382,8 +382,8 @@ public actor RecoverySubsystem {
     public func validateRecoveryCapability(targetLSN: UInt64) -> Bool {
         // Check if we can recover to target LSN
         guard let baseBackup = backupMetadata.values
-            .filter({ $0.type == .full && $0.lsn <= targetLSN })
-            .max(by: { $0.lsn < $1.lsn }) else {
+            .filter({ $0.type == .full && $0.lsnRange.end <= targetLSN })
+            .max(by: { $0.lsnRange.end < $1.lsnRange.end }) else {
             return false
         }
         

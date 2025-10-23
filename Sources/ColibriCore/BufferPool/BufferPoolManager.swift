@@ -46,7 +46,7 @@ public struct BufferPage: Codable, Sendable, Equatable {
 
 /// Buffer Pool Manager for database buffer pool management
 /// Corresponds to TLA+ module: BufferPool.tla
-public actor BufferPoolManager {
+public actor BufferPoolManagerActor {
     
     // MARK: - Constants
     
@@ -346,20 +346,8 @@ public actor BufferPoolManager {
     
     // MARK: - Query Operations
     
-    /// Get cache size
-    public func getCacheSize() -> Int {
-        return getCacheSize()
-    }
     
-    /// Get dirty page count
-    public func getDirtyPageCount() -> Int {
-        return getDirtyPageCount()
-    }
     
-    /// Get pin count
-    public func getPinCount(pageId: PageID) -> Int {
-        return getPinCount(pageId: pageId)
-    }
     
     /// Get page
     public func getPage(pageId: PageID) -> BufferPage? {
@@ -397,27 +385,19 @@ public actor BufferPoolManager {
     }
     
     /// Get cache
-    public func getCache() -> [PageID: Page] {
+    public func getCache() -> [PageID: BufferPage] {
         return cache
     }
     
     /// Get disk
-    public func getDisk() -> [PageID: Page] {
+    public func getDisk() -> [PageID: BufferPage] {
         return disk
     }
     
-    /// Check if page is in cache
-    public func isPageInCache(pageId: PageID) -> Bool {
-        return isPageInCache(pageId: pageId)
-    }
     
-    /// Check if page is dirty
-    public func isPageDirty(pageId: PageID) -> Bool {
-        return isPageDirty(pageId: pageId)
-    }
     
-    /// Check if page can be evicted
-    public func canEvict(pageId: PageID) -> Bool {
+    /// Check if page can be evicted (public interface)
+    public func canEvictPage(pageId: PageID) -> Bool {
         return canEvict(pageId: pageId)
     }
     

@@ -36,8 +36,8 @@ public enum RecoveryPhase: String, Codable, Sendable, CaseIterable {
 /// Corresponds to TLA+: ATTEntry
 public struct ATTEntry: Codable, Sendable, Equatable {
     public let txId: TxID
-    public let status: String
-    public let lastLSN: LSN
+    public var status: String
+    public var lastLSN: LSN
     public let undoNextLSN: LSN
     
     public init(txId: TxID, status: String, lastLSN: LSN, undoNextLSN: LSN) {
@@ -259,17 +259,17 @@ public actor ARIESRecoveryManager {
         }
         
         // TLA+: Check if page is modifiable
-        guard ModifiablePages.contains(record.pageId) else {
+        guard ModifiablePages.contains(record.pageID) else {
             return
         }
         
         // TLA+: Check if page LSN is less than record LSN
-        if pageLSN[record.pageId] ?? 0 < lsn {
+        if pageLSN[record.pageID] ?? 0 < lsn {
             // TLA+: Apply record to page
             try await applyRecordToPage(record: record)
             
             // TLA+: Update page LSN
-            pageLSN[record.pageId] = lsn
+            pageLSN[record.pageID] = lsn
         }
         
         print("Redo operation: \(lsn)")
@@ -284,7 +284,7 @@ public actor ARIESRecoveryManager {
         }
         
         // TLA+: Check if page is modifiable
-        guard ModifiablePages.contains(record.pageId) else {
+        guard ModifiablePages.contains(record.pageID) else {
             return
         }
         
@@ -303,39 +303,39 @@ public actor ARIESRecoveryManager {
     private func buildATTAndDPT() async throws {
         // TLA+: Build ATT and DPT from WAL
         for (lsn, record) in wal {
-            if record.kind == "begin" {
+            if record.kind == .begin {
                 // TLA+: Add to ATT
-                att[record.txId] = ATTEntry(
-                    txId: record.txId,
+                att[record.txID] = ATTEntry(
+                    txId: record.txID,
                     status: "active",
                     lastLSN: lsn,
                     undoNextLSN: lsn
                 )
-            } else if record.kind == "commit" {
+            } else if record.kind == .commit {
                 // TLA+: Update ATT
-                if var entry = att[record.txId] {
+                if var entry = att[record.txID] {
                     entry.status = "committed"
                     entry.lastLSN = lsn
-                    att[record.txId] = entry
+                    att[record.txID] = entry
                 }
-            } else if record.kind == "abort" {
+            } else if record.kind == .abort {
                 // TLA+: Update ATT
-                if var entry = att[record.txId] {
+                if var entry = att[record.txID] {
                     entry.status = "aborted"
                     entry.lastLSN = lsn
-                    att[record.txId] = entry
+                    att[record.txID] = entry
                 }
-            } else if record.kind == "checkpoint" {
+            } else if record.kind == .checkpoint {
                 // TLA+: Initialize DPT
                 if let checkpointRecord = record as? CheckpointRecord {
-                    for pageId in checkpointRecord.dirtyPages {
+                    for (pageId, _) in checkpointRecord.dirtyPageTable {
                         dpt[pageId] = DPTEntry(pageId: pageId, recLSN: lsn)
                     }
                 }
-            } else if record.kind == "update" {
+            } else if record.kind == .heapUpdate {
                 // TLA+: Update DPT
-                if dpt[record.pageId] == nil {
-                    dpt[record.pageId] = DPTEntry(pageId: record.pageId, recLSN: lsn)
+                if dpt[record.pageID] == nil {
+                    dpt[record.pageID] = DPTEntry(pageId: record.pageID, recLSN: lsn)
                 }
             }
         }
@@ -460,12 +460,12 @@ public actor ARIESRecoveryManager {
     
     /// Get WAL records by transaction
     public func getWALRecordsByTransaction(txId: TxID) -> [WALRecord] {
-        return wal.values.filter { $0.txId == txId }
+        return wal.values.filter { $0.txID == txId }
     }
     
     /// Get WAL records by kind
     public func getWALRecordsByKind(kind: String) -> [WALRecord] {
-        return wal.values.filter { $0.kind == kind }
+        return wal.values.filter { $0.kind.rawValue == kind }
     }
     
     /// Get WAL records in range

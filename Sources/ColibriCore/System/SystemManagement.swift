@@ -127,7 +127,7 @@ public struct SystemAlert: Codable {
     }
 }
 
-public enum AlertSeverity: String, Codable {
+public enum AlertSeverity: String, Codable, Sendable {
     case info
     case warning
     case error
@@ -161,8 +161,11 @@ public actor SystemManagement {
     
     public init(config: SystemConfig = .default) {
         self.systemConfig = config
-        initializeResources()
-        startMonitoring()
+        // Initialize resources and start monitoring asynchronously
+        Task {
+            await initializeResources()
+            await startMonitoring()
+        }
     }
     
     deinit {

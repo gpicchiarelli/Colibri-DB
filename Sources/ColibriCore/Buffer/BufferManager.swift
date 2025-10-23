@@ -47,10 +47,10 @@ public struct BufferMetrics: Codable, Sendable, Equatable {
     public let freeFrames: Int
     public let dirtyFrames: Int
     public let pinnedFrames: Int
-    public let hitRate: Double
-    public let missRate: Double
-    public let evictionCount: Int
-    public let averageLatency: Double
+    public var hitRate: Double
+    public var missRate: Double
+    public var evictionCount: Int
+    public var averageLatency: Double
     
     public init(totalFrames: Int, usedFrames: Int, freeFrames: Int, dirtyFrames: Int, pinnedFrames: Int, hitRate: Double, missRate: Double, evictionCount: Int, averageLatency: Double) {
         self.totalFrames = totalFrames
@@ -170,7 +170,7 @@ public actor BufferManager {
         let page = BufferPage(
             pageId: pageId,
             data: pageData,
-            frameIndex: frameIndex,
+            lsn: UInt64(frameIndex), // Use frameIndex as LSN for now
             isDirty: false,
             isPinned: false,
             timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
@@ -404,7 +404,7 @@ public actor BufferManager {
     
     /// Get free frame count
     public func getFreeFrameCount() -> Int {
-        return bufferPool.count - pinnedPages.count
+        return bufferPool.count - bufferPool.values.filter { $0.isPinned }.count
     }
     
     /// Get dirty page count
@@ -442,15 +442,7 @@ public actor BufferManager {
         return bufferPool
     }
     
-    /// Check if page is pinned
-    public func isPagePinned(pageId: PageID) -> Bool {
-        return isPagePinned(pageId: pageId)
-    }
     
-    /// Check if page is dirty
-    public func isPageDirty(pageId: PageID) -> Bool {
-        return isPageDirty(pageId: pageId)
-    }
     
     /// Get page by ID
     public func getPage(pageId: PageID) -> BufferPage? {
@@ -461,7 +453,7 @@ public actor BufferManager {
     }
     
     /// Get frame by index
-    public func getFrame(frameIndex: FrameIndex) -> Page? {
+    public func getFrame(frameIndex: FrameIndex) -> BufferPage? {
         return bufferPool[frameIndex]
     }
     

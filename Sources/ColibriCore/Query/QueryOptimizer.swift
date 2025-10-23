@@ -12,6 +12,20 @@
 
 import Foundation
 
+// MARK: - Query Plan Node
+
+/// Physical query plan node
+public indirect enum QueryPlanNode: Sendable {
+    case scan(table: String)
+    case indexScan(table: String, index: String, key: String)
+    case filter(predicate: String, child: QueryPlanNode)
+    case project(columns: [String], child: QueryPlanNode)
+    case sort(columns: [String], child: QueryPlanNode)
+    case limit(count: Int, child: QueryPlanNode)
+    case join(left: QueryPlanNode, right: QueryPlanNode, condition: String)
+    case aggregate(function: String, column: String, child: QueryPlanNode)
+}
+
 /// Query optimizer for cost-based optimization
 /// Corresponds to TLA+ module: QueryOptimizer.tla
 public actor QueryOptimizer {
@@ -74,7 +88,7 @@ public actor QueryOptimizer {
         if let indexes = await catalog.getTable(plan.table)?.indexes {
             for index in indexes {
                 if let key = plan.filterKey {
-                    candidates.append(.indexScan(table: plan.table, index: index.name, key: key))
+                    candidates.append(.indexScan(table: plan.table, index: index.name, key: String(describing: key)))
                 }
             }
         }
@@ -82,7 +96,7 @@ public actor QueryOptimizer {
         // Apply filters
         if let predicate = plan.predicate {
             candidates = candidates.map { candidate in
-                .filter(predicate: predicate, child: candidate)
+                .filter(predicate: String(describing: predicate), child: candidate)
             }
         }
         
@@ -185,10 +199,12 @@ public actor QueryOptimizer {
     private func estimateCardinality(plan: QueryPlanNode) async -> Int {
         switch plan {
         case .scan(let table):
-            return await statistics.getRowCount(table: table)
+            let rowCount = await statistics.getRowCount(table: table)
+            return rowCount  // Return row count directly
             
         case .indexScan(let table, _, _):
-            return await statistics.getRowCount(table: table) / 10  // Assume 10% selectivity
+            let rowCount = await statistics.getRowCount(table: table)
+            return rowCount / 10  // Assume 10% selectivity
             
         case .filter(_, let child):
             let childCard = await estimateCardinality(plan: child)

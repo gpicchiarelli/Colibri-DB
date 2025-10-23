@@ -210,14 +210,10 @@ public actor ConstraintManager {
     private func validateConstraint(constraint: Constraint, row: [Value], operation: String) async throws {
         // TLA+: Validate based on constraint type
         switch constraint.constraintType {
-        case .primary:
-            try await checkPrimaryKey(constraint: constraint, row: row, operation: operation)
-        case .foreign:
-            try await checkForeignKey(constraint: constraint, row: row, operation: operation)
-        case .unique:
-            try await checkUnique(constraint: constraint, row: row, operation: operation)
         case .check:
             try await checkNotNull(constraint: constraint, row: row, operation: operation)
+        case .unique:
+            try await checkUnique(constraint: constraint, row: row, operation: operation)
         case .notNull:
             try await checkNotNull(constraint: constraint, row: row, operation: operation)
         }
@@ -334,10 +330,6 @@ public actor ConstraintManager {
     
     // MARK: - Query Operations
     
-    /// Get constraint
-    public func getConstraint(constraintId: String) -> Constraint? {
-        return constraints[constraintId]
-    }
     
     
     /// Get all constraints

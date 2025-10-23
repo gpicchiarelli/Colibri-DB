@@ -28,7 +28,7 @@ import Foundation
 // MARK: - Database Configuration
 
 /// ColibrìDB configuration
-public struct ColibrìDBConfiguration: Codable {
+public struct ColibrìDBConfiguration: Codable, Sendable {
     public let dataDirectory: URL
     public let bufferPoolSize: Int
     public let maxConnections: Int
@@ -140,29 +140,28 @@ public actor ColibrìDB {
         
         // Initialize storage layer
         self.wal = try FileWAL(
-            dataDirectory: config.dataDirectory,
-            bufferSize: config.walBufferSize
+            dataDirectory: config.dataDirectory
         )
         
         self.bufferPool = BufferPool(
             poolSize: config.bufferPoolSize,
-            wal: wal
+            diskManager: wal
         )
         
         // Initialize transaction layer
-        self.lockManager = LockManager()
         self.mvccManager = MVCCManager()
+        self.lockManager = LockManager(transactionManager: nil) // Will be set after transactionManager is created
         self.transactionManager = TransactionManager(
-            lockManager: lockManager,
+            walManager: wal,
             mvccManager: mvccManager,
-            wal: wal
+            lockManager: lockManager
         )
+        self.lockManager = LockManager(transactionManager: transactionManager)
         
         // Initialize recovery
         self.recoveryManager = ARIESRecovery(
             wal: wal,
-            bufferPool: bufferPool,
-            transactionManager: transactionManager
+            bufferPool: bufferPool
         )
         
         // Initialize query processing
@@ -586,7 +585,7 @@ public actor ColibrìDB {
 
 // MARK: - Supporting Types
 
-public enum SystemState: String, Codable {
+public enum SystemState: String, Codable, Sendable {
     case initializing = "INITIALIZING"
     case starting = "STARTING"
     case running = "RUNNING"
@@ -602,7 +601,7 @@ public enum RecoveryState: String, Codable {
     case completed = "COMPLETED"
 }
 
-public struct DatabaseStats: Codable {
+public struct DatabaseStats: Codable, Sendable {
     public var startTime: Date?
     public var shutdownTime: Date?
     public var transactionsStarted: Int = 0
@@ -625,7 +624,7 @@ public struct DatabaseStats: Codable {
     }
 }
 
-public struct QueryResult: Codable {
+public struct QueryResult: Codable, Sendable {
     public let rows: [Row]
     public let columns: [String]
     public let rowCount: Int
