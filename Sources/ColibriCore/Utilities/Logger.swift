@@ -15,7 +15,7 @@ import os.log
 // MARK: - Log Levels
 
 /// Log levels for ColibrìDB
-public enum LogLevel: String, CaseIterable, Codable {
+public enum LogLevel: String, CaseIterable, Codable, Sendable {
     case trace = "TRACE"
     case debug = "DEBUG"
     case info = "INFO"

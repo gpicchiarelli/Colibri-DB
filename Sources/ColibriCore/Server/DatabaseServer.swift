@@ -28,7 +28,7 @@ public struct DatabaseConfiguration: Codable, Sendable {
 public actor DatabaseServer {
     // MARK: - Configuration
     
-    public struct Configuration {
+    public struct Configuration: Sendable {
         public let host: String
         public let port: Int
         public let maxConnections: Int

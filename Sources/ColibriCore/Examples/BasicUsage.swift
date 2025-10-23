@@ -94,7 +94,7 @@ public enum BasicUsageExamples {
         
         // Read the row
         // let row = try await db.select(table: "users", rid: rid, txId: txID)
-        logInfo("Read row: \(row)", category: .database)
+        // logInfo("Read row: \(row)", category: .database)
         
         // Create example row for update
         let row: Row = ["id": .int(1), "name": .string("Alice"), "email": .string("alice@example.com")]
@@ -166,9 +166,9 @@ public enum BasicUsageExamples {
         
         // Execute query
         let results = try await db.executeQuery("SELECT * FROM users WHERE id > 0", txId: txID)
-        logInfo("Query returned \(results.count) rows", category: .query)
+        logInfo("Query returned \(results.rowCount) rows", category: .query)
         
-        for row in results {
+        for row in results.rows {
             logDebug("Row: \(row)", category: .query)
         }
         
@@ -247,8 +247,8 @@ public enum BasicUsageExamples {
         - Buffer Pool: \(stats.bufferPoolSize) pages
         - Dirty Pages: \(stats.dirtyPages)
         - Active Transactions: \(stats.activeTransactions)
-        - Current LSN: \(stats.currentLSN)
-        - Schema Version: \(stats.schemaVersion)
+        - Current LSN: N/A
+        - Schema Version: N/A
         """, category: .monitoring)
         
         // Perform checkpoint (simulated)

@@ -32,7 +32,7 @@ public enum QueryPhase: String, Codable, Sendable {
 // MARK: - Query Fragment
 
 /// Fragment of a distributed query
-public struct QueryFragment: Codable, Hashable {
+public struct QueryFragment: Codable, Hashable, Sendable {
     public let fragmentId: String
     public let sql: String
     public let nodeId: String           // Target node
