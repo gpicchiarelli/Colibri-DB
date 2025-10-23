@@ -217,25 +217,13 @@ public actor ColibrìDB {
         systemState = .starting
         
         try await withThrowingTaskGroup(of: Void.self) { group in
-            // Start WAL
-            group.addTask {
-                try await self.wal.start()
-            }
+            // WAL is ready to use (no start method needed)
             
-            // Start buffer pool
-            group.addTask {
-                try await self.bufferPool.start()
-            }
+            // Buffer pool is ready to use (no start method needed)
             
-            // Start recovery if needed
-            group.addTask {
-                try await self.recoveryManager.start()
-            }
+            // Recovery manager is ready to use (no start method needed)
             
-            // Start transaction manager
-            group.addTask {
-                try await self.transactionManager.start()
-            }
+            // Transaction manager is ready to use (no start method needed)
             
             // Start statistics manager
             if config.enableStatistics {
@@ -273,12 +261,12 @@ public actor ColibrìDB {
         try await withThrowingTaskGroup(of: Void.self) { group in
             // Stop accepting new connections
             group.addTask {
-                await self.databaseServer.stop()
+                try await self.databaseServer.stop()
             }
             
             // Complete all active transactions
             group.addTask {
-                await self.completeAllTransactions()
+                try await self.completeAllTransactions()
             }
             
             // Flush WAL
@@ -286,20 +274,11 @@ public actor ColibrìDB {
                 try await self.wal.flush()
             }
             
-            // Stop transaction manager
-            group.addTask {
-                try await self.transactionManager.shutdown()
-            }
+            // Transaction manager doesn't need shutdown
             
-            // Stop buffer pool
-            group.addTask {
-                try await self.bufferPool.shutdown()
-            }
+            // Buffer pool doesn't need shutdown
             
-            // Stop WAL
-            group.addTask {
-                try await self.wal.shutdown()
-            }
+            // WAL doesn't need shutdown
             
             // Wait for all subsystems to stop
             try await group.waitForAll()
@@ -326,7 +305,7 @@ public actor ColibrìDB {
         let transaction = Transaction(
             txId: txId,
             state: .active,
-            startTime: Date(),
+            startTime: UInt64(Date().timeIntervalSince1970 * 1000),
             endTime: nil,
             resources: [],
             participants: [],
@@ -350,11 +329,13 @@ public actor ColibrìDB {
         
         var updatedTransaction = transaction
         updatedTransaction.state = .committed
-        updatedTransaction.endTime = Date()
+        updatedTransaction.endTime = UInt64(Date().timeIntervalSince1970 * 1000)
         activeTransactions[txId] = updatedTransaction
         
         databaseStats.transactionsCommitted += 1
-        databaseStats.totalTransactionTime += updatedTransaction.endTime!.timeIntervalSince(updatedTransaction.startTime)
+        let startDate = Date(timeIntervalSince1970: Double(updatedTransaction.startTime) / 1000)
+        let endDate = Date(timeIntervalSince1970: Double(updatedTransaction.endTime!) / 1000)
+        databaseStats.totalTransactionTime += endDate.timeIntervalSince(startDate)
     }
     
     /// Abort a transaction
@@ -555,7 +536,7 @@ public actor ColibrìDB {
     
     // MARK: - Helper Methods
     
-    private func completeAllTransactions() async {
+    private func completeAllTransactions() async throws {
         for txId in activeTransactions.keys {
             try? await abort(txId: txId)
         }

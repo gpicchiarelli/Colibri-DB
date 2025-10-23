@@ -112,7 +112,7 @@ public actor HeapTableManager {
         var newSlots = page.slots
         newSlots.append(slot)
         
-        let newHeader = PageHeader(
+        var newHeader = PageHeader(
             pageID: pageID,
             pageLSN: page.header.pageLSN
         )
@@ -121,7 +121,7 @@ public actor HeapTableManager {
         newHeader.freeEnd = UInt16(offset)
         newHeader.checksum = calculatePageChecksum(page: page)
         
-        let newPage = HeapPage(pageID: pageID)
+        var newPage = HeapPage(pageID: pageID)
         newPage.header = newHeader
         newPage.slots = newSlots
         newPage.data = page.data
@@ -172,7 +172,7 @@ public actor HeapTableManager {
             tombstone: true
         )
         
-        let newPage = HeapPage(pageID: pageID)
+        var newPage = HeapPage(pageID: pageID)
         newPage.header = page.header
         newPage.slots = newSlots
         newPage.data = page.data
@@ -310,7 +310,9 @@ public actor HeapTableManager {
     /// Calculate row size
     /// TLA+ Function: CalculateRowSize(row)
     private func calculateRowSize(_ row: Row) -> Int {
-        return row.reduce(0) { $0 + $1.count }
+        return row.reduce(into: 0) { result, pair in
+            result += pair.key.count + 8 // Key size + estimated value size
+        }
     }
     
     /// Calculate page checksum
@@ -354,14 +356,14 @@ public actor HeapTableManager {
     private func parseRowData(_ rowData: Data) -> Row {
         // Simplified parsing
         let string = String(data: rowData, encoding: .utf8) ?? ""
-        return [string]
+        return ["data": .string(string)]
     }
     
     /// Serialize row data
     /// TLA+ Function: SerializeRowData(row)
     private func serializeRowData(_ row: Row) -> Data {
         // Simplified serialization
-        let string = row.joined(separator: ",")
+        let string = row.map { "\($0.key):\($0.value)" }.joined(separator: ",")
         return string.data(using: .utf8) ?? Data()
     }
     
@@ -376,7 +378,7 @@ public actor HeapTableManager {
             newData.replaceSubrange(startIndex..<endIndex, with: newRowData)
         }
         
-        let newPage = HeapPage(pageID: page.pageID)
+        var newPage = HeapPage(pageID: page.pageID)
         newPage.header = page.header
         newPage.slots = page.slots
         newPage.data = newData
@@ -397,7 +399,7 @@ public actor HeapTableManager {
     /// Create new page
     /// TLA+ Function: CreateNewPage(pageID)
     private func createNewPage(pageID: PageID) -> HeapPage {
-        let page = HeapPage(pageID: pageID)
+        var page = HeapPage(pageID: pageID)
         page.header.slotCount = 0
         page.header.freeStart = UInt16(MemoryLayout<PageHeader>.size)
         page.header.freeEnd = UInt16(PAGE_SIZE)
@@ -476,7 +478,7 @@ public actor HeapTableManager {
     }
     
     /// Get page
-    public func getPage(pageID: PageID) -> Page? {
+    public func getPage(pageID: PageID) -> HeapPage? {
         return pages[pageID]
     }
     

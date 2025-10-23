@@ -58,11 +58,6 @@ public actor HeapTable {
         // Get page from buffer pool (pins it)
         var page = try await bufferPool.getPage(pageID)
         
-        defer {
-            // Always unpin when done
-            try? bufferPool.unpinPage(pageID)
-        }
-        
         // Find free slot
         let slotID = UInt32(page.slots.count)
         
@@ -86,7 +81,7 @@ public actor HeapTable {
         page.data.replaceSubrange(Int(offset)..<Int(newFreeStart), with: rowData)
         
         // Log the insert to WAL
-        let lsn = try wal.append(
+        let lsn = try await wal.append(
             kind: .heapInsert,
             txID: txID,
             pageID: pageID,
@@ -95,13 +90,16 @@ public actor HeapTable {
         
         // Update page LSN
         page.header.pageLSN = lsn
-        try wal.updatePageLSN(pageID, lsn: lsn)
+        try await wal.updatePageLSN(pageID, lsn: lsn)
         
         // Write page back (mark as dirty)
-        try bufferPool.putPage(pageID, page: page, isDirty: true)
+        try await bufferPool.putPage(pageID, page: page, isDirty: true)
         
         // Update free space map
         freeSpaceMap[pageID] = Int(page.header.freeEnd - page.header.freeStart)
+        
+        // Unpin page
+        try await bufferPool.unpinPage(pageID)
         
         return RID(pageID: pageID, slotID: slotID)
     }
@@ -110,13 +108,9 @@ public actor HeapTable {
     /// TLA+ Action: ReadRow(rid)
     /// Precondition: rid is valid
     /// Postcondition: returns row data
-    public func read(_ rid: RID) throws -> Row {
+    public func read(_ rid: RID) async throws -> Row {
         // Get page from buffer pool
-        let page = try bufferPool.getPage(rid.pageID)
-        
-        defer {
-            try? bufferPool.unpinPage(rid.pageID)
-        }
+        let page = try await bufferPool.getPage(rid.pageID)
         
         // Check slot exists
         guard Int(rid.slotID) < page.slots.count else {
@@ -139,6 +133,9 @@ public actor HeapTable {
         let decoder = JSONDecoder()
         let row = try decoder.decode(Row.self, from: rowData)
         
+        // Unpin page
+        try await bufferPool.unpinPage(rid.pageID)
+        
         return row
     }
     
@@ -149,7 +146,7 @@ public actor HeapTable {
     public func update(_ rid: RID, newRow: Row, txID: TxID) async throws {
         // For simplicity, delete old and insert new
         // A real implementation would try in-place update first
-        try delete(rid, txID: txID)
+        try await delete(rid, txID: txID)
         _ = try await insert(newRow, txID: txID)
     }
     
@@ -157,13 +154,9 @@ public actor HeapTable {
     /// TLA+ Action: DeleteRow(rid)
     /// Precondition: rid exists
     /// Postcondition: row marked deleted (tombstone)
-    public func delete(_ rid: RID, txID: TxID) throws {
+    public func delete(_ rid: RID, txID: TxID) async throws {
         // Get page from buffer pool
-        var page = try bufferPool.getPage(rid.pageID)
-        
-        defer {
-            try? bufferPool.unpinPage(rid.pageID)
-        }
+        var page = try await bufferPool.getPage(rid.pageID)
         
         // Check slot exists
         guard Int(rid.slotID) < page.slots.count else {
@@ -177,7 +170,7 @@ public actor HeapTable {
         let slot = page.slots[Int(rid.slotID)]
         let rowData = page.data.subdata(in: Int(slot.offset)..<Int(slot.offset + slot.length))
         
-        let lsn = try wal.append(
+        let lsn = try await wal.append(
             kind: .heapDelete,
             txID: txID,
             pageID: rid.pageID,
@@ -186,10 +179,13 @@ public actor HeapTable {
         
         // Update page LSN
         page.header.pageLSN = lsn
-        try wal.updatePageLSN(rid.pageID, lsn: lsn)
+        try await wal.updatePageLSN(rid.pageID, lsn: lsn)
         
         // Write page back (mark as dirty)
-        try bufferPool.putPage(rid.pageID, page: page, isDirty: true)
+        try await bufferPool.putPage(rid.pageID, page: page, isDirty: true)
+        
+        // Unpin page
+        try await bufferPool.unpinPage(rid.pageID)
     }
     
     // MARK: - Helper Methods

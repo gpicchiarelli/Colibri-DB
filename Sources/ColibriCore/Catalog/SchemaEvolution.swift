@@ -510,7 +510,7 @@ public actor SchemaEvolutionManager {
             phase: .preparation,
             progress: 0,
             startTime: currentTime,
-            estimatedCompletion: currentTime + schemaChangeTimeout,
+            estimatedCompletion: currentTime + UInt64(schemaChangeTimeout),
             blockingOperations: []
         )
         
@@ -559,7 +559,7 @@ public actor SchemaEvolutionManager {
             ddlStatement: "ONLINE \(currentChange.changeType.rawValue)",
             executedBy: txId,
             executedAt: currentTime,
-            duration: currentTime - currentChange.startTime,
+            duration: Int(currentTime - currentChange.startTime),
             success: true,
             rollbackScript: ""
         )

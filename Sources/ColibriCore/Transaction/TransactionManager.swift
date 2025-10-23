@@ -194,11 +194,11 @@ public actor TransactionManager {
     private let mvccManager: TransactionMVCCManager
     
     /// Lock manager
-    private let lockManager: LockManager
+    private let lockManager: LockManager?
     
     // MARK: - Initialization
     
-    public init(walManager: TransactionWALManager, mvccManager: TransactionMVCCManager, lockManager: LockManager) {
+    public init(walManager: TransactionWALManager, mvccManager: TransactionMVCCManager, lockManager: LockManager?) {
         self.walManager = walManager
         self.mvccManager = mvccManager
         self.lockManager = lockManager

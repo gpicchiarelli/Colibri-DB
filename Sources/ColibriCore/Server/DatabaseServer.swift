@@ -197,8 +197,8 @@ public actor ServerConnection {
             throw DBError.internalError("No active transaction")
         }
         
-        let result = try await database.executeQuery(query: sql, txId: txID)
-        return result
+        let result = try await database.executeQuery(sql, txId: txID)
+        return result.rows
     }
     
     /// Close connection

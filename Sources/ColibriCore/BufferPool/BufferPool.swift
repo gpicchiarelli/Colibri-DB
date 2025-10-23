@@ -86,7 +86,7 @@ public actor BufferPool {
     /// TLA+ Actions: GetPage_Hit(pid), GetPage_Miss(pid), GetPage_Evict(pid)
     /// Precondition: pid is valid
     /// Postcondition: page returned and pinned, eviction performed if necessary
-    public func getPage(_ pageID: PageID) throws -> Page {
+    public func getPage(_ pageID: PageID) async throws -> Page {
         // Check if page is in cache (cache hit)
         if let page = cache[pageID] {
             // TLA+: GetPage_Hit
@@ -104,13 +104,14 @@ public actor BufferPool {
         
         // Cache miss - need to load from disk
         let pageData = try await diskManager.readPage(pageId: pageID)
-        var page = Page(pageID: pageID, data: pageData)
+        var page = Page(pageID: pageID)
+        page.data = pageData
         
         // Check if pool is full
         if cache.count >= poolSize {
             // TLA+: GetPage_Evict
             // Need to evict a page
-            try evictPage()
+            try await evictPage()
         }
         
         // TLA+: GetPage_Miss or GetPage_Evict (after eviction)
@@ -188,7 +189,7 @@ public actor BufferPool {
     /// TLA+ Action: FlushPage(pid)
     /// Precondition: page is dirty, WAL flushed (pageLSN <= flushedLSN)
     /// Postcondition: page written to disk, removed from dirty set
-    public func flushPage(_ pageID: PageID) throws {
+    public func flushPage(_ pageID: PageID) async throws {
         // TLA+: pid \in dirty
         guard dirty.contains(pageID) else {
             return  // Already clean
@@ -215,20 +216,13 @@ public actor BufferPool {
     /// TLA+ Action: FlushAll
     /// Precondition: all dirty pages have pageLSN <= flushedLSN
     /// Postcondition: all pages written to disk, dirty set empty
-    public func flushAll() throws {
-        // TLA+: \A p \in dirty: FlushPage(p)
-        for pageID in dirty {
-            try flushPage(pageID)
-        }
-    }
-    
-    /// Flush all dirty pages (async version)
     public func flushAll() async throws {
         // TLA+: \A p \in dirty: FlushPage(p)
         for pageID in dirty {
-            try flushPage(pageID)
+            try await flushPage(pageID)
         }
     }
+    
     
     /// Update flushed LSN from WAL
     /// TLA+ Action: UpdateFlushedLSN(lsn)
@@ -250,7 +244,7 @@ public actor BufferPool {
     /// TLA+ Helper: FindVictim + eviction logic
     /// Precondition: pool is full
     /// Postcondition: one unpinned page evicted
-    private func evictPage() throws {
+    private func evictPage() async throws {
         // TLA+: FindVictim - find unpinned page with reference bit = false
         var scannedPages = 0
         let maxScans = cache.count * 2  // Scan at most twice
@@ -285,7 +279,7 @@ public actor BufferPool {
             }
             
             // Found victim! Evict it
-            try evictSpecificPage(candidatePageID)
+            try await evictSpecificPage(candidatePageID)
             return
         }
         
@@ -294,7 +288,7 @@ public actor BufferPool {
     }
     
     /// Evict a specific page
-    private func evictSpecificPage(_ pageID: PageID) throws {
+    private func evictSpecificPage(_ pageID: PageID) async throws {
         // TLA+: If dirty, flush first (WAL before data)
         if dirty.contains(pageID) {
             // TLA+: cache[victim].header.pageLSN <= flushedLSN
