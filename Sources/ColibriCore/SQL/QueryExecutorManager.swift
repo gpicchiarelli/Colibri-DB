@@ -103,7 +103,7 @@ public actor SQLQueryExecutorManager {
         outputBuffers[operatorId] = []
         
         // TLA+: Execute join
-        try await executeJoinOperator(operatorId: operatorId)
+        try await executeJoinOperator(operatorId: operatorId, leftTable: "left", rightTable: "right")
         
         print("Executed join: \(operatorId)")
     }

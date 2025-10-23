@@ -47,7 +47,7 @@ public actor HeapTable {
     /// TLA+ Action: InsertRow(row)
     /// Precondition: row is valid
     /// Postcondition: row inserted, RID assigned
-    public func insert(_ row: Row, txID: TxID) throws -> RID {
+    public func insert(_ row: Row, txID: TxID) async throws -> RID {
         // Serialize row to data
         let encoder = JSONEncoder()
         let rowData = try encoder.encode(row)
@@ -56,7 +56,7 @@ public actor HeapTable {
         let pageID = try findPageWithSpace(Int(rowData.count))
         
         // Get page from buffer pool (pins it)
-        var page = try bufferPool.getPage(pageID)
+        var page = try await bufferPool.getPage(pageID)
         
         defer {
             // Always unpin when done
@@ -146,11 +146,11 @@ public actor HeapTable {
     /// TLA+ Action: UpdateRow(rid, newRow)
     /// Precondition: rid exists
     /// Postcondition: row updated (in-place or new slot)
-    public func update(_ rid: RID, newRow: Row, txID: TxID) throws {
+    public func update(_ rid: RID, newRow: Row, txID: TxID) async throws {
         // For simplicity, delete old and insert new
         // A real implementation would try in-place update first
         try delete(rid, txID: txID)
-        _ = try insert(newRow, txID: txID)
+        _ = try await insert(newRow, txID: txID)
     }
     
     /// Delete a row from the heap table

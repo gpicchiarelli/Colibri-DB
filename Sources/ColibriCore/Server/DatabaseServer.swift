@@ -192,13 +192,13 @@ public actor ServerConnection {
     }
     
     /// Execute query
-    public func executeQuery(plan: PlanNode) async throws -> [Row] {
+    public func executeQuery(sql: String) async throws -> [Row] {
         guard let txID = currentTxID else {
             throw DBError.internalError("No active transaction")
         }
         
-        let result = try await database.executeQuery(plan: plan, txID: txID)
-        return result.rows
+        let result = try await database.executeQuery(query: sql, txId: txID)
+        return result
     }
     
     /// Close connection

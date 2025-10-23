@@ -243,7 +243,7 @@ public actor QueryOptimizerManager {
     
     /// Generate join orders
     /// TLA+ Action: GenerateJoinOrders(query)
-    public func generateJoinOrders(parsedQuery: [String: Any]) async throws -> [[PlanNode]] {
+    public func generateJoinOrders(parsedQuery: [String: Any]) async throws -> [[QueryNode]] {
         // TLA+: Generate all possible join orders
         let tables = parsedQuery["tables"] as? [String] ?? []
         let joinOrders = try await generateAllJoinOrders(tables: tables)

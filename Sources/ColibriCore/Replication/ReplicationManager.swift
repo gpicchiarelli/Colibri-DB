@@ -247,7 +247,7 @@ public actor ReplicationManager {
         }
         
         // TLA+: Get next LSN from WAL
-        let lsn = try await wal.getNextLSN()
+        let lsn = await wal.getCurrentLSN()
         
         // TLA+: Create replication log entry
         let logEntry = ReplicationLogEntry(

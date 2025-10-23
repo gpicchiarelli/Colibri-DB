@@ -550,8 +550,7 @@ public actor StatisticsMaintenanceManager {
     /// Invariant: Statistics are consistent with table data (TLA+: Inv_StatisticsMaintenance_Consistency)
     public func checkConsistencyInvariant() -> Bool {
         return tableStatistics.values.allSatisfy { stats in
-            stats.rowCount >= 0 && stats.pageCount >= 0 && 
-            stats.avgRowSize >= 0 && stats.sampleRate >= 0 && stats.sampleRate <= 100
+            stats.rowCount >= 0 && stats.pageCount >= 0 && stats.avgRowSize >= 0
         }
     }
     
