@@ -505,16 +505,16 @@ class WireProtocolTests: XCTestCase {
         XCTAssertTrue(wireProtocol.checkMessageOrderInvariant())
         
         // Test no message loss invariant
-        XCTAssertTrue(wireProtocol.checkNoMessageLossInvariant())
+        XCTAssertTrue(await wireProtocol.checkNoMessageLossInvariant())
         
         // Test transaction state consistent invariant
-        XCTAssertTrue(wireProtocol.checkTxnStateConsistentInvariant())
+        XCTAssertTrue(await wireProtocol.checkTxnStateConsistentInvariant())
         
         // Test message size bounded invariant
-        XCTAssertTrue(wireProtocol.checkMessageSizeBoundedInvariant())
+        XCTAssertTrue(await wireProtocol.checkMessageSizeBoundedInvariant())
         
         // Test combined safety invariant
-        XCTAssertTrue(wireProtocol.checkSafetyInvariant())
+        XCTAssertTrue(await wireProtocol.checkSafetyInvariant())
     }
 }
 

@@ -615,6 +615,9 @@ public struct DatabaseStats: Codable {
     public var rowsUpdated: Int = 0
     public var rowsDeleted: Int = 0
     public var queriesExecuted: Int = 0
+    public var dirtyPages: Int = 0
+    public var bufferPoolSize: Int = 0
+    public var activeTransactions: Int = 0
     
     public var averageTransactionTime: TimeInterval {
         guard transactionsCommitted > 0 else { return 0 }
