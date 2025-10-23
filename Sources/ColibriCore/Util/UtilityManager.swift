@@ -53,13 +53,7 @@ public struct UtilityResult: Codable, Sendable, Equatable {
 
 /// Log level
 /// Corresponds to TLA+: LogLevel
-public enum LogLevel: String, Codable, Sendable, CaseIterable {
-    case debug = "debug"
-    case info = "info"
-    case warning = "warning"
-    case error = "error"
-    case fatal = "fatal"
-}
+// LogLevel is defined in Utilities/Logger.swift
 
 // MARK: - Utility Manager
 

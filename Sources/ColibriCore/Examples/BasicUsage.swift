@@ -96,6 +96,9 @@ public enum BasicUsageExamples {
         let row = try await db.select(table: "users", rid: rid, txId: txID)
         logInfo("Read row: \(row)", category: .database)
         
+        // Create example row for update
+        let row: Row = ["id": .int(1), "name": .string("Alice"), "email": .string("alice@example.com")]
+        
         // Update the row
         var updatedRow = row
         updatedRow["name"] = Value.string("Alice Updated")
@@ -213,8 +216,13 @@ public enum BasicUsageExamples {
         
         // Execute query
         let queryPlan: QueryPlanNode = .scan(table: "users")
+<<<<<<< HEAD
         let results = try await connection.executeQuery(plan: queryPlan)
         logInfo("Query returned \(results.count) rows", category: .query)
+=======
+        let results = try await connection.executeQuery(sql: "SELECT * FROM users")
+        print("Query returned \(results.count) rows")
+>>>>>>> 6217e76 (Refactor: Update type handling and improve query execution in examples)
         
         // Commit
         try await connection.commit()

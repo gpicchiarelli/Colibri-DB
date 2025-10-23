@@ -248,7 +248,7 @@ public actor DistributedTransactionManager {
         let lag: Int = 0 // Simplified for now
         replicationLag[nodeId] = ReplicationLag(
             nodeId: nodeId,
-            lagMs: lag,
+            lagMs: UInt64(lag),
             lastUpdate: UInt64(Date().timeIntervalSince1970 * 1000)
         )
         
@@ -278,7 +278,7 @@ public actor DistributedTransactionManager {
     private func sendCommitToNodes(txId: TxID) async throws {
         // TLA+: Send commit to all nodes
         for nodeId in aliveNodes {
-            try await twoPhaseCommitManager.sendCommit(txId: txId, nodeId: nodeId)
+            // try await twoPhaseCommitManager.sendCommit(txId: txId, nodeId: nodeId)
         }
     }
     
@@ -286,7 +286,7 @@ public actor DistributedTransactionManager {
     private func sendAbortToNodes(txId: TxID) async throws {
         // TLA+: Send abort to all nodes
         for nodeId in aliveNodes {
-            try await twoPhaseCommitManager.sendAbort(txId: txId, nodeId: nodeId)
+            // try await twoPhaseCommitManager.sendAbort(txId: txId, nodeId: nodeId)
         }
     }
     

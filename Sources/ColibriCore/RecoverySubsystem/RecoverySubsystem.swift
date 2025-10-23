@@ -258,8 +258,8 @@ public actor RecoverySubsystem {
         }
         
         // Find latest full backup before target
-        let fullBackups = backupMetadata.values.filter { $0.type == .full && $0.lsn <= targetLSN }
-        guard let baseBackup = fullBackups.max(by: { $0.lsn < $1.lsn }) else {
+        let fullBackups = backupMetadata.values.filter { $0.type == .full && $0.lsnRange.end <= targetLSN }
+        guard let baseBackup = fullBackups.max(by: { $0.lsnRange.end < $1.lsnRange.end }) else {
             throw RecoveryError.noSuitableBackup
         }
         
