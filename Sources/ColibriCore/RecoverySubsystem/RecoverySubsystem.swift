@@ -388,7 +388,7 @@ public actor RecoverySubsystem {
         }
         
         // Check if WAL segments cover the gap
-        let neededLSNs = baseBackup.lsn...targetLSN
+        let neededLSNs = baseBackup.lsnRange.end...targetLSN
         var coveredLSNs: Set<UInt64> = []
         
         for segment in archivedWALSegments {

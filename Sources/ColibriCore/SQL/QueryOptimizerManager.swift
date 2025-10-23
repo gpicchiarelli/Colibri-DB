@@ -482,9 +482,9 @@ public actor QueryOptimizerManager {
     
     /// Select best plan
     /// TLA+ Function: SelectBestPlan()
-    private func selectBestPlan() async throws -> [QueryNode] {
+    private func selectBestPlan() async throws -> [PlanNode] {
         var bestCost = Double.infinity
-        var bestPlan: [QueryNode] = []
+        var bestPlan: [PlanNode] = []
         
         for plan in exploredPlans {
             let cost = try await estimateCost(plan: plan)

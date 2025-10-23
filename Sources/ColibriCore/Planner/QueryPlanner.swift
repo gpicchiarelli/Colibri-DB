@@ -41,7 +41,7 @@ public struct QueryNode: Codable, Sendable, Equatable, Hashable {
 
 /// Plan node
 /// Corresponds to TLA+: PlanNode
-public struct PlanNode: Codable, Sendable, Equatable {
+public struct PlanNode: Codable, Sendable, Equatable, Hashable {
     public let planId: String
     public let queryId: String
     public let rootNode: String
