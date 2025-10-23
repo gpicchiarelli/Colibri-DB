@@ -216,13 +216,8 @@ public enum BasicUsageExamples {
         
         // Execute query
         let queryPlan: QueryPlanNode = .scan(table: "users")
-<<<<<<< HEAD
-        let results = try await connection.executeQuery(plan: queryPlan)
-        logInfo("Query returned \(results.count) rows", category: .query)
-=======
         let results = try await connection.executeQuery(sql: "SELECT * FROM users")
         print("Query returned \(results.count) rows")
->>>>>>> 6217e76 (Refactor: Update type handling and improve query execution in examples)
         
         // Commit
         try await connection.commit()
