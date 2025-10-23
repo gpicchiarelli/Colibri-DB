@@ -46,35 +46,7 @@ public struct IndexEntry: Codable, Sendable, Equatable {
     }
 }
 
-/// Index metadata
-/// Corresponds to TLA+: IndexMetadata
-public struct IndexMetadata: Codable, Sendable, Equatable {
-    public let indexId: IndexID
-    public let name: String
-    public let tableName: String
-    public let columnNames: [String]
-    public let indexType: IndexType
-    public let isUnique: Bool
-    public let isPrimary: Bool
-    public let isClustered: Bool
-    public let fillFactor: Double
-    public let created: UInt64
-    public let lastModified: UInt64
-    
-    public init(indexId: IndexID, name: String, tableName: String, columnNames: [String], indexType: IndexType, isUnique: Bool, isPrimary: Bool, isClustered: Bool, fillFactor: Double, created: UInt64, lastModified: UInt64) {
-        self.indexId = indexId
-        self.name = name
-        self.tableName = tableName
-        self.columnNames = columnNames
-        self.indexType = indexType
-        self.isUnique = isUnique
-        self.isPrimary = isPrimary
-        self.isClustered = isClustered
-        self.fillFactor = fillFactor
-        self.created = created
-        self.lastModified = lastModified
-    }
-}
+// IndexMetadata is defined in Catalog/CatalogManager.swift
 
 /// Index metrics
 /// Corresponds to TLA+: IndexMetrics

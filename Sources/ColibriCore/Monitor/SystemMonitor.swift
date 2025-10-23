@@ -37,13 +37,7 @@ public enum MetricType: String, Codable, Sendable, CaseIterable {
     case summary = "summary"
 }
 
-/// Alert severity
-/// Corresponds to TLA+: AlertSeverity
-public enum AlertSeverity: String, Codable, Sendable, CaseIterable {
-    case critical = "critical"
-    case warning = "warning"
-    case info = "info"
-}
+// AlertSeverity is defined in System/SystemManagement.swift
 
 /// Alert status
 /// Corresponds to TLA+: AlertStatus

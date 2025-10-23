@@ -209,14 +209,14 @@ public actor QueryExecutor {
         // Fetch next tuple (simplified - would scan heap table)
         if let rid = state.currentRID {
             // Get next RID
-            state.currentRID = RID(pageId: rid.pageId, slotId: rid.slotId + 1)
+            state.currentRID = RID(pageID: rid.pageID, slotID: rid.slotID + 1)
         } else {
             // Start scan
-            state.currentRID = RID(pageId: 1, slotId: 0)
+            state.currentRID = RID(pageID: 1, slotID: 0)
         }
         
         // Check if exhausted
-        if state.currentRID!.pageId > 100 {  // Simplified
+        if state.currentRID!.pageID > 100 {  // Simplified
             state.exhausted = true
             scanState[opId] = state
             return nil
@@ -307,7 +307,7 @@ public actor QueryExecutor {
         
         // Build hash table from right input
         for tuple in rightInput {
-            let key = "\(tuple.values.first ?? .null)"
+            let key = "\(tuple.values.first ?? Value.null)"
             state.hashTable[key, default: []].append(tuple)
         }
         
@@ -325,7 +325,7 @@ public actor QueryExecutor {
         
         // Probe hash table with left input
         for leftTuple in state.leftInput {
-            let key = "\(leftTuple.values.first ?? .null)"
+            let key = "\(leftTuple.values.first ?? Value.null)"
             
             if let matches = state.hashTable[key] {
                 for rightTuple in matches {
@@ -387,7 +387,7 @@ public actor QueryExecutor {
         // Materialize results
         var result: [ExecutorTuple] = []
         for (groupKey, aggValues) in state.hashTable {
-            let tuple = ExecutorTuple(values: groupKey + aggValues, rid: RID(pageId: 0, slotId: 0))
+            let tuple = ExecutorTuple(values: groupKey + aggValues, rid: RID(pageID: 0, slotID: 0))
             result.append(tuple)
         }
         

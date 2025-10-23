@@ -18,15 +18,7 @@ import Foundation
 
 // MARK: - Constraint Types
 
-/// Constraint type
-/// Corresponds to TLA+: ConstraintType
-public enum ConstraintType: String, Codable, Sendable, CaseIterable {
-    case primaryKey = "PRIMARY_KEY"
-    case foreignKey = "FOREIGN_KEY"
-    case unique = "UNIQUE"
-    case check = "CHECK"
-    case notNull = "NOT_NULL"
-}
+// ConstraintType is defined in Catalog/CatalogManager.swift
 
 /// Constraint
 /// Corresponds to TLA+: Constraint

@@ -88,17 +88,7 @@ public actor ARIESRecovery {
         }
     }
     
-    /// Undo record
-    /// TLA+: UndoRecord
-    public struct UndoRecord: Sendable {
-        public let txID: TxID
-        public let lsn: LSN
-        
-        public init(txID: TxID, lsn: LSN) {
-            self.txID = txID
-            self.lsn = lsn
-        }
-    }
+    // UndoRecord is defined in ARIESRecoveryManager.swift
     
     /// Recovery phase
     /// TLA+: phase \in {"idle", "analysis", "redo", "undo", "done"}

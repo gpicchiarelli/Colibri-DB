@@ -563,11 +563,7 @@ public actor PointInTimeRecoveryManager {
 
 // MARK: - Supporting Types
 
-struct UndoRecord {
-    let lsn: UInt64
-    let pageId: Int?
-    let undoInfo: String
-}
+// UndoRecord is defined in ARIESRecoveryManager.swift
 
 struct RedoRecord {
     let txnId: String

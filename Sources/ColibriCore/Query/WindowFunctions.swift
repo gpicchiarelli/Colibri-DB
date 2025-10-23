@@ -153,34 +153,19 @@ public struct WindowRow: Codable {
     }
 }
 
-/// Generic value type
-public enum Value: Codable, Hashable {
-    case null
-    case int(Int64)
-    case double(Double)
-    case string(String)
-    case bool(Bool)
-    
-    public var asDouble: Double? {
-        switch self {
-        case .int(let i): return Double(i)
-        case .double(let d): return d
-        default: return nil
-        }
-    }
-}
+// Value type is defined in Core/Types.swift
 
 /// Window function definition
 public struct WindowFunction {
-    public let func: WindowFunc
+    public let function: WindowFunc
     public let spec: WindowSpec
     public let targetColumn: String
     public let offset: Int              // For LAG/LEAD/NTH_VALUE
     public let buckets: Int             // For NTILE
     
-    public init(func: WindowFunc, spec: WindowSpec, targetColumn: String = "value",
+    public init(function: WindowFunc, spec: WindowSpec, targetColumn: String = "value",
                 offset: Int = 1, buckets: Int = 4) {
-        self.func = `func`
+        self.function = function
         self.spec = spec
         self.targetColumn = targetColumn
         self.offset = offset
@@ -300,15 +285,15 @@ public actor WindowFunctionsProcessor {
     
     private func makePartitionKey(row: WindowRow, columns: [String]) -> String {
         return columns.map { col in
-            String(describing: row.values[col] ?? .null)
+            String(describing: row.values[col] ?? Value.null)
         }.joined(separator: "||")
     }
     
     private func sortPartition(_ partition: [WindowRow], orderBy: [OrderSpec]) -> [WindowRow] {
         return partition.sorted { r1, r2 in
             for spec in orderBy {
-                let v1 = r1.values[spec.column] ?? .null
-                let v2 = r2.values[spec.column] ?? .null
+                let v1 = r1.values[spec.column] ?? Value.null
+                let v2 = r2.values[spec.column] ?? Value.null
                 
                 let cmp = compareValues(v1, v2)
                 if cmp != .orderedSame {
@@ -339,7 +324,7 @@ public actor WindowFunctionsProcessor {
         var results: [String: Value] = [:]
         
         for windowFunc in windowFunctions {
-            let funcName = windowFunc.func.rawValue
+            let funcName = windowFunc.function.rawValue
             let value = try computeWindowFunction(windowFunc, partition: partition, rowIdx: rowIdx)
             results[funcName] = value
         }
@@ -352,7 +337,7 @@ public actor WindowFunctionsProcessor {
     private func computeWindowFunction(_ windowFunc: WindowFunction, partition: [WindowRow], rowIdx: Int) throws -> Value {
         let frame = getFrame(partition: partition, rowIdx: rowIdx, spec: windowFunc.spec)
         
-        switch windowFunc.func {
+        switch windowFunc.function {
         // Aggregates
         case .sum:
             return computeSum(frame: frame, column: windowFunc.targetColumn)
@@ -489,7 +474,7 @@ public actor WindowFunctionsProcessor {
     }
     
     private func computeMin(frame: [WindowRow], column: String) -> Value {
-        var minVal: Value = .null
+        var minVal: Value = Value.null
         for row in frame {
             if let value = row.values[column] {
                 if case .null = minVal {
@@ -503,7 +488,7 @@ public actor WindowFunctionsProcessor {
     }
     
     private func computeMax(frame: [WindowRow], column: String) -> Value {
-        var maxVal: Value = .null
+        var maxVal: Value = Value.null
         for row in frame {
             if let value = row.values[column] {
                 if case .null = maxVal {

@@ -18,7 +18,7 @@ public actor QueryOptimizer {
     // MARK: - Dependencies
     
     private let catalog: Catalog
-    private let statistics: StatisticsManager
+    private let statistics: StatisticsManagerActor
     
     // MARK: - Cost Model Constants
     
@@ -33,7 +33,7 @@ public actor QueryOptimizer {
     
     // MARK: - Initialization
     
-    public init(catalog: Catalog, statistics: StatisticsManager) {
+    public init(catalog: Catalog, statistics: StatisticsManagerActor) {
         self.catalog = catalog
         self.statistics = statistics
     }
@@ -243,7 +243,7 @@ public struct LogicalPlan {
 }
 
 /// Statistics manager interface
-public actor StatisticsManager {
+public actor StatisticsManagerActor {
     private var tableStats: [String: TableStatistics] = [:]
     
     public init() {}

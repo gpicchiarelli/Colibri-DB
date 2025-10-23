@@ -22,9 +22,7 @@ import Foundation
 /// Corresponds to TLA+: ShardID
 public typealias ShardID = String
 
-/// Key
-/// Corresponds to TLA+: Key
-public typealias Key = Value
+// Key is defined as Value in Core/Types.swift
 
 /// Shard strategy
 /// Corresponds to TLA+: ShardStrategy
@@ -39,11 +37,11 @@ public enum ShardStrategy: String, Codable, Sendable, CaseIterable {
 public struct ShardMapping: Codable, Sendable, Equatable {
     public let shardId: ShardID
     public let nodeId: String
-    public let keyRange: (Key, Key)?
+    public let keyRange: (Value, Value)?
     public let hashRange: (UInt32, UInt32)?
     public let isActive: Bool
     
-    public init(shardId: ShardID, nodeId: String, keyRange: (Key, Key)? = nil, hashRange: (UInt32, UInt32)? = nil, isActive: Bool) {
+    public init(shardId: ShardID, nodeId: String, keyRange: (Value, Value)? = nil, hashRange: (UInt32, UInt32)? = nil, isActive: Bool) {
         self.shardId = shardId
         self.nodeId = nodeId
         self.keyRange = keyRange
@@ -56,11 +54,11 @@ public struct ShardMapping: Codable, Sendable, Equatable {
 /// Corresponds to TLA+: ShardData
 public struct ShardData: Codable, Sendable, Equatable {
     public let shardId: ShardID
-    public let data: [Key: Row]
-    public let size: Int
-    public let lastUpdate: UInt64
+    public var data: [Value: Row]
+    public var size: Int
+    public var lastUpdate: UInt64
     
-    public init(shardId: ShardID, data: [Key: Row], size: Int, lastUpdate: UInt64) {
+    public init(shardId: ShardID, data: [Value: Row], size: Int, lastUpdate: UInt64) {
         self.shardId = shardId
         self.data = data
         self.size = size
@@ -387,8 +385,8 @@ public actor ShardingManager {
         return Set(shardMapping.values.map { $0.nodeId }).count
     }
     
-    /// Check if shards are balanced
-    public func isShardsBalanced() -> Bool {
+    /// Check if shards are balanced (public interface)
+    public func areShardsBalanced() -> Bool {
         return isShardsBalanced()
     }
     

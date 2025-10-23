@@ -82,7 +82,7 @@ public struct StorageMetrics: Codable, Sendable, Equatable {
 
 /// Storage Manager for database storage management
 /// Corresponds to TLA+ module: Storage.tla
-public actor StorageManager {
+public actor StorageManagerActor {
     
     // MARK: - State Variables (TLA+ vars)
     

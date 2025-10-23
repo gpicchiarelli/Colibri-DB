@@ -38,23 +38,7 @@ public struct DistributedQueryFragment: Codable, Sendable, Equatable {
     }
 }
 
-/// Query result
-/// Corresponds to TLA+: QueryResult
-public struct QueryResult: Codable, Sendable, Equatable {
-    public let resultId: String
-    public let fragmentId: String
-    public let data: [Row]
-    public let metadata: [String: String]
-    public let timestamp: UInt64
-    
-    public init(resultId: String, fragmentId: String, data: [Row], metadata: [String: String], timestamp: UInt64) {
-        self.resultId = resultId
-        self.fragmentId = fragmentId
-        self.data = data
-        self.metadata = metadata
-        self.timestamp = timestamp
-    }
-}
+// QueryResult is defined in Database/ColibrìDB.swift
 
 /// Distributed query phase
 /// Corresponds to TLA+: QueryPhase
