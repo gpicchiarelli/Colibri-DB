@@ -59,7 +59,7 @@ public enum ResourceType: String, Codable {
 }
 
 /// Resource usage tracking
-public struct SystemSystemResourceUsage: Codable {
+public struct ResourceUsage: Codable {
     public let resourceType: ResourceType
     public var currentUsage: Int64
     public var maxLimit: Int64
@@ -127,6 +127,12 @@ public struct SystemAlert: Codable {
     }
 }
 
+public enum AlertSeverity: String, Codable {
+    case info
+    case warning
+    case error
+    case critical
+}
 
 // MARK: - System Management
 
@@ -137,7 +143,7 @@ public actor SystemManagement {
     private var systemConfig: SystemConfig
     
     // Resource tracking
-    private var resourceUsage: [ResourceType: SystemResourceUsage] = [:]
+    private var resourceUsage: [ResourceType: ResourceUsage] = [:]
     
     // Performance metrics
     private var performanceMetrics: [String: PerformanceMetric] = [:]
@@ -166,27 +172,27 @@ public actor SystemManagement {
     // MARK: - Initialization
     
     private func initializeResources() {
-        resourceUsage[.connections] = SystemResourceUsage(
+        resourceUsage[.connections] = ResourceUsage(
             resourceType: .connections,
             maxLimit: Int64(systemConfig.maxConnections)
         )
         
-        resourceUsage[.memory] = SystemResourceUsage(
+        resourceUsage[.memory] = ResourceUsage(
             resourceType: .memory,
             maxLimit: systemConfig.maxMemory
         )
         
-        resourceUsage[.cpu] = SystemResourceUsage(
+        resourceUsage[.cpu] = ResourceUsage(
             resourceType: .cpu,
             maxLimit: 100  // percentage
         )
         
-        resourceUsage[.disk] = SystemResourceUsage(
+        resourceUsage[.disk] = ResourceUsage(
             resourceType: .disk,
             maxLimit: 100  // percentage
         )
         
-        resourceUsage[.network] = SystemResourceUsage(
+        resourceUsage[.network] = ResourceUsage(
             resourceType: .network,
             maxLimit: 1_000_000_000  // 1 Gbps
         )
@@ -247,12 +253,12 @@ public actor SystemManagement {
     }
     
     /// Get resource usage
-    public func getSystemResourceUsage(resource: ResourceType) -> SystemResourceUsage? {
+    public func getResourceUsage(resource: ResourceType) -> ResourceUsage? {
         return resourceUsage[resource]
     }
     
     /// Get all resource usage
-    public func getAllSystemResourceUsage() -> [ResourceType: SystemResourceUsage] {
+    public func getAllResourceUsage() -> [ResourceType: ResourceUsage] {
         return resourceUsage
     }
     

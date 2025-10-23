@@ -30,17 +30,10 @@
 
 import Foundation
 
-/// Query executor transaction manager protocol
-public protocol QueryExecutorTransactionManager: Sendable {
-    func beginTransaction() async throws -> TxID
-    func commitTransaction(txId: TxID) async throws
-    func abortTransaction(txId: TxID) async throws
-}
-
 // MARK: - Tuple Structure
 
 /// Tuple with values and RID (TLA+: Tuple)
-public struct ExecutorTuple: Codable, Sendable {
+public struct ExecutorTuple: Codable {
     public let values: [Value]
     public let rid: RID
     
@@ -52,8 +45,8 @@ public struct ExecutorTuple: Codable, Sendable {
 
 // MARK: - Operator States (TLA+ VARIABLES)
 
-/// Query executor scan state (TLA+: ScanState)
-public struct QueryExecutorScanState: Codable, Sendable {
+/// Scan operator state (TLA+: ScanState)
+public struct ScanState {
     public var table: String
     public var predicate: String?
     public var currentRID: RID?
@@ -61,7 +54,7 @@ public struct QueryExecutorScanState: Codable, Sendable {
     public var indexName: String?
     public var exhausted: Bool
     
-    public enum ScanType: String, Codable, Sendable {
+    public enum ScanType: String {
         case sequential = "sequential"
         case index = "index"
     }
@@ -76,8 +69,8 @@ public struct QueryExecutorScanState: Codable, Sendable {
     }
 }
 
-/// Query executor join state (TLA+: JoinState)
-public struct QueryExecutorJoinState: Codable, Sendable {
+/// Join operator state (TLA+: JoinState)
+public struct JoinState {
     public var leftInput: [ExecutorTuple]
     public var rightInput: [ExecutorTuple]
     public var joinType: JoinType
@@ -87,7 +80,7 @@ public struct QueryExecutorJoinState: Codable, Sendable {
     public var hashTable: [String: [ExecutorTuple]]  // For hash join
     public var exhausted: Bool
     
-    public enum JoinType: String, Codable, Sendable {
+    public enum JoinType: String {
         case nestedLoop = "nested_loop"
         case hash = "hash"
         case sortMerge = "sort_merge"
@@ -105,8 +98,8 @@ public struct QueryExecutorJoinState: Codable, Sendable {
     }
 }
 
-/// Query executor aggregation state (TLA+: AggregationState)
-public struct QueryExecutorAggregationState: Codable, Sendable {
+/// Aggregation state (TLA+: AggregationState)
+public struct AggregationState {
     public var groupBy: [Int]           // Column indices
     public var aggregates: [AggregateSpec]
     public var hashTable: [[Value]: [Value]]  // GroupKey -> AggValues
@@ -120,11 +113,11 @@ public struct QueryExecutorAggregationState: Codable, Sendable {
     }
 }
 
-public struct AggregateSpec: Codable, Sendable {
+public struct AggregateSpec {
     public let function: AggregateFunc
     public let column: Int
     
-    public enum AggregateFunc: String, Codable, Sendable {
+    public enum AggregateFunc: String {
         case sum = "SUM"
         case count = "COUNT"
         case avg = "AVG"
@@ -133,8 +126,8 @@ public struct AggregateSpec: Codable, Sendable {
     }
 }
 
-/// Query executor sort state (TLA+: SortState)
-public struct QueryExecutorSortState: Codable, Sendable {
+/// Sort state (TLA+: SortState)
+public struct SortState {
     public var input: [ExecutorTuple]
     public var sortKeys: [SortKey]
     public var sorted: [ExecutorTuple]
@@ -148,11 +141,11 @@ public struct QueryExecutorSortState: Codable, Sendable {
     }
 }
 
-public struct SortKey: Sendable, Codable {
+public struct SortKey {
     public let column: Int
     public let order: SortOrder
     
-    public enum SortOrder: String, Sendable, Codable {
+    public enum SortOrder: String {
         case ascending = "ASC"
         case descending = "DESC"
     }
@@ -167,16 +160,16 @@ public actor QueryExecutor {
     // TLA+ VARIABLES
     
     /// Scan state per operator (TLA+: scanState)
-    private var scanState: [Int: QueryExecutorScanState] = [:]
+    private var scanState: [Int: ScanState] = [:]
     
     /// Join state per operator (TLA+: joinState)
-    private var joinState: [Int: QueryExecutorJoinState] = [:]
+    private var joinState: [Int: JoinState] = [:]
     
     /// Aggregation state per operator (TLA+: aggState)
-    private var aggState: [Int: QueryExecutorAggregationState] = [:]
+    private var aggState: [Int: AggregationState] = [:]
     
     /// Sort state per operator (TLA+: sortState)
-    private var sortState: [Int: QueryExecutorSortState] = [:]
+    private var sortState: [Int: SortState] = [:]
     
     /// Output buffer per operator (TLA+: outputBuffer)
     private var outputBuffer: [Int: [ExecutorTuple]] = [:]
@@ -185,13 +178,13 @@ public actor QueryExecutor {
     private var pipelineActive: [Int: Bool] = [:]
     
     // Dependencies
-    private let transactionManager: QueryExecutorTransactionManager
+    private let transactionManager: TransactionManager
     private let catalog: Catalog
     
     // Statistics
     private var stats: QueryExecutorStats = QueryExecutorStats()
     
-    public init(transactionManager: QueryExecutorTransactionManager, catalog: Catalog) {
+    public init(transactionManager: TransactionManager, catalog: Catalog) {
         self.transactionManager = transactionManager
         self.catalog = catalog
     }
@@ -201,7 +194,7 @@ public actor QueryExecutor {
     /// Initialize sequential scan
     /// TLA+ Action: InitSeqScan(opId, tableName)
     public func initSeqScan(opId: Int, tableName: String) {
-        scanState[opId] = QueryExecutorScanState(table: tableName, scanType: .sequential)
+        scanState[opId] = ScanState(table: tableName, scanType: .sequential)
         outputBuffer[opId] = []
         pipelineActive[opId] = true
     }
@@ -216,14 +209,14 @@ public actor QueryExecutor {
         // Fetch next tuple (simplified - would scan heap table)
         if let rid = state.currentRID {
             // Get next RID
-            state.currentRID = RID(pageID: rid.pageID, slotID: rid.slotID + 1)
+            state.currentRID = RID(pageId: rid.pageId, slotId: rid.slotId + 1)
         } else {
             // Start scan
-            state.currentRID = RID(pageID: 1, slotID: 0)
+            state.currentRID = RID(pageId: 1, slotId: 0)
         }
         
         // Check if exhausted
-        if state.currentRID!.pageID > 100 {  // Simplified
+        if state.currentRID!.pageId > 100 {  // Simplified
             state.exhausted = true
             scanState[opId] = state
             return nil
@@ -241,7 +234,7 @@ public actor QueryExecutor {
     /// Initialize index scan
     /// TLA+ Action: InitIndexScan(opId, tableName, indexName, searchKey)
     public func initIndexScan(opId: Int, tableName: String, indexName: String, searchKey: Value) {
-        var state = QueryExecutorScanState(table: tableName, scanType: .index)
+        var state = ScanState(table: tableName, scanType: .index)
         state.indexName = indexName
         state.predicate = "\(searchKey)"
         
@@ -255,7 +248,7 @@ public actor QueryExecutor {
     /// Initialize nested loop join
     /// TLA+ Action: InitNestedLoopJoin(opId, leftInput, rightInput)
     public func initNestedLoopJoin(opId: Int, leftInput: [ExecutorTuple], rightInput: [ExecutorTuple]) {
-        var state = QueryExecutorJoinState(joinType: .nestedLoop)
+        var state = JoinState(joinType: .nestedLoop)
         state.leftInput = leftInput
         state.rightInput = rightInput
         
@@ -308,7 +301,7 @@ public actor QueryExecutor {
     /// Initialize hash join
     /// TLA+ Action: InitHashJoin(opId, leftInput, rightInput, buildSide)
     public func initHashJoin(opId: Int, leftInput: [ExecutorTuple], rightInput: [ExecutorTuple]) {
-        var state = QueryExecutorJoinState(joinType: .hash)
+        var state = JoinState(joinType: .hash)
         state.leftInput = leftInput
         state.rightInput = rightInput
         
@@ -354,7 +347,7 @@ public actor QueryExecutor {
     /// Initialize aggregation operator
     /// TLA+ Action: InitAggregation(opId, groupBy, aggregates)
     public func initAggregation(opId: Int, groupBy: [Int], aggregates: [AggregateSpec]) {
-        var state = QueryExecutorAggregationState()
+        var state = AggregationState()
         state.groupBy = groupBy
         state.aggregates = aggregates
         
@@ -381,10 +374,8 @@ public actor QueryExecutor {
                 state.hashTable[groupKey] = aggValues
             } else {
                 // Initialize group
-                let aggregates = state.aggregates
-                let tupleValues = tuple.values
-                let initValues = aggregates.map { spec in
-                    initializeAggregate(value: tupleValues[spec.column], function: spec.function)
+                let initValues = state.aggregates.map { spec in
+                    initializeAggregate(value: tuple.values[spec.column], function: spec.function)
                 }
                 state.hashTable[groupKey] = initValues
             }
@@ -396,7 +387,7 @@ public actor QueryExecutor {
         // Materialize results
         var result: [ExecutorTuple] = []
         for (groupKey, aggValues) in state.hashTable {
-            let tuple = ExecutorTuple(values: groupKey + aggValues, rid: RID(pageID: 0, slotID: 0))
+            let tuple = ExecutorTuple(values: groupKey + aggValues, rid: RID(pageId: 0, slotId: 0))
             result.append(tuple)
         }
         
@@ -437,7 +428,7 @@ public actor QueryExecutor {
     /// Initialize sort operator
     /// TLA+ Action: InitSort(opId, sortKeys)
     public func initSort(opId: Int, sortKeys: [SortKey]) {
-        var state = QueryExecutorSortState()
+        var state = SortState()
         state.sortKeys = sortKeys
         
         sortState[opId] = state
@@ -453,9 +444,8 @@ public actor QueryExecutor {
         state.input = input
         
         // Sort tuples
-        let sortKeys = Array(state.sortKeys)
-        state.sorted = input.sorted { @Sendable t1, t2 in
-            for sortKey in sortKeys {
+        state.sorted = input.sorted { t1, t2 in
+            for sortKey in state.sortKeys {
                 let v1 = t1.values[sortKey.column]
                 let v2 = t2.values[sortKey.column]
                 
@@ -496,7 +486,7 @@ public actor QueryExecutor {
     
     // MARK: - Helper Methods
     
-    private nonisolated func compareValues(_ v1: Value, _ v2: Value) -> Int {
+    private func compareValues(_ v1: Value, _ v2: Value) -> Int {
         switch (v1, v2) {
         case (.int(let a), .int(let b)):
             return a < b ? -1 : (a > b ? 1 : 0)
@@ -536,50 +526,6 @@ public actor QueryExecutor {
     public func getOutputBuffer(opId: Int) -> [ExecutorTuple] {
         return outputBuffer[opId] ?? []
     }
-    
-    // MARK: - TLA+ Invariants Implementation
-    
-    /// Invariant: Output buffers bounded (TLA+: Inv_Executor_BoundedOutput)
-    public func checkBoundedOutputInvariant(maxTuples: Int) -> Bool {
-        return outputBuffer.values.allSatisfy { $0.count <= maxTuples }
-    }
-    
-    /// Invariant: Join indices within bounds (TLA+: Inv_Executor_JoinBounds)
-    public func checkJoinBoundsInvariant() -> Bool {
-        return joinState.values.allSatisfy { state in
-            state.leftIdx >= 0 && state.rightIdx >= 0 &&
-            state.leftIdx <= state.leftInput.count + 1 &&
-            state.rightIdx <= state.rightInput.count + 1
-        }
-    }
-    
-    /// Invariant: Exhausted operators don't produce output (TLA+: Inv_Executor_ExhaustedNoOutput)
-    public func checkExhaustedNoOutputInvariant() -> Bool {
-        let scanExhausted = scanState.values.allSatisfy { state in
-            !state.exhausted || !(pipelineActive[state.table.hashValue] ?? false)
-        }
-        let joinExhausted = joinState.values.allSatisfy { state in
-            !state.exhausted || !(pipelineActive[state.leftInput.hashValue] ?? false)
-        }
-        return scanExhausted && joinExhausted
-    }
-    
-    /// Invariant: All output tuples valid (TLA+: Inv_Executor_ValidTuples)
-    public func checkValidTuplesInvariant() -> Bool {
-        return outputBuffer.values.allSatisfy { tuples in
-            tuples.allSatisfy { tuple in
-                tuple.values.allSatisfy { $0.isValid } && tuple.rid.isValid
-            }
-        }
-    }
-    
-    /// Combined safety invariant (TLA+: Inv_Executor_Safety)
-    public func checkSafetyInvariant(maxTuples: Int = 1000) -> Bool {
-        return checkBoundedOutputInvariant(maxTuples: maxTuples) &&
-               checkJoinBoundsInvariant() &&
-               checkExhaustedNoOutputInvariant() &&
-               checkValidTuplesInvariant()
-    }
 }
 
 // MARK: - Statistics
@@ -590,23 +536,6 @@ public struct QueryExecutorStats: Codable {
     public var tuplesFiltered: Int = 0
     public var tuplesSorted: Int = 0
     public var tuplesAggregated: Int = 0
-}
-
-// MARK: - Value Extensions
-
-extension Value {
-    var isValid: Bool {
-        switch self {
-        case .int, .double, .bool, .string, .null, .decimal, .date, .bytes:
-            return true
-        }
-    }
-}
-
-extension RID {
-    var isValid: Bool {
-        return pageID > 0 && slotID >= 0
-    }
 }
 
 /*

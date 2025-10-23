@@ -42,12 +42,12 @@ public actor QueryOptimizer {
     
     /// Optimize a logical query plan
     /// TLA+ Action: Optimize(logicalPlan)
-    public func optimize(logical plan: LogicalPlan) async -> PlanNode {
+    public func optimize(logical plan: LogicalPlan) async -> QueryPlanNode {
         // Step 1: Generate candidate physical plans
         let candidates = await generateCandidates(logical: plan)
         
         // Step 2: Estimate cost for each candidate
-        var bestPlan: PlanNode?
+        var bestPlan: QueryPlanNode?
         var bestCost = Double.infinity
         
         for candidate in candidates {
@@ -58,23 +58,23 @@ public actor QueryOptimizer {
             }
         }
         
-        return bestPlan ?? PlanNode(planId: "default", queryId: plan.table, rootNode: "scan", nodes: [:], cost: 0, estimatedRows: 0, estimatedCost: 0)
+        return bestPlan ?? .scan(table: plan.table)
     }
     
     // MARK: - Plan Generation
     
     /// Generate candidate physical plans
-    private func generateCandidates(logical plan: LogicalPlan) async -> [PlanNode] {
-        var candidates: [PlanNode] = []
+    private func generateCandidates(logical plan: LogicalPlan) async -> [QueryPlanNode] {
+        var candidates: [QueryPlanNode] = []
         
         // Generate scan plans
-        candidates.append(PlanNode(planId: "scan_\(plan.table)", queryId: plan.table, rootNode: "scan", nodes: [:], cost: 0, estimatedRows: 0, estimatedCost: 0))
+        candidates.append(.scan(table: plan.table))
         
         // Generate index scan plans if applicable
         if let indexes = await catalog.getTable(plan.table)?.indexes {
             for index in indexes {
                 if let key = plan.filterKey {
-                    candidates.append(PlanNode(planId: "index_\(index.name)", queryId: plan.table, rootNode: "indexScan", nodes: [:], cost: 0, estimatedRows: 0, estimatedCost: 0))
+                    candidates.append(.indexScan(table: plan.table, index: index.name, key: key))
                 }
             }
         }
@@ -82,28 +82,28 @@ public actor QueryOptimizer {
         // Apply filters
         if let predicate = plan.predicate {
             candidates = candidates.map { candidate in
-                PlanNode(planId: "filter_\(candidate.planId)", queryId: candidate.queryId, rootNode: "filter", nodes: [:], cost: candidate.cost, estimatedRows: candidate.estimatedRows, estimatedCost: candidate.estimatedCost)
+                .filter(predicate: predicate, child: candidate)
             }
         }
         
         // Apply projections
         if let columns = plan.projection {
             candidates = candidates.map { candidate in
-                PlanNode(planId: "project_\(candidate.planId)", queryId: candidate.queryId, rootNode: "project", nodes: [:], cost: candidate.cost, estimatedRows: candidate.estimatedRows, estimatedCost: candidate.estimatedCost)
+                .project(columns: columns, child: candidate)
             }
         }
         
         // Apply sorts
         if let sortColumns = plan.sortColumns {
             candidates = candidates.map { candidate in
-                PlanNode(planId: "sort_\(candidate.planId)", queryId: candidate.queryId, rootNode: "sort", nodes: [:], cost: candidate.cost, estimatedRows: candidate.estimatedRows, estimatedCost: candidate.estimatedCost)
+                .sort(columns: sortColumns, child: candidate)
             }
         }
         
         // Apply limits
         if let limit = plan.limit {
             candidates = candidates.map { candidate in
-                PlanNode(planId: "limit_\(candidate.planId)", queryId: candidate.queryId, rootNode: "limit", nodes: [:], cost: candidate.cost, estimatedRows: min(candidate.estimatedRows, limit), estimatedCost: candidate.estimatedCost)
+                .limit(count: limit, child: candidate)
             }
         }
         
@@ -114,37 +114,38 @@ public actor QueryOptimizer {
     
     /// Estimate cost of a physical plan
     /// TLA+ Function: EstimateCost(plan)
-    private func estimateCost(plan: PlanNode) async -> Double {
-        switch plan.rootNode {
-        case "scan":
-            return await estimateScanCost(table: plan.queryId)
+    private func estimateCost(plan: QueryPlanNode) async -> Double {
+        switch plan {
+        case .scan(let table):
+            return await estimateScanCost(table: table)
             
-        case "indexScan":
-            return await estimateIndexScanCost(table: plan.queryId, index: "default")
+        case .indexScan(let table, let index, _):
+            return await estimateIndexScanCost(table: table, index: index)
             
-        case "filter":
+        case .filter(_, let child):
+            let childCost = await estimateCost(plan: child)
             let selectivity = 0.1  // Assume 10% selectivity
-            return plan.estimatedCost + (plan.estimatedCost * selectivity * Self.costPerTuple)
+            return childCost + (childCost * selectivity * Self.costPerTuple)
             
-        case "project":
-            return plan.estimatedCost + (plan.estimatedCost * Self.costPerCPU)
+        case .project(_, let child):
+            let childCost = await estimateCost(plan: child)
+            return childCost + (childCost * Self.costPerCPU)
             
-        case "join":
-            return await estimateJoinCost(left: plan, right: plan)
+        case .join(let left, let right, _):
+            return await estimateJoinCost(left: left, right: right)
             
-        case "aggregate":
-            return plan.estimatedCost + (plan.estimatedCost * 0.5)  // Hash aggregation overhead
+        case .aggregate(_, _, let child):
+            let childCost = await estimateCost(plan: child)
+            return childCost + (childCost * 0.5)  // Hash aggregation overhead
             
-        case "sort":
-            let cardinality = plan.estimatedRows
+        case .sort(_, let child):
+            let childCost = await estimateCost(plan: child)
+            let cardinality = await estimateCardinality(plan: child)
             let sortCost = Double(cardinality) * log2(Double(cardinality)) * Self.costPerCPU
-            return plan.estimatedCost + sortCost
+            return childCost + sortCost
             
-        case "limit":
-            return plan.estimatedCost * 0.1  // Assume early termination
-            
-        default:
-            return plan.estimatedCost
+        case .limit(_, let child):
+            return await estimateCost(plan: child) * 0.1  // Assume early termination
         }
     }
     
@@ -164,7 +165,7 @@ public actor QueryOptimizer {
     }
     
     /// Estimate join cost
-    private func estimateJoinCost(left: PlanNode, right: PlanNode) async -> Double {
+    private func estimateJoinCost(left: QueryPlanNode, right: QueryPlanNode) async -> Double {
         let leftCost = await estimateCost(plan: left)
         let rightCost = await estimateCost(plan: right)
         let leftCard = await estimateCardinality(plan: left)
@@ -181,34 +182,34 @@ public actor QueryOptimizer {
     }
     
     /// Estimate cardinality (row count)
-    private func estimateCardinality(plan: PlanNode) async -> Int {
-        switch plan.rootNode {
-        case "scan":
-            return await statistics.getRowCount(table: plan.queryId)
+    private func estimateCardinality(plan: QueryPlanNode) async -> Int {
+        switch plan {
+        case .scan(let table):
+            return await statistics.getRowCount(table: table)
             
-        case "indexScan":
-            return await statistics.getRowCount(table: plan.queryId) / 10  // Assume 10% selectivity
+        case .indexScan(let table, _, _):
+            return await statistics.getRowCount(table: table) / 10  // Assume 10% selectivity
             
-        case "filter":
-            return plan.estimatedRows / 10  // Assume 10% selectivity
+        case .filter(_, let child):
+            let childCard = await estimateCardinality(plan: child)
+            return childCard / 10  // Assume 10% selectivity
             
-        case "project":
-            return plan.estimatedRows
+        case .project(_, let child):
+            return await estimateCardinality(plan: child)
             
-        case "join":
-            return plan.estimatedRows  // Use estimated rows from plan
+        case .join(let left, let right, _):
+            let leftCard = await estimateCardinality(plan: left)
+            let rightCard = await estimateCardinality(plan: right)
+            return leftCard * rightCard / 10  // Assume 10% join selectivity
             
-        case "aggregate":
-            return plan.estimatedRows / 100  // Assume groups
+        case .aggregate(_, _, let child):
+            return await estimateCardinality(plan: child) / 100  // Assume groups
             
-        case "sort":
-            return plan.estimatedRows
+        case .sort(_, let child):
+            return await estimateCardinality(plan: child)
             
-        case "limit":
-            return plan.estimatedRows
-            
-        default:
-            return plan.estimatedRows
+        case .limit(let count, _):
+            return count
         }
     }
 }
@@ -241,9 +242,9 @@ public struct LogicalPlan {
     }
 }
 
-/// Query optimizer statistics manager interface
-public actor QueryOptimizerStatisticsManager {
-    private var tableStats: [String: QueryOptimizerTableStatistics] = [:]
+/// Statistics manager interface
+public actor StatisticsManager {
+    private var tableStats: [String: TableStatistics] = [:]
     
     public init() {}
     
@@ -263,13 +264,13 @@ public actor QueryOptimizerStatisticsManager {
         return 10  // Estimated result pages
     }
     
-    public func updateStatistics(table: String, stats: QueryOptimizerTableStatistics) {
+    public func updateStatistics(table: String, stats: TableStatistics) {
         tableStats[table] = stats
     }
 }
 
-/// Query optimizer table statistics
-public struct QueryOptimizerTableStatistics {
+/// Table statistics
+public struct TableStatistics {
     public let pageCount: Int
     public let rowCount: Int
     public let avgRowSize: Int
