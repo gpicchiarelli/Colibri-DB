@@ -271,7 +271,7 @@ public actor TypeSystem {
         }
         
         let key = "\(from.base.rawValue)->\(to.base.rawValue)"
-        return castRules[key] != nil && castRules[key] != .none
+        return castRules[key] != nil && castRules[key] != CastRule.none
     }
     
     /// Perform numeric type promotion (choose wider type)
@@ -418,18 +418,28 @@ public actor TypeSystem {
             let leftCheck = typeCheck(expr: left, context: context)
             let rightCheck = typeCheck(expr: right, context: context)
             
-            if !leftCheck.valid || !rightCheck.valid {
+            // Capture values to avoid concurrency issues
+            let leftValid = leftCheck.valid
+            let rightValid = rightCheck.valid
+            let leftType = leftCheck.type
+            let rightType = rightCheck.type
+            let leftErrors = leftCheck.errors
+            let rightErrors = rightCheck.errors
+            
+            if !leftValid || !rightValid {
                 return TypeCheckResult(valid: false, type: SQLType(base: .null),
-                                     errors: leftCheck.errors + rightCheck.errors)
+                                     errors: leftErrors + rightErrors)
             }
             
-            if !isAssignable(from: leftCheck.type, to: rightCheck.type) &&
-               !isAssignable(from: rightCheck.type, to: leftCheck.type) {
+            let leftAssignable = isAssignable(from: leftType, to: rightType)
+            let rightAssignable = isAssignable(from: rightType, to: leftType)
+            
+            if !leftAssignable && !rightAssignable {
                 return TypeCheckResult(valid: false, type: SQLType(base: .null),
                                      errors: ["Type mismatch in \(op)"])
             }
             
-            let resultType = binaryOpResultType(op: op, left: leftCheck.type, right: rightCheck.type)
+            let resultType = binaryOpResultType(op: op, left: leftType, right: rightType)
             return TypeCheckResult(valid: true, type: resultType)
             
         case .functionCall:

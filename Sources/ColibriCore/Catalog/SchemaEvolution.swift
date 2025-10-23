@@ -296,7 +296,8 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.schemaAlreadyExists(schemaName)
         }
         
-        let currentTime = await clock.getCurrentTimestamp()
+        let clockRef = clock
+        let currentTime = await clockRef.getCurrentTimestamp()
         let newVersion = SchemaVersion(
             version: 1,
             schemaName: schemaName,
@@ -336,7 +337,8 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.schemaNotFound(schemaName)
         }
         
-        let currentTime = await clock.getCurrentTimestamp()
+        let clockRef = clock
+        let currentTime = await clockRef.getCurrentTimestamp()
         let newVersionNumber = currentVersion.version + 1
         let isCompatible = checkCompatibility(fromVersion: currentVersion.version, toVersion: newVersionNumber)
         
@@ -379,7 +381,8 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.schemaNotFound(schemaName)
         }
         
-        let currentTime = await clock.getCurrentTimestamp()
+        let clockRef = clock
+        let currentTime = await clockRef.getCurrentTimestamp()
         
         schemas.removeValue(forKey: schemaName)
         schemaVersions.removeValue(forKey: schemaName)
@@ -412,7 +415,8 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.schemaAlreadyExists(newName)
         }
         
-        let currentTime = await clock.getCurrentTimestamp()
+        let clockRef = clock
+        let currentTime = await clockRef.getCurrentTimestamp()
         let renamedVersion = SchemaVersion(
             version: currentVersion.version,
             schemaName: newName,
@@ -452,7 +456,8 @@ public actor SchemaEvolutionManager {
     public func submitPendingChange(schemaName: String, changeType: PendingChange.ChangeType,
                                    ddlStatement: String, txId: TxID, estimatedDuration: Int,
                                    requiresDowntime: Bool = false) async throws {
-        let currentTime = await clock.getCurrentTimestamp()
+        let clockRef = clock
+        let currentTime = await clockRef.getCurrentTimestamp()
         
         let pendingChange = PendingChange(
             schemaName: schemaName,
@@ -503,7 +508,8 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.onlineChangeInProgress(schemaName)
         }
         
-        let currentTime = await clock.getCurrentTimestamp()
+        let clockRef = clock
+        let currentTime = await clockRef.getCurrentTimestamp()
         let onlineChange = OnlineChangeState(
             schemaName: schemaName,
             changeType: changeType,
@@ -545,7 +551,8 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.noOnlineChange(schemaName)
         }
         
-        let currentTime = await clock.getCurrentTimestamp()
+        let clockRef = clock
+        let currentTime = await clockRef.getCurrentTimestamp()
         let currentVersion = schemas[schemaName]!
         
         onlineChanges.removeValue(forKey: schemaName)

@@ -261,12 +261,16 @@ public actor RaftServer {
             voterTerm: log.last?.term ?? 0
         )
         
-        let grantVote = request.term >= currentTerm &&
-                       (votedFor == nil || votedFor == request.candidateId) &&
+        // Capture request values to avoid concurrency issues
+        let candidateId = request.candidateId
+        let requestTerm = request.term
+        
+        let grantVote = requestTerm >= currentTerm &&
+                       (votedFor == nil || votedFor == candidateId) &&
                        logUpToDate
         
         if grantVote {
-            votedFor = request.candidateId
+            votedFor = candidateId
             resetElectionTimer()
         }
         
@@ -325,6 +329,7 @@ public actor RaftServer {
             entriesToSend = []
         }
         
+        // Create request with captured values to avoid concurrency issues
         let request = AppendEntriesRequest(
             term: currentTerm,
             leaderId: serverId,
@@ -365,24 +370,29 @@ public actor RaftServer {
             state = .follower
         }
         
+        // Capture request values to avoid concurrency issues
+        let prevLogIndex = request.prevLogIndex
+        let prevLogTerm = request.prevLogTerm
+        let requestEntries = request.entries
+        
         // Check log consistency
-        let logOk = request.prevLogIndex == 0 ||
-                   (request.prevLogIndex <= UInt64(log.count) &&
-                    log[Int(request.prevLogIndex - 1)].term == request.prevLogTerm)
+        let logOk = prevLogIndex == 0 ||
+                   (prevLogIndex <= UInt64(log.count) &&
+                    log[Int(prevLogIndex - 1)].term == prevLogTerm)
         
         guard logOk else {
             return AppendEntriesResponse(term: currentTerm, success: false, matchIndex: 0, from: serverId)
         }
         
         // Append entries
-        if !request.entries.isEmpty {
+        if !requestEntries.isEmpty {
             // Truncate log if necessary
-            if request.prevLogIndex < UInt64(log.count) {
-                log = Array(log[..<Int(request.prevLogIndex)])
+            if prevLogIndex < UInt64(log.count) {
+                log = Array(log[..<Int(prevLogIndex)])
             }
             
             // Append new entries
-            log.append(contentsOf: request.entries)
+            log.append(contentsOf: requestEntries)
             
             stats.totalLogAppends += 1
         }

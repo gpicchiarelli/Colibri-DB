@@ -135,6 +135,7 @@ public actor DistributedTransactionManager {
         self.localTransactionManager = localTransactionManager
         self.twoPhaseCommitManager = twoPhaseCommitManager
         self.replicationManager = replicationManager
+        self.consensusManager = consensusManager
         self.clockManager = clockManager
         
         // TLA+ Init
@@ -269,7 +270,7 @@ public actor DistributedTransactionManager {
     /// Send prepare to nodes
     private func sendPrepareToNodes(txId: TxID) async throws {
         // TLA+: Send prepare to all nodes
-        for nodeId in aliveNodes {
+        for _ in aliveNodes {
             // try await twoPhaseCommitManager.sendPrepare(txId: txId, nodeId: nodeId)
         }
     }
@@ -277,7 +278,7 @@ public actor DistributedTransactionManager {
     /// Send commit to nodes
     private func sendCommitToNodes(txId: TxID) async throws {
         // TLA+: Send commit to all nodes
-        for nodeId in aliveNodes {
+        for _ in aliveNodes {
             // try await twoPhaseCommitManager.sendCommit(txId: txId, nodeId: nodeId)
         }
     }
@@ -285,7 +286,7 @@ public actor DistributedTransactionManager {
     /// Send abort to nodes
     private func sendAbortToNodes(txId: TxID) async throws {
         // TLA+: Send abort to all nodes
-        for nodeId in aliveNodes {
+        for _ in aliveNodes {
             // try await twoPhaseCommitManager.sendAbort(txId: txId, nodeId: nodeId)
         }
     }

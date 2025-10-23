@@ -321,7 +321,7 @@ public actor TransactionManager {
         guard let lockMode = LockMode(rawValue: mode) else {
             throw TransactionManagerError.invalidLockMode
         }
-        try await lockManager.requestLock(txId: txId, resource: resource, mode: lockMode)
+        try await lockManager?.requestLock(txId: txId, resource: resource, mode: lockMode)
         
         // TLA+: Add to transaction locks
         txLocks[txId]?.insert(resource)
@@ -338,7 +338,7 @@ public actor TransactionManager {
         }
         
         // TLA+: Release lock
-        try await lockManager.releaseLock(txId: txId, resource: resource)
+        try await lockManager?.releaseLock(txId: txId, resource: resource)
         
         // TLA+: Remove from transaction locks
         txLocks[txId]?.remove(resource)

@@ -405,7 +405,7 @@ public actor ColibrìDB {
         }
         
         // Get table definition
-        guard let tableDef = try await catalog.getTable(table) else {
+        guard let tableDef = await catalog.getTable(table) else {
             throw DBError.tableNotFound(table: table)
         }
         
@@ -481,7 +481,7 @@ public actor ColibrìDB {
         
         // Parse query (simplified)
         let logicalPlan = LogicalPlan(table: "table1") // Simplified - would parse SQL
-        let queryPlan = await queryOptimizer.optimize(logical: logicalPlan)
+        let _ = await queryOptimizer.optimize(logical: logicalPlan)
         
         // Execute query (simplified - would use actual executor)
         let result = QueryResult(rows: [], columns: [])
@@ -551,7 +551,7 @@ public actor ColibrìDB {
         }
         
         // Validate column types and constraints
-        for (index, column) in tableDef.columns.enumerated() {
+        for (_, column) in tableDef.columns.enumerated() {
             let value = row[column.name]
             
             // Check null constraint
@@ -568,7 +568,7 @@ public actor ColibrìDB {
     
     private func log(_ level: LogLevel, _ message: String, category: LogCategory = .database) {
         if level.priority >= config.logLevel.priority {
-            Task {
+            Task { [category] in
                 await colibriLogger.log(level, category: category, message)
             }
         }

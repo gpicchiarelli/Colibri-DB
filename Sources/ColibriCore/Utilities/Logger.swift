@@ -53,7 +53,7 @@ public enum LogLevel: String, CaseIterable, Codable, Sendable {
 // MARK: - Log Categories
 
 /// Log categories for different subsystems
-public enum LogCategory: String, CaseIterable {
+public enum LogCategory: String, CaseIterable, Codable, Sendable {
     case database = "Database"
     case transaction = "Transaction"
     case storage = "Storage"
@@ -79,21 +79,43 @@ public enum LogCategory: String, CaseIterable {
 
 // MARK: - Log Entry
 
-/// A structured log entry
-// LogEntry is defined in Consensus/RaftConsensusManager.swift
+/// Log entry structure for the logging system
+public struct LoggerEntry: Codable, Sendable, Equatable {
+    public let timestamp: Date
+    public let level: LogLevel
+    public let category: LogCategory
+    public let message: String
+    public let file: String
+    public let function: String
+    public let line: UInt
+    public let metadata: [String: String]?
+    
+    public init(level: LogLevel, category: LogCategory, message: String, 
+                file: String = #file, function: String = #function, line: UInt = #line,
+                metadata: [String: String]? = nil) {
+        self.timestamp = Date()
+        self.level = level
+        self.category = category
+        self.message = message
+        self.file = file
+        self.function = function
+        self.line = line
+        self.metadata = metadata
+    }
+}
 
 // MARK: - Log Formatter
 
 /// Formats log entries for different outputs
 public protocol LogFormatter {
-    func format(_ entry: LogEntry) -> String
+    func format(_ entry: LoggerEntry) -> String
 }
 
 /// JSON formatter for structured logging
 public struct JSONLogFormatter: LogFormatter {
     public init() {}
     
-    public func format(_ entry: LogEntry) -> String {
+    public func format(_ entry: LoggerEntry) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         
@@ -124,7 +146,7 @@ public struct JSONLogFormatter: LogFormatter {
 public struct HumanReadableLogFormatter: LogFormatter {
     public init() {}
     
-    public func format(_ entry: LogEntry) -> String {
+    public func format(_ entry: LoggerEntry) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
         
@@ -148,7 +170,7 @@ public struct HumanReadableLogFormatter: LogFormatter {
 
 /// Handles log entries (console, file, etc.)
 public protocol LogHandler {
-    func handle(_ entry: LogEntry)
+    func handle(_ entry: LoggerEntry)
 }
 
 /// Console log handler
@@ -159,14 +181,14 @@ public struct ConsoleLogHandler: LogHandler {
         self.formatter = formatter
     }
     
-    public func handle(_ entry: LogEntry) {
+    public func handle(_ entry: LoggerEntry) {
         let formattedMessage = formatter.format(entry)
         print(formattedMessage)
     }
 }
 
 /// File log handler
-public struct FileLogHandler: LogHandler {
+public class FileLogHandler: LogHandler {
     private let fileURL: URL
     private let formatter: LogFormatter
     private let fileHandle: FileHandle?
@@ -190,10 +212,10 @@ public struct FileLogHandler: LogHandler {
         self.fileHandle?.seekToEndOfFile()
     }
     
-    public func handle(_ entry: LogEntry) {
+    public func handle(_ entry: LoggerEntry) {
         let formattedMessage = formatter.format(entry) + "\n"
         
-        if let data = formattedMessage.data(using: .utf8) {
+        if let data = formattedMessage.data(using: String.Encoding.utf8) {
             fileHandle?.write(data)
         }
     }
@@ -213,7 +235,7 @@ public struct OSLogHandler: LogHandler {
         self.category = category
     }
     
-    public func handle(_ entry: LogEntry) {
+    public func handle(_ entry: LoggerEntry) {
         os_log("%{public}@", log: osLog, type: entry.level.osLogType, entry.message)
     }
 }
@@ -247,7 +269,7 @@ public actor Logger {
     ) {
         guard isEnabled && level.priority >= minLevel.priority else { return }
         
-        let entry = LogEntry(
+        let entry = LoggerEntry(
             level: level,
             category: category,
             message: message,
@@ -291,6 +313,7 @@ public actor Logger {
 // MARK: - Global Logger Instance
 
 /// Global logger instance for ColibrìDB
+@MainActor
 public var colibriLogger: Logger = Logger()
 
 // MARK: - Convenience Functions
