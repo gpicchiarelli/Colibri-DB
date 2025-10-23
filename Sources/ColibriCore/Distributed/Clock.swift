@@ -10,10 +10,15 @@
 
 import Foundation
 
+/// Clock protocol for timestamp generation
+public protocol Clock {
+    func getCurrentTimestamp() async -> Timestamp
+}
+
 /// Hybrid Logical Clock
 /// Combines physical time with logical counter for total ordering
 /// Based on: "Logical Physical Clocks" (Kulkarni & Demirbas, 2014)
-public actor HybridLogicalClock {
+public actor HybridLogicalClock: Clock {
     // MARK: - State
     
     /// Physical time component (milliseconds since epoch)
@@ -77,6 +82,11 @@ public actor HybridLogicalClock {
         physicalTime = maxPhysical
         
         return encodeTimestamp()
+    }
+    
+    /// Get current timestamp (implements Clock protocol)
+    public func getCurrentTimestamp() async -> Timestamp {
+        return tick()
     }
     
     // MARK: - Private Helpers

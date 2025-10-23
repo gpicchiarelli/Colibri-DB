@@ -82,7 +82,7 @@ public struct VacuumStats: Codable {
 // MARK: - Vacuum Phase (TLA+: vacuumPhase)
 
 /// Vacuum execution phase
-public enum VacuumPhase: String, Codable {
+public enum VacuumPhase: String, Codable, Sendable {
     case none = "none"
     case scan = "scan"
     case clean = "clean"
@@ -269,7 +269,7 @@ public actor VacuumManager {
     /// Scan heap and identify dead tuples (TLA+ Action: ScanHeap)
     public func scanHeap(table: String) async throws {
         guard vacuumPhase[table] == .scan else {
-            throw VacuumError.invalidPhase(table: table, expected: .scan, actual: vacuumPhase[table] ?? .none)
+            throw VacuumError.invalidPhase(table: table, expected: .scan, actual: vacuumPhase[table] ?? VacuumPhase.none)
         }
         
         let tuples = heapTuples[table] ?? []
@@ -284,7 +284,7 @@ public actor VacuumManager {
     /// Remove dead tuples from heap (TLA+ Action: CleanHeap)
     public func cleanHeap(table: String) async throws {
         guard vacuumPhase[table] == .clean else {
-            throw VacuumError.invalidPhase(table: table, expected: .clean, actual: vacuumPhase[table] ?? .none)
+            throw VacuumError.invalidPhase(table: table, expected: .clean, actual: vacuumPhase[table] ?? VacuumPhase.none)
         }
         
         let deadTids = deadTuples[table] ?? []
@@ -299,7 +299,7 @@ public actor VacuumManager {
     /// Clean up index pointers to removed tuples (TLA+ Action: CleanIndexes)
     public func cleanIndexes(table: String) async throws {
         guard vacuumPhase[table] == .index else {
-            throw VacuumError.invalidPhase(table: table, expected: .index, actual: vacuumPhase[table] ?? .none)
+            throw VacuumError.invalidPhase(table: table, expected: .index, actual: vacuumPhase[table] ?? VacuumPhase.none)
         }
         
         let deadTids = deadTuples[table] ?? []
@@ -318,7 +318,7 @@ public actor VacuumManager {
     /// Truncate empty pages at end of table (TLA+ Action: TruncateTable)
     public func truncateTable(table: String) async throws {
         guard vacuumPhase[table] == .truncate else {
-            throw VacuumError.invalidPhase(table: table, expected: .truncate, actual: vacuumPhase[table] ?? .none)
+            throw VacuumError.invalidPhase(table: table, expected: .truncate, actual: vacuumPhase[table] ?? VacuumPhase.none)
         }
         
         let tuples = heapTuples[table] ?? []
@@ -340,11 +340,11 @@ public actor VacuumManager {
     /// Finish VACUUM (TLA+ Action: FinishVacuum)
     public func finishVacuum(table: String, timestamp: Int) async throws {
         guard vacuumPhase[table] == .done else {
-            throw VacuumError.invalidPhase(table: table, expected: .done, actual: vacuumPhase[table] ?? .none)
+            throw VacuumError.invalidPhase(table: table, expected: .done, actual: vacuumPhase[table] ?? VacuumPhase.none)
         }
         
         vacuumInProgress[table] = false
-        vacuumPhase[table] = .none
+        vacuumPhase[table] = VacuumPhase.none
         lastVacuum[table] = timestamp
         deadTuples[table] = []
     }

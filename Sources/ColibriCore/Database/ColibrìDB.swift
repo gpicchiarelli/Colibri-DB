@@ -143,18 +143,22 @@ public actor ColibrìDB {
             walFilePath: config.dataDirectory.appendingPathComponent("wal.log")
         )
         
+        // Create a separate disk manager for buffer pool
+        let diskManager = try FileDiskManager(
+            filePath: config.dataDirectory.appendingPathComponent("data.db")
+        )
+        
         self.bufferPool = BufferPool(
             poolSize: config.bufferPoolSize,
-            diskManager: wal
+            diskManager: diskManager
         )
         
         // Initialize transaction layer
         self.mvccManager = MVCCManager()
-        self.lockManager = LockManager(transactionManager: nil) // Will be set after transactionManager is created
         self.transactionManager = TransactionManager(
             walManager: wal as! TransactionWALManager,
             mvccManager: mvccManager as! TransactionMVCCManager,
-            lockManager: lockManager
+            lockManager: nil
         )
         self.lockManager = LockManager(transactionManager: transactionManager)
         
@@ -172,7 +176,7 @@ public actor ColibrìDB {
         
         self.queryOptimizer = QueryOptimizer(
             catalog: catalog,
-            statistics: StatisticsMaintenanceManager()
+            statistics: StatisticsManagerActor()
         )
         
         // Initialize statistics
@@ -182,7 +186,7 @@ public actor ColibrìDB {
         self.schemaEvolution = SchemaEvolutionManager(
             transactionManager: transactionManager,
             catalog: catalog,
-            clock: Clock(nodeID: 1)
+            clock: HybridLogicalClock(nodeID: 1)
         )
         
         // Initialize wire protocol

@@ -32,7 +32,7 @@ import Foundation
 // MARK: - Error Types (TLA+: ErrorTypes)
 
 /// Error classification types
-public enum ErrorType: String, Codable {
+public enum ErrorType: String, Codable, Sendable {
     case transient = "TRANSIENT"     // Temporary error (retry may succeed)
     case permanent = "PERMANENT"     // Persistent error (requires intervention)
     case intermittent = "INTERMITTENT" // Sporadic error

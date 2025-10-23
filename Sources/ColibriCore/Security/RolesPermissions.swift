@@ -38,7 +38,7 @@ import Foundation
 // MARK: - Permission Types (TLA+: PermissionType)
 
 /// Permission structure: (object, operation)
-public struct Permission: Codable, Equatable, Hashable {
+public struct Permission: Codable, Equatable, Hashable, Sendable {
     public let object: String      // TLA+: object
     public let operation: String    // TLA+: operation
     
@@ -69,7 +69,7 @@ public struct SessionContext: Codable {
 // MARK: - Constraint Types (TLA+: ConstraintType, Constraint)
 
 /// Constraint types for RBAC
-public enum RBACConstraintType: String, Codable {
+public enum RBACConstraintType: String, Codable, Sendable {
     case staticSoD = "STATIC_SoD"      // Statically Mutually Exclusive Roles
     case dynamicSoD = "DYNAMIC_SoD"     // Dynamically Mutually Exclusive Roles
     case prerequisite = "PREREQUISITE" // Role requires another role
@@ -77,7 +77,7 @@ public enum RBACConstraintType: String, Codable {
 }
 
 /// RBAC constraint
-public struct RBACConstraint: Codable, Equatable, Hashable {
+public struct RBACConstraint: Codable, Equatable, Hashable, Sendable {
     public let type: RBACConstraintType     // TLA+: type
     public let roles: Set<String>       // TLA+: roles
     public let limit: Int               // TLA+: limit
@@ -322,7 +322,7 @@ public actor RBACManager {
             return 0
         }
         
-        return 1 + seniorRoles.map { roleDepth($0) }.max() ?? 0
+        return 1 + (seniorRoles.map { roleDepth($0) }.max() ?? 0)
     }
     
     // MARK: - Constraint Checking (TLA+: Constraint Functions)

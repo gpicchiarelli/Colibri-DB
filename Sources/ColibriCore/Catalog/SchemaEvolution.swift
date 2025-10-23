@@ -60,7 +60,7 @@ public struct PendingChange: Codable {
     public let schemaName: String
     public let changeType: ChangeType
     public let ddlStatement: String
-    public let submittedBy: TxId
+    public let submittedBy: TxID
     public let submittedAt: Timestamp
     public let estimatedDuration: Int
     public let requiresDowntime: Bool
@@ -73,7 +73,7 @@ public struct PendingChange: Codable {
     }
     
     public init(schemaName: String, changeType: ChangeType, ddlStatement: String,
-                submittedBy: TxId, submittedAt: Timestamp, estimatedDuration: Int,
+                submittedBy: TxID, submittedAt: Timestamp, estimatedDuration: Int,
                 requiresDowntime: Bool = false) {
         self.schemaName = schemaName
         self.changeType = changeType
@@ -95,7 +95,7 @@ public struct SchemaChange: Codable {
     public let fromVersion: Int
     public let toVersion: Int
     public let ddlStatement: String
-    public let executedBy: TxId
+    public let executedBy: TxID
     public let executedAt: Timestamp
     public let duration: Int
     public let success: Bool
@@ -103,7 +103,7 @@ public struct SchemaChange: Codable {
     
     public init(changeId: Int, schemaName: String, changeType: PendingChange.ChangeType,
                 fromVersion: Int, toVersion: Int, ddlStatement: String,
-                executedBy: TxId, executedAt: Timestamp, duration: Int,
+                executedBy: TxID, executedAt: Timestamp, duration: Int,
                 success: Bool, rollbackScript: String) {
         self.changeId = changeId
         self.schemaName = schemaName
@@ -205,7 +205,7 @@ public struct OnlineChangeState: Codable {
     public let progress: Int  // 0-100
     public let startTime: Timestamp
     public let estimatedCompletion: Timestamp
-    public let blockingOperations: [TxId]
+    public let blockingOperations: [TxID]
     
     public enum OnlineChangeType: String, Codable {
         case addColumn = "add_column"
@@ -224,7 +224,7 @@ public struct OnlineChangeState: Codable {
     
     public init(schemaName: String, changeType: OnlineChangeType, phase: Phase,
                 progress: Int, startTime: Timestamp, estimatedCompletion: Timestamp,
-                blockingOperations: [TxId] = []) {
+                blockingOperations: [TxID] = []) {
         self.schemaName = schemaName
         self.changeType = changeType
         self.phase = phase
@@ -270,14 +270,14 @@ public actor SchemaEvolutionManager {
     // Dependencies
     private let transactionManager: TransactionManager
     private let catalog: Catalog
-    private let clock: Clock
+    private let clock: any Clock
     
     // Configuration
     private let maxSchemaVersions: Int
     private let maxColumnChanges: Int
     private let schemaChangeTimeout: Int
     
-    public init(transactionManager: TransactionManager, catalog: Catalog, clock: Clock,
+    public init(transactionManager: TransactionManager, catalog: Catalog, clock: any Clock,
                 maxSchemaVersions: Int = 10, maxColumnChanges: Int = 5, schemaChangeTimeout: Int = 300) {
         self.transactionManager = transactionManager
         self.catalog = catalog
@@ -403,7 +403,7 @@ public actor SchemaEvolutionManager {
     
     /// Rename schema
     /// TLA+ Action: RenameSchema(oldName, newName, txId)
-    public func renameSchema(oldName: String, newName: String, txId: TxId) async throws {
+    public func renameSchema(oldName: String, newName: String, txId: TxID) async throws {
         guard let currentVersion = schemas[oldName] else {
             throw SchemaEvolutionError.schemaNotFound(oldName)
         }
@@ -450,7 +450,7 @@ public actor SchemaEvolutionManager {
     /// Submit pending schema change
     /// TLA+ Action: SubmitPendingChange(schemaName, changeType, ddlStatement, txId, estimatedDuration, requiresDowntime)
     public func submitPendingChange(schemaName: String, changeType: PendingChange.ChangeType,
-                                   ddlStatement: String, txId: TxId, estimatedDuration: Int,
+                                   ddlStatement: String, txId: TxID, estimatedDuration: Int,
                                    requiresDowntime: Bool = false) async throws {
         let currentTime = await clock.getCurrentTimestamp()
         
@@ -469,7 +469,7 @@ public actor SchemaEvolutionManager {
     
     /// Execute pending schema change
     /// TLA+ Action: ExecutePendingChange(schemaName, txId)
-    public func executePendingChange(schemaName: String, txId: TxId) async throws {
+    public func executePendingChange(schemaName: String, txId: TxID) async throws {
         guard let pendingChange = pendingChanges[schemaName] else {
             throw SchemaEvolutionError.noPendingChange(schemaName)
         }
@@ -494,7 +494,7 @@ public actor SchemaEvolutionManager {
     
     /// Start online schema change
     /// TLA+ Action: StartOnlineChange(schemaName, changeType, txId)
-    public func startOnlineChange(schemaName: String, changeType: OnlineChangeState.OnlineChangeType, txId: TxId) async throws {
+    public func startOnlineChange(schemaName: String, changeType: OnlineChangeState.OnlineChangeType, txId: TxID) async throws {
         guard schemas.keys.contains(schemaName) else {
             throw SchemaEvolutionError.schemaNotFound(schemaName)
         }
