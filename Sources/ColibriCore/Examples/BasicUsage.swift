@@ -93,7 +93,7 @@ public enum BasicUsageExamples {
         let txID = try await db.beginTransaction()
         
         // Read the row
-        let row = try await db.select(table: "users", rid: rid, txId: txID)
+        // let row = try await db.select(table: "users", rid: rid, txId: txID)
         logInfo("Read row: \(row)", category: .database)
         
         // Create example row for update
@@ -165,7 +165,7 @@ public enum BasicUsageExamples {
         )
         
         // Execute query
-        let results = try await db.executeQuery(query: "SELECT * FROM users WHERE id > 0", txId: txID)
+        let results = try await db.executeQuery("SELECT * FROM users WHERE id > 0", txId: txID)
         logInfo("Query returned \(results.count) rows", category: .query)
         
         for row in results {
