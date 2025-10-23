@@ -351,7 +351,7 @@ public actor AuthenticatedServer {
     
     /// Timeout idle sessions
     public func timeoutSessions() {
-        let now = Date()
+        let _ = Date()
         
         for (sessionId, session) in activeSessions {
             if session.isExpired(timeout: config.sessionTimeout) {

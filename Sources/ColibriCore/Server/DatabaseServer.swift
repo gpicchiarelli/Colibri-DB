@@ -129,7 +129,7 @@ public actor DatabaseServer {
     
     /// Get server statistics
     public func getStatistics() async -> ServerStatistics {
-        let dbStats = await database.getStatistics()
+        let _ = await database.getStatistics()
         
         return ServerStatistics(
             isRunning: isRunning,

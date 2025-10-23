@@ -115,7 +115,7 @@ public actor ShardingManager {
         let shardId = try await determineShardForKey(key: key)
         
         // TLA+: Get shard mapping
-        guard let mapping = shardMapping[shardId] else {
+        guard shardMapping[shardId] != nil else {
             throw ShardingError.shardNotFound
         }
         
@@ -132,7 +132,7 @@ public actor ShardingManager {
         let shardId = try await determineShardForKey(key: key)
         
         // TLA+: Get shard mapping
-        guard let mapping = shardMapping[shardId] else {
+        guard shardMapping[shardId] != nil else {
             throw ShardingError.shardNotFound
         }
         
@@ -150,7 +150,7 @@ public actor ShardingManager {
         let shardId = try await determineShardForKey(key: key)
         
         // TLA+: Get shard mapping
-        guard let mapping = shardMapping[shardId] else {
+        guard shardMapping[shardId] != nil else {
             throw ShardingError.shardNotFound
         }
         

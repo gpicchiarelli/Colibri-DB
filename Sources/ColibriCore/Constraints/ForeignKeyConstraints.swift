@@ -245,7 +245,7 @@ public actor ForeignKeyManager {
             throw FKError.transactionNotActive
         }
         
-        guard var oldRow = getRow(table: table, rowId: rowId) else {
+        guard let oldRow = getRow(table: table, rowId: rowId) else {
             throw FKError.rowNotFound(table: table, rowId: rowId)
         }
         

@@ -201,7 +201,7 @@ public actor BTreeIndexManager {
     /// Check if node is full
     /// TLA+ Function: IsFull(node)
     private func isNodeFull(nodeId: PageID) -> Bool {
-        guard let node = nodes[nodeId] else {
+        guard var node = nodes[nodeId] else {
             return false
         }
         
@@ -212,7 +212,7 @@ public actor BTreeIndexManager {
     /// Check if node is minimum
     /// TLA+ Function: IsMinimum(node)
     private func isNodeMinimum(nodeId: PageID) -> Bool {
-        guard let node = nodes[nodeId] else {
+        guard var node = nodes[nodeId] else {
             return false
         }
         
@@ -335,7 +335,7 @@ public actor BTreeIndexManager {
     /// Search node
     /// TLA+ Action: SearchNode(node, key)
     private func searchNode(nodeId: PageID, key: Key) async throws -> RID? {
-        guard let node = nodes[nodeId] else {
+        guard var node = nodes[nodeId] else {
             return nil
         }
         
@@ -409,7 +409,7 @@ public actor BTreeIndexManager {
         }
         
         let childId = node.children[childIndex]
-        guard let childNode = nodes[childId] else {
+        guard nodes[childId] != nil else {
             throw BTreeIndexManagerError.nodeNotFound
         }
         
@@ -617,7 +617,7 @@ public actor BTreeIndexManager {
     /// Find leaf node
     /// TLA+ Function: FindLeafNode(node, key)
     private func findLeafNode(nodeId: PageID, key: Key) async throws -> PageID {
-        guard let node = nodes[nodeId] else {
+        guard var node = nodes[nodeId] else {
             return 0
         }
         

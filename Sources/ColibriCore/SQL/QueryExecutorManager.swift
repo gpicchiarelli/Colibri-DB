@@ -250,7 +250,7 @@ public actor SQLQueryExecutorManager {
     /// Execute aggregation operator
     /// TLA+ Function: ExecuteAggregationOperator(operatorId)
     private func executeAggregationOperator(operatorId: String, function: String) async throws {
-        guard var aggState = aggStates[operatorId] else {
+        guard let aggState = aggStates[operatorId] else {
             throw SQLQueryExecutorManagerError.operatorNotFound
         }
         
@@ -309,7 +309,7 @@ public actor SQLQueryExecutorManager {
     /// Execute sort operator
     /// TLA+ Function: ExecuteSortOperator(operatorId)
     private func executeSortOperator(operatorId: String, order: String) async throws {
-        guard var sortState = sortStates[operatorId] else {
+        guard let sortState = sortStates[operatorId] else {
             throw SQLQueryExecutorManagerError.operatorNotFound
         }
         

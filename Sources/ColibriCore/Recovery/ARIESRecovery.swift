@@ -257,9 +257,9 @@ public actor ARIESRecovery {
             switch record.kind {
             case .heapInsert, .heapUpdate, .heapDelete:
                 // Check if page is in DPT
-                if let recLSN = dpt[record.pageID] {
+                if dpt[record.pageID] != nil {
                     // Get page
-                    var page = try await bufferPool.getPage(record.pageID)
+                    let page = try await bufferPool.getPage(record.pageID)
                     
                     // Check if redo is needed (idempotence)
                     // TLA+: IF pageLSN[pid] < lsn THEN redo operation
@@ -372,7 +372,7 @@ public actor ARIESRecovery {
         print("Undo operation: LSN=\(record.lsn), type=\(record.kind)")
         
         // Get page and reverse the operation
-        var page = try await bufferPool.getPage(record.pageID)
+        let page = try await bufferPool.getPage(record.pageID)
         
         // Reverse the operation (simplified)
         // In real implementation, would deserialize undo information
@@ -447,7 +447,7 @@ public actor ARIESRecovery {
         }
         
         // DPT contains only dirty pages
-        for (pageID, recLSN) in dpt {
+        for (_, recLSN) in dpt {
             if recLSN == 0 {
                 return false
             }

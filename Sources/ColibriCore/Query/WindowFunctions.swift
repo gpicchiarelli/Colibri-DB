@@ -290,9 +290,9 @@ public actor WindowFunctionsProcessor {
     }
     
     private func sortPartition(_ partition: [WindowRow], orderBy: [OrderSpec]) -> [WindowRow] {
-        let orderSpecs = Array(orderBy) // Create a copy to avoid data race
+        let orderSpecsCopy = Array(orderBy) // Create a copy to avoid data race
         return partition.sorted { r1, r2 in
-            for spec in orderSpecs {
+            for spec in orderSpecsCopy {
                 let v1 = r1.values[spec.column] ?? Value.null
                 let v2 = r2.values[spec.column] ?? Value.null
                 
@@ -430,10 +430,10 @@ public actor WindowFunctionsProcessor {
             frame = frame.filter { $0.rowNum != partition[rowIdx].rowNum }
         case .group, .ties:
             // Exclude peers (simplified - exclude rows with same order key values)
-            let currentRow = partition[rowIdx]
+            let currentRowCopy = partition[rowIdx]
             let orderColumns = Array(spec.orderBy.map { $0.column }) // Create a copy to avoid data race
             frame = frame.filter { row in
-                !areRowsEqual(row, currentRow, columns: orderColumns)
+                !areRowsEqual(row, currentRowCopy, columns: orderColumns)
             }
         }
         
@@ -508,10 +508,10 @@ public actor WindowFunctionsProcessor {
     private func computeRank(partition: [WindowRow], rowIdx: Int) -> Value {
         // RANK considers ties - same values get same rank
         var rank = 1
-        let currentRow = partition[rowIdx]
+        let _ = partition[rowIdx]
         
         for i in 0..<rowIdx {
-            if !areRowsEqual(partition[i], currentRow, columns: []) {
+            if !areRowsEqual(partition[i], partition[rowIdx], columns: []) {
                 rank = i + 2
             }
         }
@@ -522,7 +522,7 @@ public actor WindowFunctionsProcessor {
     private func computeDenseRank(partition: [WindowRow], rowIdx: Int) -> Value {
         // Dense rank has no gaps after ties
         var distinctCount = 1
-        let currentRow = partition[rowIdx]
+        let _ = partition[rowIdx]
         
         for i in 1...rowIdx {
             if !areRowsEqual(partition[i-1], partition[i], columns: []) {

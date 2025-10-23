@@ -231,7 +231,7 @@ public actor VacuumManager {
         
         // Mark recently_dead tuples as dead if now invisible to all
         for table in heapTuples.keys {
-            var tuples = heapTuples[table] ?? []
+            let tuples = heapTuples[table] ?? []
             var updatedTuples: Set<VacuumTuple> = []
             
             for tuple in tuples {
@@ -325,7 +325,7 @@ public actor VacuumManager {
         let usedPages = Set(tuples.map { $0.tid.pageID })
         
         // Find empty pages
-        let allPages = Set(freespace[table]?.keys ?? [PageID]())
+        let allPages = Set<PageID>(freespace[table]?.keys ?? [PageID]())
         let emptyPages = allPages.subtracting(usedPages)
         
         // Update free space for empty pages
@@ -370,11 +370,11 @@ public actor VacuumManager {
             
         case .auto:
             if shouldAutovacuum(table: table) {
-                try await vacuum(table: table, mode: .lazy)
+                let _ = try await vacuum(table: table, mode: .lazy)
             }
         }
         
-        let duration = Date().timeIntervalSince(startTime)
+        let _ = Date().timeIntervalSince(startTime)
         let stats = vacuumStats[table] ?? VacuumStats()
         
         return stats

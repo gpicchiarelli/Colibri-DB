@@ -275,7 +275,7 @@ public actor Logger {
             message: message,
             file: file,
             function: function,
-            line: line,
+            line: UInt(line),
             metadata: metadata
         )
         

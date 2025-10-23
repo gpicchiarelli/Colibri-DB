@@ -246,7 +246,7 @@ public actor PointInTimeRecoveryManager {
         pageState[pageId] = page
         
         // Track in undo log
-        undoLog[txnId, default: []].append(UndoRecord(lsn: record.lsn, txId: TxID(txnId), pageId: PageID(pageId), data: Data(), timestamp: UInt64(Date().timeIntervalSince1970)))
+        undoLog[txnId, default: []].append(UndoRecord(lsn: record.lsn, txId: UInt64(txnId), pageId: PageID(pageId), data: Data(), timestamp: UInt64(Date().timeIntervalSince1970)))
         
         stats.totalUpdates += 1
     }
@@ -457,15 +457,16 @@ public actor PointInTimeRecoveryManager {
         for txnId in activeTxns {
             if let undoRecords = undoLog[txnId] {
                 for undoRec in undoRecords.reversed() {
-                    if let pageId = undoRec.pageId {
-                        var page = pageState[pageId, default: PageState()]
-                        page.data = undoRec.undoInfo
-                        pageState[pageId] = page
+                    let pageId = undoRec.pageId
+                    if pageId != 0 {
+                        var page = pageState[Int(pageId), default: PageState()]
+                        page.data = String(data: undoRec.data, encoding: .utf8) ?? ""
+                        pageState[Int(pageId)] = page
                         
                         // Write CLR (Compensation Log Record)
                         let clr = LogRecord(lsn: lastLSN + 1, type: .compensation,
-                                          txnId: txnId, pageId: pageId,
-                                          redoInfo: undoRec.undoInfo,
+                                          txnId: txnId, pageId: Int(pageId),
+                                          redoInfo: String(data: undoRec.data, encoding: .utf8) ?? "",
                                           timestamp: currentTime)
                         appendWAL(record: clr)
                     }
@@ -487,23 +488,23 @@ public actor PointInTimeRecoveryManager {
             throw PITRError.activeTransactionsRemaining
         }
         
-        systemState = .consistent
+        systemState = .completed
     }
     
     /// Resume normal operation
     public func resumeNormalOperation() throws {
-        guard systemState == .consistent else {
+        guard systemState == .completed else {
             throw PITRError.systemNotConsistent
         }
         
-        systemState = .normal
+        systemState = .running
     }
     
     // MARK: - Helper Methods
     
     private func appendWAL(record: LogRecord) {
         lastLSN += 1
-        var updatedRecord = record
+        let updatedRecord = record
         wal.append(updatedRecord)
     }
     

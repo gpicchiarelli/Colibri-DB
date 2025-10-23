@@ -586,7 +586,7 @@ public actor RBACManager {
             throw RBACError.sessionExists(sessionId)
         }
         
-        sessions[sessionId] = Session(user: user, context: context)
+        sessions[sessionId] = RBACSession(user: user, activeRoles: Set(), context: context)
         
         let event = AuditEvent(
             event: "SESSION_CREATED",
@@ -633,8 +633,8 @@ public actor RBACManager {
         let event = AuditEvent(
             event: "ROLE_ACTIVATED",
             user: user,
-            sessionId: sessionId,
             role: role,
+            sessionId: sessionId,
             time: currentTime
         )
         auditLog.append(event)
@@ -660,8 +660,8 @@ public actor RBACManager {
         let event = AuditEvent(
             event: "ROLE_DEACTIVATED",
             user: user,
-            sessionId: sessionId,
             role: role,
+            sessionId: sessionId,
             time: currentTime
         )
         auditLog.append(event)
