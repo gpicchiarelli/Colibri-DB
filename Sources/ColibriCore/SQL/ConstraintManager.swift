@@ -89,14 +89,14 @@ public actor ConstraintManager {
     // MARK: - Dependencies
     
     /// Storage manager
-    private let storageManager: StorageManager
+    private let storageManager: StorageManagerActor
     
     /// Index manager
-    private let indexManager: IndexManager
+    private let indexManager: IndexManagerActor
     
     // MARK: - Initialization
     
-    public init(storageManager: StorageManager, indexManager: IndexManager) {
+    public init(storageManager: StorageManagerActor, indexManager: IndexManagerActor) {
         self.storageManager = storageManager
         self.indexManager = indexManager
         

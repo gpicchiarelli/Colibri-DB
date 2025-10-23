@@ -34,7 +34,7 @@ import Foundation
 // MARK: - Table Statistics
 
 /// Statistics for a table (TLA+: TableStatistics)
-public struct TableStatistics: Codable {
+public struct TableStatisticsMaintenance: Codable {
     public var rowCount: Int64          // TLA+: rowCount
     public var pageCount: Int64         // TLA+: pageCount
     public var tupleSize: Int           // TLA+: tupleSize (avg row size)
@@ -70,8 +70,8 @@ public struct ColumnStatistics: Codable {
     // Aliases for compatibility
     public var distinctCount: Int64 { distinctValues }
     public var nullCount: Int { nullFraction }
-    public var minValue: String? { histogram?.buckets.first?.lowerBound }
-    public var maxValue: String? { histogram?.buckets.last?.upperBound }
+    public var minValue: String? { histogram?.buckets.first?.minValue }
+    public var maxValue: String? { histogram?.buckets.last?.maxValue }
     public var avgSize: Int { avgWidth }
     
     public init(columnName: String, distinctCount: Int = 0, nullCount: Int = 0,
@@ -97,7 +97,7 @@ public struct ColumnStatistics: Codable {
 // MARK: - Index Statistics
 
 /// Statistics for an index (TLA+: IndexStatistics)
-public struct IndexStatistics: Codable {
+public struct IndexStatisticsMaintenance: Codable {
     public var distinctKeys: Int64      // TLA+: distinctKeys
     public var height: Int              // TLA+: height
     public var pages: Int64             // TLA+: pages (leaf pages)
@@ -198,13 +198,13 @@ public actor StatisticsMaintenanceManager {
     // TLA+ VARIABLES
     
     /// Table statistics (TLA+: tableStats)
-    private var tableStatistics: [String: TableStatistics] = [:]
+    private var tableStatistics: [String: TableStatisticsMaintenance] = [:]
     
     /// Column statistics (TLA+: columnStats)
     private var columnStatistics: [String: [String: ColumnStatistics]] = [:]
     
     /// Index statistics (TLA+: indexStats)
-    private var indexStats: [String: IndexStatistics] = [:]
+    private var indexStats: [String: IndexStatisticsMaintenance] = [:]
     
     /// HyperLogLog sketches (TLA+: hllSketches)
     private var hllSketches: [String: [String: HyperLogLogSketch]] = [:]
@@ -265,7 +265,7 @@ public actor StatisticsMaintenanceManager {
             sum + estimateSize(value)
         }
         
-        var stats = tableStatistics[table] ?? TableStatistics()
+        var stats = tableStatistics[table] ?? TableStatisticsMaintenance()
         stats.rowCount = rowCount
         stats.pageCount = pageCount
         stats.tupleSize = avgSize
@@ -277,7 +277,7 @@ public actor StatisticsMaintenanceManager {
         if let firstRow = rows.first {
             var colStats: [String: ColumnStatistics] = [:]
             
-            for (columnName, _) in firstRow.values {
+            for columnName in firstRow.keys {
                 let columnStats = try? await analyzeColumn(table: table, column: columnName, rows: sampled)
                 if let cs = columnStats {
                     colStats[columnName] = cs
@@ -296,7 +296,7 @@ public actor StatisticsMaintenanceManager {
     /// Analyze specific column
     /// TLA+ Action: ComputeColumnStats(table, column)
     private func analyzeColumn(table: String, column: String, rows: [Row]) async throws -> ColumnStatistics {
-        let values = rows.compactMap { $0.values[column] }
+        let values = rows.compactMap { $0[column] }
         let totalCount = rows.count
         let nullCount = totalCount - values.count
         let nullFraction = totalCount > 0 ? (nullCount * 100) / totalCount : 0
@@ -521,7 +521,7 @@ public actor StatisticsMaintenanceManager {
     
     // MARK: - Query Methods
     
-    public func getTableStatistics(_ table: String) -> TableStatistics? {
+    public func getTableStatistics(_ table: String) -> TableStatisticsMaintenance? {
         return tableStatistics[table]
     }
     
@@ -529,7 +529,7 @@ public actor StatisticsMaintenanceManager {
         return columnStatistics[table]?[column]
     }
     
-    public func getIndexStats(indexName: String) -> IndexStatistics? {
+    public func getIndexStats(indexName: String) -> IndexStatisticsMaintenance? {
         return indexStats[indexName]
     }
     
@@ -574,8 +574,7 @@ public actor StatisticsMaintenanceManager {
                 return histogram.bucketCount >= 0 && 
                        histogram.bucketCount <= maxHistogramBuckets &&
                        histogram.buckets.count == histogram.bucketCount &&
-                       histogram.totalRows >= 0 && histogram.nullRows >= 0 &&
-                       histogram.distinctValues >= 0
+                        histogram.buckets.count >= 0
             }
         }
     }

@@ -110,10 +110,11 @@ public actor IndexSubsystem {
         }
         
         let definition = IndexDefinition(
-            name: indexName,
+            indexName: indexName,
+            indexType: indexType,
+            tableName: tableName,
             columns: columns,
-            unique: unique,
-            type: indexType
+            unique: unique
         )
         
         indexRegistry[indexName] = definition
@@ -126,7 +127,7 @@ public actor IndexSubsystem {
             btreeIndexes[indexName] = "btree_placeholder"
         case .hash:
             hashIndexes[indexName] = "hash_placeholder"
-        case .art:
+        case .adaptiveRadixTree:
             artIndexes[indexName] = "art_placeholder"
         case .lsm:
             lsmIndexes[indexName] = "lsm_placeholder"

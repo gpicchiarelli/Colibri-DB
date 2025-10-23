@@ -88,7 +88,7 @@ public struct IndexMetrics: Codable, Sendable, Equatable {
 
 /// Index Manager for database indexing system
 /// Corresponds to TLA+ module: Index.tla
-public actor IndexManager {
+public actor IndexManagerActor {
     
     // MARK: - State Variables (TLA+ vars)
     

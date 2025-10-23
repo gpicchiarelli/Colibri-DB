@@ -34,7 +34,7 @@ public enum ShardStrategy: String, Codable, Sendable, CaseIterable {
 
 /// Shard mapping
 /// Corresponds to TLA+: ShardMapping
-public struct ShardMapping: Codable, Sendable, Equatable {
+public struct ShardMapping: Sendable {
     public let shardId: ShardID
     public let nodeId: String
     public let keyRange: (Value, Value)?
@@ -52,7 +52,7 @@ public struct ShardMapping: Codable, Sendable, Equatable {
 
 /// Shard data
 /// Corresponds to TLA+: ShardData
-public struct ShardData: Codable, Sendable, Equatable {
+public struct ShardData: Sendable {
     public let shardId: ShardID
     public var data: [Value: Row]
     public var size: Int
@@ -89,14 +89,14 @@ public actor ShardingManager {
     // MARK: - Dependencies
     
     /// Storage manager
-    private let storageManager: StorageManager
+    private let storageManager: StorageManagerActor
     
     /// Network manager
     private let networkManager: NetworkManager
     
     // MARK: - Initialization
     
-    public init(storageManager: StorageManager, networkManager: NetworkManager, strategy: ShardStrategy = .hash) {
+    public init(storageManager: StorageManagerActor, networkManager: NetworkManager, strategy: ShardStrategy = .hash) {
         self.storageManager = storageManager
         self.networkManager = networkManager
         self.strategy = strategy
@@ -242,7 +242,7 @@ public actor ShardingManager {
     }
     
     /// Hash function
-    private func hash(_ key: Key) -> UInt32 {
+    private func hash(_ key: Value) -> UInt32 {
         switch key {
         case .int(let value):
             return UInt32(abs(value.hashValue))
@@ -252,6 +252,14 @@ public actor ShardingManager {
             return value ? 1 : 0
         case .null:
             return 0
+        case .double(let value):
+            return UInt32(abs(value.hashValue))
+        case .decimal(let value):
+            return UInt32(abs(value.hashValue))
+        case .date(let value):
+            return UInt32(abs(value.hashValue))
+        case .bytes(let value):
+            return UInt32(abs(value.hashValue))
         }
     }
     
