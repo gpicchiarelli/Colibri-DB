@@ -386,7 +386,7 @@ class ColibrìDBTests: XCTestCase {
     func testDatabaseNotRunningError() async throws {
         // Database not started
         do {
-            try await database.beginTransaction()
+            let _ = try await database.beginTransaction()
             XCTFail("Expected database not running error")
         } catch DBError.databaseNotRunning {
             // Expected error
@@ -417,7 +417,7 @@ class ColibrìDBTests: XCTestCase {
         ]
         
         do {
-            try await database.insert(table: "test_table", row: invalidRow, txId: txId)
+            let _ = try await database.insert(table: "test_table", row: invalidRow, txId: txId)
             XCTFail("Expected schema mismatch error")
         } catch DBError.schemaMismatch {
             // Expected error
@@ -570,7 +570,7 @@ extension ColibrìDBTests {
                 "name": .string("User\(i)"),
                 "age": .int(Int64(20 + i))
             ]
-            try await database.insert(table: table, row: row, txId: txId)
+            let _ = try await database.insert(table: table, row: row, txId: txId)
             try await database.commit(txId: txId)
         }
     }

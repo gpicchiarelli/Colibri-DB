@@ -296,7 +296,7 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.schemaAlreadyExists(schemaName)
         }
         
-        let currentTime = Date()
+        let currentTime = UInt64(Date().timeIntervalSince1970 * 1000)
         let newVersion = SchemaVersion(
             version: 1,
             schemaName: schemaName,
@@ -336,7 +336,7 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.schemaNotFound(schemaName)
         }
         
-        let currentTime = Date()
+        let currentTime = UInt64(Date().timeIntervalSince1970 * 1000)
         let newVersionNumber = currentVersion.version + 1
         let isCompatible = checkCompatibility(fromVersion: currentVersion.version, toVersion: newVersionNumber)
         
@@ -379,7 +379,7 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.schemaNotFound(schemaName)
         }
         
-        let currentTime = Date()
+        let currentTime = UInt64(Date().timeIntervalSince1970 * 1000)
         
         schemas.removeValue(forKey: schemaName)
         schemaVersions.removeValue(forKey: schemaName)
@@ -412,7 +412,7 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.schemaAlreadyExists(newName)
         }
         
-        let currentTime = Date()
+        let currentTime = UInt64(Date().timeIntervalSince1970 * 1000)
         let renamedVersion = SchemaVersion(
             version: currentVersion.version,
             schemaName: newName,
@@ -452,7 +452,7 @@ public actor SchemaEvolutionManager {
     public func submitPendingChange(schemaName: String, changeType: PendingChange.ChangeType,
                                    ddlStatement: String, txId: TxID, estimatedDuration: Int,
                                    requiresDowntime: Bool = false) async throws {
-        let currentTime = Date()
+        let currentTime = UInt64(Date().timeIntervalSince1970 * 1000)
         
         let pendingChange = PendingChange(
             schemaName: schemaName,
@@ -503,14 +503,14 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.onlineChangeInProgress(schemaName)
         }
         
-        let currentTime = Date()
+        let currentTime = UInt64(Date().timeIntervalSince1970 * 1000)
         let onlineChange = OnlineChangeState(
             schemaName: schemaName,
             changeType: changeType,
             phase: .preparation,
             progress: 0,
             startTime: currentTime,
-            estimatedCompletion: currentTime + UInt64(schemaChangeTimeout),
+            estimatedCompletion: currentTime + UInt64(schemaChangeTimeout * 1000),
             blockingOperations: []
         )
         
@@ -545,7 +545,7 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.noOnlineChange(schemaName)
         }
         
-        let currentTime = Date()
+        let currentTime = UInt64(Date().timeIntervalSince1970 * 1000)
         let currentVersion = schemas[schemaName]!
         
         onlineChanges.removeValue(forKey: schemaName)

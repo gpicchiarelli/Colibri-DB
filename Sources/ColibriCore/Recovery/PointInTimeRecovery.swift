@@ -497,7 +497,7 @@ public actor PointInTimeRecoveryManager {
             throw PITRError.systemNotConsistent
         }
         
-        systemState = .running
+        systemState = .normal
     }
     
     // MARK: - Helper Methods

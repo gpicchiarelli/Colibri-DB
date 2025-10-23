@@ -474,7 +474,7 @@ public actor AuthorizationManager {
     /// Evaluate constraints (TLA+: EvaluateConstraints)
     private func evaluateConstraints(constraints: [String: String], subject: String, object: String) -> Bool {
         // Simplified: constraints like "time_of_day", "location", etc.
-        for (key, value) in constraints {
+        for (_, _) in constraints {
             // Would evaluate actual constraints
             continue
         }

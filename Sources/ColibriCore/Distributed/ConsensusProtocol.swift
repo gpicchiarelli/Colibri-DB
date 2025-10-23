@@ -339,7 +339,8 @@ public actor RaftServer {
             leaderCommit: commitIndex
         )
         
-        await sendMessage(follower, request)
+        let requestCopy = request
+        await sendMessage(follower, requestCopy)
     }
     
     /// Send heartbeats to all followers

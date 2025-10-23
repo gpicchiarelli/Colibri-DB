@@ -325,7 +325,7 @@ public actor VacuumManager {
         let usedPages = Set(tuples.map { $0.tid.pageID })
         
         // Find empty pages
-        let allPages = Set<PageID>(freespace[table]?.keys ?? [PageID]())
+        let allPages = Set(freespace[table]?.keys ?? [])
         let emptyPages = allPages.subtracting(usedPages)
         
         // Update free space for empty pages

@@ -276,7 +276,7 @@ public actor Logger {
             file: file,
             function: function,
             line: UInt(line),
-            metadata: metadata
+            metadata: metadata?.mapValues { String(describing: $0) }
         )
         
         for handler in handlers {
