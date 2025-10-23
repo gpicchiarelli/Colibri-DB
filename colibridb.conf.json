@@ -4,7 +4,7 @@
   "_description": "Main configuration file for ColibrìDB database engine",
   
   "dataDir": "./data",
-  "maxConnectionsLogical": 1000000,
+  "maxConnectionsLogical": 1000,
   "maxConnectionsPhysical": 16,
   "bufferPoolSizeBytes": 1073741824,
   "pageSizeBytes": 8192,
@@ -32,7 +32,9 @@
     "level": "INFO",
     "file": "./logs/colibridb.log",
     "maxFileSize": "10MB",
-    "maxFiles": 5
+    "maxFiles": 5,
+    "console": true,
+    "structured": true
   },
   
   "security": {

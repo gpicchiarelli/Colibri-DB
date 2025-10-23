@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examples - ColibrìDB</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>💡 Examples</h1>
+        
+        <h2>Esempio 1: Database Base</h2>
+        <div class="code-block">
+            <pre><code>import ColibriCore
+
+// Configurazione database
+let config = ColibrìDBConfiguration(
+    dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data"),
+    bufferPoolSize: 1000,
+    maxConnections: 100,
+    walBufferSize: 8192,
+    checkpointInterval: 60.0
+)
+
+// Crea e avvia database
+let db = try ColibrìDB(config: config)
+try await db.start()
+
+// Shutdown
+try await db.shutdown()</code></pre>
+        </div>
+
+        <h2>Esempio 2: Creazione Tabella e Inserimento</h2>
+        <div class="code-block">
+            <pre><code>// Crea tabella
+let usersTable = TableDefinition(
+    name: "users",
+    columns: [
+        ColumnDefinition(name: "id", type: .int, nullable: false),
+        ColumnDefinition(name: "name", type: .string, nullable: false),
+        ColumnDefinition(name: "email", type: .string, nullable: true)
+    ],
+    primaryKey: ["id"]
+)
+
+try await db.createTable(usersTable)
+
+// Inserisci dati
+let txID = try await db.beginTransaction()
+let row: Row = [
+    "id": .int(1),
+    "name": .string("Alice"),
+    "email": .string("alice@example.com")
+]
+
+let rid = try await db.insert(table: "users", row: row, txID: txID)
+try await db.commit(txID: txID)</code></pre>
+        </div>
+
+        <h2>Esempio 3: Query e Aggiornamenti</h2>
+        <div class="code-block">
+            <pre><code>// Leggi dati
+let txID = try await db.beginTransaction()
+let row = try await db.select(table: "users", rid: rid, txID: txID)
+
+// Aggiorna dati
+let updatedRow: Row = [
+    "id": .int(1),
+    "name": .string("Alice Updated"),
+    "email": .string("alice.updated@example.com")
+]
+
+try await db.update(table: "users", rid: rid, row: updatedRow, txID: txID)
+try await db.commit(txID: txID)</code></pre>
+        </div>
+
+        <h2>Esempio 4: Transazioni con Rollback</h2>
+        <div class="code-block">
+            <pre><code>let txID = try await db.beginTransaction()
+
+do {
+    // Operazioni multiple
+    let row1: Row = ["id": .int(2), "name": .string("Bob")]
+    try await db.insert(table: "users", row: row1, txID: txID)
+    
+    let row2: Row = ["id": .int(3), "name": .string("Charlie")]
+    try await db.insert(table: "users", row: row2, txID: txID)
+    
+    // Commit se tutto va bene
+    try await db.commit(txID: txID)
+    
+} catch {
+    // Rollback in caso di errore
+    try await db.abort(txID: txID)
+    logError("Transaction failed: \(error)", category: .transaction)
+}</code></pre>
+        </div>
+
+        <h2>Esempio 5: Server di Rete</h2>
+        <div class="code-block">
+            <pre><code>// Configurazione server
+let serverConfig = DatabaseServer.Configuration(
+    host: "127.0.0.1",
+    port: 5432,
+    maxConnections: 100
+)
+
+let server = DatabaseServer(config: serverConfig)
+
+// Avvia server
+try await server.start()
+
+// Accetta connessioni
+let connection = try await server.acceptConnection()
+
+// Autentica client
+try await connection.authenticate(username: "admin", password: "admin")
+
+// Esegui query
+let txID = try await connection.beginTransaction()
+let results = try await connection.executeQuery(plan: .scan(table: "users"))
+try await connection.commit()</code></pre>
+        </div>
+
+        <h2>Esempio 6: Statistiche e Monitoring</h2>
+        <div class="code-block">
+            <pre><code>// Ottieni statistiche
+let stats = await db.getStatistics()
+
+logInfo("""
+Database Statistics:
+- Transactions: \(stats.transactionsStarted)
+- Tables: \(stats.tablesCreated)
+- Rows: \(stats.rowsInserted)
+- Buffer Pool: \(stats.bufferPoolSize) pages
+- Active Transactions: \(stats.activeTransactions)
+""", category: .monitoring)
+
+// Verifica invarianti
+let consistencyResult = await db.checkConsistencyInvariant()
+let atomicityResult = await db.checkAtomicityInvariant()
+
+logInfo("Consistency: \(consistencyResult), Atomicity: \(atomicityResult)", 
+        category: .database)</code></pre>
+        </div>
+
+        <h2>Esempio 7: Gestione Errori</h2>
+        <div class="code-block">
+            <pre><code>do {
+    let txID = try await db.beginTransaction()
+    let row: Row = ["id": .int(1), "name": .string("Alice")]
+    try await db.insert(table: "users", row: row, txID: txID)
+    try await db.commit(txID: txID)
+    
+} catch DBError.transactionNotFound {
+    logError("Transaction not found", category: .transaction)
+    
+} catch DBError.schemaMismatch {
+    logError("Schema mismatch", category: .database)
+    
+} catch DBError.constraintViolation {
+    logError("Constraint violation", category: .database)
+    
+} catch {
+    logError("Unexpected error: \(error)", category: .general)
+}</code></pre>
+        </div>
+
+        <h2>Esempio 8: Configurazione Avanzata</h2>
+        <div class="code-block">
+            <pre><code>// Configurazione per produzione
+let productionConfig = ColibrìDBConfiguration(
+    dataDirectory: URL(fileURLWithPath: "/var/lib/colibridb"),
+    bufferPoolSize: 2000,
+    maxConnections: 500,
+    walBufferSize: 2 * 1024 * 1024,
+    checkpointInterval: 600,
+    logLevel: .warning,
+    enableStatistics: true,
+    enableAutoAnalyze: true
+)
+
+// Configurazione per sviluppo
+let devConfig = ColibrìDBConfiguration(
+    dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_dev"),
+    bufferPoolSize: 100,
+    maxConnections: 10,
+    walBufferSize: 1024 * 1024,
+    checkpointInterval: 60,
+    logLevel: .debug,
+    enableStatistics: true,
+    enableAutoAnalyze: false
+)</code></pre>
+        </div>
+
+        <h2>Esempio 9: Logging Personalizzato</h2>
+        <div class="code-block">
+            <pre><code>// Configura logger personalizzato
+let fileHandler = try FileLogHandler(
+    fileURL: URL(fileURLWithPath: "/var/log/colibridb.log"),
+    formatter: JSONLogFormatter()
+)
+
+let consoleHandler = ConsoleLogHandler(
+    formatter: HumanReadableLogFormatter()
+)
+
+let logger = Logger(
+    handlers: [fileHandler, consoleHandler],
+    minLevel: .info
+)
+
+// Usa logger personalizzato
+await logger.info("Database started", category: .database)
+await logger.warning("High memory usage", category: .monitoring, 
+                     metadata: ["usage": "85%"])
+await logger.error("Connection failed", category: .network,
+                   metadata: ["host": "localhost", "port": 5432])</code></pre>
+        </div>
+
+        <h2>Esempio 10: Test di Performance</h2>
+        <div class="code-block">
+            <pre><code>// Test throughput transazioni
+let transactionCount = 1000
+let startTime = Date()
+
+for i in 0..<transactionCount {
+    let txID = try await db.beginTransaction()
+    let row: Row = ["id": .int(i), "name": .string("User\(i)")]
+    try await db.insert(table: "users", row: row, txID: txID)
+    try await db.commit(txID: txID)
+}
+
+let endTime = Date()
+let duration = endTime.timeIntervalSince(startTime)
+let tps = Double(transactionCount) / duration
+
+logInfo("Performance test completed: \(tps) TPS", 
+        category: .performance)</code></pre>
+        </div>
+
+        <h2>Prossimi Passi</h2>
+        <ul>
+            <li><a href="api-reference.html">API Reference</a> - Riferimento API completo</li>
+            <li><a href="configuration.html">Configuration</a> - Configurazione avanzata</li>
+            <li><a href="architecture.html">Architecture</a> - Architettura del sistema</li>
+        </ul>
+    </div>
+</body>
+</html>

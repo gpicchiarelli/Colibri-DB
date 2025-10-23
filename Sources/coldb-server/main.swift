@@ -9,5 +9,5 @@
 import Foundation
 import ColibriServer
 
-print("ColibrìDB Server - Version 1.0.0")
-print("Use 'coldb-server --help' for more information")
+logInfo("ColibrìDB Server - Version 1.0.0", category: .network)
+logInfo("Use 'coldb-server --help' for more information", category: .network)

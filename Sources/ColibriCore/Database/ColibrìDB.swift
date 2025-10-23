@@ -565,9 +565,11 @@ public actor ColibrìDB {
         }
     }
     
-    private func log(_ level: LogLevel, _ message: String) {
-        if level.rawValue >= config.logLevel.rawValue {
-            print("[\(level.rawValue)] \(message)")
+    private func log(_ level: LogLevel, _ message: String, category: LogCategory = .database) {
+        if level.priority >= config.logLevel.priority {
+            Task {
+                await colibriLogger.log(level, category: category, message)
+            }
         }
     }
 }

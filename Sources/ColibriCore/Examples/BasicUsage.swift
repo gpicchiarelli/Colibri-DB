@@ -28,7 +28,7 @@ public enum BasicUsageExamples {
         // Start the database (performs recovery if needed)
         try await db.start()
         
-        print("Database started: \(ColibriDBVersion.fullVersion)")
+        logInfo("Database started: \(ColibriDBVersion.fullVersion)", category: .database)
         
         // Shutdown when done
         try await db.shutdown()
@@ -55,7 +55,7 @@ public enum BasicUsageExamples {
         )
         
         try await db.createTable(usersTable)
-        print("Table 'users' created")
+        logInfo("Table 'users' created", category: .database)
         
         // Begin transaction
         let txID = try await db.beginTransaction()
@@ -69,11 +69,11 @@ public enum BasicUsageExamples {
         ]
         
         let rid = try await db.insert(table: "users", row: row, txId: txID)
-        print("Inserted row with RID: \(rid)")
+        logInfo("Inserted row with RID: \(rid)", category: .database)
         
         // Commit transaction
         try await db.commit(txId: txID)
-        print("Transaction committed")
+        logInfo("Transaction committed", category: .transaction)
         
         try await db.shutdown()
     }
@@ -94,14 +94,14 @@ public enum BasicUsageExamples {
         
         // Read the row
         let row = try await db.select(table: "users", rid: rid, txId: txID)
-        print("Read row: \(row)")
+        logInfo("Read row: \(row)", category: .database)
         
         // Update the row
         var updatedRow = row
         updatedRow["name"] = Value.string("Alice Updated")
         
         try await db.update(table: "users", rid: rid, row: updatedRow, txId: txID)
-        print("Row updated")
+        logInfo("Row updated", category: .database)
         
         // Commit transaction
         try await db.commit(txId: txID)
@@ -136,9 +136,9 @@ public enum BasicUsageExamples {
             
         } catch {
             // Rollback on error
-            print("Error occurred: \(error)")
+            logError("Error occurred: \(error)", category: .transaction)
             try await db.abort(txId: txID)
-            print("Transaction rolled back")
+            logInfo("Transaction rolled back", category: .transaction)
         }
         
         try await db.shutdown()
@@ -163,10 +163,10 @@ public enum BasicUsageExamples {
         
         // Execute query
         let results = try await db.executeQuery(query: "SELECT * FROM users WHERE id > 0", txId: txID)
-        print("Query returned \(results.count) rows")
+        logInfo("Query returned \(results.count) rows", category: .query)
         
         for row in results {
-            print("Row: \(row)")
+            logDebug("Row: \(row)", category: .query)
         }
         
         // Commit transaction
@@ -192,27 +192,27 @@ public enum BasicUsageExamples {
         
         // Start the server
         try await server.start()
-        print("Server started on \(serverConfig.host):\(serverConfig.port)")
+        logInfo("Server started on \(serverConfig.host):\(serverConfig.port)", category: .network)
         
         // Accept a connection
         let connection = try await server.acceptConnection(clientID: "client-1")
         
         // Authenticate
         try await connection.authenticate(username: "admin", password: "admin")
-        print("Client authenticated")
+        logInfo("Client authenticated", category: .security)
         
         // Begin transaction
         let txID = try await connection.beginTransaction()
-        print("Transaction started: \(txID)")
+        logInfo("Transaction started: \(txID)", category: .transaction)
         
         // Execute query
         let queryPlan: QueryPlanNode = .scan(table: "users")
         let results = try await connection.executeQuery(plan: queryPlan)
-        print("Query returned \(results.count) rows")
+        logInfo("Query returned \(results.count) rows", category: .query)
         
         // Commit
         try await connection.commit()
-        print("Transaction committed")
+        logInfo("Transaction committed", category: .transaction)
         
         // Close connection
         await connection.close()
@@ -232,7 +232,7 @@ public enum BasicUsageExamples {
         // Get database statistics
         let stats = await db.getStatistics()
         
-        print("""
+        logInfo("""
         Database Statistics:
         - Started: \(stats.startTime != nil)
         - Buffer Pool: \(stats.bufferPoolSize) pages
@@ -240,13 +240,13 @@ public enum BasicUsageExamples {
         - Active Transactions: \(stats.activeTransactions)
         - Current LSN: \(stats.currentLSN)
         - Schema Version: \(stats.schemaVersion)
-        """)
+        """, category: .monitoring)
         
         // Perform checkpoint (simulated)
-        print("Checkpoint completed")
+        logInfo("Checkpoint completed", category: .storage)
         
         // Vacuum (garbage collection) (simulated)
-        print("Vacuum completed")
+        logInfo("Vacuum completed", category: .storage)
         
         try await db.shutdown()
     }
@@ -310,7 +310,7 @@ public enum AdvancedUsageExamples {
             )]
         ))
         
-        print("Table with index created")
+        logInfo("Table with index created", category: .database)
         
         try await db.shutdown()
     }
@@ -331,7 +331,7 @@ public enum AdvancedUsageExamples {
             
             // Simulate crash (no shutdown)
         } catch {
-            print("Simulated crash")
+            logWarning("Simulated crash", category: .testing)
         }
         
         // Restart database - automatic recovery
@@ -342,7 +342,7 @@ public enum AdvancedUsageExamples {
         
         // start() will automatically perform ARIES recovery
         try await db.start()
-        print("Database recovered successfully")
+        logInfo("Database recovered successfully", category: .recovery)
         
         try await db.shutdown()
     }

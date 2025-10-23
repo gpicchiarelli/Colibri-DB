@@ -443,7 +443,7 @@ class ColibrìDBTests: XCTestCase {
         let duration = endTime.timeIntervalSince(startTime)
         let tps = Double(transactionCount) / duration
         
-        print("Transaction performance: \(tps) TPS")
+        logInfo("Transaction performance: \(tps) TPS", category: .performance)
         XCTAssertGreaterThan(tps, 100) // At least 100 TPS
     }
     
@@ -471,7 +471,7 @@ class ColibrìDBTests: XCTestCase {
         let duration = endTime.timeIntervalSince(startTime)
         let tps = Double(transactionCount) / duration
         
-        print("Concurrent transaction performance: \(tps) TPS")
+        logInfo("Concurrent transaction performance: \(tps) TPS", category: .performance)
         XCTAssertGreaterThan(tps, 50) // At least 50 TPS with concurrency
     }
 }
@@ -534,7 +534,7 @@ class SchemaEvolutionTests: XCTestCase {
     
     func testSchemaEvolutionInvariants() async throws {
         // Skip this test for now due to complex dependencies
-        // TODO: Implement proper test setup with all required dependencies
+        // Note: This test requires proper setup with all dependencies
         XCTAssertTrue(true) // Placeholder test
     }
 }

@@ -4,413 +4,78 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quick Start - ColibrìDB</title>
-    <meta name="description" content="Guida rapida per iniziare con ColibrìDB - RDBMS professionale per macOS">
-    <link rel="stylesheet" href="assets/css/main.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="container">
-            <div class="nav-brand">
-                <span class="brand-icon">🐦</span>
-                <span class="brand-text">ColibrìDB</span>
-            </div>
-            <div class="nav-menu">
-                <a href="index.html" class="nav-link">Home</a>
-                <a href="architecture.html" class="nav-link">Architettura</a>
-                <a href="documentation.html" class="nav-link">Documentazione</a>
-                <a href="tla-specifications.html" class="nav-link">TLA+ Specs</a>
-                <a href="performance.html" class="nav-link">Performance</a>
-                <a href="https://github.com/gpicchiarelli/Colibri-DB" class="nav-link external" target="_blank">GitHub</a>
-            </div>
+    <div class="container">
+        <h1>🚀 Quick Start</h1>
+        
+        <h2>Installazione</h2>
+        <div class="code-block">
+            <pre><code># Clone e build
+git clone https://github.com/gpicchiarelli/Colibri-DB.git
+cd Colibri-DB
+swift build
+
+# Avvia il database
+.build/debug/coldb --config colibridb.conf.json</code></pre>
         </div>
-    </nav>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <div class="page-header">
-                <h1>Quick Start</h1>
-                <p class="page-description">
-                    Inizia a utilizzare ColibrìDB in 5 minuti. Guida rapida per installazione e primi passi.
-                </p>
-            </div>
+        <h2>Uso Base</h2>
+        <div class="code-block">
+            <pre><code>import ColibriCore
 
-            <!-- Prerequisites -->
-            <section class="prerequisites">
-                <h2>Prerequisiti</h2>
-                <div class="prerequisites-list">
-                    <div class="prerequisite-item">
-                        <div class="prerequisite-icon">🍎</div>
-                        <div class="prerequisite-content">
-                            <h3>macOS 13.0+</h3>
-                            <p>ColibrìDB richiede macOS 13.0 o superiore</p>
-                        </div>
-                    </div>
-                    <div class="prerequisite-item">
-                        <div class="prerequisite-icon">⚡</div>
-                        <div class="prerequisite-content">
-                            <h3>Swift 6.2+</h3>
-                            <p>Swift 6.2 o superiore per compilare il progetto</p>
-                        </div>
-                    </div>
-                    <div class="prerequisite-item">
-                        <div class="prerequisite-icon">📦</div>
-                        <div class="prerequisite-content">
-                            <h3>Swift Package Manager</h3>
-                            <p>SPM per la gestione delle dipendenze</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
+// Crea database
+let config = ColibrìDBConfiguration(
+    dataDirectory: URL(fileURLWithPath: "/tmp/colibridb")
+)
+let db = try ColibrìDB(config: config)
+try await db.start()
 
-            <!-- Installation -->
-            <section class="installation">
-                <h2>Installazione</h2>
-                
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h3>Clona il Repository</h3>
-                        <p>Scarica il codice sorgente da GitHub</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-title">Terminal</span>
-                                <span class="code-lang">bash</span>
-                            </div>
-                            <div class="code-content">
-                                <pre><code>git clone https://github.com/gpicchiarelli/Colibri-DB.git
-cd Colibri-DB</code></pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+// Crea tabella
+let tableDef = TableDefinition(
+    name: "users",
+    columns: [
+        ColumnDefinition(name: "id", type: .int, nullable: false),
+        ColumnDefinition(name: "name", type: .string, nullable: false)
+    ],
+    primaryKey: ["id"]
+)
+try await db.createTable(tableDef)
 
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h3>Compila il Progetto</h3>
-                        <p>Usa Swift Package Manager per compilare ColibrìDB</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-title">Terminal</span>
-                                <span class="code-lang">bash</span>
-                            </div>
-                            <div class="code-content">
-                                <pre><code>swift build --configuration release</code></pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+// Transazione ACID
+let txID = try await db.beginTransaction()
+let row: Row = ["id": .int(1), "name": .string("Alice")]
+try await db.insert(table: "users", row: row, txID: txID)
+try await db.commit(txID)
 
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h3>Configura il Database</h3>
-                        <p>Crea un file di configurazione per il tuo database</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-title">colibridb.conf.json</span>
-                                <span class="code-lang">json</span>
-                            </div>
-                            <div class="code-content">
-                                <pre><code>{
-  "dataDirectory": "./data",
-  "bufferPoolSize": 1073741824,
+// Shutdown
+try await db.shutdown()</code></pre>
+        </div>
+
+        <h2>Configurazione</h2>
+        <p>ColibrìDB usa un file di configurazione JSON:</p>
+        <div class="code-block">
+            <pre><code>{
+  "dataDir": "./data",
+  "maxConnectionsLogical": 1000,
+  "bufferPoolSizeBytes": 1073741824,
+  "pageSizeBytes": 8192,
   "walEnabled": true,
-  "maxConnections": 100,
-  "port": 5432,
-  "host": "localhost"
+  "checksumEnabled": true,
+  "logging": {
+    "level": "INFO",
+    "file": "./logs/colibridb.log"
+  }
 }</code></pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- First Steps -->
-            <section class="first-steps">
-                <h2>Primi Passi</h2>
-                
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <div class="step-content">
-                        <h3>Avvia il Server</h3>
-                        <p>Lancia il server ColibrìDB</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-title">Terminal</span>
-                                <span class="code-lang">bash</span>
-                            </div>
-                            <div class="code-content">
-                                <pre><code>swift run coldb-server --config colibridb.conf.json</code></pre>
-                            </div>
-                        </div>
-                        <div class="step-note">
-                            <p><strong>Nota:</strong> Il server si avvierà sulla porta 5432 (configurabile)</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <div class="step-content">
-                        <h3>Connettiti con il CLI</h3>
-                        <p>Usa il client da riga di comando per interagire con il database</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-title">Terminal</span>
-                                <span class="code-lang">bash</span>
-                            </div>
-                            <div class="code-content">
-                                <pre><code>swift run coldb --host localhost --port 5432</code></pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <div class="step-content">
-                        <h3>Esegui le Prime Query</h3>
-                        <p>Prova le funzionalità base di ColibrìDB</p>
-                        <div class="code-block">
-                            <div class="code-header">
-                                <span class="code-title">ColibrìDB CLI</span>
-                                <span class="code-lang">sql</span>
-                            </div>
-                            <div class="code-content">
-                                <pre><code>-- Crea una tabella
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE
-);
-
--- Inserisci dati
-INSERT INTO users (name, email) VALUES 
-    ('Alice', 'alice@example.com'),
-    ('Bob', 'bob@example.com');
-
--- Esegui query
-SELECT * FROM users WHERE name LIKE 'A%';
-
--- Mostra le tabelle
-\dt</code></pre>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Swift Integration -->
-            <section class="swift-integration">
-                <h2>Integrazione Swift</h2>
-                <p>Usa ColibrìDB nelle tue applicazioni Swift</p>
-
-                <div class="code-example">
-                    <h3>Esempio Base</h3>
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-title">main.swift</span>
-                            <span class="code-lang">swift</span>
-                        </div>
-                        <div class="code-content">
-                            <pre><code>import ColibriCore
-
-@main
-struct ColibriExample {
-    static func main() async throws {
-        // Configura il database
-        let config = DatabaseConfig(
-            dataDirectory: "./data",
-            bufferPoolSize: 1024 * 1024 * 1024, // 1GB
-            walEnabled: true
-        )
-        
-        // Crea e avvia il database
-        let db = try ColibrìDB(config: config)
-        try await db.start()
-        
-        // Inizia una transazione
-        let txID = try await db.beginTransaction()
-        
-        // Crea una tabella
-        let schema = TableSchema(columns: [
-            Column(name: "id", type: .integer, primaryKey: true),
-            Column(name: "name", type: .string, nullable: false),
-            Column(name: "email", type: .string, nullable: true)
-        ])
-        try await db.createTable(name: "users", schema: schema, txID: txID)
-        
-        // Inserisci dati
-        let row: Row = [
-            "id": .int(1),
-            "name": .string("Alice"),
-            "email": .string("alice@example.com")
-        ]
-        try await db.insert(table: "users", row: row, txID: txID)
-        
-        // Conferma la transazione
-        try await db.commit(txID)
-        
-        // Esegui una query
-        let result = try await db.execute("""
-            SELECT name, email FROM users WHERE id = 1
-        """, txID: try await db.beginTransaction())
-        
-        for row in result.rows {
-            print("Name: \(row["name"]), Email: \(row["email"])")
-        }
-        
-        // Arresta il database
-        try await db.stop()
-    }
-}</code></pre>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="code-example">
-                    <h3>Query Builder</h3>
-                    <div class="code-block">
-                        <div class="code-header">
-                            <span class="code-title">query-builder.swift</span>
-                            <span class="code-lang">swift</span>
-                        </div>
-                        <div class="code-content">
-                            <pre><code>// Query complesse con QueryBuilder
-let query = QueryBuilder()
-    .select(["u.name", "u.email", "p.title"])
-    .from("users u")
-    .join("posts p", on: "u.id = p.user_id")
-    .where("u.created_at > ?", Date().addingTimeInterval(-86400)) // Ultimo giorno
-    .orderBy("u.name")
-    .limit(10)
-
-let result = try await query.execute(txID: txID)
-
-for row in result.rows {
-    print("User: \(row["name"]), Post: \(row["title"])")
-}</code></pre>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Configuration Options -->
-            <section class="configuration">
-                <h2>Opzioni di Configurazione</h2>
-                <p>Personalizza ColibrìDB per le tue esigenze</p>
-
-                <div class="config-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Parametro</th>
-                                <th>Default</th>
-                                <th>Descrizione</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>dataDirectory</code></td>
-                                <td><code>./data</code></td>
-                                <td>Directory per i file di dati</td>
-                            </tr>
-                            <tr>
-                                <td><code>bufferPoolSize</code></td>
-                                <td><code>256MB</code></td>
-                                <td>Dimensione del buffer pool</td>
-                            </tr>
-                            <tr>
-                                <td><code>walEnabled</code></td>
-                                <td><code>true</code></td>
-                                <td>Abilita Write-Ahead Logging</td>
-                            </tr>
-                            <tr>
-                                <td><code>maxConnections</code></td>
-                                <td><code>100</code></td>
-                                <td>Connessioni concorrenti massime</td>
-                            </tr>
-                            <tr>
-                                <td><code>port</code></td>
-                                <td><code>5432</code></td>
-                                <td>Porta del server</td>
-                            </tr>
-                            <tr>
-                                <td><code>host</code></td>
-                                <td><code>localhost</code></td>
-                                <td>Indirizzo di ascolto</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Next Steps -->
-            <section class="next-steps">
-                <h2>Prossimi Passi</h2>
-                <div class="next-steps-grid">
-                    <a href="documentation.html" class="next-step-card">
-                        <div class="next-step-icon">📚</div>
-                        <h3>Documentazione Completa</h3>
-                        <p>Esplora tutte le funzionalità di ColibrìDB</p>
-                    </a>
-                    <a href="api-reference.html" class="next-step-card">
-                        <div class="next-step-icon">🔧</div>
-                        <h3>API Reference</h3>
-                        <p>Riferimento completo delle API</p>
-                    </a>
-                    <a href="architecture.html" class="next-step-card">
-                        <div class="next-step-icon">🏗️</div>
-                        <h3>Architettura</h3>
-                        <p>Comprendi il design interno</p>
-                    </a>
-                    <a href="performance.html" class="next-step-card">
-                        <div class="next-step-icon">📊</div>
-                        <h3>Performance</h3>
-                        <p>Ottimizza le performance</p>
-                    </a>
-                </div>
-            </section>
         </div>
-    </main>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>ColibrìDB</h3>
-                    <p>RDBMS moderno e performante per macOS, con architettura modulare e verifiche formali complete.</p>
-                </div>
-                <div class="footer-section">
-                    <h3>Risorse</h3>
-                    <ul>
-                        <li><a href="documentation.html">Documentazione</a></li>
-                        <li><a href="architecture.html">Architettura</a></li>
-                        <li><a href="tla-specifications.html">Specifiche TLA+</a></li>
-                        <li><a href="api-reference.html">API Reference</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h3>Community</h3>
-                    <ul>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank">GitHub</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/issues" target="_blank">Segnala Bug</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/discussions" target="_blank">Discussioni</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md" target="_blank">Contribuisci</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 ColibrìDB · Swift 6.2 · Licenza BSD-3-Clause</p>
-            </div>
-        </div>
-    </footer>
+        <h2>Prossimi Passi</h2>
+        <ul>
+            <li><a href="api-reference.html">API Reference</a> - Riferimento completo delle API</li>
+            <li><a href="configuration.html">Configuration</a> - Configurazione avanzata</li>
+            <li><a href="examples.html">Examples</a> - Esempi pratici</li>
+        </ul>
+    </div>
 </body>
 </html>
