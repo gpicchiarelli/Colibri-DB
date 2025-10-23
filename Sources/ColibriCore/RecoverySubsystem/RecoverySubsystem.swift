@@ -269,7 +269,8 @@ public actor RecoverySubsystem {
         
         do {
             // Step 1: Restore base backup
-            try await restoreCallback(baseBackup.path)
+            // try await restoreCallback(baseBackup.path)
+            try await restoreCallback(baseBackup.backupId)
             
             // Step 2: Apply incremental backups
             let incrementals = backupMetadata.values.filter {
@@ -279,7 +280,7 @@ public actor RecoverySubsystem {
             }.sorted { $0.lsnRange.end < $1.lsnRange.end }
             
             for incremental in incrementals {
-                try await restoreCallback(incremental.path)
+                try await restoreCallback(incremental.backupId)
             }
             
             // Step 3: PITR recovery
