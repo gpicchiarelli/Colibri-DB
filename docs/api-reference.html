@@ -4,378 +4,179 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API Reference - ColibrìDB</title>
-    <meta name="description" content="Documentazione completa delle API di ColibrìDB - RDBMS professionale per macOS">
-    <link rel="stylesheet" href="assets/css/main.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="container">
-            <div class="nav-brand">
-                <span class="brand-icon">🐦</span>
-                <span class="brand-text">ColibrìDB</span>
+    <div class="container">
+        <h1>📚 API Reference</h1>
+        
+        <h2>Database Core</h2>
+        
+        <h3>ColibrìDB</h3>
+        <div class="api-section">
+            <h4>Inizializzazione</h4>
+            <div class="code-block">
+                <pre><code>let config = ColibrìDBConfiguration(
+    dataDirectory: URL,
+    bufferPoolSize: Int = 1000,
+    maxConnections: Int = 100,
+    walBufferSize: Int = 1024 * 1024,
+    checkpointInterval: TimeInterval = 300,
+    logLevel: LogLevel = .info,
+    enableStatistics: Bool = true,
+    enableAutoAnalyze: Bool = true
+)
+
+let db = try ColibrìDB(config: config)</code></pre>
             </div>
-            <div class="nav-menu">
-                <a href="index.html" class="nav-link">Home</a>
-                <a href="architecture.html" class="nav-link">Architettura</a>
-                <a href="documentation.html" class="nav-link">Documentazione</a>
-                <a href="tla-specifications.html" class="nav-link">TLA+ Specs</a>
-                <a href="performance.html" class="nav-link">Performance</a>
-                <a href="https://github.com/gpicchiarelli/Colibri-DB" class="nav-link external" target="_blank">GitHub</a>
+
+            <h4>Lifecycle</h4>
+            <div class="code-block">
+                <pre><code>// Avvia il database
+try await db.start()
+
+// Verifica stato
+let isRunning = await db.isDatabaseRunning()
+let state = await db.getSystemState()
+
+// Shutdown
+try await db.shutdown()</code></pre>
             </div>
         </div>
-    </nav>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <div class="page-header">
-                <h1>API Reference</h1>
-                <p class="page-description">
-                    Documentazione completa delle API di ColibrìDB per sviluppatori Swift
-                </p>
+        <h3>Transazioni</h3>
+        <div class="api-section">
+            <div class="code-block">
+                <pre><code>// Inizia transazione
+let txID = try await db.beginTransaction()
+
+// Commit
+try await db.commit(txID: txID)
+
+// Abort
+try await db.abort(txID: txID)</code></pre>
             </div>
+        </div>
 
-            <!-- Quick Navigation -->
-            <section class="api-nav">
-                <h2>Navigazione Rapida</h2>
-                <div class="api-nav-grid">
-                    <a href="#core-api" class="api-nav-card">
-                        <div class="api-nav-icon">⚙️</div>
-                        <h3>Core API</h3>
-                        <p>Database, transazioni, query</p>
-                    </a>
-                    <a href="#storage-api" class="api-nav-card">
-                        <div class="api-nav-icon">💾</div>
-                        <h3>Storage API</h3>
-                        <p>Buffer pool, WAL, indici</p>
-                    </a>
-                    <a href="#query-api" class="api-nav-card">
-                        <div class="api-nav-icon">🔍</div>
-                        <h3>Query API</h3>
-                        <p>Parser, optimizer, executor</p>
-                    </a>
-                    <a href="#distributed-api" class="api-nav-card">
-                        <div class="api-nav-icon">🌐</div>
-                        <h3>Distributed API</h3>
-                        <p>Raft, replica, sharding</p>
-                    </a>
-                </div>
-            </section>
-
-            <!-- Core API -->
-            <section id="core-api" class="api-section">
-                <h2>Core API</h2>
-                <p>API fondamentali per l'utilizzo di ColibrìDB</p>
-
-                <div class="api-class">
-                    <h3>ColibrìDB</h3>
-                    <p class="api-description">Classe principale per l'interazione con il database</p>
-                    
-                    <div class="api-method">
-                        <h4>init(config: DatabaseConfig)</h4>
-                        <p class="api-description">Inizializza una nuova istanza del database</p>
-                        <div class="api-code">
-                            <pre><code>let config = DatabaseConfig(
-    dataDirectory: "/path/to/data",
-    bufferPoolSize: 1024 * 1024 * 1024, // 1GB
-    walEnabled: true
+        <h3>DDL Operations</h3>
+        <div class="api-section">
+            <div class="code-block">
+                <pre><code>// Crea tabella
+let tableDef = TableDefinition(
+    name: "users",
+    columns: [
+        ColumnDefinition(name: "id", type: .int, nullable: false),
+        ColumnDefinition(name: "name", type: .string, nullable: false)
+    ],
+    primaryKey: ["id"]
 )
-let db = try ColibrìDB(config: config)</code></pre>
-                        </div>
-                    </div>
+try await db.createTable(tableDef)
 
-                    <div class="api-method">
-                        <h4>func start() async throws</h4>
-                        <p class="api-description">Avvia il database e inizializza tutti i componenti</p>
-                        <div class="api-code">
-                            <pre><code>try await db.start()</code></pre>
-                        </div>
-                    </div>
+// Elimina tabella
+try await db.dropTable("users")</code></pre>
+            </div>
+        </div>
 
-                    <div class="api-method">
-                        <h4>func stop() async throws</h4>
-                        <p class="api-description">Arresta il database in modo sicuro</p>
-                        <div class="api-code">
-                            <pre><code>try await db.stop()</code></pre>
-                        </div>
-                    </div>
-                </div>
+        <h3>DML Operations</h3>
+        <div class="api-section">
+            <div class="code-block">
+                <pre><code>// Insert
+let row: Row = ["id": .int(1), "name": .string("Alice")]
+let rid = try await db.insert(table: "users", row: row, txID: txID)
 
-                <div class="api-class">
-                    <h3>Transaction</h3>
-                    <p class="api-description">Gestione delle transazioni ACID</p>
-                    
-                    <div class="api-method">
-                        <h4>func beginTransaction() async throws -> TransactionID</h4>
-                        <p class="api-description">Inizia una nuova transazione</p>
-                        <div class="api-code">
-                            <pre><code>let txID = try await db.beginTransaction()</code></pre>
-                        </div>
-                    </div>
+// Update
+let updatedRow: Row = ["id": .int(1), "name": .string("Alice Updated")]
+try await db.update(table: "users", rid: rid, row: updatedRow, txID: txID)
 
-                    <div class="api-method">
-                        <h4>func commit(_ txID: TransactionID) async throws</h4>
-                        <p class="api-description">Conferma una transazione</p>
-                        <div class="api-code">
-                            <pre><code>try await db.commit(txID)</code></pre>
-                        </div>
-                    </div>
+// Delete
+try await db.delete(table: "users", rid: rid, txID: txID)
 
-                    <div class="api-method">
-                        <h4>func rollback(_ txID: TransactionID) async throws</h4>
-                        <p class="api-description">Annulla una transazione</p>
-                        <div class="api-code">
-                            <pre><code>try await db.rollback(txID)</code></pre>
-                        </div>
-                    </div>
-                </div>
-            </section>
+// Select
+let result = try await db.select(table: "users", rid: rid, txID: txID)</code></pre>
+            </div>
+        </div>
 
-            <!-- Storage API -->
-            <section id="storage-api" class="api-section">
-                <h2>Storage API</h2>
-                <p>API per la gestione dello storage e degli indici</p>
-
-                <div class="api-class">
-                    <h3>TableManager</h3>
-                    <p class="api-description">Gestione delle tabelle e dello storage</p>
-                    
-                    <div class="api-method">
-                        <h4>func createTable(name: String, schema: TableSchema) async throws</h4>
-                        <p class="api-description">Crea una nuova tabella</p>
-                        <div class="api-code">
-                            <pre><code>let schema = TableSchema(columns: [
-    Column(name: "id", type: .integer, primaryKey: true),
-    Column(name: "name", type: .string, nullable: false),
-    Column(name: "email", type: .string, nullable: true)
-])
-try await db.createTable(name: "users", schema: schema)</code></pre>
-                        </div>
-                    </div>
-
-                    <div class="api-method">
-                        <h4>func insert(table: String, row: Row, txID: TransactionID) async throws</h4>
-                        <p class="api-description">Inserisce una riga in una tabella</p>
-                        <div class="api-code">
-                            <pre><code>let row: Row = [
+        <h2>Tipi di Dati</h2>
+        
+        <h3>Row</h3>
+        <div class="api-section">
+            <div class="code-block">
+                <pre><code>let row: Row = [
     "id": .int(1),
     "name": .string("Alice"),
-    "email": .string("alice@example.com")
-]
-try await db.insert(table: "users", row: row, txID: txID)</code></pre>
-                        </div>
-                    </div>
+    "age": .int(25),
+    "active": .bool(true),
+    "data": .blob(Data())
+]</code></pre>
+            </div>
+        </div>
 
-                    <div class="api-method">
-                        <h4>func select(table: String, where: Predicate?, txID: TransactionID) async throws -> [Row]</h4>
-                        <p class="api-description">Esegue una query SELECT</p>
-                        <div class="api-code">
-                            <pre><code>let predicate = Predicate.column("name").equals(.string("Alice"))
-let rows = try await db.select(table: "users", where: predicate, txID: txID)</code></pre>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="api-class">
-                    <h3>IndexManager</h3>
-                    <p class="api-description">Gestione degli indici per performance ottimali</p>
-                    
-                    <div class="api-method">
-                        <h4>func createIndex(name: String, table: String, columns: [String], type: IndexType) async throws</h4>
-                        <p class="api-description">Crea un nuovo indice</p>
-                        <div class="api-code">
-                            <pre><code>try await db.createIndex(
-    name: "idx_users_email",
-    table: "users",
-    columns: ["email"],
-    type: .bTree
+        <h3>ColumnDefinition</h3>
+        <div class="api-section">
+            <div class="code-block">
+                <pre><code>let column = ColumnDefinition(
+    name: "id",
+    type: .int,
+    nullable: false,
+    defaultValue: .int(0)
 )</code></pre>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            </div>
+        </div>
 
-            <!-- Query API -->
-            <section id="query-api" class="api-section">
-                <h2>Query API</h2>
-                <p>API per l'esecuzione di query SQL complesse</p>
-
-                <div class="api-class">
-                    <h3>QueryEngine</h3>
-                    <p class="api-description">Engine per l'esecuzione di query SQL</p>
-                    
-                    <div class="api-method">
-                        <h4>func execute(_ sql: String, txID: TransactionID) async throws -> QueryResult</h4>
-                        <p class="api-description">Esegue una query SQL</p>
-                        <div class="api-code">
-                            <pre><code>let result = try await db.execute("""
-    SELECT u.name, u.email, p.title
-    FROM users u
-    JOIN posts p ON u.id = p.user_id
-    WHERE u.created_at > '2024-01-01'
-    ORDER BY u.name
-    """, txID: txID)
-
-for row in result.rows {
-    print("Name: \(row["name"]), Email: \(row["email"])")
+        <h2>Configurazione</h2>
+        
+        <h3>LogLevel</h3>
+        <div class="api-section">
+            <div class="code-block">
+                <pre><code>enum LogLevel: String, CaseIterable {
+    case trace = "TRACE"
+    case debug = "DEBUG"
+    case info = "INFO"
+    case warning = "WARNING"
+    case error = "ERROR"
+    case fatal = "FATAL"
 }</code></pre>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="api-class">
-                    <h3>QueryBuilder</h3>
-                    <p class="api-description">Builder fluente per query complesse</p>
-                    
-                    <div class="api-method">
-                        <h4>func select(_ columns: [String]) -> QueryBuilder</h4>
-                        <p class="api-description">Inizia una query SELECT</p>
-                        <div class="api-code">
-                            <pre><code>let query = QueryBuilder()
-    .select(["name", "email"])
-    .from("users")
-    .where("age > ?", 18)
-    .orderBy("name")
-    .limit(10)
-
-let result = try await query.execute(txID: txID)</code></pre>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Distributed API -->
-            <section id="distributed-api" class="api-section">
-                <h2>Distributed API</h2>
-                <p>API per sistemi distribuiti e replica</p>
-
-                <div class="api-class">
-                    <h3>ClusterManager</h3>
-                    <p class="api-description">Gestione del cluster distribuito</p>
-                    
-                    <div class="api-method">
-                        <h4>func joinCluster(seedNodes: [NodeAddress]) async throws</h4>
-                        <p class="api-description">Unisce il nodo a un cluster</p>
-                        <div class="api-code">
-                            <pre><code>let seedNodes = [
-    NodeAddress(host: "node1.example.com", port: 5432),
-    NodeAddress(host: "node2.example.com", port: 5432)
-]
-try await db.joinCluster(seedNodes: seedNodes)</code></pre>
-                        </div>
-                    </div>
-
-                    <div class="api-method">
-                        <h4>func getClusterStatus() async throws -> ClusterStatus</h4>
-                        <p class="api-description">Ottiene lo stato del cluster</p>
-                        <div class="api-code">
-                            <pre><code>let status = try await db.getClusterStatus()
-print("Leader: \(status.leader)")
-print("Nodes: \(status.nodes.count)")</code></pre>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Configuration -->
-            <section class="api-section">
-                <h2>Configurazione</h2>
-                <p>Opzioni di configurazione per ColibrìDB</p>
-
-                <div class="api-class">
-                    <h3>DatabaseConfig</h3>
-                    <p class="api-description">Configurazione principale del database</p>
-                    
-                    <div class="api-property">
-                        <h4>dataDirectory: String</h4>
-                        <p>Directory per i file di dati</p>
-                    </div>
-                    
-                    <div class="api-property">
-                        <h4>bufferPoolSize: Int</h4>
-                        <p>Dimensione del buffer pool in bytes</p>
-                    </div>
-                    
-                    <div class="api-property">
-                        <h4>walEnabled: Bool</h4>
-                        <p>Abilita il Write-Ahead Logging</p>
-                    </div>
-                    
-                    <div class="api-property">
-                        <h4>maxConnections: Int</h4>
-                        <p>Numero massimo di connessioni concorrenti</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Error Handling -->
-            <section class="api-section">
-                <h2>Gestione Errori</h2>
-                <p>Tipi di errore e gestione delle eccezioni</p>
-
-                <div class="api-class">
-                    <h3>ColibriDBError</h3>
-                    <p class="api-description">Errori specifici di ColibrìDB</p>
-                    
-                    <div class="api-error">
-                        <h4>.transactionAborted</h4>
-                        <p>Transazione interrotta per deadlock o timeout</p>
-                    </div>
-                    
-                    <div class="api-error">
-                        <h4>.tableNotFound</h4>
-                        <p>Tabella non trovata</p>
-                    </div>
-                    
-                    <div class="api-error">
-                        <h4>.constraintViolation</h4>
-                        <p>Violazione di vincolo di integrità</p>
-                    </div>
-                    
-                    <div class="api-error">
-                        <h4>.clusterUnavailable</h4>
-                        <p>Cluster non disponibile</p>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>ColibrìDB</h3>
-                    <p>RDBMS moderno e performante per macOS, con architettura modulare e verifiche formali complete.</p>
-                </div>
-                <div class="footer-section">
-                    <h3>Risorse</h3>
-                    <ul>
-                        <li><a href="documentation.html">Documentazione</a></li>
-                        <li><a href="architecture.html">Architettura</a></li>
-                        <li><a href="tla-specifications.html">Specifiche TLA+</a></li>
-                        <li><a href="api-reference.html">API Reference</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h3>Community</h3>
-                    <ul>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank">GitHub</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/issues" target="_blank">Segnala Bug</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/discussions" target="_blank">Discussioni</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md" target="_blank">Contribuisci</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 ColibrìDB · Swift 6.2 · Licenza BSD-3-Clause</p>
             </div>
         </div>
-    </footer>
+
+        <h2>Gestione Errori</h2>
+        
+        <h3>DBError</h3>
+        <div class="api-section">
+            <div class="code-block">
+                <pre><code>enum DBError: Error {
+    case databaseNotRunning
+    case transactionNotFound
+    case schemaMismatch
+    case constraintViolation
+    case deadlockDetected
+    case insufficientResources
+    case invalidConfiguration
+    case recoveryFailed
+    case authenticationFailed
+    case authorizationDenied
+}</code></pre>
+            </div>
+        </div>
+
+        <h2>Statistiche</h2>
+        
+        <h3>DatabaseStats</h3>
+        <div class="api-section">
+            <div class="code-block">
+                <pre><code>let stats = await db.getStatistics()
+print("Transactions: \(stats.transactionsStarted)")
+print("Tables: \(stats.tablesCreated)")
+print("Rows: \(stats.rowsInserted)")</code></pre>
+            </div>
+        </div>
+
+        <h2>Prossimi Passi</h2>
+        <ul>
+            <li><a href="configuration.html">Configuration</a> - Configurazione avanzata</li>
+            <li><a href="examples.html">Examples</a> - Esempi pratici</li>
+            <li><a href="architecture.html">Architecture</a> - Architettura del sistema</li>
+        </ul>
+    </div>
 </body>
 </html>

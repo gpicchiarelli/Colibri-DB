@@ -4,413 +4,306 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Performance - ColibrìDB</title>
-    <meta name="description" content="Benchmark e metriche di performance di ColibrìDB - RDBMS professionale per macOS">
-    <link rel="stylesheet" href="assets/css/main.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="container">
-            <div class="nav-brand">
-                <span class="brand-icon">🐦</span>
-                <span class="brand-text">ColibrìDB</span>
-            </div>
-            <div class="nav-menu">
-                <a href="index.html" class="nav-link">Home</a>
-                <a href="architecture.html" class="nav-link">Architettura</a>
-                <a href="documentation.html" class="nav-link">Documentazione</a>
-                <a href="tla-specifications.html" class="nav-link">TLA+ Specs</a>
-                <a href="performance.html" class="nav-link active">Performance</a>
-                <a href="https://github.com/gpicchiarelli/Colibri-DB" class="nav-link external" target="_blank">GitHub</a>
-            </div>
-        </div>
-    </nav>
+    <div class="container">
+        <h1>📈 Performance</h1>
+        
+        <h2>Metriche di Performance</h2>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <div class="page-header">
-                <h1>Performance</h1>
-                <p class="page-description">
-                    Benchmark completi e metriche di performance di ColibrìDB su hardware moderno
-                </p>
-            </div>
+        <h3>Throughput</h3>
+        <div class="api-section">
+            <h4>Transazioni per Secondo (TPS)</h4>
+            <ul>
+                <li><strong>Target:</strong> 1000+ TPS</li>
+                <li><strong>Read-heavy workload:</strong> 2000+ TPS</li>
+                <li><strong>Write-heavy workload:</strong> 500+ TPS</li>
+                <li><strong>Mixed workload:</strong> 1000+ TPS</li>
+            </ul>
 
-            <!-- Performance Overview -->
-            <section class="performance-overview">
-                <h2>Panoramica Performance</h2>
-                <div class="performance-stats">
-                    <div class="stat-card">
-                        <div class="stat-icon">⚡</div>
-                        <div class="stat-content">
-                            <div class="stat-number">1,000+</div>
-                            <div class="stat-label">Transazioni al Secondo</div>
-                            <div class="stat-description">Throughput sostenuto su SSD NVMe</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">⏱️</div>
-                        <div class="stat-content">
-                            <div class="stat-number">&lt;10ms</div>
-                            <div class="stat-label">Latenza P95</div>
-                            <div class="stat-description">Query SELECT su tabelle indicizzate</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🔄</div>
-                        <div class="stat-content">
-                            <div class="stat-number">&lt;5s/GB</div>
-                            <div class="stat-label">Recovery Time</div>
-                            <div class="stat-description">Tempo di recovery ARIES</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🔍</div>
-                        <div class="stat-content">
-                            <div class="stat-number">1M+</div>
-                            <div class="stat-label">Lookup al Secondo</div>
-                            <div class="stat-description">Ricerca su indici B-Tree</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            <h4>Test di Throughput</h4>
+            <div class="code-block">
+                <pre><code>// Test throughput transazioni
+let transactionCount = 1000
+let startTime = Date()
 
-            <!-- Benchmark Results -->
-            <section class="benchmark-results">
-                <h2>Risultati Benchmark</h2>
-                <p>Test eseguiti su MacBook Pro M2 Max con 32GB RAM e SSD 1TB</p>
+for i in 0..<transactionCount {
+    let txID = try await db.beginTransaction()
+    let row: Row = ["id": .int(i), "name": .string("User\(i)")]
+    try await db.insert(table: "users", row: row, txID: txID)
+    try await db.commit(txID: txID)
+}
 
-                <div class="benchmark-section">
-                    <h3>Throughput Transazioni</h3>
-                    <div class="benchmark-chart">
-                        <div class="chart-container">
-                            <div class="chart-bars">
-                                <div class="chart-bar">
-                                    <div class="bar-label">INSERT</div>
-                                    <div class="bar-fill" style="width: 85%"></div>
-                                    <div class="bar-value">1,200 TPS</div>
-                                </div>
-                                <div class="chart-bar">
-                                    <div class="bar-label">UPDATE</div>
-                                    <div class="bar-fill" style="width: 70%"></div>
-                                    <div class="bar-value">980 TPS</div>
-                                </div>
-                                <div class="chart-bar">
-                                    <div class="bar-label">SELECT</div>
-                                    <div class="bar-fill" style="width: 95%"></div>
-                                    <div class="bar-value">2,500 QPS</div>
-                                </div>
-                                <div class="chart-bar">
-                                    <div class="bar-label">DELETE</div>
-                                    <div class="bar-fill" style="width: 60%"></div>
-                                    <div class="bar-value">750 TPS</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+let endTime = Date()
+let duration = endTime.timeIntervalSince(startTime)
+let tps = Double(transactionCount) / duration
 
-                <div class="benchmark-section">
-                    <h3>Latenza Query</h3>
-                    <div class="latency-table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Operazione</th>
-                                    <th>P50</th>
-                                    <th>P95</th>
-                                    <th>P99</th>
-                                    <th>Max</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>SELECT (con indice)</td>
-                                    <td>0.5ms</td>
-                                    <td>2.1ms</td>
-                                    <td>8.5ms</td>
-                                    <td>15ms</td>
-                                </tr>
-                                <tr>
-                                    <td>SELECT (full scan)</td>
-                                    <td>2.3ms</td>
-                                    <td>12.5ms</td>
-                                    <td>45ms</td>
-                                    <td>120ms</td>
-                                </tr>
-                                <tr>
-                                    <td>INSERT</td>
-                                    <td>1.2ms</td>
-                                    <td>5.8ms</td>
-                                    <td>18ms</td>
-                                    <td>35ms</td>
-                                </tr>
-                                <tr>
-                                    <td>UPDATE</td>
-                                    <td>1.8ms</td>
-                                    <td>8.2ms</td>
-                                    <td>25ms</td>
-                                    <td>50ms</td>
-                                </tr>
-                                <tr>
-                                    <td>DELETE</td>
-                                    <td>2.1ms</td>
-                                    <td>9.5ms</td>
-                                    <td>30ms</td>
-                                    <td>60ms</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Memory Usage -->
-            <section class="memory-usage">
-                <h2>Utilizzo Memoria</h2>
-                <p>Efficienza del buffer pool e gestione memoria</p>
-
-                <div class="memory-metrics">
-                    <div class="metric-card">
-                        <h3>Buffer Pool Hit Rate</h3>
-                        <div class="metric-value">98.5%</div>
-                        <p>Cache hit rate con workload tipico</p>
-                    </div>
-                    <div class="metric-card">
-                        <h3>Memory Overhead</h3>
-                        <div class="metric-value">12%</div>
-                        <p>Overhead rispetto ai dati utente</p>
-                    </div>
-                    <div class="metric-card">
-                        <h3>Peak Memory</h3>
-                        <div class="metric-value">2.1GB</div>
-                        <p>Picco memoria con 10GB dati</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Index Performance -->
-            <section class="index-performance">
-                <h2>Performance Indici</h2>
-                <p>Confronto tra diversi tipi di indici</p>
-
-                <div class="index-comparison">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Tipo Indice</th>
-                                <th>Lookup (ops/sec)</th>
-                                <th>Insert (ops/sec)</th>
-                                <th>Update (ops/sec)</th>
-                                <th>Spazio</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>B+Tree</td>
-                                <td>1,200,000</td>
-                                <td>45,000</td>
-                                <td>38,000</td>
-                                <td>100%</td>
-                            </tr>
-                            <tr>
-                                <td>Hash</td>
-                                <td>2,100,000</td>
-                                <td>52,000</td>
-                                <td>41,000</td>
-                                <td>85%</td>
-                            </tr>
-                            <tr>
-                                <td>ART</td>
-                                <td>1,800,000</td>
-                                <td>48,000</td>
-                                <td>39,000</td>
-                                <td>60%</td>
-                            </tr>
-                            <tr>
-                                <td>LSM Tree</td>
-                                <td>950,000</td>
-                                <td>85,000</td>
-                                <td>72,000</td>
-                                <td>120%</td>
-                            </tr>
-                            <tr>
-                                <td>Fractal Tree</td>
-                                <td>1,100,000</td>
-                                <td>78,000</td>
-                                <td>65,000</td>
-                                <td>110%</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Scalability -->
-            <section class="scalability">
-                <h2>Scalabilità</h2>
-                <p>Performance con dataset di dimensioni crescenti</p>
-
-                <div class="scalability-chart">
-                    <div class="chart-title">Throughput vs Dataset Size</div>
-                    <div class="chart-data">
-                        <div class="data-point">
-                            <span class="data-size">1GB</span>
-                            <span class="data-throughput">1,200 TPS</span>
-                        </div>
-                        <div class="data-point">
-                            <span class="data-size">10GB</span>
-                            <span class="data-throughput">1,150 TPS</span>
-                        </div>
-                        <div class="data-point">
-                            <span class="data-size">100GB</span>
-                            <span class="data-throughput">1,080 TPS</span>
-                        </div>
-                        <div class="data-point">
-                            <span class="data-size">1TB</span>
-                            <span class="data-throughput">950 TPS</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Recovery Performance -->
-            <section class="recovery-performance">
-                <h2>Performance Recovery</h2>
-                <p>Tempi di recovery con algoritmo ARIES</p>
-
-                <div class="recovery-metrics">
-                    <div class="recovery-card">
-                        <h3>Crash Recovery</h3>
-                        <div class="recovery-time">3.2s</div>
-                        <p>Recovery completo da crash</p>
-                    </div>
-                    <div class="recovery-card">
-                        <h3>Point-in-Time Recovery</h3>
-                        <div class="recovery-time">5.8s</div>
-                        <p>Recovery a timestamp specifico</p>
-                    </div>
-                    <div class="recovery-card">
-                        <h3>Backup Restore</h3>
-                        <div class="recovery-time">12.5s</div>
-                        <p>Ripristino da backup completo</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Comparison -->
-            <section class="comparison">
-                <h2>Confronto con Altri Database</h2>
-                <p>Benchmark comparativo con database simili</p>
-
-                <div class="comparison-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Database</th>
-                                <th>Throughput</th>
-                                <th>Latenza P95</th>
-                                <th>Memoria</th>
-                                <th>Recovery</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="highlight">
-                                <td><strong>ColibrìDB</strong></td>
-                                <td><strong>1,200 TPS</strong></td>
-                                <td><strong>8.5ms</strong></td>
-                                <td><strong>2.1GB</strong></td>
-                                <td><strong>3.2s</strong></td>
-                            </tr>
-                            <tr>
-                                <td>SQLite</td>
-                                <td>450 TPS</td>
-                                <td>15ms</td>
-                                <td>1.8GB</td>
-                                <td>N/A</td>
-                            </tr>
-                            <tr>
-                                <td>PostgreSQL</td>
-                                <td>800 TPS</td>
-                                <td>12ms</td>
-                                <td>3.5GB</td>
-                                <td>8.5s</td>
-                            </tr>
-                            <tr>
-                                <td>MySQL</td>
-                                <td>950 TPS</td>
-                                <td>10ms</td>
-                                <td>2.8GB</td>
-                                <td>6.2s</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Optimization Tips -->
-            <section class="optimization-tips">
-                <h2>Suggerimenti per l'Ottimizzazione</h2>
-                <div class="tips-grid">
-                    <div class="tip-card">
-                        <div class="tip-icon">📊</div>
-                        <h3>Indici Appropriati</h3>
-                        <p>Usa B+Tree per range queries, Hash per lookup esatti, ART per stringhe</p>
-                    </div>
-                    <div class="tip-card">
-                        <div class="tip-icon">💾</div>
-                        <h3>Buffer Pool</h3>
-                        <p>Imposta buffer pool al 25-50% della RAM disponibile</p>
-                    </div>
-                    <div class="tip-card">
-                        <div class="tip-icon">⚡</div>
-                        <h3>Batch Operations</h3>
-                        <p>Usa transazioni batch per operazioni multiple</p>
-                    </div>
-                    <div class="tip-card">
-                        <div class="tip-icon">🔍</div>
-                        <h3>Query Planning</h3>
-                        <p>Analizza i piani di esecuzione con EXPLAIN</p>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>ColibrìDB</h3>
-                    <p>RDBMS moderno e performante per macOS, con architettura modulare e verifiche formali complete.</p>
-                </div>
-                <div class="footer-section">
-                    <h3>Risorse</h3>
-                    <ul>
-                        <li><a href="documentation.html">Documentazione</a></li>
-                        <li><a href="architecture.html">Architettura</a></li>
-                        <li><a href="tla-specifications.html">Specifiche TLA+</a></li>
-                        <li><a href="api-reference.html">API Reference</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h3>Community</h3>
-                    <ul>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB" target="_blank">GitHub</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/issues" target="_blank">Segnala Bug</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/discussions" target="_blank">Discussioni</a></li>
-                        <li><a href="https://github.com/gpicchiarelli/Colibri-DB/blob/main/CONTRIBUTING.md" target="_blank">Contribuisci</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 ColibrìDB · Swift 6.2 · Licenza BSD-3-Clause</p>
+logInfo("Throughput: \(tps) TPS", category: .performance)</code></pre>
             </div>
         </div>
-    </footer>
+
+        <h3>Latenza</h3>
+        <div class="api-section">
+            <h4>Latenza Target</h4>
+            <ul>
+                <li><strong>P50:</strong> < 5ms</li>
+                <li><strong>P95:</strong> < 10ms</li>
+                <li><strong>P99:</strong> < 50ms</li>
+                <li><strong>P99.9:</strong> < 100ms</li>
+            </ul>
+
+            <h4>Test di Latenza</h4>
+            <div class="code-block">
+                <pre><code>// Test latenza operazioni
+let operationCount = 1000
+var latencies: [TimeInterval] = []
+
+for _ in 0..<operationCount {
+    let startTime = Date()
+    
+    let txID = try await db.beginTransaction()
+    let row: Row = ["id": .int(Int.random(in: 1...1000)), "name": .string("Test")]
+    try await db.insert(table: "users", row: row, txID: txID)
+    try await db.commit(txID: txID)
+    
+    let endTime = Date()
+    latencies.append(endTime.timeIntervalSince(startTime))
+}
+
+// Calcola percentili
+latencies.sort()
+let p50 = latencies[Int(Double(latencies.count) * 0.5)]
+let p95 = latencies[Int(Double(latencies.count) * 0.95)]
+let p99 = latencies[Int(Double(latencies.count) * 0.99)]
+
+logInfo("Latency - P50: \(p50*1000)ms, P95: \(p95*1000)ms, P99: \(p99*1000)ms", 
+        category: .performance)</code></pre>
+            </div>
+        </div>
+
+        <h3>Recovery Time</h3>
+        <div class="api-section">
+            <h4>Target di Recovery</h4>
+            <ul>
+                <li><strong>Crash Recovery:</strong> < 5s per GB di dati</li>
+                <li><strong>Checkpoint:</strong> < 1s per GB di dati</li>
+                <li><strong>Startup:</strong> < 10s</li>
+            </ul>
+
+            <h4>Test di Recovery</h4>
+            <div class="code-block">
+                <pre><code>// Test recovery time
+let startTime = Date()
+try await db.start()
+let endTime = Date()
+let recoveryTime = endTime.timeIntervalSince(startTime)
+
+logInfo("Recovery time: \(recoveryTime)s", category: .performance)</code></pre>
+            </div>
+        </div>
+
+        <h2>Ottimizzazioni Performance</h2>
+
+        <h3>Configurazione Buffer Pool</h3>
+        <div class="api-section">
+            <h4>Dimensionamento</h4>
+            <ul>
+                <li><strong>Regola generale:</strong> 70-80% della RAM disponibile</li>
+                <li><strong>Minimo:</strong> 100 pagine (800KB)</li>
+                <li><strong>Raccomandato:</strong> 1000+ pagine (8MB+)</li>
+            </ul>
+
+            <h4>Configurazione Ottimale</h4>
+            <div class="code-block">
+                <pre><code>// Per sistema con 8GB RAM
+let config = ColibrìDBConfiguration(
+    bufferPoolSize: 6000,  // ~48MB (6% della RAM)
+    walBufferSize: 2 * 1024 * 1024  // 2MB WAL buffer
+)</code></pre>
+            </div>
+        </div>
+
+        <h3>Lock Striping</h3>
+        <div class="api-section">
+            <h4>Configurazione</h4>
+            <div class="code-block">
+                <pre><code>{
+  "performanceOptimizations": {
+    "lockStripingEnabled": true,
+    "lockStripeCount": 64  // Aumenta per più concurrency
+  }
+}</code></pre>
+            </div>
+
+            <h4>Benefici</h4>
+            <ul>
+                <li>Riduce contesa su lock globali</li>
+                <li>Migliora throughput concorrente</li>
+                <li>Riduce latenza per operazioni parallele</li>
+            </ul>
+        </div>
+
+        <h3>Query Plan Cache</h3>
+        <div class="api-section">
+            <h4>Configurazione</h4>
+            <div class="code-block">
+                <pre><code>{
+  "performanceOptimizations": {
+    "queryPlanCacheEnabled": true,
+    "queryPlanCacheSize": 500  // Numero di piani cached
+  }
+}</code></pre>
+            </div>
+
+            <h4>Benefici</h4>
+            <ul>
+                <li>Elimina ri-ottimizzazione query frequenti</li>
+                <li>Riduce CPU usage</li>
+                <li>Migliora latenza query</li>
+            </ul>
+        </div>
+
+        <h3>Serializzazione Binaria</h3>
+        <div class="api-section">
+            <h4>Configurazione</h4>
+            <div class="code-block">
+                <pre><code>{
+  "performanceOptimizations": {
+    "binarySerializationEnabled": true
+  }
+}</code></pre>
+            </div>
+
+            <h4>Benefici</h4>
+            <ul>
+                <li>3-5x più veloce di JSON</li>
+                <li>Riduce overhead serializzazione</li>
+                <li>Migliora throughput I/O</li>
+            </ul>
+        </div>
+
+        <h2>Monitoring Performance</h2>
+
+        <h3>Metriche Chiave</h3>
+        <div class="api-section">
+            <h4>Database Statistics</h4>
+            <div class="code-block">
+                <pre><code>let stats = await db.getStatistics()
+
+// Throughput
+logInfo("Transactions/sec: \(stats.transactionsPerSecond)", category: .performance)
+
+// Buffer Pool
+logInfo("Buffer pool hit rate: \(stats.bufferPoolHitRate)%", category: .performance)
+logInfo("Dirty pages: \(stats.dirtyPages)", category: .performance)
+
+// Concurrency
+logInfo("Active transactions: \(stats.activeTransactions)", category: .performance)
+logInfo("Lock contention: \(stats.lockContentionCount)", category: .performance)</code></pre>
+            </div>
+        </div>
+
+        <h3>Logging Performance</h3>
+        <div class="api-section">
+            <h4>Configurazione Logging</h4>
+            <div class="code-block">
+                <pre><code>// Logging per performance monitoring
+let performanceLogger = Logger(
+    handlers: [
+        FileLogHandler(fileURL: URL(fileURLWithPath: "/var/log/colibridb_perf.log")),
+        ConsoleLogHandler()
+    ],
+    minLevel: .info
+)
+
+// Log metriche periodiche
+Task {
+    while true {
+        let stats = await db.getStatistics()
+        await performanceLogger.info("Performance metrics", 
+                                   category: .performance,
+                                   metadata: [
+                                       "tps": stats.transactionsPerSecond,
+                                       "latency_p95": stats.latencyP95,
+                                       "buffer_hit_rate": stats.bufferPoolHitRate
+                                   ])
+        try await Task.sleep(nanoseconds: 60_000_000_000) // 60 secondi
+    }
+}</code></pre>
+            </div>
+        </div>
+
+        <h2>Benchmark e Testing</h2>
+
+        <h3>Benchmark Suite</h3>
+        <div class="api-section">
+            <h4>Esegui Benchmark</h4>
+            <div class="code-block">
+                <pre><code># Esegui benchmark completi
+swift run benchmarks
+
+# Benchmark specifici
+swift run benchmarks --throughput
+swift run benchmarks --latency
+swift run benchmarks --recovery</code></pre>
+            </div>
+        </div>
+
+        <h3>Stress Testing</h3>
+        <div class="api-section">
+            <h4>Test di Carico</h4>
+            <div class="code-block">
+                <pre><code>// Test con carico elevato
+let concurrentTasks = 100
+let operationsPerTask = 1000
+
+await withTaskGroup(of: Void.self) { group in
+    for _ in 0..<concurrentTasks {
+        group.addTask {
+            for _ in 0..<operationsPerTask {
+                let txID = try await db.beginTransaction()
+                let row: Row = ["id": .int(Int.random(in: 1...10000)), 
+                               "name": .string("StressTest")]
+                try await db.insert(table: "users", row: row, txID: txID)
+                try await db.commit(txID: txID)
+            }
+        }
+    }
+}</code></pre>
+            </div>
+        </div>
+
+        <h2>Best Practices</h2>
+
+        <h3>Configurazione Produzione</h3>
+        <div class="api-section">
+            <ul>
+                <li>Usa <code>logLevel: .warning</code> per ridurre I/O</li>
+                <li>Imposta <code>bufferPoolSizeBytes</code> al 70-80% della RAM</li>
+                <li>Abilita tutte le ottimizzazioni performance</li>
+                <li>Configura <code>periodicCleanupEnabled</code></li>
+                <li>Usa SSD per storage</li>
+                <li>Monitora metriche continuamente</li>
+            </ul>
+        </div>
+
+        <h3>Configurazione Sviluppo</h3>
+        <div class="api-section">
+            <ul>
+                <li>Usa <code>logLevel: .debug</code> per debugging</li>
+                <li>Abilita <code>metricsEnabled</code> per monitoring</li>
+                <li>Usa buffer pool più piccolo per test</li>
+                <li>Abilita logging dettagliato</li>
+            </ul>
+        </div>
+
+        <h2>Prossimi Passi</h2>
+        <ul>
+            <li><a href="configuration.html">Configuration</a> - Configurazione avanzata</li>
+            <li><a href="troubleshooting.html">Troubleshooting</a> - Risoluzione problemi</li>
+            <li><a href="api-reference.html">API Reference</a> - Riferimento API completo</li>
+        </ul>
+    </div>
 </body>
 </html>
