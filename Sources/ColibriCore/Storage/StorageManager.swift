@@ -62,7 +62,7 @@ public struct StorageMetrics: Codable, Sendable, Equatable {
     public let usedSpace: UInt64
     public let freeSpace: UInt64
     public let compressionRatio: Double
-    public let ioOperations: Int
+    public var ioOperations: Int
     public let averageLatency: Double
     
     public init(totalPages: Int, usedPages: Int, freePages: Int, totalRecords: Int, usedSpace: UInt64, freeSpace: UInt64, compressionRatio: Double, ioOperations: Int, averageLatency: Double) {
@@ -161,15 +161,7 @@ public actor StorageManagerActor {
         let pageId = try await findFreePage(area: area, size: size)
         
         // TLA+: Allocate page
-        let page = Page(
-            pageId: pageId,
-            area: area,
-            size: size,
-            data: Data(),
-            isAllocated: true,
-            isDirty: false,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
-        )
+        let page = Page(pageID: pageId)
         
         pages[pageId] = page
         freeSpaceMap[pageId] = size
@@ -200,9 +192,8 @@ public actor StorageManagerActor {
         freeSpaceMap.removeValue(forKey: pageId)
         
         // TLA+: Remove from storage area
-        if let area = page.area {
-            storageAreas[area]?.removeAll { $0 == pageId }
-        }
+        // Note: Page doesn't have area property, using default area
+        storageAreas[.heap]?.removeAll { $0 == pageId }
         
         // TLA+: Update metrics
         updateMetrics()
@@ -298,12 +289,14 @@ public actor StorageManagerActor {
     /// TLA+ Action: ManageFreeSpace()
     public func manageFreeSpace() async throws {
         // TLA+: Manage free space
-        let freePages = pages.values.filter { !$0.isAllocated }
-        let usedPages = pages.values.filter { $0.isAllocated }
+        let freePages = pages.values.filter { $0.data.isEmpty }
+        let usedPages = pages.values.filter { !$0.data.isEmpty }
         
         // TLA+: Update free space map
-        for page in freePages {
-            freeSpaceMap[page.pageId] = page.size
+        for (pageId, page) in pages {
+            if page.data.isEmpty {
+                freeSpaceMap[pageId] = UInt64(page.data.count)
+            }
         }
         
         // TLA+: Update metrics
@@ -334,11 +327,11 @@ public actor StorageManagerActor {
     private func updateMetrics() {
         // TLA+: Update storage metrics
         let totalPages = pages.count
-        let usedPages = pages.values.filter { $0.isAllocated }.count
+        let usedPages = pages.values.filter { !$0.data.isEmpty }.count
         let freePages = totalPages - usedPages
         let totalRecords = records.values.filter { !$0.isDeleted }.count
-        let usedSpace = pages.values.filter { $0.isAllocated }.reduce(0) { $0 + $1.size }
-        let freeSpace = pages.values.filter { !$0.isAllocated }.reduce(0) { $0 + $1.size }
+        let usedSpace = pages.values.filter { !$0.data.isEmpty }.reduce(into: 0) { $0 += UInt64($1.data.count) }
+        let freeSpace = pages.values.filter { $0.data.isEmpty }.reduce(into: 0) { $0 += UInt64($1.data.count) }
         
         metrics = StorageMetrics(
             totalPages: totalPages,
@@ -372,17 +365,17 @@ public actor StorageManagerActor {
     
     /// Get page
     public func getPage(pageId: PageID) -> Page? {
-        return getPage(pageId: pageId)
+        return pages[pageId]
     }
     
     /// Get record
     public func getRecord(recordId: RecordID) -> Record? {
-        return getRecord(recordId: recordId)
+        return records[recordId]
     }
     
     /// Get free space
     public func getFreeSpace(pageId: PageID) -> UInt64? {
-        return getFreeSpace(pageId: pageId)
+        return freeSpaceMap[pageId]
     }
     
     /// Get page count
@@ -495,7 +488,7 @@ public struct Record: Codable, Sendable, Equatable {
     public let pageId: PageID?
     public let offset: UInt64
     public let size: UInt64
-    public let isDeleted: Bool
+    public var isDeleted: Bool
     public let timestamp: UInt64
     
     public init(recordId: RecordID, data: Data, pageId: PageID?, offset: UInt64, size: UInt64, isDeleted: Bool, timestamp: UInt64) {
