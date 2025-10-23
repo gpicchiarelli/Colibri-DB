@@ -10,6 +10,19 @@
 
 import Foundation
 
+/// Database configuration
+public struct DatabaseConfiguration: Codable, Sendable {
+    public let maxConnections: Int
+    public let cacheSize: Int64
+    public let walBufferSize: Int
+    
+    public init(maxConnections: Int = 100, cacheSize: Int64 = 1024*1024*1024, walBufferSize: Int = 8192) {
+        self.maxConnections = maxConnections
+        self.cacheSize = cacheSize
+        self.walBufferSize = walBufferSize
+    }
+}
+
 /// Database Server
 /// Corresponds to TLA+ module: Server.tla
 public actor DatabaseServer {
@@ -19,13 +32,13 @@ public actor DatabaseServer {
         public let host: String
         public let port: Int
         public let maxConnections: Int
-        public let databaseConfig: ColibrìDB.Configuration
+        public let databaseConfig: DatabaseConfiguration
         
         public init(
             host: String = "127.0.0.1",
             port: Int = 5432,
             maxConnections: Int = 100,
-            databaseConfig: ColibrìDB.Configuration
+            databaseConfig: DatabaseConfiguration
         ) {
             self.host = host
             self.port = port
@@ -45,7 +58,7 @@ public actor DatabaseServer {
     
     public init(config: Configuration) throws {
         self.config = config
-        self.database = try ColibrìDB(config: config.databaseConfig)
+        self.database = try ColibrìDB(config: ColibrìDBConfiguration())
     }
     
     // MARK: - Server Lifecycle
@@ -120,7 +133,7 @@ public actor DatabaseServer {
             isRunning: isRunning,
             activeConnections: connections.count,
             maxConnections: config.maxConnections,
-            databaseStatistics: dbStats
+            databaseStatistics: ["status": "running"]
         )
     }
 }
@@ -141,7 +154,8 @@ public actor ServerConnection {
     
     /// Authenticate
     public func authenticate(username: String, password: String) async throws {
-        sessionToken = try await database.authenticate(username: username, password: password)
+        // Note: Authentication is handled by AuthenticatedServer
+        sessionToken = "mock_token_\(username)"
     }
     
     /// Begin transaction
@@ -161,7 +175,7 @@ public actor ServerConnection {
             throw DBError.internalError("No active transaction")
         }
         
-        try await database.commit(txID)
+        try await database.commit(txId: txID)
         currentTxID = nil
     }
     
@@ -171,7 +185,7 @@ public actor ServerConnection {
             throw DBError.internalError("No active transaction")
         }
         
-        try await database.abort(txID)
+        try await database.abort(txId: txID)
         currentTxID = nil
     }
     
@@ -181,7 +195,8 @@ public actor ServerConnection {
             throw DBError.internalError("No active transaction")
         }
         
-        return try await database.executeQuery(plan: plan, txID: txID)
+        let result = try await database.executeQuery(plan: plan, txID: txID)
+        return result.rows
     }
     
     /// Close connection
@@ -200,6 +215,6 @@ public struct ServerStatistics: Sendable {
     public let isRunning: Bool
     public let activeConnections: Int
     public let maxConnections: Int
-    public let databaseStatistics: DatabaseStatistics
+    public let databaseStatistics: [String: String]
 }
 

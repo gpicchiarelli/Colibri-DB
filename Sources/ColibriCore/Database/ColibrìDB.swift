@@ -638,38 +638,7 @@ public struct QueryResult: Codable {
 }
 
 // MARK: - Errors
-
-public enum DBError: Error, LocalizedError {
-    case databaseAlreadyRunning
-    case databaseNotRunning
-    case transactionNotFound(txId: TxID)
-    case tableNotFound(table: String)
-    case schemaMismatch(expected: Int, actual: Int)
-    case nullConstraintViolation(column: String)
-    case invalidConfiguration
-    case subsystemError(String)
-    
-    public var errorDescription: String? {
-        switch self {
-        case .databaseAlreadyRunning:
-            return "Database is already running"
-        case .databaseNotRunning:
-            return "Database is not running"
-        case .transactionNotFound(let txId):
-            return "Transaction not found: \(txId)"
-        case .tableNotFound(let table):
-            return "Table not found: \(table)"
-        case .schemaMismatch(let expected, let actual):
-            return "Schema mismatch: expected \(expected) columns, got \(actual)"
-        case .nullConstraintViolation(let column):
-            return "Null constraint violation for column: \(column)"
-        case .invalidConfiguration:
-            return "Invalid database configuration"
-        case .subsystemError(let message):
-            return "Subsystem error: \(message)"
-        }
-    }
-}
+// DBError is defined in Core/Types.swift
 
 /*
  * IMPLEMENTATION NOTES:

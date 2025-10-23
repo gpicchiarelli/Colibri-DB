@@ -22,7 +22,7 @@ import Foundation
 // MARK: - Configuration
 
 /// System configuration key-value pairs
-public struct SystemConfig: Codable {
+public struct SystemConfig: Codable, Sendable {
     public var maxConnections: Int
     public var maxMemory: Int64  // bytes
     public var cacheSize: Int64  // bytes
@@ -50,7 +50,7 @@ public struct SystemConfig: Codable {
 // MARK: - Resource Usage
 
 /// Resource type
-public enum ResourceType: String, Codable {
+public enum ResourceType: String, Codable, Sendable {
     case connections
     case memory
     case cpu

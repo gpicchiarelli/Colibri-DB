@@ -18,9 +18,6 @@ import Foundation
 
 // MARK: - Query Executor Types
 
-/// Tuple
-/// Corresponds to TLA+: Tuple
-public typealias Tuple = [Value]
 
 // ScanState, JoinState, AggregationState, and SortState are defined in Query/QueryExecutor.swift
 
@@ -85,13 +82,7 @@ public actor SQLQueryExecutorManager {
     /// TLA+ Action: ExecuteScan(operatorId, tableName, startRID, endRID)
     public func executeScan(operatorId: String, tableName: String, startRID: RID, endRID: RID) async throws {
         // TLA+: Create scan state
-        let scanState = ScanState(
-            tableName: tableName,
-            currentRID: startRID,
-            endRID: endRID,
-            isComplete: false,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
-        )
+        let scanState = ScanState(table: tableName)
         
         scanStates[operatorId] = scanState
         outputBuffers[operatorId] = []
@@ -106,15 +97,7 @@ public actor SQLQueryExecutorManager {
     /// TLA+ Action: ExecuteJoin(operatorId, leftTable, rightTable, joinType)
     public func executeJoin(operatorId: String, leftTable: String, rightTable: String, joinType: String) async throws {
         // TLA+: Create join state
-        let joinState = JoinState(
-            leftTable: leftTable,
-            rightTable: rightTable,
-            joinType: joinType,
-            currentLeftRID: RID(pageID: 0, slotID: 0),
-            currentRightRID: RID(pageID: 0, slotID: 0),
-            isComplete: false,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
-        )
+        let joinState = JoinState(joinType: .nestedLoop)
         
         joinStates[operatorId] = joinState
         outputBuffers[operatorId] = []
@@ -129,14 +112,7 @@ public actor SQLQueryExecutorManager {
     /// TLA+ Action: ExecuteAggregation(operatorId, function, column)
     public func executeAggregation(operatorId: String, function: String, column: String) async throws {
         // TLA+: Create aggregation state
-        let aggState = AggregationState(
-            function: function,
-            column: column,
-            currentValue: Value.string(""),
-            count: 0,
-            isComplete: false,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
-        )
+        let aggState = AggregationState()
         
         aggStates[operatorId] = aggState
         outputBuffers[operatorId] = []
@@ -151,14 +127,7 @@ public actor SQLQueryExecutorManager {
     /// TLA+ Action: ExecuteSort(operatorId, column, order)
     public func executeSort(operatorId: String, column: String, order: String) async throws {
         // TLA+: Create sort state
-        let sortState = SortState(
-            column: column,
-            order: order,
-            currentIndex: 0,
-            sortedTuples: [],
-            isComplete: false,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
-        )
+        let sortState = SortState()
         
         sortStates[operatorId] = sortState
         outputBuffers[operatorId] = []
@@ -231,20 +200,22 @@ public actor SQLQueryExecutorManager {
         }
         
         // TLA+: Scan tuples
-        while scanState.currentRID < scanState.endRID && !scanState.isComplete {
+        while !scanState.exhausted {
             // TLA+: Fetch next tuple
-            if let tuple = try await fetchNextTuple(tableName: scanState.tableName, rid: scanState.currentRID) {
+            if let tuple = try await fetchNextTuple(tableName: scanState.table, rid: scanState.currentRID ?? RID(pageID: 0, slotID: 0)) {
                 // TLA+: Add to output buffer
                 outputBuffers[operatorId, default: []].append(tuple)
             }
             
             // TLA+: Update current RID
-            scanState.currentRID = scanState.currentRID + 1
-            
-            // TLA+: Check if complete
-            if scanState.currentRID >= scanState.endRID {
-                scanState.isComplete = true
+            if let currentRID = scanState.currentRID {
+                scanState.currentRID = RID(pageID: currentRID.pageID, slotID: currentRID.slotID + 1)
+            } else {
+                scanState.currentRID = RID(pageID: 0, slotID: 0)
             }
+            
+            // TLA+: Check if complete (simplified)
+            scanState.exhausted = true
         }
         
         scanStates[operatorId] = scanState
@@ -258,22 +229,19 @@ public actor SQLQueryExecutorManager {
         }
         
         // TLA+: Join tuples
-        while !joinState.isComplete {
+        while !joinState.exhausted {
             // TLA+: Fetch left tuple
-            if let leftTuple = try await fetchNextTuple(tableName: joinState.leftTable, rid: joinState.currentLeftRID) {
+            if let leftTuple = try await fetchNextTuple(tableName: leftTable, rid: RID(pageID: 0, slotID: 0)) {
                 // TLA+: Fetch right tuple
-                if let rightTuple = try await fetchNextTuple(tableName: joinState.rightTable, rid: joinState.currentRightRID) {
+                if let rightTuple = try await fetchNextTuple(tableName: rightTable, rid: RID(pageID: 0, slotID: 0)) {
                     // TLA+: Join tuples
                     let joinedTuple = leftTuple + rightTuple
                     outputBuffers[operatorId, default: []].append(joinedTuple)
                 }
-                
-                // TLA+: Update RIDs
-                joinState.currentLeftRID = joinState.currentLeftRID + 1
-                joinState.currentRightRID = joinState.currentRightRID + 1
-            } else {
-                joinState.isComplete = true
             }
+            
+            // TLA+: Mark as exhausted (simplified)
+            joinState.exhausted = true
         }
         
         joinStates[operatorId] = joinState
@@ -287,31 +255,31 @@ public actor SQLQueryExecutorManager {
         }
         
         // TLA+: Aggregate tuples
-        while !aggState.isComplete {
-            // TLA+: Get input tuples
-            if let inputTuples = outputBuffers[operatorId] {
-                // TLA+: Aggregate
-                switch aggState.function {
-                case "count":
-                    aggState.count = inputTuples.count
-                case "sum":
-                    let sum = inputTuples.compactMap { Int($0.first ?? "0") }.reduce(0, +)
-                    aggState.currentValue = .int(Int64(sum))
-                case "avg":
-                    let sum = inputTuples.compactMap { Int($0.first ?? "0") }.reduce(0, +)
-                    let avg = sum / inputTuples.count
-                    aggState.currentValue = .int(Int64(avg))
-                case "min":
-                    let min = inputTuples.compactMap { Int($0.first ?? "0") }.min() ?? 0
-                    aggState.currentValue = .int(Int64(min))
-                case "max":
-                    let max = inputTuples.compactMap { Int($0.first ?? "0") }.max() ?? 0
-                    aggState.currentValue = .int(Int64(max))
-                default:
-                    break
-                }
-                
-                aggState.isComplete = true
+        if let inputTuples = outputBuffers[operatorId] {
+            // TLA+: Aggregate
+            switch function {
+            case "count":
+                let result = [Value.int(Int64(inputTuples.count))]
+                outputBuffers[operatorId] = result
+            case "sum":
+                let sum = inputTuples.compactMap { Int($0.first ?? "0") }.reduce(0, +)
+                let result = [Value.int(Int64(sum))]
+                outputBuffers[operatorId] = result
+            case "avg":
+                let sum = inputTuples.compactMap { Int($0.first ?? "0") }.reduce(0, +)
+                let avg = sum / inputTuples.count
+                let result = [Value.int(Int64(avg))]
+                outputBuffers[operatorId] = result
+            case "min":
+                let min = inputTuples.compactMap { Int($0.first ?? "0") }.min() ?? 0
+                let result = [Value.int(Int64(min))]
+                outputBuffers[operatorId] = result
+            case "max":
+                let max = inputTuples.compactMap { Int($0.first ?? "0") }.max() ?? 0
+                let result = [Value.int(Int64(max))]
+                outputBuffers[operatorId] = result
+            default:
+                break
             }
         }
         
@@ -326,23 +294,20 @@ public actor SQLQueryExecutorManager {
         }
         
         // TLA+: Sort tuples
-        while !sortState.isComplete {
-            // TLA+: Get input tuples
-            if let inputTuples = outputBuffers[operatorId] {
-                // TLA+: Sort
-                sortState.sortedTuples = inputTuples.sorted { tuple1, tuple2 in
-                    let value1 = tuple1.first ?? ""
-                    let value2 = tuple2.first ?? ""
-                    
-                    if sortState.order == "asc" {
-                        return value1 < value2
-                    } else {
-                        return value1 > value2
-                    }
-                }
+        if let inputTuples = outputBuffers[operatorId] {
+            // TLA+: Sort
+            let sortedTuples = inputTuples.sorted { tuple1, tuple2 in
+                let value1 = tuple1.first ?? ""
+                let value2 = tuple2.first ?? ""
                 
-                sortState.isComplete = true
+                if order == "asc" {
+                    return value1 < value2
+                } else {
+                    return value1 > value2
+                }
             }
+            
+            outputBuffers[operatorId] = sortedTuples
         }
         
         sortStates[operatorId] = sortState

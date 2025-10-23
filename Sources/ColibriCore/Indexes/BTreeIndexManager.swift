@@ -27,9 +27,9 @@ public typealias Key = Value
 /// Corresponds to TLA+: Node
 public struct Node: Codable, Sendable, Equatable {
     public let nodeId: PageID
-    public let keys: [Key]
-    public let children: [PageID]
-    public let rids: [RID]
+    public var keys: [Key]
+    public var children: [PageID]
+    public var rids: [RID]
     public let isLeaf: Bool
     public let next: PageID?
     public let parent: PageID?

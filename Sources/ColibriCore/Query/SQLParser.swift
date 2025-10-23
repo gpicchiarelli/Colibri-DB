@@ -34,7 +34,7 @@ public enum TokenType: String {
     case keyword        // SELECT, FROM, WHERE
     case identifier     // table/column names
     case literal        // 'string', 123, TRUE, NULL
-    case operator       // =, <>, <, >, +, -, *, /
+    case `operator`     // =, <>, <, >, +, -, *, /
     case punctuation    // (, ), ,, ;
     case eof
 }

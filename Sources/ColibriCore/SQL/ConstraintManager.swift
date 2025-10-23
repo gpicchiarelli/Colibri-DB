@@ -210,9 +210,9 @@ public actor ConstraintManager {
     private func validateConstraint(constraint: Constraint, row: [Value], operation: String) async throws {
         // TLA+: Validate based on constraint type
         switch constraint.constraintType {
-        case .primaryKey:
+        case .primary:
             try await checkPrimaryKey(constraint: constraint, row: row, operation: operation)
-        case .foreignKey:
+        case .foreign:
             try await checkForeignKey(constraint: constraint, row: row, operation: operation)
         case .unique:
             try await checkUnique(constraint: constraint, row: row, operation: operation)
@@ -339,15 +339,6 @@ public actor ConstraintManager {
         return constraints[constraintId]
     }
     
-    /// Get violations
-    public func getViolations(constraintId: String) -> [String] {
-        return constraintViolations[constraintId] ?? []
-    }
-    
-    /// Check if has violations
-    public func hasViolations(constraintId: String) -> Bool {
-        return !(constraintViolations[constraintId]?.isEmpty ?? true)
-    }
     
     /// Get all constraints
     public func getAllConstraints() -> [String: Constraint] {
@@ -457,13 +448,6 @@ public actor ConstraintManager {
 }
 
 // MARK: - Supporting Types
-
-/// Storage manager
-public protocol StorageManager: Sendable {
-    func readRow(tableName: String, rid: RID) async throws -> [Value]?
-    func writeRow(tableName: String, rid: RID, row: [Value]) async throws
-    func deleteRow(tableName: String, rid: RID) async throws
-}
 
 /// Index manager
 public protocol IndexManager: Sendable {

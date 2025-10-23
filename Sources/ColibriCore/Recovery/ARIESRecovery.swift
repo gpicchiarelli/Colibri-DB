@@ -315,14 +315,14 @@ public actor ARIESRecovery {
         // TLA+: undoList' = <<[txId |-> tid, lsn |-> att[tid].lastLSN] : tid \in DOMAIN att>>
         undoList = att.compactMap { (txID, entry) in
             if entry.status == .active {
-                return UndoRecord(txID: txID, lsn: entry.lastLSN)
+                return UndoRecord(transactionId: txID, lsn: entry.lastLSN)
             }
             return nil
         }
         
         // For each active transaction, undo its operations
         for undoRecord in undoList {
-            try await undoTransaction(txID: undoRecord.txID, lastLSN: undoRecord.lsn, records: records)
+            try await undoTransaction(txID: undoRecord.transactionId, lastLSN: undoRecord.lsn, records: records)
         }
         
         print("Undo phase complete")

@@ -127,20 +127,7 @@ public actor IndexSubsystem {
             btreeIndexes[indexName] = "btree_placeholder"
         case .hash:
             hashIndexes[indexName] = "hash_placeholder"
-        case .adaptiveRadixTree:
-            artIndexes[indexName] = "art_placeholder"
-        case .lsm:
-            lsmIndexes[indexName] = "lsm_placeholder"
-        case .fractal:
-            fractalIndexes[indexName] = "fractal_placeholder"
-        case .bloom:
-            bloomFilters[indexName] = "bloom_placeholder"
-        case .skiplist:
-            skiplistIndexes[indexName] = "skiplist_placeholder"
-        case .ttree:
-            ttreeIndexes[indexName] = "ttree_placeholder"
-        case .radix:
-            radixIndexes[indexName] = "radix_placeholder"
+        // Note: Only btree and hash are supported in IndexType
         }
         
         stats.totalIndexes += 1
@@ -166,20 +153,7 @@ public actor IndexSubsystem {
             btreeIndexes.removeValue(forKey: indexName)
         case .hash:
             hashIndexes.removeValue(forKey: indexName)
-        case .art:
-            artIndexes.removeValue(forKey: indexName)
-        case .lsm:
-            lsmIndexes.removeValue(forKey: indexName)
-        case .fractal:
-            fractalIndexes.removeValue(forKey: indexName)
-        case .bloom:
-            bloomFilters.removeValue(forKey: indexName)
-        case .skiplist:
-            skiplistIndexes.removeValue(forKey: indexName)
-        case .ttree:
-            ttreeIndexes.removeValue(forKey: indexName)
-        case .radix:
-            radixIndexes.removeValue(forKey: indexName)
+        // Note: Only btree and hash are supported in IndexType
         }
         
         stats.totalIndexes -= 1

@@ -49,7 +49,7 @@ public enum SystemHealthStatusStatus: String, Codable {
 // MARK: - Chaos Experiment
 
 /// Chaos experiment definition
-public struct ChaosExperiment: Codable, Hashable {
+public struct ChaosExperiment: Codable, Hashable, Equatable {
     public let experimentId: String
     public let experimentType: ExperimentType
     public let targetNodes: Set<String>
@@ -75,7 +75,7 @@ public struct ChaosExperiment: Codable, Hashable {
 }
 
 /// Experiment outcome
-public struct ExperimentOutcome: Codable {
+public struct ExperimentOutcome: Codable, Equatable {
     public let systemRecovered: Bool
     public let recoveryTime: TimeInterval?
     public let failuresCaused: Int

@@ -391,10 +391,10 @@ class ColibrìDBTests: XCTestCase {
         
         // Try to insert row with wrong schema
         let txId = try await database.beginTransaction()
-        let invalidRow = Row(values: [
+        let invalidRow: Row = [
             "id": .int(1),
             "extra_column": .string("value")  // Extra column
-        ])
+        ]
         
         do {
             try await database.insert(table: "test_table", row: invalidRow, txId: txId)
@@ -579,11 +579,11 @@ extension ColibrìDBTests {
     func insertTestData(table: String, count: Int) async throws {
         for i in 0..<count {
             let txId = try await database.beginTransaction()
-            let row = Row(values: [
-                "id": .int(i),
+            let row: Row = [
+                "id": .int(Int64(i)),
                 "name": .string("User\(i)"),
-                "age": .int(20 + i)
-            ])
+                "age": .int(Int64(20 + i))
+            ]
             try await database.insert(table: table, row: row, txId: txId)
             try await database.commit(txId: txId)
         }

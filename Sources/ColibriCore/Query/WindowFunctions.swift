@@ -453,7 +453,7 @@ public actor WindowFunctionsProcessor {
     private func computeSum(frame: [WindowRow], column: String) -> Value {
         var sum: Double = 0
         for row in frame {
-            if let value = row.values[column]?.asDouble {
+            if case .double(let value) = row[column] {
                 sum += value
             }
         }
@@ -465,7 +465,7 @@ public actor WindowFunctionsProcessor {
         var sum: Double = 0
         var count = 0
         for row in frame {
-            if let value = row.values[column]?.asDouble {
+            if case .double(let value) = row[column] {
                 sum += value
                 count += 1
             }

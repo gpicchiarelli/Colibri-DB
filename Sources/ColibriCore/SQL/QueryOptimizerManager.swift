@@ -248,7 +248,7 @@ public actor QueryOptimizerManager {
         let tables = parsedQuery["tables"] as? [String] ?? []
         let joinOrders = try await generateAllJoinOrders(tables: tables)
         
-        return joinOrders
+        return joinOrders as! [[PlanNode]]
     }
     
     // MARK: - Helper Methods

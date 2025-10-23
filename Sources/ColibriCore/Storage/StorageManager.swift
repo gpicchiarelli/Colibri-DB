@@ -193,7 +193,7 @@ public actor StorageManagerActor {
         
         // TLA+: Remove from storage area
         // Note: Page doesn't have area property, using default area
-        storageAreas[.heap]?.removeAll { $0 == pageId }
+        storageAreas[.data]?.removeAll { $0 == pageId }
         
         // TLA+: Update metrics
         updateMetrics()
@@ -363,20 +363,6 @@ public actor StorageManagerActor {
     
     // MARK: - Query Operations
     
-    /// Get page
-    public func getPage(pageId: PageID) -> Page? {
-        return pages[pageId]
-    }
-    
-    /// Get record
-    public func getRecord(recordId: RecordID) -> Record? {
-        return records[recordId]
-    }
-    
-    /// Get free space
-    public func getFreeSpace(pageId: PageID) -> UInt64? {
-        return freeSpaceMap[pageId]
-    }
     
     /// Get page count
     public func getPageCount() -> Int {

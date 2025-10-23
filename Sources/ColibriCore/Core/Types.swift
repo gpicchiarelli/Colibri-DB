@@ -342,6 +342,14 @@ public enum DBError: Error, Sendable {
     case notNullViolation
     case ioError(String)
     case internalError(String)
+    case databaseAlreadyRunning
+    case databaseNotRunning
+    case transactionNotFound(txId: TxID)
+    case tableNotFound(table: String)
+    case schemaMismatch(expected: Int, actual: Int)
+    case nullConstraintViolation(column: String)
+    case invalidConfiguration
+    case subsystemError(String)
     case custom(String)
 }
 

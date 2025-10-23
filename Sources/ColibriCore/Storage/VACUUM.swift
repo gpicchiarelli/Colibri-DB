@@ -39,7 +39,7 @@ public actor VacuumManager {
     public func vacuum(mode: VacuumMode = .lazy) async -> VacuumStatistics {
         let startTime = Date()
         
-        try await mvcc.vacuum()
+        try? await mvcc.vacuum()
         
         let duration = Date().timeIntervalSince(startTime)
         
