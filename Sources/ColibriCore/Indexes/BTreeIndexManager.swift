@@ -31,7 +31,7 @@ public struct Node: Codable, Sendable, Equatable {
     public var children: [PageID]
     public var rids: [RID]
     public let isLeaf: Bool
-    public let next: PageID?
+    public var next: PageID?
     public let parent: PageID?
     public let timestamp: UInt64
     

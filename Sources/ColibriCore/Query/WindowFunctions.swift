@@ -290,7 +290,7 @@ public actor WindowFunctionsProcessor {
     }
     
     private func sortPartition(_ partition: [WindowRow], orderBy: [OrderSpec]) -> [WindowRow] {
-        let orderSpecs = orderBy
+        let orderSpecs = Array(orderBy) // Create a copy to avoid data race
         return partition.sorted { r1, r2 in
             for spec in orderSpecs {
                 let v1 = r1.values[spec.column] ?? Value.null
@@ -431,7 +431,7 @@ public actor WindowFunctionsProcessor {
         case .group, .ties:
             // Exclude peers (simplified - exclude rows with same order key values)
             let currentRow = partition[rowIdx]
-            let orderColumns = spec.orderBy.map { $0.column }
+            let orderColumns = Array(spec.orderBy.map { $0.column }) // Create a copy to avoid data race
             frame = frame.filter { row in
                 !areRowsEqual(row, currentRow, columns: orderColumns)
             }

@@ -445,7 +445,7 @@ public actor QueryExecutor {
         state.input = input
         
         // Sort tuples
-        let sortKeys = state.sortKeys
+        let sortKeys = Array(state.sortKeys) // Create a copy to avoid data race
         state.sorted = input.sorted { t1, t2 in
             for sortKey in sortKeys {
                 let v1 = t1.values[sortKey.column]
