@@ -98,7 +98,9 @@ public actor FaultInjectionManager {
             nodeState[node] = .healthy
         }
         
-        initializeDefaultHandlers()
+        Task {
+            await initializeDefaultHandlers()
+        }
     }
     
     // MARK: - Fault Injection

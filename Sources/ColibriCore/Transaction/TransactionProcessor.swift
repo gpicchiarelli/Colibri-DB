@@ -319,10 +319,6 @@ public actor TransactionProcessor {
     
     // MARK: - Query Operations
     
-    /// Get transaction state
-    public func getTransactionState(txId: TransactionID) -> TransactionState? {
-        return getTransactionState(txId: txId)
-    }
     
     /// Get held locks
     public func getHeldLocks(txId: TransactionID) -> [String] {
@@ -418,7 +414,7 @@ public actor TransactionProcessor {
     }
     
     /// Get transaction savepoints
-    public func getTransactionSavepoints(txId: TransactionID) -> [Savepoint] {
+    public func getTransactionSavepoints(txId: TransactionID) -> [TransactionSavepoint] {
         // TLA+: Get transaction savepoints
         // Simplified implementation - return empty array for now
         return []
@@ -491,8 +487,8 @@ public actor TransactionProcessor {
 // MARK: - Supporting Types
 
 
-/// Savepoint
-public struct Savepoint: Codable, Sendable, Equatable {
+/// Transaction Savepoint
+public struct TransactionSavepoint: Codable, Sendable, Equatable {
     public let name: String
     public let txId: TransactionID
     public let timestamp: UInt64

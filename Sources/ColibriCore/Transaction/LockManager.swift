@@ -457,20 +457,6 @@ public actor LockManager {
         return waitForGraph.values.reduce(0) { $0 + $1.count }
     }
     
-    /// Check if deadlock exists
-    public func hasDeadlock() async throws -> Bool {
-        // TLA+: Check for cycles in wait-for graph
-        // Simplified implementation - check if any transaction is waiting for a resource
-        // that is held by a transaction that is waiting for the first transaction
-        for (txId, waitingFor) in waitForGraph {
-            if let targetTx = waitingFor.first {
-                if waitForGraph[targetTx]?.contains(txId) == true {
-                    return true
-                }
-            }
-        }
-        return false
-    }
     
     /// Clear all locks
     public func clearAllLocks() async throws {
