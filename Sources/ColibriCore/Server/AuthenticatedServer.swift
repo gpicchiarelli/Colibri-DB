@@ -124,7 +124,7 @@ public enum SecurityEventSeverity: String, Codable {
 // MARK: - Configuration
 
 /// Authenticated server configuration
-public struct AuthenticatedServerConfig {
+public struct AuthenticatedServerConfig: Sendable {
     public let sessionTimeout: TimeInterval
     public let requireTLS: Bool
     public let auditEnabled: Bool

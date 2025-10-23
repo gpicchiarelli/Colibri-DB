@@ -66,11 +66,11 @@ public actor HeapTableManager {
     private let bufferPoolManager: BufferPoolManager
     
     /// WAL manager
-    private let walManager: WALManager
+    private let walManager: HeapWALManager
     
     // MARK: - Initialization
     
-    public init(bufferPoolManager: BufferPoolManager, walManager: WALManager) {
+    public init(bufferPoolManager: BufferPoolManager, walManager: HeapWALManager) {
         self.bufferPoolManager = bufferPoolManager
         self.walManager = walManager
         
@@ -595,7 +595,7 @@ public protocol BufferPoolManager: Sendable {
 }
 
 /// WAL manager
-public protocol WALManager: Sendable {
+public protocol HeapWALManager: Sendable {
     func appendRecord(txId: TxID, kind: String, data: Data) async throws -> LSN
     func flushLog() async throws
 }

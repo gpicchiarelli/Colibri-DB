@@ -78,38 +78,12 @@ public struct UndoRecord: Codable, Sendable, Equatable {
     }
 }
 
-/// WAL record
-public protocol WALRecord: Codable, Sendable {
-    var lsn: LSN { get }
-    var txId: TxID { get }
-    var kind: String { get }
-    var data: Data { get }
-    var timestamp: UInt64 { get }
-}
 
 
 
 
 
-/// Group commit configuration
-public struct GroupCommitConfig: Codable, Sendable, Equatable {
-    public let maxBatchSize: Int
-    public let maxWaitTimeMs: UInt64
-    public let flushThreshold: Int
-    
-    public init(maxBatchSize: Int, maxWaitTimeMs: UInt64, flushThreshold: Int) {
-        self.maxBatchSize = maxBatchSize
-        self.maxWaitTimeMs = maxWaitTimeMs
-        self.flushThreshold = flushThreshold
-    }
-}
 
-/// Disk manager
-public protocol DiskManager: Sendable {
-    func readPage(pageId: PageID) async throws -> Data
-    func writePage(pageId: PageID, data: Data) async throws
-    func deletePage(pageId: PageID) async throws
-}
 
 // MARK: - ARIES Recovery Manager
 
@@ -172,14 +146,14 @@ public actor ARIESRecoveryManager {
     // MARK: - Dependencies
     
     /// WAL manager
-    private let walManager: WALManager
+    private let walManager: WALManagerProtocol
     
     /// Disk manager
     private let diskManager: DiskManager
     
     // MARK: - Initialization
     
-    public init(walManager: WALManager, diskManager: DiskManager) {
+    public init(walManager: WALManagerProtocol, diskManager: DiskManager) {
         self.walManager = walManager
         self.diskManager = diskManager
         
@@ -599,7 +573,7 @@ public actor ARIESRecoveryManager {
 // MARK: - Supporting Types
 
 /// WAL manager
-public protocol WALManager: Sendable {
+public protocol WALManagerProtocol: Sendable {
     func appendRecord(txId: TxID, kind: String, data: Data) async throws -> LSN
     func flushLog() async throws
 }

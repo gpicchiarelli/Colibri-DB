@@ -59,12 +59,6 @@ public struct ColibrìDBConfiguration: Codable {
     }
 }
 
-public enum LogLevel: String, Codable, CaseIterable {
-    case debug = "DEBUG"
-    case info = "INFO"
-    case warning = "WARNING"
-    case error = "ERROR"
-}
 
 // MARK: - Main Database Engine
 

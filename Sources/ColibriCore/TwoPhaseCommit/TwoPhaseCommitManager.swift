@@ -26,9 +26,6 @@ public typealias CoordinatorID = String
 /// Corresponds to TLA+: ParticipantID
 public typealias ParticipantID = String
 
-/// Transaction ID
-/// Corresponds to TLA+: TransactionID
-public typealias TransactionID = TxID
 
 /// Two-phase commit coordinator state
 /// Corresponds to TLA+: CoordinatorState
@@ -61,17 +58,17 @@ public enum TwoPhaseCommitMessageType: String, Codable, Sendable, CaseIterable {
     case ack = "ack"
 }
 
-/// Message
-/// Corresponds to TLA+: Message
-public struct Message: Codable, Sendable, Equatable {
+/// Two-Phase Commit Message
+/// Corresponds to TLA+: TwoPhaseCommitMessage
+public struct TwoPhaseCommitMessage: Codable, Sendable, Equatable {
     public let messageType: TwoPhaseCommitMessageType
     public let from: String
     public let to: String
-    public let transactionId: TransactionID
+    public let transactionId: TxID
     public let data: Data
     public let timestamp: UInt64
     
-    public init(messageType: TwoPhaseCommitMessageType, from: String, to: String, transactionId: TransactionID, data: Data, timestamp: UInt64) {
+    public init(messageType: TwoPhaseCommitMessageType, from: String, to: String, transactionId: TxID, data: Data, timestamp: UInt64) {
         self.messageType = messageType
         self.from = from
         self.to = to
@@ -91,7 +88,7 @@ public actor TwoPhaseCommitManager {
     
     /// Coordinator state
     /// TLA+: coordState \in CoordinatorState
-    private var coordState: CoordinatorState = .active
+    private var coordState: TwoPhaseCoordinatorState = .active
     
     /// Coordinator votes
     /// TLA+: coordVotes \in [ParticipantID -> Vote]
@@ -107,7 +104,7 @@ public actor TwoPhaseCommitManager {
     
     /// Participant state
     /// TLA+: partState \in ParticipantState
-    private var partState: ParticipantState = .active
+    private var partState: TwoPhaseParticipantState = .active
     
     /// Participant vote
     /// TLA+: partVote \in Vote
@@ -122,8 +119,8 @@ public actor TwoPhaseCommitManager {
     private var partTimeout: UInt64 = 0
     
     /// Messages
-    /// TLA+: messages \in Seq(Message)
-    private var messages: [Message] = []
+    /// TLA+: messages \in Seq(TwoPhaseCommitMessage)
+    private var messages: [TwoPhaseCommitMessage] = []
     
     /// Current time
     /// TLA+: currentTime \in Nat
@@ -160,7 +157,7 @@ public actor TwoPhaseCommitManager {
     
     /// Start transaction
     /// TLA+ Action: StartTransaction(txId, participants)
-    public func startTransaction(txId: TransactionID, participants: [ParticipantID]) async throws {
+    public func startTransaction(txId: TxID, participants: [ParticipantID]) async throws {
         // TLA+: Set coordinator state to active
         coordState = .active
         
@@ -174,21 +171,21 @@ public actor TwoPhaseCommitManager {
         coordDecision = nil
         
         // TLA+: Start local transaction
-        try await transactionManager.beginTransaction(txId: txId)
+        let _ = try await transactionManager.beginTransaction()
         
         print("Started transaction: \(txId) with \(participants.count) participants")
     }
     
     /// Send prepare
     /// TLA+ Action: SendPrepare(txId, participants)
-    public func sendPrepare(txId: TransactionID, participants: [ParticipantID]) async throws {
+    public func sendPrepare(txId: TxID, participants: [ParticipantID]) async throws {
         // TLA+: Set coordinator state to preparing
         coordState = .preparing
         
         // TLA+: Send prepare to all participants
         for participant in participants {
-            let message = Message(
-                messageType: .prepare,
+            let message = TwoPhaseCommitMessage(
+                messageType: TwoPhaseCommitMessageType.prepare,
                 from: "coordinator",
                 to: participant,
                 transactionId: txId,
@@ -211,7 +208,7 @@ public actor TwoPhaseCommitManager {
         coordVotes[participant] = vote
         
         // TLA+: Check if all votes received
-        if coordVotes.values.allSatisfy({ $0 != nil }) {
+        if coordVotes.values.allSatisfy({ !$0.isEmpty }) {
             try await makeDecision()
         }
         
@@ -248,8 +245,8 @@ public actor TwoPhaseCommitManager {
     public func sendCommitAbort(decision: String) async throws {
         // TLA+: Send decision to all participants
         for participant in coordVotes.keys {
-            let messageType: MessageType = decision == "commit" ? .commit : .abort
-            let message = Message(
+            let messageType: TwoPhaseCommitMessageType = decision == "commit" ? TwoPhaseCommitMessageType.commit : TwoPhaseCommitMessageType.abort
+            let message = TwoPhaseCommitMessage(
                 messageType: messageType,
                 from: "coordinator",
                 to: participant,
@@ -286,8 +283,8 @@ public actor TwoPhaseCommitManager {
     /// TLA+ Action: SendAck()
     public func sendAck() async throws {
         // TLA+: Send ack to coordinator
-        let message = Message(
-            messageType: .ack,
+        let message = TwoPhaseCommitMessage(
+            messageType: TwoPhaseCommitMessageType.ack,
             from: "participant",
             to: "coordinator",
             transactionId: TxID(0), // Simplified
@@ -305,8 +302,8 @@ public actor TwoPhaseCommitManager {
     private func sendCommitToAll() async throws {
         // TLA+: Send commit to all participants
         for participant in coordVotes.keys {
-            let message = Message(
-                messageType: .commit,
+            let message = TwoPhaseCommitMessage(
+                messageType: TwoPhaseCommitMessageType.commit,
                 from: "coordinator",
                 to: participant,
                 transactionId: TxID(0), // Simplified
@@ -321,8 +318,8 @@ public actor TwoPhaseCommitManager {
     private func sendAbortToAll() async throws {
         // TLA+: Send abort to all participants
         for participant in coordVotes.keys {
-            let message = Message(
-                messageType: .abort,
+            let message = TwoPhaseCommitMessage(
+                messageType: TwoPhaseCommitMessageType.abort,
                 from: "coordinator",
                 to: participant,
                 transactionId: TxID(0), // Simplified
@@ -366,12 +363,12 @@ public actor TwoPhaseCommitManager {
     // MARK: - Query Operations
     
     /// Get coordinator state
-    public func getCoordinatorState() -> CoordinatorState {
+    public func getCoordinatorState() -> TwoPhaseCoordinatorState {
         return coordState
     }
     
     /// Get participant state
-    public func getParticipantState() -> ParticipantState {
+    public func getParticipantState() -> TwoPhaseParticipantState {
         return partState
     }
     
@@ -396,7 +393,7 @@ public actor TwoPhaseCommitManager {
     }
     
     /// Get messages
-    public func getMessages() -> [Message] {
+    public func getMessages() -> [TwoPhaseCommitMessage] {
         return messages
     }
     
@@ -405,25 +402,9 @@ public actor TwoPhaseCommitManager {
         return currentTime
     }
     
-    /// Check if prepared
-    public func isPrepared() -> Bool {
-        return isPrepared()
-    }
     
-    /// Check if has quorum
-    public func hasQuorum() -> Bool {
-        return hasQuorum()
-    }
     
-    /// Check if committed
-    public func isCommitted() -> Bool {
-        return isCommitted()
-    }
     
-    /// Check if aborted
-    public func isAborted() -> Bool {
-        return isAborted()
-    }
     
     /// Get vote count
     public func getVoteCount() -> Int {

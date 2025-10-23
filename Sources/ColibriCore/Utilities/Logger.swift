@@ -4,13 +4,6 @@
 
 import Foundation
 
-public enum LogLevel: Int {
-    case debug = 0
-    case info = 1
-    case warning = 2
-    case error = 3
-    case fatal = 4
-}
 
 public struct LoggerEntry {
     public let level: LogLevel

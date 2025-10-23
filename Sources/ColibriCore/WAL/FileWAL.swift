@@ -194,7 +194,15 @@ public actor FileWAL {
     
     /// Flush all pending records to disk (async version)
     public func flush() async throws {
-        try flush()
+        // TLA+: Flush all pending records to disk
+        for record in pendingRecords {
+            try await writeRecordToDisk(record)
+            flushedLSN = max(flushedLSN, record.lsn)
+        }
+        pendingRecords.removeAll()
+        
+        // Reset group commit timer
+        groupCommitTimer = 0
     }
     
     /// Apply a WAL record to data pages (write page to disk)

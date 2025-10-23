@@ -34,9 +34,9 @@ public typealias Participants = Set<String>
 /// Corresponds to TLA+: Transaction
 public struct Transaction: Codable, Sendable, Equatable {
     public let txId: TxID
-    public let state: TransactionState
+    public var state: TransactionState
     public let startTime: Timestamp
-    public let endTime: Timestamp?
+    public var endTime: Timestamp?
     public let resources: Resources
     public let participants: Participants
     public let isDirty: Bool
@@ -318,7 +318,10 @@ public actor TransactionManager {
         }
         
         // TLA+: Request lock
-        try await lockManager.requestLock(txId: txId, resource: resource, mode: mode)
+        guard let lockMode = LockMode(rawValue: mode) else {
+            throw TransactionManagerError.invalidLockMode
+        }
+        try await lockManager.requestLock(txId: txId, resource: resource, mode: lockMode)
         
         // TLA+: Add to transaction locks
         txLocks[txId]?.insert(resource)
@@ -699,11 +702,6 @@ public actor TransactionManager {
 
 // MARK: - Supporting Types
 
-/// Transaction WAL manager
-public protocol TransactionWALManager: Sendable {
-    func appendRecord(txId: TxID, kind: String, data: Data) async throws -> LSN
-    func flushLog() async throws
-}
 
 /// Transaction manager MVCC protocol
 public protocol TransactionMVCCManager: Sendable {
@@ -734,6 +732,7 @@ public enum TransactionManagerError: Error, LocalizedError {
     case abortFailed
     case voteCollectionFailed
     case decisionMakingFailed
+    case invalidLockMode
     
     public var errorDescription: String? {
         switch self {
@@ -759,6 +758,8 @@ public enum TransactionManagerError: Error, LocalizedError {
             return "Vote collection failed"
         case .decisionMakingFailed:
             return "Decision making failed"
+        case .invalidLockMode:
+            return "Invalid lock mode"
         }
     }
 }

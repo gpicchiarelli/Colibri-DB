@@ -18,15 +18,6 @@ import Foundation
 
 // MARK: - WAL Types
 
-/// WAL record
-/// Corresponds to TLA+: WALRecord
-public protocol WALRecord: Codable, Sendable {
-    var lsn: LSN { get }
-    var txId: TxID { get }
-    var kind: WALRecordKind { get }
-    var data: Data { get }
-    var timestamp: UInt64 { get }
-}
 
 
 
@@ -57,7 +48,7 @@ public actor WALManager {
     
     /// WAL
     /// TLA+: wal \in [LSN -> WALRecord]
-    private var wal: [LSN: WALRecord] = [:]
+    private var wal: [LSN: any WALRecord] = [:]
     
     /// Next LSN
     /// TLA+: nextLSN \in LSN
@@ -102,14 +93,14 @@ public actor WALManager {
     // MARK: - Dependencies
     
     /// Disk manager
-    private let diskManager: DiskManager
+    private let diskManager: any DiskManager
     
     /// Group commit manager
     private let groupCommitManager: GroupCommitManager
     
     // MARK: - Initialization
     
-    public init(diskManager: DiskManager, groupCommitManager: GroupCommitManager) {
+    public init(diskManager: any DiskManager, groupCommitManager: GroupCommitManager) {
         self.diskManager = diskManager
         self.groupCommitManager = groupCommitManager
         
@@ -135,10 +126,12 @@ public actor WALManager {
         // TLA+: Create WAL record
         let record = ConcreteWALRecord(
             lsn: nextLSN,
-            txId: txId,
+            prevLSN: txLastLSN[txId] ?? 0,
             kind: kind,
-            data: data,
-            timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+            txID: txId,
+            pageID: 0, // Default page ID for now
+            undoNextLSN: 0,
+            payload: data
         )
         
         // TLA+: Add to WAL
@@ -270,13 +263,13 @@ public actor WALManager {
     }
     
     /// Write record to disk
-    private func writeRecordToDisk(record: WALRecord) async throws {
+    private func writeRecordToDisk(record: any WALRecord) async throws {
         // TLA+: Write record to disk
         // This would include writing the record header and data to disk
     }
     
     /// Apply record to page
-    private func applyRecordToPage(pageId: PageID, record: WALRecord) async throws {
+    private func applyRecordToPage(pageId: PageID, record: any WALRecord) async throws {
         // TLA+: Apply record to page
         // This would include reading the page, applying the record, and writing back
     }
@@ -287,15 +280,6 @@ public actor WALManager {
         // This would include reading the WAL and applying records to data pages
     }
     
-    /// Get WAL record
-    private func getWALRecord(lsn: LSN) -> WALRecord? {
-        return wal[lsn]
-    }
-    
-    /// Get WAL size
-    private func getWALSize() -> Int {
-        return wal.count
-    }
     
     // MARK: - Query Operations
     
@@ -315,13 +299,13 @@ public actor WALManager {
     }
     
     /// Get WAL record
-    public func getWALRecord(lsn: LSN) -> WALRecord? {
-        return getWALRecord(lsn: lsn)
+    public func getWALRecord(lsn: LSN) -> (any WALRecord)? {
+        return wal[lsn]
     }
     
     /// Get WAL size
     public func getWALSize() -> Int {
-        return getWALSize()
+        return wal.count
     }
     
     /// Get transaction last LSN
@@ -355,22 +339,22 @@ public actor WALManager {
     }
     
     /// Get WAL records
-    public func getWALRecords() -> [WALRecord] {
+    public func getWALRecords() -> [any WALRecord] {
         return Array(wal.values)
     }
     
     /// Get WAL records by transaction
-    public func getWALRecordsByTransaction(txId: TxID) -> [WALRecord] {
-        return wal.values.filter { $0.txId == txId }
+    public func getWALRecordsByTransaction(txId: TxID) -> [any WALRecord] {
+        return wal.values.filter { $0.txID == txId }
     }
     
     /// Get WAL records by kind
-    public func getWALRecordsByKind(kind: WALRecordKind) -> [WALRecord] {
+    public func getWALRecordsByKind(kind: WALRecordKind) -> [any WALRecord] {
         return wal.values.filter { $0.kind == kind }
     }
     
     /// Get WAL records in range
-    public func getWALRecordsInRange(startLSN: LSN, endLSN: LSN) -> [WALRecord] {
+    public func getWALRecordsInRange(startLSN: LSN, endLSN: LSN) -> [any WALRecord] {
         return wal.values.filter { $0.lsn >= startLSN && $0.lsn <= endLSN }
     }
     
@@ -439,13 +423,6 @@ public actor WALManager {
 }
 
 // MARK: - Supporting Types
-
-/// Group commit manager
-public protocol GroupCommitManager: Sendable {
-    func requestCommit(txId: TxID, lsn: LSN) async throws
-    func flushBatch() async throws
-    func tickTimer() async throws
-}
 
 /// WAL manager error
 public enum WALManagerError: Error, LocalizedError {

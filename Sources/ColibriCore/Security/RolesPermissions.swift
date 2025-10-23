@@ -5,6 +5,20 @@
 
 import Foundation
 
+/// Permission types for database operations
+public enum Permission: String, Codable, Sendable, CaseIterable {
+    case all = "all"
+    case select = "select"
+    case insert = "insert"
+    case update = "update"
+    case delete = "delete"
+    case create = "create"
+    case drop = "drop"
+    case alter = "alter"
+    case index = "index"
+    case execute = "execute"
+}
+
 public struct Role {
     public let name: String
     public let permissions: Set<Permission>
@@ -22,7 +36,9 @@ public actor RoleManager {
     private var userRoles: [String: Set<String>] = [:]
     
     public init() {
-        initializeBuiltinRoles()
+        Task {
+            await initializeBuiltinRoles()
+        }
     }
     
     private func initializeBuiltinRoles() {

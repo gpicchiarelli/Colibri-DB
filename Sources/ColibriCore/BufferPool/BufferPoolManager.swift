@@ -41,12 +41,6 @@ public struct BufferPage: Codable, Sendable, Equatable {
     }
 }
 
-/// Disk manager
-public protocol DiskManager: Sendable {
-    func readPage(pageId: PageID) async throws -> Data
-    func writePage(pageId: PageID, data: Data) async throws
-    func deletePage(pageId: PageID) async throws
-}
 
 // MARK: - Buffer Pool Manager
 
@@ -100,11 +94,11 @@ public actor BufferPoolManager {
     private let diskManager: DiskManager
     
     /// WAL manager
-    private let walManager: WALManager
+    private let walManager: BufferWALManager
     
     // MARK: - Initialization
     
-    public init(diskManager: DiskManager, walManager: WALManager) {
+    public init(diskManager: DiskManager, walManager: BufferWALManager) {
         self.diskManager = diskManager
         self.walManager = walManager
         
@@ -520,7 +514,7 @@ public actor BufferPoolManager {
 // MARK: - Supporting Types
 
 /// WAL manager
-public protocol WALManager: Sendable {
+public protocol BufferWALManager: Sendable {
     func appendRecord(txId: UInt64, kind: String, data: Data) async throws -> LSN
     func flushLog() async throws
 }

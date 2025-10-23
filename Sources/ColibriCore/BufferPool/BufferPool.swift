@@ -415,11 +415,6 @@ public struct BufferPoolStatistics: Sendable {
     }
 }
 
-/// Disk Manager interface for page I/O
-public protocol DiskManager: Sendable {
-    func readPage(_ pageID: PageID) throws -> Page
-    func writePage(_ pageID: PageID, page: Page) throws
-}
 
 /// Simple file-based disk manager
 public actor FileDiskManager: DiskManager {

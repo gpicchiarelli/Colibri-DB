@@ -24,11 +24,6 @@ import Foundation
 
 
 
-/// Disk manager interface
-public protocol DiskManager: Sendable {
-    func readPage(_ pageID: PageID) throws -> Page
-    func writePage(_ pageID: PageID, page: Page) throws
-}
 
 /// ARIES Recovery Manager
 /// Corresponds to TLA+ module: RECOVERY.tla

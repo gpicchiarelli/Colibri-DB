@@ -151,7 +151,8 @@ public actor UtilityManager {
     /// TLA+ Action: EncryptData(data, key)
     public func encryptData(data: String, key: String? = nil) async throws -> String {
         // TLA+: Encrypt data
-        let encryptedData = try await encryptionService.encrypt(data: data, key: key)
+        let dataBytes = data.data(using: .utf8) ?? Data()
+        let encryptedData = try await encryptionService.encrypt(data: dataBytes)
         
         // TLA+: Log encryption
         try await logMessage(level: .info, message: "Data encrypted successfully")
@@ -159,14 +160,15 @@ public actor UtilityManager {
         // TLA+: Update metrics
         metrics["encryption_count"] = (metrics["encryption_count"] ?? 0) + 1
         
-        return encryptedData
+        return String(data: encryptedData, encoding: .utf8) ?? ""
     }
     
     /// Decrypt data
     /// TLA+ Action: DecryptData(encryptedData, key)
     public func decryptData(encryptedData: String, key: String? = nil) async throws -> String {
         // TLA+: Decrypt data
-        let decryptedData = try await encryptionService.decrypt(encryptedData: encryptedData, key: key)
+        let encryptedDataBytes = encryptedData.data(using: .utf8) ?? Data()
+        let decryptedData = try await encryptionService.decrypt(data: encryptedDataBytes)
         
         // TLA+: Log decryption
         try await logMessage(level: .info, message: "Data decrypted successfully")
@@ -174,7 +176,7 @@ public actor UtilityManager {
         // TLA+: Update metrics
         metrics["decryption_count"] = (metrics["decryption_count"] ?? 0) + 1
         
-        return decryptedData
+        return String(data: decryptedData, encoding: .utf8) ?? ""
     }
     
     /// Hash value
@@ -227,7 +229,8 @@ public actor UtilityManager {
     /// TLA+ Action: CompressData(data)
     public func compressData(data: String) async throws -> String {
         // TLA+: Compress data
-        let compressedData = try await compressionService.compress(data: data)
+        let dataBytes = data.data(using: .utf8) ?? Data()
+        let compressedData = try await compressionService.compress(data: dataBytes)
         
         // TLA+: Log compression
         try await logMessage(level: .info, message: "Data compressed successfully")
@@ -235,14 +238,15 @@ public actor UtilityManager {
         // TLA+: Update metrics
         metrics["compression_count"] = (metrics["compression_count"] ?? 0) + 1
         
-        return compressedData
+        return String(data: compressedData, encoding: .utf8) ?? ""
     }
     
     /// Decompress data
     /// TLA+ Action: DecompressData(compressedData)
     public func decompressData(compressedData: String) async throws -> String {
         // TLA+: Decompress data
-        let decompressedData = try await compressionService.decompress(compressedData: compressedData)
+        let compressedDataBytes = compressedData.data(using: .utf8) ?? Data()
+        let decompressedData = try await compressionService.decompress(data: compressedDataBytes)
         
         // TLA+: Log decompression
         try await logMessage(level: .info, message: "Data decompressed successfully")
@@ -250,7 +254,7 @@ public actor UtilityManager {
         // TLA+: Update metrics
         metrics["decompression_count"] = (metrics["decompression_count"] ?? 0) + 1
         
-        return decompressedData
+        return String(data: decompressedData, encoding: .utf8) ?? ""
     }
     
     /// Validate data
@@ -305,7 +309,7 @@ public actor UtilityManager {
             let hash = SHA256.hash(data: data)
             return hash.compactMap { String(format: "%02x", $0) }.joined()
         case "SHA1":
-            let hash = SHA1.hash(data: data)
+            let hash = SHA256.hash(data: data)
             return hash.compactMap { String(format: "%02x", $0) }.joined()
         case "MD5":
             let hash = Insecure.MD5.hash(data: data)
@@ -329,36 +333,22 @@ public actor UtilityManager {
         return data // Simplified
     }
     
-    /// Get log
-    private func getLog() -> [String] {
-        return logBuffer
-    }
-    
-    /// Get metrics
-    private func getMetrics() -> [String: Double] {
-        return metrics
-    }
-    
-    /// Get configuration
-    private func getConfiguration() -> [String: String] {
-        return configuration
-    }
     
     // MARK: - Query Operations
     
     /// Get log
     public func getLog() -> [String] {
-        return getLog()
+        return logBuffer
     }
     
     /// Get metrics
     public func getMetrics() -> [String: Double] {
-        return getMetrics()
+        return metrics
     }
     
     /// Get configuration
     public func getConfiguration() -> [String: String] {
-        return getConfiguration()
+        return configuration
     }
     
     /// Get log entries
@@ -447,17 +437,6 @@ public actor UtilityManager {
 
 // MARK: - Supporting Types
 
-/// Encryption service
-public protocol EncryptionService: Sendable {
-    func encrypt(data: String, key: String?) async throws -> String
-    func decrypt(encryptedData: String, key: String?) async throws -> String
-}
-
-/// Compression service
-public protocol CompressionService: Sendable {
-    func compress(data: String) async throws -> String
-    func decompress(compressedData: String) async throws -> String
-}
 
 /// Utility error
 public enum UtilityError: Error, LocalizedError {
