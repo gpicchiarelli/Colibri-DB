@@ -291,7 +291,7 @@ public actor SchemaEvolutionManager {
     
     /// Create new schema
     /// TLA+ Action: CreateSchema(schemaName, ddlStatement, txId)
-    public func createSchema(schemaName: String, ddlStatement: String, txId: TxId) async throws {
+    public func createSchema(schemaName: String, ddlStatement: String, txId: TxID) async throws {
         guard !schemas.keys.contains(schemaName) else {
             throw SchemaEvolutionError.schemaAlreadyExists(schemaName)
         }
@@ -331,7 +331,7 @@ public actor SchemaEvolutionManager {
     
     /// Alter existing schema
     /// TLA+ Action: AlterSchema(schemaName, ddlStatement, txId)
-    public func alterSchema(schemaName: String, ddlStatement: String, txId: TxId) async throws {
+    public func alterSchema(schemaName: String, ddlStatement: String, txId: TxID) async throws {
         guard let currentVersion = schemas[schemaName] else {
             throw SchemaEvolutionError.schemaNotFound(schemaName)
         }
@@ -374,7 +374,7 @@ public actor SchemaEvolutionManager {
     
     /// Drop schema
     /// TLA+ Action: DropSchema(schemaName, txId)
-    public func dropSchema(schemaName: String, txId: TxId) async throws {
+    public func dropSchema(schemaName: String, txId: TxID) async throws {
         guard let currentVersion = schemas[schemaName] else {
             throw SchemaEvolutionError.schemaNotFound(schemaName)
         }
@@ -520,7 +520,7 @@ public actor SchemaEvolutionManager {
     /// Progress online schema change
     /// TLA+ Action: ProgressOnlineChange(schemaName, newPhase, progress, blockingOps)
     public func progressOnlineChange(schemaName: String, newPhase: OnlineChangeState.Phase,
-                                   progress: Int, blockingOps: [TxId] = []) async throws {
+                                   progress: Int, blockingOps: [TxID] = []) async throws {
         guard var currentChange = onlineChanges[schemaName] else {
             throw SchemaEvolutionError.noOnlineChange(schemaName)
         }
@@ -540,7 +540,7 @@ public actor SchemaEvolutionManager {
     
     /// Complete online schema change
     /// TLA+ Action: CompleteOnlineChange(schemaName, txId)
-    public func completeOnlineChange(schemaName: String, txId: TxId) async throws {
+    public func completeOnlineChange(schemaName: String, txId: TxID) async throws {
         guard let currentChange = onlineChanges[schemaName] else {
             throw SchemaEvolutionError.noOnlineChange(schemaName)
         }

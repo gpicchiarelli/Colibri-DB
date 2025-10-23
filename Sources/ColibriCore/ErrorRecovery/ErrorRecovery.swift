@@ -115,8 +115,8 @@ public struct RecoveryActionRecord: Codable, Equatable {
 
 // MARK: - Checkpoint (TLA+: Checkpoint)
 
-/// Checkpoint structure
-public struct Checkpoint: Codable, Equatable {
+/// Error recovery checkpoint structure
+public struct ErrorRecoveryCheckpoint: Codable, Equatable {
     public let checkpointId: Int        // TLA+: checkpointId
     public let component: String        // TLA+: component
     public let timestamp: Int           // TLA+: timestamp
@@ -163,7 +163,7 @@ public actor ErrorRecoveryManager {
     private var recoveryInProgress: Set<Int> = []
     
     /// Checkpoints (TLA+: checkpoints)
-    private var checkpoints: [String: [Checkpoint]] = [:]
+    private var checkpoints: [String: [ErrorRecoveryCheckpoint]] = [:]
     
     /// Last checkpoint ID (TLA+: lastCheckpointId)
     private var lastCheckpointId: [String: Int] = [:]
@@ -206,7 +206,7 @@ public actor ErrorRecoveryManager {
     }
     
     /// Get latest checkpoint for component (TLA+: LatestCheckpoint)
-    private func latestCheckpoint(component: String) -> Checkpoint? {
+    private func latestCheckpoint(component: String) -> ErrorRecoveryCheckpoint? {
         let checkpoints = checkpoints[component] ?? []
         return checkpoints.last
     }
@@ -493,7 +493,7 @@ public actor ErrorRecoveryManager {
         return recoveryInProgress.contains(errorId)
     }
     
-    public func getCheckpoints(_ component: String) -> [Checkpoint] {
+    public func getCheckpoints(_ component: String) -> [ErrorRecoveryCheckpoint] {
         return checkpoints[component] ?? []
     }
     

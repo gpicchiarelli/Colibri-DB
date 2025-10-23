@@ -20,7 +20,7 @@ import Foundation
 
 /// Distributed query fragment
 /// Corresponds to TLA+: QueryFragment
-public struct DistributedQueryFragment: Codable, Sendable, Equatable {
+public struct DistributedQueryFragment: Codable, Sendable {
     public let fragmentId: String
     public let nodeId: String
     public let queryText: String

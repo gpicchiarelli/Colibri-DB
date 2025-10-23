@@ -140,7 +140,7 @@ public actor ColibrìDB {
         
         // Initialize storage layer
         self.wal = try FileWAL(
-            dataDirectory: config.dataDirectory
+            walFilePath: config.dataDirectory.appendingPathComponent("wal.log")
         )
         
         self.bufferPool = BufferPool(
@@ -152,8 +152,8 @@ public actor ColibrìDB {
         self.mvccManager = MVCCManager()
         self.lockManager = LockManager(transactionManager: nil) // Will be set after transactionManager is created
         self.transactionManager = TransactionManager(
-            walManager: wal,
-            mvccManager: mvccManager,
+            walManager: wal as! TransactionWALManager,
+            mvccManager: mvccManager as! TransactionMVCCManager,
             lockManager: lockManager
         )
         self.lockManager = LockManager(transactionManager: transactionManager)
@@ -172,14 +172,18 @@ public actor ColibrìDB {
         
         self.queryOptimizer = QueryOptimizer(
             catalog: catalog,
-            statisticsManager: StatisticsMaintenanceManager()
+            statistics: StatisticsMaintenanceManager()
         )
         
         // Initialize statistics
         self.statisticsManager = StatisticsMaintenanceManager()
         
         // Initialize schema evolution
-        self.schemaEvolution = SchemaEvolutionManager(catalog: catalog)
+        self.schemaEvolution = SchemaEvolutionManager(
+            transactionManager: transactionManager,
+            catalog: catalog,
+            clock: Clock(nodeID: 1)
+        )
         
         // Initialize wire protocol
         self.wireProtocol = WireProtocolHandler()
@@ -192,7 +196,7 @@ public actor ColibrìDB {
             host: "127.0.0.1",
             port: 5432,
             maxConnections: config.maxConnections,
-            databaseConfig: config
+            databaseConfig: DatabaseConfiguration()
         )
         self.databaseServer = try DatabaseServer(config: serverConfig)
     }

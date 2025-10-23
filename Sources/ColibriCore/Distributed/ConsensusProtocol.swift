@@ -193,8 +193,10 @@ public actor RaftServer {
         self.sendMessage = sendMessage
         self.applyCommand = applyCommand
         
-        resetElectionTimer()
-        startTimers()
+        Task {
+            await resetElectionTimer()
+            await startTimers()
+        }
     }
     
     deinit {

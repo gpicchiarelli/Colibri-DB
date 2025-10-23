@@ -29,7 +29,7 @@ public actor HybridLogicalClock {
     
     public init(nodeID: UInt64) {
         self.nodeID = nodeID
-        self.physicalTime = currentPhysicalTime()
+        self.physicalTime = UInt64(Date().timeIntervalSince1970 * 1000)  // milliseconds
         self.logicalCounter = 0
     }
     
