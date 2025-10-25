@@ -25,7 +25,7 @@ public struct DatabaseConfiguration: Codable, Sendable {
 
 /// Database Server
 /// Corresponds to TLA+ module: Server.tla
-public actor DatabaseServer {
+public final class DatabaseServer: @unchecked Sendable {
     // MARK: - Configuration
     
     public struct Configuration: Sendable {
@@ -53,6 +53,7 @@ public actor DatabaseServer {
     private let database: ColibrìDB
     private var connections: [String: ServerConnection] = [:]
     private var isRunning: Bool = false
+    private let lock = NSLock()
     
     // MARK: - Initialization
     
@@ -66,32 +67,32 @@ public actor DatabaseServer {
     // MARK: - Server Lifecycle
     
     /// Start the server
-    public func start() async throws {
+    public func start() throws {
         guard !isRunning else { return }
         
         print("Starting ColibrìDB Server on \(config.host):\(config.port)...")
         
         // Start database
-        try await database.start()
+        try database.start()
         
         isRunning = true
         print("ColibrìDB Server started successfully")
     }
     
     /// Stop the server
-    public func stop() async throws {
+    public func stop() throws {
         guard isRunning else { return }
         
         print("Stopping ColibrìDB Server...")
         
         // Close all connections
         for (_, connection) in connections {
-            await connection.close()
+            connection.close()
         }
         connections.removeAll()
         
         // Shutdown database
-        try await database.shutdown()
+        try database.shutdown()
         
         isRunning = false
         print("ColibrìDB Server stopped successfully")
@@ -100,7 +101,7 @@ public actor DatabaseServer {
     // MARK: - Connection Management
     
     /// Accept a new connection
-    public func acceptConnection(clientID: String) async throws -> ServerConnection {
+    public func acceptConnection(clientID: String) throws -> ServerConnection {
         guard isRunning else {
             throw DBError.internalError("Server not running")
         }
@@ -117,9 +118,9 @@ public actor DatabaseServer {
     }
     
     /// Close a connection
-    public func closeConnection(clientID: String) async {
+    public func closeConnection(clientID: String) {
         if let connection = connections[clientID] {
-            await connection.close()
+            connection.close()
             connections[clientID] = nil
             print("Client \(clientID) disconnected")
         }
@@ -128,8 +129,8 @@ public actor DatabaseServer {
     // MARK: - Statistics
     
     /// Get server statistics
-    public func getStatistics() async -> ServerStatistics {
-        let _ = await database.getStatistics()
+    public func getStatistics() -> ServerStatistics {
+        let _ = database.getStatistics()
         
         return ServerStatistics(
             isRunning: isRunning,
@@ -143,11 +144,12 @@ public actor DatabaseServer {
 // MARK: - Server Connection
 
 /// Represents a client connection to the server
-public actor ServerConnection {
+public final class ServerConnection: @unchecked Sendable {
     public let clientID: String
     private let database: ColibrìDB
     private var sessionToken: String?
     private var currentTxID: TxID?
+    private let lock = NSLock()
     
     init(clientID: String, database: ColibrìDB) {
         self.clientID = clientID
@@ -155,57 +157,75 @@ public actor ServerConnection {
     }
     
     /// Authenticate
-    public func authenticate(username: String, password: String) async throws {
+    public func authenticate(username: String, password: String) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        
         // Note: Authentication is handled by AuthenticatedServer
         sessionToken = "mock_token_\(username)"
     }
     
     /// Begin transaction
-    public func beginTransaction() async throws -> TxID {
+    public func beginTransaction() throws -> TxID {
+        lock.lock()
+        defer { lock.unlock() }
+        
         guard sessionToken != nil else {
             throw DBError.internalError("Not authenticated")
         }
         
-        let txID = try await database.beginTransaction()
+        let txID = try database.beginTransaction()
         currentTxID = txID
         return txID
     }
     
     /// Commit transaction
-    public func commit() async throws {
+    public func commit() throws {
+        lock.lock()
+        defer { lock.unlock() }
+        
         guard let txID = currentTxID else {
             throw DBError.internalError("No active transaction")
         }
         
-        try await database.commit(txId: txID)
+        try database.commit(txId: txID)
         currentTxID = nil
     }
     
     /// Rollback transaction
-    public func rollback() async throws {
+    public func rollback() throws {
+        lock.lock()
+        defer { lock.unlock() }
+        
         guard let txID = currentTxID else {
             throw DBError.internalError("No active transaction")
         }
         
-        try await database.abort(txId: txID)
+        try database.abort(txId: txID)
         currentTxID = nil
     }
     
     /// Execute query
-    public func executeQuery(sql: String) async throws -> [Row] {
+    public func executeQuery(sql: String) throws -> [Row] {
+        lock.lock()
+        defer { lock.unlock() }
+        
         guard let txID = currentTxID else {
             throw DBError.internalError("No active transaction")
         }
         
-        let result = try await database.executeQuery(sql, txId: txID)
+        let result = try database.executeQuery(sql, txId: txID)
         return result.rows
     }
     
     /// Close connection
-    public func close() async {
+    public func close() {
+        lock.lock()
+        defer { lock.unlock() }
+        
         // Rollback any active transaction
         if currentTxID != nil {
-            try? await rollback()
+            try? rollback()
         }
     }
 }

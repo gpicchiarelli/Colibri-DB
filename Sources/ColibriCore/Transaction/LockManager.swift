@@ -62,7 +62,7 @@ public struct LockRequest: Codable, Sendable, Equatable {
 
 /// Lock Manager for database lock management
 /// Corresponds to TLA+ module: LockManager.tla
-public actor LockManager {
+public final class LockManager: @unchecked Sendable {
     
     // MARK: - Constants
     
@@ -96,6 +96,7 @@ public actor LockManager {
     
     /// Transaction manager
     private let transactionManager: TransactionManager
+    private let lock = NSLock()
     
     // MARK: - Initialization
     
@@ -114,11 +115,14 @@ public actor LockManager {
     
     /// Request lock
     /// TLA+ Action: RequestLock(txId, resource, mode)
-    public func requestLock(txId: TxID, resource: Resource, mode: LockMode) async throws {
+    public func requestLock(txId: TxID, resource: Resource, mode: LockMode) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        
         // TLA+: Check if lock can be granted
-        if try await canGrantLock(txId: txId, resource: resource, mode: mode) {
+        if try canGrantLock(txId: txId, resource: resource, mode: mode) {
             // TLA+: Grant lock
-            try await grantLock(txId: txId, resource: resource, mode: mode)
+            try grantLock(txId: txId, resource: resource, mode: mode)
         } else {
             // TLA+: Add to wait queue
             let request = LockRequest(
@@ -133,7 +137,7 @@ public actor LockManager {
             waitQueue[resource]?.append(request)
             
             // TLA+: Update wait-for graph
-            try await updateWaitForGraph(txId: txId, resource: resource)
+            try updateWaitForGraph(txId: txId, resource: resource)
             
             print("Lock request queued: \(txId) for resource: \(resource) with mode: \(mode.rawValue)")
         }
@@ -141,7 +145,10 @@ public actor LockManager {
     
     /// Release lock
     /// TLA+ Action: ReleaseLock(txId, resource)
-    public func releaseLock(txId: TxID, resource: Resource) async throws {
+    public func releaseLock(txId: TxID, resource: Resource) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        
         // TLA+: Check if transaction holds lock
         guard locks[resource]?[txId] != nil else {
             throw LockManagerError.lockNotHeld
@@ -154,21 +161,24 @@ public actor LockManager {
         lockGrantTime[txId]?.removeValue(forKey: resource)
         
         // TLA+: Grant locks from wait queue
-        try await grantFromWaitQueue(resource: resource)
+        try grantFromWaitQueue(resource: resource)
         
         print("Released lock: \(txId) for resource: \(resource)")
     }
     
     /// Upgrade lock
     /// TLA+ Action: UpgradeLock(txId, resource, newMode)
-    public func upgradeLock(txId: TxID, resource: Resource, newMode: LockMode) async throws {
+    public func upgradeLock(txId: TxID, resource: Resource, newMode: LockMode) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        
         // TLA+: Check if transaction holds lock
         guard let currentMode = locks[resource]?[txId] else {
             throw LockManagerError.lockNotHeld
         }
         
         // TLA+: Check if upgrade is possible
-        if try await canGrantLock(txId: txId, resource: resource, mode: newMode) {
+        if try canGrantLock(txId: txId, resource: resource, mode: newMode) {
             // TLA+: Upgrade lock
             locks[resource]?[txId] = newMode
         } else {
@@ -185,7 +195,7 @@ public actor LockManager {
             waitQueue[resource]?.append(request)
             
             // TLA+: Update wait-for graph
-            try await updateWaitForGraph(txId: txId, resource: resource)
+            try updateWaitForGraph(txId: txId, resource: resource)
             
             print("Lock upgrade queued: \(txId) for resource: \(resource) to mode: \(newMode.rawValue)")
         }
@@ -193,11 +203,14 @@ public actor LockManager {
     
     /// Release all locks
     /// TLA+ Action: ReleaseAllLocks(txId)
-    public func releaseAllLocks(txId: TxID) async throws {
+    public func releaseAllLocks(txId: TxID) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        
         // TLA+: Release all locks for transaction
         for resource in locks.keys {
             if locks[resource]?[txId] != nil {
-                try await releaseLock(txId: txId, resource: resource)
+                try releaseLock(txId: txId, resource: resource)
             }
         }
         
@@ -210,7 +223,7 @@ public actor LockManager {
     // MARK: - Helper Methods
     
     /// Check if lock can be granted
-    private func canGrantLock(txId: TxID, resource: Resource, mode: LockMode) async throws -> Bool {
+    private func canGrantLock(txId: TxID, resource: Resource, mode: LockMode) throws -> Bool {
         // TLA+: Check lock compatibility
         guard let resourceLocks = locks[resource] else {
             return true // No locks on resource
@@ -226,7 +239,7 @@ public actor LockManager {
     }
     
     /// Grant lock
-    private func grantLock(txId: TxID, resource: Resource, mode: LockMode) async throws {
+    private func grantLock(txId: TxID, resource: Resource, mode: LockMode) throws {
         // TLA+: Grant lock
         if locks[resource] == nil {
             locks[resource] = [:]
@@ -243,15 +256,15 @@ public actor LockManager {
     }
     
     /// Grant locks from wait queue
-    private func grantFromWaitQueue(resource: Resource) async throws {
+    private func grantFromWaitQueue(resource: Resource) throws {
         // TLA+: Grant locks from wait queue
         guard var queue = waitQueue[resource] else { return }
         
         var grantedRequests: [LockRequest] = []
         
         for request in queue {
-            if try await canGrantLock(txId: request.txId, resource: resource, mode: request.mode) {
-                try await grantLock(txId: request.txId, resource: resource, mode: request.mode)
+            if try canGrantLock(txId: request.txId, resource: resource, mode: request.mode) {
+                try grantLock(txId: request.txId, resource: resource, mode: request.mode)
                 grantedRequests.append(request)
             }
         }
@@ -267,7 +280,7 @@ public actor LockManager {
     }
     
     /// Update wait-for graph
-    private func updateWaitForGraph(txId: TxID, resource: Resource) async throws {
+    private func updateWaitForGraph(txId: TxID, resource: Resource) throws {
         // TLA+: Update wait-for graph
         if waitForGraph[txId] == nil {
             waitForGraph[txId] = []
@@ -283,24 +296,24 @@ public actor LockManager {
         }
         
         // TLA+: Check for deadlock
-        if try await hasDeadlock() {
+        if try hasDeadlock() {
             // TLA+: Select deadlock victim
-            deadlockVictim = try await selectDeadlockVictim()
+            deadlockVictim = try selectDeadlockVictim()
             
             // TLA+: Abort victim transaction
-            try await transactionManager.abortTransaction(txId: deadlockVictim)
+            try transactionManager.abortTransaction(txId: deadlockVictim)
         }
     }
     
     /// Check for deadlock
-    private func hasDeadlock() async throws -> Bool {
+    private func hasDeadlock() throws -> Bool {
         // TLA+: Check for deadlock using DFS
         var visited: Set<TxID> = []
         var recursionStack: Set<TxID> = []
         
         for txId in waitForGraph.keys {
             if !visited.contains(txId) {
-                if try await hasCycleUtil(txId: txId, visited: &visited, recursionStack: &recursionStack) {
+                if try hasCycleUtil(txId: txId, visited: &visited, recursionStack: &recursionStack) {
                     return true
                 }
             }
@@ -310,14 +323,14 @@ public actor LockManager {
     }
     
     /// Check for cycle using DFS
-    private func hasCycleUtil(txId: TxID, visited: inout Set<TxID>, recursionStack: inout Set<TxID>) async throws -> Bool {
+    private func hasCycleUtil(txId: TxID, visited: inout Set<TxID>, recursionStack: inout Set<TxID>) throws -> Bool {
         visited.insert(txId)
         recursionStack.insert(txId)
         
         if let neighbors = waitForGraph[txId] {
             for neighbor in neighbors {
                 if !visited.contains(neighbor) {
-                    if try await hasCycleUtil(txId: neighbor, visited: &visited, recursionStack: &recursionStack) {
+                    if try hasCycleUtil(txId: neighbor, visited: &visited, recursionStack: &recursionStack) {
                         return true
                     }
                 } else if recursionStack.contains(neighbor) {
@@ -331,7 +344,7 @@ public actor LockManager {
     }
     
     /// Select deadlock victim
-    private func selectDeadlockVictim() async throws -> TxID {
+    private func selectDeadlockVictim() throws -> TxID {
         // TLA+: Select deadlock victim
         // This would include selecting the transaction to abort based on some criteria
         return waitForGraph.keys.first ?? 0
@@ -355,18 +368,18 @@ public actor LockManager {
     }
     
     /// Wait for lock
-    private func waitForLock(txId: TxID, resource: Resource, timeoutMs: UInt64) async throws -> Bool {
+    private func waitForLock(txId: TxID, resource: Resource, timeoutMs: UInt64) throws -> Bool {
         // TLA+: Wait for lock with timeout
         let startTime = UInt64(Date().timeIntervalSince1970 * 1000)
         
         while UInt64(Date().timeIntervalSince1970 * 1000) - startTime < timeoutMs {
-            if try await canGrantLock(txId: txId, resource: resource, mode: .exclusive) {
-                try await grantLock(txId: txId, resource: resource, mode: .exclusive)
+            if try canGrantLock(txId: txId, resource: resource, mode: .exclusive) {
+                try grantLock(txId: txId, resource: resource, mode: .exclusive)
                 return true
             }
             
             // TLA+: Sleep for a short time
-            try await Task.sleep(nanoseconds: 1_000_000) // 1ms
+            Thread.sleep(forTimeInterval: 0.001) // 1ms
         }
         
         return false
@@ -459,7 +472,10 @@ public actor LockManager {
     
     
     /// Clear all locks
-    public func clearAllLocks() async throws {
+    public func clearAllLocks() throws {
+        lock.lock()
+        defer { lock.unlock() }
+        
         locks.removeAll()
         waitQueue.removeAll()
         waitForGraph.removeAll()
@@ -470,8 +486,8 @@ public actor LockManager {
     }
     
     /// Reset lock manager
-    public func resetLockManager() async throws {
-        try await clearAllLocks()
+    public func resetLockManager() throws {
+        try clearAllLocks()
         print("Lock manager reset")
     }
     
@@ -520,7 +536,7 @@ public actor LockManager {
 
 /// Transaction manager protocol for lock management
 public protocol LockTransactionManager: Sendable {
-    func abortTransaction(txId: TxID) async throws
+    func abortTransaction(txId: TxID) throws
 }
 
 /// Lock manager error

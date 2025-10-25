@@ -18,7 +18,11 @@ import Foundation
 
 /// File-based Write-Ahead Log implementation
 /// Corresponds to TLA+ module: WAL.tla
-public actor FileWAL {
+public final class FileWAL: @unchecked Sendable {
+    // MARK: - Thread Safety
+    
+    private let lock = NSLock()
+    
     // MARK: - State Variables (TLA+ vars)
     
     /// Sequence of WAL records (on disk after flush)
@@ -114,6 +118,9 @@ public actor FileWAL {
         pageID: PageID,
         payload: Data? = nil
     ) throws -> LSN {
+        lock.lock()
+        defer { lock.unlock() }
+        
         guard !crashed else {
             throw DBError.crash
         }

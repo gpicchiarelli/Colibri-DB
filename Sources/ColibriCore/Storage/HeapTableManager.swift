@@ -44,7 +44,10 @@ public struct HeapPage: Sendable {
 
 /// Heap Table Manager for database storage
 /// Corresponds to TLA+ module: HeapTable.tla
-public actor HeapTableManager {
+public final class HeapTableManager: @unchecked Sendable {
+    
+    // MARK: - State
+    private let lock = NSLock()
     
     // MARK: - State Variables (TLA+ vars)
     

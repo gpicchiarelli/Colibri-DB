@@ -155,7 +155,10 @@ public struct SortKey {
 
 /// Physical query execution engine
 /// Corresponds to TLA+ module: QueryExecutor.tla
-public actor QueryExecutor {
+public final class QueryExecutor: @unchecked Sendable {
+    
+    // MARK: - State
+    private let lock = NSLock()
     
     // TLA+ VARIABLES
     

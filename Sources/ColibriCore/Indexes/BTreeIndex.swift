@@ -232,8 +232,12 @@ public actor BTreeIndex {
             throw DBError.internalError("Parent node not found")
         }
         
+        guard childIndex < parent.children.count else {
+            throw DBError.internalError("Child index out of range")
+        }
+        
         let child = parent.children[childIndex]
-        let mid = Self.minDegree
+        let mid = Self.minDegree - 1  // Correct split point for B+Tree
         
         // Create new node
         let newNodeID = nextNodeId
@@ -242,23 +246,24 @@ public actor BTreeIndex {
         newNode.parent = parent
         nodes[newNodeID] = newNode
         
-        // Split keys
-        let promotedKey = child.keys[mid - 1]
-        newNode.keys = Array(child.keys[mid...])
-        child.keys = Array(child.keys[0..<(mid - 1)])
+        // Split keys - promote middle key for internal nodes
+        let promotedKey = child.keys[mid]
+        newNode.keys = Array(child.keys[(mid + 1)...])
+        child.keys = Array(child.keys[0..<mid])
         
         if child.isLeaf {
-            // Split leaf node
+            // Split leaf node - include promoted key in right node
+            newNode.keys.insert(promotedKey, at: 0)
             newNode.rids = Array(child.rids[mid...])
-            child.rids = Array(child.rids[0..<(mid - 1)])
+            child.rids = Array(child.rids[0..<mid])
             
             // Update leaf links
             newNode.next = child.next
             child.next = newNode
         } else {
-            // Split internal node
-            newNode.children = Array(child.children[mid...])
-            child.children = Array(child.children[0..<mid])
+            // Split internal node - don't include promoted key in children
+            newNode.children = Array(child.children[(mid + 1)...])
+            child.children = Array(child.children[0...(mid)])
             
             // Update parent pointers
             for grandchild in newNode.children {
@@ -287,6 +292,9 @@ public actor BTreeIndex {
         } else {
             // Search in internal node
             let childIndex = findChildIndex(keys: node.keys, key: key)
+            guard childIndex < node.children.count else {
+                return nil
+            }
             return searchNode(nodeID: node.children[childIndex].nodeID, key: key)
         }
     }
@@ -309,14 +317,18 @@ public actor BTreeIndex {
         } else {
             // Delete from internal node
             let childIndex = findChildIndex(keys: node.keys, key: key)
+            guard childIndex < node.children.count else {
+                throw DBError.notFound
+            }
             let child = node.children[childIndex]
             
-            // Ensure child has at least minDegree keys
-            if child.keys.count < Self.minDegree {
+            // Delete from child first
+            try deleteFromNode(nodeID: child.nodeID, key: key)
+            
+            // Then rebalance if needed
+            if child.keys.count < Self.minDegree - 1 {
                 try rebalanceChild(parentID: nodeID, childIndex: childIndex)
             }
-            
-            try deleteFromNode(nodeID: child.nodeID, key: key)
         }
     }
     
@@ -324,6 +336,10 @@ public actor BTreeIndex {
     private func rebalanceChild(parentID: PageID, childIndex: Int) throws {
         guard let parent = nodes[parentID] else {
             throw DBError.internalError("Parent node not found")
+        }
+        
+        guard childIndex < parent.children.count else {
+            throw DBError.internalError("Child index out of range")
         }
         
         let child = parent.children[childIndex]
@@ -358,6 +374,10 @@ public actor BTreeIndex {
     private func borrowFromLeft(parentID: PageID, childIndex: Int) throws {
         guard let parent = nodes[parentID] else {
             throw DBError.internalError("Parent node not found")
+        }
+        
+        guard childIndex < parent.children.count && childIndex > 0 else {
+            throw DBError.internalError("Invalid child index for left borrow")
         }
         
         let child = parent.children[childIndex]
@@ -406,19 +426,26 @@ public actor BTreeIndex {
             throw DBError.internalError("Parent node not found")
         }
         
+        guard childIndex < parent.children.count && childIndex > 0 else {
+            throw DBError.internalError("Invalid child index for left merge")
+        }
+        
         let child = parent.children[childIndex]
         let leftSibling = parent.children[childIndex - 1]
         
-        // Move parent key down
-        leftSibling.keys.append(parent.keys[childIndex - 1])
-        
-        // Merge child into left sibling
-        leftSibling.keys.append(contentsOf: child.keys)
-        
         if child.isLeaf {
+            // For leaf nodes, just merge child into left sibling
+            // Don't add parent key to leaf nodes
+            leftSibling.keys.append(contentsOf: child.keys)
             leftSibling.rids.append(contentsOf: child.rids)
             leftSibling.next = child.next
         } else {
+            // For internal nodes, move parent key down
+            leftSibling.keys.append(parent.keys[childIndex - 1])
+            
+            // Merge child into left sibling
+            leftSibling.keys.append(contentsOf: child.keys)
+            
             leftSibling.children.append(contentsOf: child.children)
             for grandchild in child.children {
                 grandchild.parent = leftSibling
@@ -439,19 +466,26 @@ public actor BTreeIndex {
             throw DBError.internalError("Parent node not found")
         }
         
+        guard childIndex < parent.children.count - 1 else {
+            throw DBError.internalError("Invalid child index for right merge")
+        }
+        
         let child = parent.children[childIndex]
         let rightSibling = parent.children[childIndex + 1]
         
-        // Move parent key down
-        child.keys.append(parent.keys[childIndex])
-        
-        // Merge right sibling into child
-        child.keys.append(contentsOf: rightSibling.keys)
-        
         if child.isLeaf {
+            // For leaf nodes, just merge right sibling into child
+            // Don't add parent key to leaf nodes
+            child.keys.append(contentsOf: rightSibling.keys)
             child.rids.append(contentsOf: rightSibling.rids)
             child.next = rightSibling.next
         } else {
+            // For internal nodes, move parent key down
+            child.keys.append(parent.keys[childIndex])
+            
+            // Merge right sibling into child
+            child.keys.append(contentsOf: rightSibling.keys)
+            
             child.children.append(contentsOf: rightSibling.children)
             for grandchild in rightSibling.children {
                 grandchild.parent = child
@@ -473,6 +507,9 @@ public actor BTreeIndex {
         
         while let currentNode = nodes[currentID], !currentNode.isLeaf {
             let childIndex = findChildIndex(keys: currentNode.keys, key: key)
+            guard childIndex < currentNode.children.count else {
+                return nil
+            }
             currentID = currentNode.children[childIndex].nodeID
         }
         
@@ -530,7 +567,7 @@ public actor BTreeIndex {
         if node.isLeaf {
             return node.keys.count
         } else {
-            var count = node.keys.count
+            var count = 0
             for child in node.children {
                 count += countKeys(nodeID: child.nodeID)
             }

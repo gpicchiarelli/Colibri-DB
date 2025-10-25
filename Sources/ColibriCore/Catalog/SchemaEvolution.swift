@@ -239,7 +239,10 @@ public struct OnlineChangeState: Codable {
 
 /// Physical schema evolution engine
 /// Corresponds to TLA+ module: SchemaEvolution.tla
-public actor SchemaEvolutionManager {
+public final class SchemaEvolutionManager: @unchecked Sendable {
+    
+    // MARK: - State
+    private let lock = NSLock()
     
     // TLA+ VARIABLES
     

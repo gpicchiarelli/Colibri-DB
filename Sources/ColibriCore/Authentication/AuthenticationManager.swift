@@ -89,7 +89,10 @@ public struct Session: Codable, Sendable, Equatable {
 
 /// Authentication Manager for user authentication and authorization
 /// Corresponds to TLA+ module: Authentication.tla
-public actor AuthenticationManager {
+public final class AuthenticationManager: @unchecked Sendable {
+    
+    // MARK: - State
+    private let lock = NSLock()
     
     // MARK: - State Variables (TLA+ vars)
     

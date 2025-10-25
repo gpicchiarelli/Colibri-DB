@@ -95,7 +95,11 @@ public enum CoordinatorState: String, Codable, Sendable, CaseIterable {
 
 /// Transaction Manager for database transaction management
 /// Corresponds to TLA+ module: TransactionManager.tla
-public actor TransactionManager {
+public final class TransactionManager: @unchecked Sendable {
+    
+    // MARK: - Thread Safety
+    
+    private let lock = NSLock()
     
     // MARK: - Constants
     
@@ -227,7 +231,7 @@ public actor TransactionManager {
     
     /// Begin transaction
     /// TLA+ Action: BeginTransaction()
-    public func beginTransaction() async throws -> TxID {
+    public func beginTransaction() throws -> TxID {
         // TLA+: Create transaction
         let txId = nextTID
         nextTID += 1
@@ -260,7 +264,7 @@ public actor TransactionManager {
     
     /// Commit transaction
     /// TLA+ Action: CommitTransaction(txId)
-    public func commitTransaction(txId: TxID) async throws {
+    public func commitTransaction(txId: TxID) throws {
         // TLA+: Check if transaction exists
         guard var transaction = transactions[txId] else {
             throw TransactionManagerError.transactionNotFound
@@ -272,7 +276,7 @@ public actor TransactionManager {
         }
         
         // TLA+: Prepare transaction
-        try await prepareTransaction(txId: txId)
+        try prepareTransaction(txId: txId)
         
         // TLA+: Commit transaction
         transaction.state = .committed
@@ -287,7 +291,7 @@ public actor TransactionManager {
     
     /// Abort transaction
     /// TLA+ Action: AbortTransaction(txId)
-    public func abortTransaction(txId: TxID) async throws {
+    public func abortTransaction(txId: TxID) throws {
         // TLA+: Check if transaction exists
         guard var transaction = transactions[txId] else {
             throw TransactionManagerError.transactionNotFound
@@ -311,7 +315,7 @@ public actor TransactionManager {
     
     /// Request lock
     /// TLA+ Action: RequestLock(txId, resource, mode)
-    public func requestLock(txId: TxID, resource: String, mode: String) async throws {
+    public func requestLock(txId: TxID, resource: String, mode: String) throws {
         // TLA+: Check if transaction exists
         guard transactions[txId] != nil else {
             throw TransactionManagerError.transactionNotFound
@@ -321,7 +325,7 @@ public actor TransactionManager {
         guard let lockMode = LockMode(rawValue: mode) else {
             throw TransactionManagerError.invalidLockMode
         }
-        try await lockManager?.requestLock(txId: txId, resource: resource, mode: lockMode)
+        try lockManager?.requestLock(txId: txId, resource: resource, mode: lockMode)
         
         // TLA+: Add to transaction locks
         txLocks[txId]?.insert(resource)
@@ -331,14 +335,14 @@ public actor TransactionManager {
     
     /// Release lock
     /// TLA+ Action: ReleaseLock(txId, resource)
-    public func releaseLock(txId: TxID, resource: String) async throws {
+    public func releaseLock(txId: TxID, resource: String) throws {
         // TLA+: Check if transaction exists
         guard transactions[txId] != nil else {
             throw TransactionManagerError.transactionNotFound
         }
         
         // TLA+: Release lock
-        try await lockManager?.releaseLock(txId: txId, resource: resource)
+        try lockManager?.releaseLock(txId: txId, resource: resource)
         
         // TLA+: Remove from transaction locks
         txLocks[txId]?.remove(resource)
@@ -348,7 +352,7 @@ public actor TransactionManager {
     
     /// Prepare transaction
     /// TLA+ Action: PrepareTransaction(txId)
-    public func prepareTransaction(txId: TxID) async throws {
+    public func prepareTransaction(txId: TxID) throws {
         // TLA+: Check if transaction exists
         guard var transaction = transactions[txId] else {
             throw TransactionManagerError.transactionNotFound
@@ -369,7 +373,7 @@ public actor TransactionManager {
     
     /// Receive vote
     /// TLA+ Action: ReceiveVote(txId, participant, vote)
-    public func receiveVote(txId: TxID, participant: String, vote: Bool) async throws {
+    public func receiveVote(txId: TxID, participant: String, vote: Bool) throws {
         // TLA+: Check if transaction exists
         guard transactions[txId] != nil else {
             throw TransactionManagerError.transactionNotFound
@@ -386,7 +390,7 @@ public actor TransactionManager {
     
     /// Make decision
     /// TLA+ Action: MakeDecision(txId)
-    public func makeDecision(txId: TxID) async throws -> Bool {
+    public func makeDecision(txId: TxID) throws -> Bool {
         // TLA+: Check if transaction exists
         guard transactions[txId] != nil else {
             throw TransactionManagerError.transactionNotFound
@@ -407,7 +411,7 @@ public actor TransactionManager {
     
     /// Send commit/abort
     /// TLA+ Action: SendCommitAbort(txId, decision)
-    public func sendCommitAbort(txId: TxID, decision: Bool) async throws {
+    public func sendCommitAbort(txId: TxID, decision: Bool) throws {
         // TLA+: Check if transaction exists
         guard var transaction = transactions[txId] else {
             throw TransactionManagerError.transactionNotFound
@@ -431,21 +435,21 @@ public actor TransactionManager {
     // MARK: - Helper Methods
     
     /// Detect deadlock
-    private func detectDeadlock() async throws -> Bool {
+    private func detectDeadlock() throws -> Bool {
         // TLA+: Detect deadlock
         // This would include building the wait-for graph and checking for cycles
         return false // Simplified
     }
     
     /// Select deadlock victim
-    private func selectDeadlockVictim() async throws -> TxID {
+    private func selectDeadlockVictim() throws -> TxID {
         // TLA+: Select deadlock victim
         // This would include selecting the transaction to abort
         return 0 // Simplified
     }
     
     /// Update wait-for graph
-    private func updateWaitForGraph(txId: TxID, waitingFor: TxID) async throws {
+    private func updateWaitForGraph(txId: TxID, waitingFor: TxID) throws {
         // TLA+: Update wait-for graph
         if waitForGraph[txId] == nil {
             waitForGraph[txId] = []
@@ -611,7 +615,7 @@ public actor TransactionManager {
     }
     
     /// Clear completed transactions
-    public func clearCompletedTransactions() async throws {
+    public func clearCompletedTransactions() throws {
         transactions = transactions.filter { $0.value.state == .active }
         txOperations = txOperations.filter { transactions[$0.key] != nil }
         txLocks = txLocks.filter { transactions[$0.key] != nil }
@@ -629,7 +633,7 @@ public actor TransactionManager {
     }
     
     /// Reset transaction manager
-    public func resetTransactionManager() async throws {
+    public func resetTransactionManager() throws {
         transactions.removeAll()
         txOperations.removeAll()
         txLocks.removeAll()
@@ -705,17 +709,17 @@ public actor TransactionManager {
 
 /// Transaction manager MVCC protocol
 public protocol TransactionMVCCManager: Sendable {
-    func beginTransaction(txId: TxID) async throws -> Snapshot
-    func read(txId: TxID, key: String) async throws -> String?
-    func write(txId: TxID, key: String, value: String) async throws
-    func commit(txId: TxID) async throws
-    func abort(txId: TxID) async throws
+    func beginTransaction(txId: TxID) throws -> Snapshot
+    func read(txId: TxID, key: String) throws -> String?
+    func write(txId: TxID, key: String, value: String) throws
+    func commit(txId: TxID) throws
+    func abort(txId: TxID) throws
 }
 
 /// Lock manager protocol for transaction management
 public protocol TransactionLockManager: Sendable {
-    func requestLock(txId: TxID, resource: String, mode: String) async throws
-    func releaseLock(txId: TxID, resource: String) async throws
+    func requestLock(txId: TxID, resource: String, mode: String) throws
+    func releaseLock(txId: TxID, resource: String) throws
 }
 
 
