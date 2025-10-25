@@ -311,17 +311,26 @@ struct BufferPoolTests {
         let bufferPool = BufferPool(poolSize: 5, diskManager: diskManager)
         
         // Test operations on non-existent page
-        try TestAssertions.assertThrows({
+        do {
             try await bufferPool.putPage(999, page: Page(pageID: 999), isDirty: true)
-        }, "Should throw error for non-existent page")
+            #expect(false, "Should throw error for non-existent page")
+        } catch {
+            // Expected error
+        }
         
-        try TestAssertions.assertThrows({
+        do {
             try await bufferPool.pinPage(999)
-        }, "Should throw error for non-existent page")
+            #expect(false, "Should throw error for non-existent page")
+        } catch {
+            // Expected error
+        }
         
-        try TestAssertions.assertThrows({
+        do {
             try await bufferPool.unpinPage(999)
-        }, "Should throw error for non-existent page")
+            #expect(false, "Should throw error for non-existent page")
+        } catch {
+            // Expected error
+        }
         
         // Get a page and unpin it
         let pageID: PageID = 1
@@ -329,9 +338,12 @@ struct BufferPoolTests {
         try await bufferPool.unpinPage(pageID)
         
         // Test modifying unpinned page
-        try TestAssertions.assertThrows({
+        do {
             try await bufferPool.putPage(pageID, page: Page(pageID: pageID), isDirty: true)
-        }, "Should throw error for modifying unpinned page")
+            #expect(false, "Should throw error for modifying unpinned page")
+        } catch {
+            // Expected error
+        }
     }
     
     /// Test concurrent access
