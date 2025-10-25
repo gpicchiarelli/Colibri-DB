@@ -36,7 +36,7 @@ public enum RaftState: String, Codable {
 // MARK: - Log Entry
 
 /// Log entry with term and command (Ongaro Figure 2)
-public struct RaftLogEntry: Codable {
+public struct RaftLogEntry: Codable, Sendable {
     public let term: UInt64
     public let index: UInt64
     public let command: String          // Command to apply to state machine
@@ -81,7 +81,7 @@ public struct RequestVoteResponse: Codable {
 }
 
 /// AppendEntries RPC request (Ongaro Section 5.3)
-public struct AppendEntriesRequest: Codable {
+public struct AppendEntriesRequest: Codable, Sendable {
     public let term: UInt64
     public let leaderId: String
     public let prevLogIndex: UInt64
@@ -339,6 +339,7 @@ public actor RaftServer {
             leaderCommit: commitIndex
         )
         
+        // Create a sendable copy of the request
         let requestCopy = AppendEntriesRequest(
             term: request.term,
             leaderId: request.leaderId,

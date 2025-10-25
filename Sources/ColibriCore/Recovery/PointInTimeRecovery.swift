@@ -396,7 +396,8 @@ public actor PointInTimeRecoveryManager {
         committedTxns.removeAll()
         activeTxns.removeAll()
         
-        for record in wal where record.lsn >= startLSN && beforeTarget(record: record, target: target) {
+        let targetCopy = target
+        for record in wal where record.lsn >= startLSN && beforeTarget(record: record, target: targetCopy) {
             if let txnId = record.txnId {
                 switch record.type {
                 case .begin:
@@ -427,8 +428,9 @@ public actor PointInTimeRecoveryManager {
         }
         
         // Redo all committed transactions
+        let targetCopy2 = target
         for record in wal where record.type == .update &&
-                                beforeTarget(record: record, target: target) {
+                                beforeTarget(record: record, target: targetCopy2) {
             if let txnId = record.txnId,
                committedTxns.contains(txnId),
                let pageId = record.pageId {

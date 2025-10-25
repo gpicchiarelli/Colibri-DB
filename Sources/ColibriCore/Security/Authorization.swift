@@ -456,12 +456,13 @@ public actor AuthorizationManager {
     }
     
     /// Check valid capability (TLA+: HasValidCapability)
-    private nonisolated func hasValidCapability(subject: String, object: String, operation: AuthOperation) -> Bool {
+    private func hasValidCapability(subject: String, object: String, operation: AuthOperation) -> Bool {
         guard let caps = capabilities[subject] else { return false }
         
+        let currentTimeCopy = currentTime
         for cap in caps {
             let capCopy = cap
-            if capCopy.object == object && capCopy.operation == operation && capCopy.isValid(currentTime: currentTime) {
+            if capCopy.object == object && capCopy.operation == operation && capCopy.isValid(currentTime: currentTimeCopy) {
                 // Evaluate constraints
                 if evaluateConstraints(constraints: capCopy.constraints, subject: subject, object: object) {
                     return true

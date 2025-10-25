@@ -291,17 +291,44 @@ public actor WindowFunctionsProcessor {
     
     private func sortPartition(_ partition: [WindowRow], orderBy: [OrderSpec]) -> [WindowRow] {
         let orderSpecsCopy = Array(orderBy) // Create a copy to avoid data race
+        return Self.sortPartitionHelper(partition, orderBy: orderSpecsCopy)
+    }
+    
+    /// Helper function to sort partition without data race issues
+    private nonisolated static func sortPartitionHelper(_ partition: [WindowRow], orderBy: [OrderSpec]) -> [WindowRow] {
         return partition.sorted { r1, r2 in
-            for spec in orderSpecsCopy {
+            for spec in orderBy {
                 let v1 = r1.values[spec.column] ?? Value.null
                 let v2 = r2.values[spec.column] ?? Value.null
                 
-                let cmp = compareValues(v1, v2)
+                let cmp = compareValuesHelper(v1, v2)
                 if cmp != .orderedSame {
                     return spec.direction == .ascending ? cmp == .orderedAscending : cmp == .orderedDescending
                 }
             }
             return false
+        }
+    }
+    
+    /// Helper function to compare values without data race issues
+    private nonisolated static func compareValuesHelper(_ v1: Value, _ v2: Value) -> ComparisonResult {
+        switch (v1, v2) {
+        case (.int(let a), .int(let b)):
+            return a < b ? .orderedAscending : (a > b ? .orderedDescending : .orderedSame)
+        case (.double(let a), .double(let b)):
+            return a < b ? .orderedAscending : (a > b ? .orderedDescending : .orderedSame)
+        case (.string(let a), .string(let b)):
+            return a < b ? .orderedAscending : (a > b ? .orderedDescending : .orderedSame)
+        case (.bool(let a), .bool(let b)):
+            return a == b ? .orderedSame : (a ? .orderedDescending : .orderedAscending)
+        case (.null, .null):
+            return .orderedSame
+        case (.null, _):
+            return .orderedAscending
+        case (_, .null):
+            return .orderedDescending
+        default:
+            return .orderedSame
         }
     }
     
@@ -433,11 +460,22 @@ public actor WindowFunctionsProcessor {
             let currentRowCopy = partition[rowIdx]
             let orderColumns = Array(spec.orderBy.map { $0.column }) // Create a copy to avoid data race
             frame = frame.filter { row in
-                !areRowsEqual(row, currentRowCopy, columns: orderColumns)
+                !Self.areRowsEqualHelper(row, currentRowCopy, columns: orderColumns)
             }
         }
         
         return frame
+    }
+    
+    /// Helper function to compare rows without data race issues
+    private nonisolated static func areRowsEqualHelper(_ r1: WindowRow, _ r2: WindowRow, columns: [String]) -> Bool {
+        guard r1.rowNum != r2.rowNum else { return true }
+        for col in columns {
+            if r1.values[col] != r2.values[col] {
+                return false
+            }
+        }
+        return true
     }
     
     private func areRowsEqual(_ r1: WindowRow, _ r2: WindowRow, columns: [String]) -> Bool {

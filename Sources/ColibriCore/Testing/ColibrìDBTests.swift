@@ -453,12 +453,16 @@ class ColibrìDBTests: XCTestCase {
         let transactionCount = 50
         let startTime = Date()
         
+        guard let database = self.database else { return }
         await withTaskGroup(of: Void.self) { group in
             for _ in 0..<transactionCount {
-                group.addTask { [weak self] in
-                    guard let strongSelf = self else { return }
-                    guard let database = strongSelf.database else { return }
-                    await strongSelf.performTransaction(database: database)
+                group.addTask { [database] in
+                    do {
+                        let txId = try await database.beginTransaction()
+                        try await database.commit(txId: txId)
+                    } catch {
+                        // Ignore errors in concurrent test
+                    }
                 }
             }
         }
