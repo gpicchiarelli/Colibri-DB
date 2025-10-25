@@ -8,6 +8,7 @@
 
 import Foundation
 import ColibriServer
+import ColibriCore
 
 logInfo("ColibrìDB Server - Version 1.0.0", category: .network)
 logInfo("Use 'coldb-server --help' for more information", category: .network)

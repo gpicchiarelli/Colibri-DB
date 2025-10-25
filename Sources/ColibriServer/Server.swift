@@ -192,7 +192,7 @@ public actor ConnectionHandler {
         
         let responseData = responseString.data(using: .utf8) ?? Data()
         
-        try await withCheckedThrowingContinuation { continuation in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             connection.send(content: responseData, completion: .contentProcessed { error in
                 if let error = error {
                     continuation.resume(throwing: error)
@@ -345,7 +345,7 @@ public actor ColibriServer {
     private var listener: NWListener?
     
     /// Active connections
-    private var activeConnections: Set<ConnectionHandler> = []
+    private var activeConnections: [UUID: ConnectionHandler] = [:]
     
     /// Server state
     private var isRunning: Bool = false
@@ -381,7 +381,7 @@ public actor ColibriServer {
         
         let parameters = NWParameters.tcp
         if config.enableSSL {
-            parameters.defaultProtocolStack.applicationProtocols.insert(NWProtocolApplication.Options.version3)
+            parameters.defaultProtocolStack.applicationProtocols.insert(NWProtocolTLS.Options(), at: 0)
         }
         
         listener = try NWListener(using: parameters, on: NWEndpoint.Port(rawValue: UInt16(config.port))!)
@@ -402,7 +402,7 @@ public actor ColibriServer {
         listener = nil
         
         // Close all active connections
-        for connection in activeConnections {
+        for (_, connection) in activeConnections {
             // Connection will be removed when it closes
         }
         
@@ -411,12 +411,13 @@ public actor ColibriServer {
     
     /// Handle new connection
     private func handleNewConnection(_ connection: NWConnection) async {
+        let connectionId = UUID()
         let connectionHandler = ConnectionHandler(connection: connection, server: self, requestHandler: requestHandler)
-        activeConnections.insert(connectionHandler)
+        activeConnections[connectionId] = connectionHandler
         
         await connectionHandler.handleConnection()
         
-        activeConnections.remove(connectionHandler)
+        activeConnections.removeValue(forKey: connectionId)
     }
     
     // MARK: - Query Operations

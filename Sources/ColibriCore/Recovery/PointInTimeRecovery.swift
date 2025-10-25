@@ -535,6 +535,8 @@ public actor PointInTimeRecoveryManager {
             }
         case .latest:
             return true
+        @unknown default:
+            return false
         }
         return false
     }

@@ -8,6 +8,7 @@
 
 import Foundation
 import ColibriCLI
+import ColibriCore
 
 logInfo("ColibrìDB CLI - Version 1.0.0", category: .general)
 logInfo("Use 'coldb --help' for more information", category: .general)

@@ -320,10 +320,10 @@ public var colibriLogger: Logger = Logger()
 
 /// Sendable wrapper for metadata to avoid data races
 public struct SendableMetadata: Sendable {
-    public let data: [String: Any]
+    public let data: [String: String]
     
     public init(_ data: [String: Any]) {
-        self.data = data
+        self.data = data.mapValues { String(describing: $0) }
     }
 }
 
