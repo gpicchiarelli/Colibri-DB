@@ -160,7 +160,10 @@ public struct PageState: Codable {
 // MARK: - Point-in-Time Recovery Manager
 
 /// Manager for Point-in-Time Recovery
-public actor PointInTimeRecoveryManager {
+public final class PointInTimeRecoveryManager: @unchecked Sendable {
+    
+    // MARK: - State
+    private let lock = NSLock()
     
     // Write-Ahead Log
     private var wal: [LogRecord] = []

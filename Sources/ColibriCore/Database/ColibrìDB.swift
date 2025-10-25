@@ -109,7 +109,7 @@ public final class ColibrìDB: @unchecked Sendable {
     private let wireProtocol: WireProtocolHandler
     
     /// Database Server (TLA+: Server)
-    private let databaseServer: DatabaseServer
+    private var databaseServer: DatabaseServer!
     
     /// System Catalog (TLA+: Catalog)
     private let catalog: Catalog
@@ -201,14 +201,14 @@ public final class ColibrìDB: @unchecked Sendable {
         // Initialize authentication
         self.authManager = AuthenticationManager()
         
-        // Initialize database server
+        // Initialize database server after all properties are set
         let serverConfig = DatabaseServer.Configuration(
             host: "127.0.0.1",
             port: 5432,
             maxConnections: config.maxConnections,
             databaseConfig: DatabaseConfiguration()
         )
-        self.databaseServer = try DatabaseServer(config: serverConfig)
+        self.databaseServer = DatabaseServer(config: serverConfig, database: self)
     }
     
     // MARK: - Database Lifecycle

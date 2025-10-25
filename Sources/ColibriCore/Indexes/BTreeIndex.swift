@@ -50,7 +50,10 @@ private class BTreeNode {
 
 /// B+Tree Index implementation
 /// Corresponds to TLA+ module: BTree.tla
-public actor BTreeIndex {
+public final class BTreeIndex: @unchecked Sendable {
+    // MARK: - State
+    private let lock = NSLock()
+    
     // MARK: - Configuration
     
     /// Minimum degree (node has [t-1, 2t-1] keys)

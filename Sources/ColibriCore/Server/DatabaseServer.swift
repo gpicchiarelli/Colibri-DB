@@ -57,11 +57,9 @@ public final class DatabaseServer: @unchecked Sendable {
     
     // MARK: - Initialization
     
-    public init(config: Configuration) throws {
+    public init(config: Configuration, database: ColibrìDB) {
         self.config = config
-        self.database = try ColibrìDB(config: ColibrìDBConfiguration(
-            dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
-        ))
+        self.database = database
     }
     
     // MARK: - Server Lifecycle

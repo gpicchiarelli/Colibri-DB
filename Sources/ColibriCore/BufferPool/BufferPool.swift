@@ -416,7 +416,8 @@ public struct BufferPoolStatistics: Sendable {
 
 
 /// Simple file-based disk manager
-public actor FileDiskManager: DiskManager {
+public final class FileDiskManager: DiskManager, @unchecked Sendable {
+    private let lock = NSLock()
     private let filePath: URL
     
     public init(filePath: URL) throws {

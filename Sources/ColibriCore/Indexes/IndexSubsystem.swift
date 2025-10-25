@@ -73,7 +73,10 @@ public struct IndexStatistics: Codable, Sendable {
 // MARK: - Index Subsystem
 
 /// Unified index subsystem
-public actor IndexSubsystem {
+public final class IndexSubsystem: @unchecked Sendable {
+    
+    // MARK: - State
+    private let lock = NSLock()
     
     // Index registry
     private var indexRegistry: [String: IndexDefinition] = [:]

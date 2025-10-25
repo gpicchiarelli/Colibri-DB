@@ -197,7 +197,7 @@ public enum BasicUsageExamples {
             databaseConfig: databaseConfig
         )
         
-        let server = try DatabaseServer(config: serverConfig)
+        let server = DatabaseServer(config: serverConfig, database: database)
         
         // Start the server
         try await server.start()
