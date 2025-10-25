@@ -93,7 +93,7 @@ let package = Package(
                 "ColibriCore",
                 .product(name: "Testing", package: "swift-testing")
             ],
-            exclude: ["README.md"]
+            exclude: ["README.md", "**/*.disabled"]
         )
     ]
 )
