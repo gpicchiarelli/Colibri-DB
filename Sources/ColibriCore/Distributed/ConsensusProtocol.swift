@@ -339,7 +339,14 @@ public actor RaftServer {
             leaderCommit: commitIndex
         )
         
-        let requestCopy = request
+        let requestCopy = AppendEntriesRequest(
+            term: request.term,
+            leaderId: request.leaderId,
+            prevLogIndex: request.prevLogIndex,
+            prevLogTerm: request.prevLogTerm,
+            entries: request.entries,
+            leaderCommit: request.leaderCommit
+        )
         await sendMessage(follower, requestCopy)
     }
     

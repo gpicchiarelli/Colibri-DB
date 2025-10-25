@@ -456,13 +456,9 @@ class ColibrìDBTests: XCTestCase {
         await withTaskGroup(of: Void.self) { group in
             for _ in 0..<transactionCount {
                 group.addTask { [weak self] in
-                    guard let self = self else { return }
-                    do {
-                        let txId = try await self.database.beginTransaction()
-                        try await self.database.commit(txId: txId)
-                    } catch {
-                        // Ignore errors in concurrent test
-                    }
+                    guard let strongSelf = self else { return }
+                    guard let database = strongSelf.database else { return }
+                    await strongSelf.performTransaction(database: database)
                 }
             }
         }
@@ -473,6 +469,16 @@ class ColibrìDBTests: XCTestCase {
         
         logInfo("Concurrent transaction performance: \(tps) TPS", category: .performance)
         XCTAssertGreaterThan(tps, 50) // At least 50 TPS with concurrency
+    }
+    
+    /// Helper function to perform a transaction without data race issues
+    private nonisolated func performTransaction(database: ColibrìDB) async {
+        do {
+            let txId = try await database.beginTransaction()
+            try await database.commit(txId: txId)
+        } catch {
+            // Ignore errors in concurrent test
+        }
     }
 }
 

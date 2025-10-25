@@ -246,7 +246,7 @@ public actor PointInTimeRecoveryManager {
         pageState[pageId] = page
         
         // Track in undo log
-        undoLog[txnId, default: []].append(UndoRecord(lsn: record.lsn, txId: UInt64(txnId), pageId: PageID(pageId), data: Data(), timestamp: UInt64(Date().timeIntervalSince1970)))
+        undoLog[txnId, default: []].append(UndoRecord(lsn: record.lsn, txId: UInt64(txnId.hashValue), pageId: PageID(pageId), data: Data(), timestamp: UInt64(Date().timeIntervalSince1970)))
         
         stats.totalUpdates += 1
     }
@@ -497,7 +497,7 @@ public actor PointInTimeRecoveryManager {
             throw PITRError.systemNotConsistent
         }
         
-        systemState = .normal
+        systemState = .completed
     }
     
     // MARK: - Helper Methods

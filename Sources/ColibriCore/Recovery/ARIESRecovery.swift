@@ -259,7 +259,7 @@ public actor ARIESRecovery {
                 // Check if page is in DPT
                 if dpt[record.pageID] != nil {
                     // Get page
-                    let page = try await bufferPool.getPage(record.pageID)
+                    var page = try await bufferPool.getPage(record.pageID)
                     
                     // Check if redo is needed (idempotence)
                     // TLA+: IF pageLSN[pid] < lsn THEN redo operation

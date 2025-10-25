@@ -320,37 +320,37 @@ public var colibriLogger: Logger = Logger()
 
 /// Global convenience functions for logging
 public func logTrace(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
-    Task {
+    Task { @MainActor in
         await colibriLogger.trace(message, category: category, metadata: metadata, file: file, function: function, line: line)
     }
 }
 
 public func logDebug(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
-    Task {
+    Task { @MainActor in
         await colibriLogger.debug(message, category: category, metadata: metadata, file: file, function: function, line: line)
     }
 }
 
 public func logInfo(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
-    Task {
+    Task { @MainActor in
         await colibriLogger.info(message, category: category, metadata: metadata, file: file, function: function, line: line)
     }
 }
 
 public func logWarning(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
-    Task {
+    Task { @MainActor in
         await colibriLogger.warning(message, category: category, metadata: metadata, file: file, function: function, line: line)
     }
 }
 
 public func logError(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
-    Task {
+    Task { @MainActor in
         await colibriLogger.error(message, category: category, metadata: metadata, file: file, function: function, line: line)
     }
 }
 
 public func logFatal(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
-    Task {
+    Task { @MainActor in
         await colibriLogger.fatal(message, category: category, metadata: metadata, file: file, function: function, line: line)
     }
 }

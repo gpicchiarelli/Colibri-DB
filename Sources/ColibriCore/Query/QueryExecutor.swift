@@ -446,19 +446,7 @@ public actor QueryExecutor {
         
         // Sort tuples
         let sortKeysCopy = Array(state.sortKeys) // Create a copy to avoid data race
-        let sortKeysLocal = sortKeysCopy
-        let sortedResult = input.sorted { t1, t2 in
-            for sortKey in sortKeysLocal {
-                let v1 = t1.values[sortKey.column]
-                let v2 = t2.values[sortKey.column]
-                
-                let cmp = compareValues(v1, v2)
-                if cmp != 0 {
-                    return sortKey.order == .ascending ? cmp < 0 : cmp > 0
-                }
-            }
-            return false
-        }
+        let sortedResult = sortTuples(input, with: sortKeysCopy)
         
         state.sorted = sortedResult
         state.exhausted = true
@@ -488,9 +476,25 @@ public actor QueryExecutor {
         return filtered
     }
     
+    /// Helper function to sort tuples without data race issues
+    private nonisolated func sortTuples(_ input: [ExecutorTuple], with sortKeys: [SortKey]) -> [ExecutorTuple] {
+        return input.sorted { t1, t2 in
+            for sortKey in sortKeys {
+                let v1 = t1.values[sortKey.column]
+                let v2 = t2.values[sortKey.column]
+                
+                let cmp = compareValues(v1, v2)
+                if cmp != 0 {
+                    return sortKey.order == .ascending ? cmp < 0 : cmp > 0
+                }
+            }
+            return false
+        }
+    }
+    
     // MARK: - Helper Methods
     
-    private func compareValues(_ v1: Value, _ v2: Value) -> Int {
+    private nonisolated func compareValues(_ v1: Value, _ v2: Value) -> Int {
         switch (v1, v2) {
         case (.int(let a), .int(let b)):
             return a < b ? -1 : (a > b ? 1 : 0)
