@@ -190,6 +190,8 @@ public enum BasicUsageExamples {
             walBufferSize: 8192
         )
         
+        let database = try ColibrìDB(config: dbConfig)
+        
         let serverConfig = DatabaseServer.Configuration(
             host: "127.0.0.1",
             port: 5432,
