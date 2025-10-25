@@ -37,7 +37,7 @@ struct BTreeIndexTests {
         
         // Insert some keys
         let keys = [Value.int(10), Value.int(20), Value.int(5), Value.int(15), Value.int(25)]
-        let rids = [RID(1), RID(2), RID(3), RID(4), RID(5)]
+        let rids = [RID(integerLiteral: 1), RID(integerLiteral: 2), RID(integerLiteral: 3), RID(integerLiteral: 4), RID(integerLiteral: 5)]
         
         for (key, rid) in zip(keys, rids) {
             try await btree.insert(key: key, rid: rid)
@@ -50,7 +50,7 @@ struct BTreeIndexTests {
         // Verify each key can be found
         for (key, expectedRid) in zip(keys, rids) {
             let foundRids = await btree.search(key: key)
-            try TestAssertions.assertNotNil(foundRids, "Key should be found")
+            try TestAssertions.assertNotNil(foundRids as [RID]?, "Key should be found")
             try TestAssertions.assertContains(foundRids!, expectedRid, "Should contain expected RID")
         }
     }
@@ -62,7 +62,7 @@ struct BTreeIndexTests {
         
         // Insert keys
         let keys = [Value.int(10), Value.int(20), Value.int(5), Value.int(15), Value.int(25)]
-        let rids = [RID(1), RID(2), RID(3), RID(4), RID(5)]
+        let rids = [RID(integerLiteral: 1), RID(integerLiteral: 2), RID(integerLiteral: 3), RID(integerLiteral: 4), RID(integerLiteral: 5)]
         
         for (key, rid) in zip(keys, rids) {
             try await btree.insert(key: key, rid: rid)
@@ -71,7 +71,7 @@ struct BTreeIndexTests {
         // Test search for existing keys
         for (key, expectedRid) in zip(keys, rids) {
             let foundRids = await btree.search(key: key)
-            try TestAssertions.assertNotNil(foundRids, "Existing key should be found")
+            try TestAssertions.assertNotNil(foundRids as [RID]?, "Existing key should be found")
             try TestAssertions.assertContains(foundRids!, expectedRid, "Should contain expected RID")
         }
         
@@ -90,7 +90,7 @@ struct BTreeIndexTests {
         
         // Insert keys
         let keys = [Value.int(10), Value.int(20), Value.int(5), Value.int(15), Value.int(25)]
-        let rids = [RID(1), RID(2), RID(3), RID(4), RID(5)]
+        let rids = [RID(integerLiteral: 1), RID(integerLiteral: 2), RID(integerLiteral: 3), RID(integerLiteral: 4), RID(integerLiteral: 5)]
         
         for (key, rid) in zip(keys, rids) {
             try await btree.insert(key: key, rid: rid)
@@ -112,9 +112,9 @@ struct BTreeIndexTests {
         let found5 = await btree.search(key: Value.int(5))
         let found25 = await btree.search(key: Value.int(25))
         
-        try TestAssertions.assertNotNil(found20, "Key 20 should still exist")
-        try TestAssertions.assertNotNil(found5, "Key 5 should still exist")
-        try TestAssertions.assertNotNil(found25, "Key 25 should still exist")
+        try TestAssertions.assertNotNil(found20 as [RID]?, "Key 20 should still exist")
+        try TestAssertions.assertNotNil(found5 as [RID]?, "Key 5 should still exist")
+        try TestAssertions.assertNotNil(found25 as [RID]?, "Key 25 should still exist")
         
         // Verify key count
         let keyCount = await btree.getKeyCount()
@@ -128,7 +128,7 @@ struct BTreeIndexTests {
         
         // Insert keys in order
         let keys = [Value.int(1), Value.int(3), Value.int(5), Value.int(7), Value.int(9), Value.int(11), Value.int(13)]
-        let rids = [RID(1), RID(2), RID(3), RID(4), RID(5), RID(6), RID(7)]
+        let rids = [RID(integerLiteral: 1), RID(integerLiteral: 2), RID(integerLiteral: 3), RID(integerLiteral: 4), RID(integerLiteral: 5), RID(integerLiteral: 6), RID(integerLiteral: 7)]
         
         for (key, rid) in zip(keys, rids) {
             try await btree.insert(key: key, rid: rid)
@@ -184,7 +184,7 @@ struct BTreeIndexTests {
         
         // Insert enough keys to force node splitting
         let keys = [Value.int(1), Value.int(2), Value.int(3), Value.int(4), Value.int(5), Value.int(6), Value.int(7)]
-        let rids = [RID(1), RID(2), RID(3), RID(4), RID(5), RID(6), RID(7)]
+        let rids = [RID(integerLiteral: 1), RID(integerLiteral: 2), RID(integerLiteral: 3), RID(integerLiteral: 4), RID(integerLiteral: 5), RID(integerLiteral: 6), RID(integerLiteral: 7)]
         
         for (key, rid) in zip(keys, rids) {
             try await btree.insert(key: key, rid: rid)
@@ -200,7 +200,7 @@ struct BTreeIndexTests {
         // Verify all keys can still be found
         for (key, expectedRid) in zip(keys, rids) {
             let foundRids = await btree.search(key: key)
-            try TestAssertions.assertNotNil(foundRids, "Key should be found after splitting")
+            try TestAssertions.assertNotNil(foundRids as [RID]?, "Key should be found after splitting")
             try TestAssertions.assertContains(foundRids!, expectedRid, "Should contain expected RID")
         }
     }
@@ -212,7 +212,7 @@ struct BTreeIndexTests {
         
         // Insert keys
         let keys = [Value.int(1), Value.int(2), Value.int(3), Value.int(4), Value.int(5), Value.int(6), Value.int(7)]
-        let rids = [RID(1), RID(2), RID(3), RID(4), RID(5), RID(6), RID(7)]
+        let rids = [RID(integerLiteral: 1), RID(integerLiteral: 2), RID(integerLiteral: 3), RID(integerLiteral: 4), RID(integerLiteral: 5), RID(integerLiteral: 6), RID(integerLiteral: 7)]
         
         for (key, rid) in zip(keys, rids) {
             try await btree.insert(key: key, rid: rid)
@@ -234,7 +234,7 @@ struct BTreeIndexTests {
         let remainingKeys = [Value.int(4), Value.int(5), Value.int(6), Value.int(7)]
         for key in remainingKeys {
             let foundRids = await btree.search(key: key)
-            try TestAssertions.assertNotNil(foundRids, "Remaining key should be found after merging")
+            try TestAssertions.assertNotNil(foundRids as [RID]?, "Remaining key should be found after merging")
         }
     }
     
@@ -253,8 +253,8 @@ struct BTreeIndexTests {
                     // Each task inserts keys in its range
                     let startKey = i * 10
                     for j in 0..<10 {
-                        let key = Value.int(startKey + j)
-                        let rid = RID(startKey + j)
+                        let key = Value.int(Int64(startKey + j))
+                        let rid = RID(integerLiteral: startKey + j)
                         try await btree.insert(key: key, rid: rid)
                     }
                 } catch {
@@ -300,8 +300,8 @@ struct BTreeIndexTests {
         // Search for some keys
         let searchStartTime = Date()
         for i in stride(from: 0, to: keyCount, by: 100) {
-            let foundRids = await btree.search(key: Value.int(i))
-            try TestAssertions.assertNotNil(foundRids, "Key should be found")
+            let foundRids = await btree.search(key: Value.int(Int64(i)))
+            try TestAssertions.assertNotNil(foundRids as [RID]?, "Key should be found")
         }
         let searchTime = Date()
         let searchDuration = searchTime.timeIntervalSince(searchStartTime)
@@ -351,7 +351,7 @@ struct BTreeIndexTests {
         
         // Insert string keys
         let keys = [Value.string("apple"), Value.string("banana"), Value.string("cherry"), Value.string("date"), Value.string("elderberry")]
-        let rids = [RID(1), RID(2), RID(3), RID(4), RID(5)]
+        let rids = [RID(integerLiteral: 1), RID(integerLiteral: 2), RID(integerLiteral: 3), RID(integerLiteral: 4), RID(integerLiteral: 5)]
         
         for (key, rid) in zip(keys, rids) {
             try await btree.insert(key: key, rid: rid)
@@ -360,7 +360,7 @@ struct BTreeIndexTests {
         // Test search
         let foundRids = await btree.search(key: Value.string("banana"))
         try TestAssertions.assertNotNil(foundRids, "String key should be found")
-        try TestAssertions.assertContains(foundRids!, RID(2), "Should contain expected RID")
+        try TestAssertions.assertContains(foundRids!, RID(integerLiteral: 2), "Should contain expected RID")
         
         // Test range scan
         let results = await btree.rangeScan(minKey: Value.string("banana"), maxKey: Value.string("date"))
@@ -378,7 +378,7 @@ struct BTreeIndexTests {
         
         // Insert double keys
         let keys = [Value.double(1.1), Value.double(2.2), Value.double(3.3), Value.double(4.4), Value.double(5.5)]
-        let rids = [RID(1), RID(2), RID(3), RID(4), RID(5)]
+        let rids = [RID(integerLiteral: 1), RID(integerLiteral: 2), RID(integerLiteral: 3), RID(integerLiteral: 4), RID(integerLiteral: 5)]
         
         for (key, rid) in zip(keys, rids) {
             try await btree.insert(key: key, rid: rid)
