@@ -79,6 +79,9 @@ public actor FileWAL {
         
         // Create WAL file if it doesn't exist
         if !FileManager.default.fileExists(atPath: walFilePath.path) {
+            // Create the directory if it doesn't exist
+            try FileManager.default.createDirectory(at: walFilePath.deletingLastPathComponent(), withIntermediateDirectories: true)
+            
             let header = WALFileHeader()
             let encoder = JSONEncoder()
             let headerData = try encoder.encode(header)
@@ -86,7 +89,7 @@ public actor FileWAL {
         }
         
         // Open file handle for appending
-        self.fileHandle = try? FileHandle(forUpdating: walFilePath)
+        self.fileHandle = try? FileHandle(forWritingTo: walFilePath)
         
         // Initialize state (TLA+ Init)
         self.wal = []

@@ -86,8 +86,8 @@ public actor ColibrìDB {
     /// Lock Manager (TLA+: LockManager)
     private let lockManager: LockManager
     
-    /// Transaction Manager (TLA+: TransactionManager) - Simplified for testing
-    private let transactionManager: TransactionManager?
+    /// Transaction Manager (TLA+: TransactionManager)
+    private let transactionManager: TransactionManager
     
     /// ARIES Recovery (TLA+: RECOVERY)
     private let recoveryManager: ARIESRecovery
@@ -156,10 +156,16 @@ public actor ColibrìDB {
         // Initialize transaction layer
         self.mvccManager = MVCCManager()
         
-        // For testing purposes, skip complex transaction manager setup
-        // This is a temporary solution until the full interfaces are implemented
-        self.transactionManager = nil
-        self.lockManager = LockManager(transactionManager: nil)
+        // Create transaction manager with proper adapters
+        let walAdapter = wal.asTransactionWALManager()
+        let mvccAdapter = mvccManager.asTransactionMVCCManager()
+        
+        self.transactionManager = TransactionManager(
+            walManager: walAdapter,
+            mvccManager: mvccAdapter,
+            lockManager: nil
+        )
+        self.lockManager = LockManager(transactionManager: transactionManager)
         
         // Initialize recovery
         self.recoveryManager = ARIESRecovery(
@@ -169,7 +175,7 @@ public actor ColibrìDB {
         
         // Initialize query processing
         self.queryExecutor = QueryExecutor(
-            transactionManager: nil,
+            transactionManager: transactionManager,
             catalog: catalog
         )
         
@@ -183,7 +189,7 @@ public actor ColibrìDB {
         
         // Initialize schema evolution
         self.schemaEvolution = SchemaEvolutionManager(
-            transactionManager: nil,
+            transactionManager: transactionManager,
             catalog: catalog,
             clock: HybridLogicalClock(nodeID: 1)
         )
@@ -299,8 +305,7 @@ public actor ColibrìDB {
             throw DBError.databaseNotRunning
         }
         
-        // Simplified transaction ID generation for testing
-        let txId = TxID(activeTransactions.count + 1)
+        let txId = try await transactionManager.beginTransaction()
         
         let transaction = Transaction(
             txId: txId,
@@ -325,7 +330,8 @@ public actor ColibrìDB {
             throw DBError.transactionNotFound(txId: txId)
         }
         
-        // Simplified commit for testing
+        try await transactionManager.commitTransaction(txId: txId)
+        
         var updatedTransaction = transaction
         updatedTransaction.state = .committed
         updatedTransaction.endTime = UInt64(Date().timeIntervalSince1970 * 1000)
@@ -344,7 +350,8 @@ public actor ColibrìDB {
             throw DBError.transactionNotFound(txId: txId)
         }
         
-        // Simplified abort for testing
+        try await transactionManager.abortTransaction(txId: txId)
+        
         var updatedTransaction = transaction
         updatedTransaction.state = .aborted
         updatedTransaction.endTime = UInt64(Date().timeIntervalSince1970 * 1000)
