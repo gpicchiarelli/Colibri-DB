@@ -71,17 +71,18 @@ final class AdvancedCompilationTests: XCTestCase {
         
         // Get statistics before starting
         let statsBefore = await db.getStatistics()
-        try TestAssertions.assertEqual(statsBefore.transactionsStarted, 0)
-        try TestAssertions.assertEqual(statsBefore.transactionsCommitted, 0)
+        try TestAssertions.assertEqual(statsBefore.transactionsStarted, 0, "Should have no transactions before start")
+        try TestAssertions.assertEqual(statsBefore.transactionsCommitted, 0, "Should have no committed transactions before start")
         
         // Start database
         try await db.start()
         
         // Get statistics after starting
         let statsAfter = await db.getStatistics()
-        try TestAssertions.assertTrue(statsAfter.startTime != nil, "Start time should be set")
+        try TestAssertions.assertNotNil(statsAfter.startTime, "Start time should be set")
         
-        // Note: No stop method available in current API
+        // Shutdown database
+        try await db.shutdown()
     }
     
     /// Test that configuration works correctly

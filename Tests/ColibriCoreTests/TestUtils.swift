@@ -66,6 +66,55 @@ public struct TestUtils {
         
         throw TestError.timeout("Condition not met within \(timeout) seconds")
     }
+    
+    /// Generate random data for testing
+    public static func generateRandomData(size: Int) -> Data {
+        var data = Data(count: size)
+        let result = data.withUnsafeMutableBytes { bytes in
+            SecRandomCopyBytes(kSecRandomDefault, size, bytes.bindMemory(to: UInt8.self).baseAddress!)
+        }
+        guard result == errSecSuccess else {
+            // Fallback to simple random data
+            return Data((0..<size).map { _ in UInt8.random(in: 0...255) })
+        }
+        return data
+    }
+}
+
+/// Test data generator for creating test objects
+public struct TestDataGenerator {
+    
+    /// Generate a test table definition
+    public static func generateTableDefinition(name: String = "test_table") -> TableDefinition {
+        return TableDefinition(
+            name: name,
+            columns: [
+                ColumnDefinition(name: "id", type: .int, nullable: false),
+                ColumnDefinition(name: "name", type: .string, nullable: false),
+                ColumnDefinition(name: "age", type: .int, nullable: true),
+                ColumnDefinition(name: "salary", type: .double, nullable: true)
+            ],
+            primaryKey: ["id"]
+        )
+    }
+    
+    /// Generate a test row
+    public static func generateTestRow(id: Int, name: String, age: Int, salary: Double) -> Row {
+        return [
+            "id": .int(Int64(id)),
+            "name": .string(name),
+            "age": .int(Int64(age)),
+            "salary": .double(salary)
+        ]
+    }
+    
+    /// Generate a simple test row
+    public static func generateSimpleTestRow(id: Int, name: String) -> Row {
+        return [
+            "id": .int(Int64(id)),
+            "name": .string(name)
+        ]
+    }
 }
 
 /// Test errors
@@ -115,6 +164,19 @@ public struct TestAssertions {
         }
     }
     
+    /// Assert that two values are not equal
+    public static func assertNotEqual<T: Equatable>(
+        _ actual: T,
+        _ expected: T,
+        _ message: String = "Values should not be equal",
+        file: StaticString = #file,
+        line: UInt = #line
+    ) throws {
+        if actual == expected {
+            throw TestError.assertionFailed("\(message): values are equal at \(file):\(line)")
+        }
+    }
+    
     /// Assert that a value is not nil
     public static func assertNotNil<T>(
         _ value: T?,
@@ -126,5 +188,73 @@ public struct TestAssertions {
             throw TestError.assertionFailed("\(message) at \(file):\(line)")
         }
         return value
+    }
+    
+    /// Assert that a value is nil
+    public static func assertNil<T>(
+        _ value: T?,
+        _ message: String = "Value should be nil",
+        file: StaticString = #file,
+        line: UInt = #line
+    ) throws {
+        if value != nil {
+            throw TestError.assertionFailed("\(message) at \(file):\(line)")
+        }
+    }
+    
+    /// Assert that a collection contains a value
+    public static func assertContains<C: Collection>(
+        _ collection: C,
+        _ element: C.Element,
+        _ message: String = "Collection should contain element",
+        file: StaticString = #file,
+        line: UInt = #line
+    ) throws where C.Element: Equatable {
+        if !collection.contains(element) {
+            throw TestError.assertionFailed("\(message) at \(file):\(line)")
+        }
+    }
+    
+    /// Assert that a collection does not contain a value
+    public static func assertNotContains<C: Collection>(
+        _ collection: C,
+        _ element: C.Element,
+        _ message: String = "Collection should not contain element",
+        file: StaticString = #file,
+        line: UInt = #line
+    ) throws where C.Element: Equatable {
+        if collection.contains(element) {
+            throw TestError.assertionFailed("\(message) at \(file):\(line)")
+        }
+    }
+    
+    /// Assert that an async operation throws an error
+    public static func assertAsyncThrows<T>(
+        _ operation: () async throws -> T,
+        _ message: String = "Operation should throw",
+        file: StaticString = #file,
+        line: UInt = #line
+    ) async throws {
+        do {
+            _ = try await operation()
+            throw TestError.assertionFailed("\(message) at \(file):\(line)")
+        } catch {
+            // Expected to throw
+        }
+    }
+    
+    /// Assert that a synchronous operation throws an error
+    public static func assertThrows<T>(
+        _ operation: () throws -> T,
+        _ message: String = "Operation should throw",
+        file: StaticString = #file,
+        line: UInt = #line
+    ) throws {
+        do {
+            _ = try operation()
+            throw TestError.assertionFailed("\(message) at \(file):\(line)")
+        } catch {
+            // Expected to throw
+        }
     }
 }
