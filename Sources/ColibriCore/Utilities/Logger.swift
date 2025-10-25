@@ -316,41 +316,58 @@ public actor Logger {
 @MainActor
 public var colibriLogger: Logger = Logger()
 
+// MARK: - Sendable Metadata Wrapper
+
+/// Sendable wrapper for metadata to avoid data races
+public struct SendableMetadata: Sendable {
+    public let data: [String: Any]
+    
+    public init(_ data: [String: Any]) {
+        self.data = data
+    }
+}
+
 // MARK: - Convenience Functions
 
 /// Global convenience functions for logging
 public func logTrace(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
+    let sendableMetadata = metadata.map { SendableMetadata($0) }
     Task { @MainActor in
-        await colibriLogger.trace(message, category: category, metadata: metadata, file: file, function: function, line: line)
+        await colibriLogger.trace(message, category: category, metadata: sendableMetadata?.data, file: file, function: function, line: line)
     }
 }
 
 public func logDebug(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
+    let sendableMetadata = metadata.map { SendableMetadata($0) }
     Task { @MainActor in
-        await colibriLogger.debug(message, category: category, metadata: metadata, file: file, function: function, line: line)
+        await colibriLogger.debug(message, category: category, metadata: sendableMetadata?.data, file: file, function: function, line: line)
     }
 }
 
 public func logInfo(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
+    let sendableMetadata = metadata.map { SendableMetadata($0) }
     Task { @MainActor in
-        await colibriLogger.info(message, category: category, metadata: metadata, file: file, function: function, line: line)
+        await colibriLogger.info(message, category: category, metadata: sendableMetadata?.data, file: file, function: function, line: line)
     }
 }
 
 public func logWarning(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
+    let sendableMetadata = metadata.map { SendableMetadata($0) }
     Task { @MainActor in
-        await colibriLogger.warning(message, category: category, metadata: metadata, file: file, function: function, line: line)
+        await colibriLogger.warning(message, category: category, metadata: sendableMetadata?.data, file: file, function: function, line: line)
     }
 }
 
 public func logError(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
+    let sendableMetadata = metadata.map { SendableMetadata($0) }
     Task { @MainActor in
-        await colibriLogger.error(message, category: category, metadata: metadata, file: file, function: function, line: line)
+        await colibriLogger.error(message, category: category, metadata: sendableMetadata?.data, file: file, function: function, line: line)
     }
 }
 
 public func logFatal(_ message: String, category: LogCategory = .general, metadata: [String: Any]? = nil, file: String = #file, function: String = #function, line: Int = #line) {
+    let sendableMetadata = metadata.map { SendableMetadata($0) }
     Task { @MainActor in
-        await colibriLogger.fatal(message, category: category, metadata: metadata, file: file, function: function, line: line)
+        await colibriLogger.fatal(message, category: category, metadata: sendableMetadata?.data, file: file, function: function, line: line)
     }
 }

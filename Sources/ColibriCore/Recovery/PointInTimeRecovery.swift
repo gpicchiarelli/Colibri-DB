@@ -397,7 +397,7 @@ public actor PointInTimeRecoveryManager {
         activeTxns.removeAll()
         
         let targetCopy = target
-        for record in wal where record.lsn >= startLSN && beforeTarget(record: record, target: targetCopy) {
+        for record in wal where record.lsn >= startLSN && Self.beforeTargetHelper(record: record, target: targetCopy) {
             if let txnId = record.txnId {
                 switch record.type {
                 case .begin:
@@ -430,7 +430,7 @@ public actor PointInTimeRecoveryManager {
         // Redo all committed transactions
         let targetCopy2 = target
         for record in wal where record.type == .update &&
-                                beforeTarget(record: record, target: targetCopy2) {
+                                Self.beforeTargetHelper(record: record, target: targetCopy2) {
             if let txnId = record.txnId,
                committedTxns.contains(txnId),
                let pageId = record.pageId {
@@ -516,6 +516,27 @@ public actor PointInTimeRecoveryManager {
     
     private func findCheckpointBefore(lsn: UInt64) -> UInt64 {
         return checkpoints.last(where: { $0.lsn < lsn })?.lsn ?? 1
+    }
+    
+    /// Helper function to check if record is before target without data race issues
+    private nonisolated static func beforeTargetHelper(record: LogRecord, target: RecoveryTarget) -> Bool {
+        switch target.type {
+        case .lsn:
+            if case .lsn(let targetLSN) = target.value {
+                return target.inclusive ? record.lsn <= targetLSN : record.lsn < targetLSN
+            }
+        case .time:
+            if case .timestamp(let targetTime) = target.value {
+                return target.inclusive ? record.timestamp <= targetTime : record.timestamp < targetTime
+            }
+        case .xid:
+            if case .transactionId(let targetId) = target.value {
+                return record.txnId == targetId
+            }
+        case .latest:
+            return true
+        }
+        return false
     }
     
     private func beforeTarget(record: LogRecord, target: RecoveryTarget) -> Bool {
