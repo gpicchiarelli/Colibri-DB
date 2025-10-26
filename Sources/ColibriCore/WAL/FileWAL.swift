@@ -72,19 +72,23 @@ public final class FileWAL: @unchecked Sendable {
     // MARK: - Configuration
     
     private let walFilePath: URL
-    private let config: GroupCommitConfig
-    private let fileHandle: FileHandle?
+    private let groupCommitManager: GroupCommitManager
+    private var fileHandle: FileHandle?
     
     // MARK: - Initialization
     
     public init(walFilePath: URL, config: GroupCommitConfig = GroupCommitConfig()) throws {
         self.walFilePath = walFilePath
-        self.config = config
         
         // Create the directory if it doesn't exist
         try FileManager.default.createDirectory(at: walFilePath.deletingLastPathComponent(), withIntermediateDirectories: true)
         
-        // Don't create or open file handle - defer until first write
+        // Initialize group commit manager
+        self.groupCommitManager = GroupCommitManager(config: config) { [weak self] records in
+            try self?.flushRecordsToDisk(records)
+        }
+        
+        // Don't create file handle until first write
         self.fileHandle = nil
         
         // Initialize state (TLA+ Init)
@@ -139,21 +143,26 @@ public final class FileWAL: @unchecked Sendable {
             payload: payload
         )
         
-        // TLA+: pendingRecords' = Append(pendingRecords, newRecord)
-        pendingRecords.append(newRecord)
+        // Add to WAL sequence
+        wal.append(newRecord)
         
         // TLA+: txLastLSN' = [txLastLSN EXCEPT ![tid] = nextLSN]
         txLastLSN[txID] = nextLSN
+        
+        // Update page LSN if applicable
+        if pageID != 0 {
+            pageLSN[pageID] = nextLSN
+            dirtyPageTable[pageID] = nextLSN
+        }
         
         let assignedLSN = nextLSN
         
         // TLA+: nextLSN' = nextLSN + 1
         nextLSN += 1
         
-        // Check if we need group commit flush (size-based)
-        if pendingRecords.count >= config.maxBatchSize {
-            try flush()
-        }
+        // Convert to new WAL record format and add to group commit
+        let newWALRecord = convertToWALRecord(newRecord)
+        try groupCommitManager.addRecord(newWALRecord)
         
         return assignedLSN
     }
@@ -450,6 +459,89 @@ public final class FileWAL: @unchecked Sendable {
     public func checkCheckpointConsistency() -> Bool {
         // lastCheckpointLSN <= flushedLSN
         return lastCheckpointLSN <= flushedLSN
+    }
+    
+    // MARK: - Group Commit Integration
+    
+    /// Convert ConcreteWALRecord to WALRecord
+    /// - Parameter record: ConcreteWALRecord to convert
+    /// - Returns: WALRecord with checksum
+    private func convertToWALRecord(_ record: ConcreteWALRecord) -> WALRecordWithChecksum {
+        let recordType = convertRecordKind(record.kind)
+        let payload = record.payload ?? Data()
+        
+        return WALRecord.create(
+            type: recordType,
+            txId: record.txID,
+            lsn: record.lsn,
+            prevLsn: record.prevLSN,
+            pageId: record.pageID,
+            payload: payload
+        )
+    }
+    
+    /// Convert WALRecordKind to WALRecordType
+    /// - Parameter kind: WALRecordKind to convert
+    /// - Returns: WALRecordType
+    private func convertRecordKind(_ kind: WALRecordKind) -> WALRecordType {
+        switch kind {
+        case .update:
+            return .update
+        case .commit:
+            return .commit
+        case .abort:
+            return .abort
+        case .checkpoint:
+            return .checkpoint
+        case .begin:
+            return .begin
+        case .clr:
+            return .clr
+        case .prepare:
+            return .prepare
+        case .rollback:
+            return .rollback
+        }
+    }
+    
+    /// Flush records to disk (called by GroupCommitManager)
+    /// - Parameter records: Records to flush
+    /// - Throws: Error if flush fails
+    private func flushRecordsToDisk(_ records: [WALRecordWithChecksum]) throws {
+        // Ensure file handle is open
+        if fileHandle == nil {
+            fileHandle = try FileHandle(forWritingTo: walFilePath)
+        }
+        
+        guard let fileHandle = fileHandle else {
+            throw DBError.ioError("Failed to open WAL file")
+        }
+        
+        // Write records to disk
+        for record in records {
+            let data = record.serialize()
+            fileHandle.write(data)
+        }
+        
+        // Ensure durability
+        try FileSystemDurability.ensureDurability(fileDescriptor: fileHandle.fileDescriptor)
+        
+        // Update flushed LSN
+        if let lastRecord = records.last {
+            flushedLSN = lastRecord.header.lsn
+        }
+    }
+    
+    /// Force flush all pending records
+    /// - Throws: Error if flush fails
+    public func forceFlush() throws {
+        try groupCommitManager.forceFlush()
+    }
+    
+    /// Get group commit statistics
+    /// - Returns: Batch statistics
+    public func getGroupCommitStats() -> BatchStats {
+        return groupCommitManager.getBatchStats()
     }
 }
 
