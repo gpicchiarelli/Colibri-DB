@@ -28,7 +28,7 @@ import Foundation
 // MARK: - Index Definition
 
 /// Index definition
-public struct IndexDefinition: Codable, Hashable, Sendable {
+public struct IndexDefinition: Codable, Hashable {
     public let indexName: String
     public let indexType: IndexType
     public let tableName: String
@@ -54,7 +54,7 @@ public struct IndexDefinition: Codable, Hashable, Sendable {
 // MARK: - Index Statistics
 
 /// Statistics for an index
-public struct IndexStatistics: Codable, Sendable {
+public struct IndexStatistics: Codable {
     public let indexName: String
     public var size: Int                // Number of entries
     public var height: Int              // Tree height (if applicable)
@@ -73,10 +73,7 @@ public struct IndexStatistics: Codable, Sendable {
 // MARK: - Index Subsystem
 
 /// Unified index subsystem
-public final class IndexSubsystem: @unchecked Sendable {
-    
-    // MARK: - State
-    private let lock = NSLock()
+public actor IndexSubsystem {
     
     // Index registry
     private var indexRegistry: [String: IndexDefinition] = [:]
@@ -314,7 +311,7 @@ public final class IndexSubsystem: @unchecked Sendable {
 // MARK: - Statistics
 
 /// Index subsystem statistics
-public struct IndexSubsystemStats: Codable, Sendable {
+public struct IndexSubsystemStats: Codable {
     public var totalIndexes: Int = 0
     public var totalInserts: Int = 0
     public var totalDeletes: Int = 0
@@ -324,7 +321,7 @@ public struct IndexSubsystemStats: Codable, Sendable {
 
 // MARK: - Errors
 
-public enum IndexSubsystemError: Error, LocalizedError, Equatable {
+public enum IndexSubsystemError: Error, LocalizedError {
     case indexAlreadyExists(name: String)
     case indexNotFound(name: String)
     case noSuitableIndex(table: String, column: String)

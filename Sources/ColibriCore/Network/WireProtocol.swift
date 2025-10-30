@@ -113,10 +113,7 @@ public struct WireMessage: Codable {
 
 /// Wire protocol handler
 /// Corresponds to TLA+ module: WireProtocol.tla
-public final class WireProtocolHandler: @unchecked Sendable {
-    
-    // MARK: - State
-    private let lock = NSLock()
+public actor WireProtocolHandler {
     
     // TLA+ VARIABLES
     

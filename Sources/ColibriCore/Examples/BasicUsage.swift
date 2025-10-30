@@ -190,8 +190,6 @@ public enum BasicUsageExamples {
             walBufferSize: 8192
         )
         
-        let database = try ColibrìDB(config: dbConfig)
-        
         let serverConfig = DatabaseServer.Configuration(
             host: "127.0.0.1",
             port: 5432,
@@ -199,7 +197,7 @@ public enum BasicUsageExamples {
             databaseConfig: databaseConfig
         )
         
-        let server = DatabaseServer(config: serverConfig, database: database)
+        let server = try DatabaseServer(config: serverConfig)
         
         // Start the server
         try await server.start()

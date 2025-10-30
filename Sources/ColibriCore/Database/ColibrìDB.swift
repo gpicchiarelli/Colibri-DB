@@ -64,14 +64,13 @@ public struct ColibrìDBConfiguration: Codable, Sendable {
 
 /// ColibrìDB main database engine
 /// Corresponds to TLA+ module: ColibriDB.tla
-public final class ColibrìDB: @unchecked Sendable {
+public actor ColibrìDB {
     
     // MARK: - Configuration
     
     private let config: ColibrìDBConfiguration
     private var isRunning: Bool = false
     private var isShuttingDown: Bool = false
-    private let lock = NSLock()
     
     // MARK: - Core Subsystems
     
@@ -109,7 +108,7 @@ public final class ColibrìDB: @unchecked Sendable {
     private let wireProtocol: WireProtocolHandler
     
     /// Database Server (TLA+: Server)
-    private var databaseServer: DatabaseServer!
+    private let databaseServer: DatabaseServer
     
     /// System Catalog (TLA+: Catalog)
     private let catalog: Catalog
@@ -201,45 +200,51 @@ public final class ColibrìDB: @unchecked Sendable {
         // Initialize authentication
         self.authManager = AuthenticationManager()
         
-        // Initialize database server after all properties are set
+        // Initialize database server
         let serverConfig = DatabaseServer.Configuration(
             host: "127.0.0.1",
             port: 5432,
             maxConnections: config.maxConnections,
             databaseConfig: DatabaseConfiguration()
         )
-        self.databaseServer = DatabaseServer(config: serverConfig, database: self)
+        self.databaseServer = try DatabaseServer(config: serverConfig)
     }
     
     // MARK: - Database Lifecycle
     
     /// Start the database
     /// TLA+ Action: StartDatabase
-    public func start() throws {
-        lock.lock()
-        defer { lock.unlock() }
-        
+    public func start() async throws {
         guard !isRunning else {
             throw DBError.databaseAlreadyRunning
         }
         
         systemState = .starting
         
-        // WAL is ready to use (no start method needed)
-        
-        // Buffer pool is ready to use (no start method needed)
-        
-        // Recovery manager is ready to use (no start method needed)
-        
-        // Transaction manager is ready to use (no start method needed)
-        
-        // Start statistics manager
-        if config.enableStatistics {
-            statisticsManager.setAutoAnalyze(enabled: config.enableAutoAnalyze)
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            // WAL is ready to use (no start method needed)
+            
+            // Buffer pool is ready to use (no start method needed)
+            
+            // Recovery manager is ready to use (no start method needed)
+            
+            // Transaction manager is ready to use (no start method needed)
+            
+            // Start statistics manager
+            if config.enableStatistics {
+                group.addTask {
+                    await self.statisticsManager.setAutoAnalyze(enabled: self.config.enableAutoAnalyze)
+                }
+            }
+            
+            // Start database server
+            group.addTask {
+                try await self.databaseServer.start()
+            }
+            
+            // Wait for all subsystems to start
+            try await group.waitForAll()
         }
-        
-        // Start database server
-        try databaseServer.start()
         
         isRunning = true
         systemState = .running
@@ -250,10 +255,7 @@ public final class ColibrìDB: @unchecked Sendable {
     
     /// Stop the database
     /// TLA+ Action: StopDatabase
-    public func shutdown() throws {
-        lock.lock()
-        defer { lock.unlock() }
-        
+    public func shutdown() async throws {
         guard isRunning else {
             throw DBError.databaseNotRunning
         }
@@ -261,20 +263,31 @@ public final class ColibrìDB: @unchecked Sendable {
         isShuttingDown = true
         systemState = .shuttingDown
         
-        // Stop accepting new connections
-        try databaseServer.stop()
-        
-        // Complete all active transactions
-        try completeAllTransactions()
-        
-        // Flush WAL
-        try wal.flush()
-        
-        // Transaction manager doesn't need shutdown
-        
-        // Buffer pool doesn't need shutdown
-        
-        // WAL doesn't need shutdown
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            // Stop accepting new connections
+            group.addTask {
+                try await self.databaseServer.stop()
+            }
+            
+            // Complete all active transactions
+            group.addTask {
+                try await self.completeAllTransactions()
+            }
+            
+            // Flush WAL
+            group.addTask {
+                try await self.wal.flush()
+            }
+            
+            // Transaction manager doesn't need shutdown
+            
+            // Buffer pool doesn't need shutdown
+            
+            // WAL doesn't need shutdown
+            
+            // Wait for all subsystems to stop
+            try await group.waitForAll()
+        }
         
         isRunning = false
         systemState = .stopped
@@ -287,15 +300,12 @@ public final class ColibrìDB: @unchecked Sendable {
     
     /// Begin a new transaction
     /// TLA+ Action: BeginTransaction
-    public func beginTransaction() throws -> TxID {
-        lock.lock()
-        defer { lock.unlock() }
-        
+    public func beginTransaction() async throws -> TxID {
         guard isRunning else {
             throw DBError.databaseNotRunning
         }
         
-        let txId = try transactionManager.beginTransaction()
+        let txId = try await transactionManager.beginTransaction()
         
         let transaction = Transaction(
             txId: txId,
@@ -315,15 +325,12 @@ public final class ColibrìDB: @unchecked Sendable {
     
     /// Commit a transaction
     /// TLA+ Action: CommitTransaction
-    public func commit(txId: TxID) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        
+    public func commit(txId: TxID) async throws {
         guard let transaction = activeTransactions[txId] else {
             throw DBError.transactionNotFound(txId: txId)
         }
         
-        try transactionManager.commitTransaction(txId: txId)
+        try await transactionManager.commitTransaction(txId: txId)
         
         var updatedTransaction = transaction
         updatedTransaction.state = .committed
@@ -338,15 +345,12 @@ public final class ColibrìDB: @unchecked Sendable {
     
     /// Abort a transaction
     /// TLA+ Action: AbortTransaction
-    public func abort(txId: TxID) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        
+    public func abort(txId: TxID) async throws {
         guard let transaction = activeTransactions[txId] else {
             throw DBError.transactionNotFound(txId: txId)
         }
         
-        try transactionManager.abortTransaction(txId: txId)
+        try await transactionManager.abortTransaction(txId: txId)
         
         var updatedTransaction = transaction
         updatedTransaction.state = .aborted
@@ -360,19 +364,16 @@ public final class ColibrìDB: @unchecked Sendable {
     
     /// Create a table
     /// TLA+ Action: CreateTable
-    public func createTable(_ tableDef: TableDefinition) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        
+    public func createTable(_ tableDef: TableDefinition) async throws {
         guard isRunning else {
             throw DBError.databaseNotRunning
         }
         
-        let txId = try beginTransaction()
-        defer { try? abort(txId: txId) }
+        let txId = try await beginTransaction()
+        defer { Task { try? await abort(txId: txId) } }
         
-        try catalog.createTable(tableDef)
-        try commit(txId: txId)
+        try await catalog.createTable(tableDef)
+        try await commit(txId: txId)
         
         databaseStats.tablesCreated += 1
         log(.info, "Table '\(tableDef.name)' created successfully")
@@ -380,19 +381,16 @@ public final class ColibrìDB: @unchecked Sendable {
     
     /// Drop a table
     /// TLA+ Action: DropTable
-    public func dropTable(_ tableName: String) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        
+    public func dropTable(_ tableName: String) async throws {
         guard isRunning else {
             throw DBError.databaseNotRunning
         }
         
-        let txId = try beginTransaction()
-        defer { try? abort(txId: txId) }
+        let txId = try await beginTransaction()
+        defer { Task { try? await abort(txId: txId) } }
         
-        try catalog.dropTable(tableName)
-        try commit(txId: txId)
+        try await catalog.dropTable(tableName)
+        try await commit(txId: txId)
         
         databaseStats.tablesDropped += 1
         log(.info, "Table '\(tableName)' dropped successfully")
@@ -402,10 +400,7 @@ public final class ColibrìDB: @unchecked Sendable {
     
     /// Insert a row
     /// TLA+ Action: InsertRow
-    public func insert(table: String, row: Row, txId: TxID) throws -> RID {
-        lock.lock()
-        defer { lock.unlock() }
-        
+    public func insert(table: String, row: Row, txId: TxID) async throws -> RID {
         guard isRunning else {
             throw DBError.databaseNotRunning
         }
@@ -415,7 +410,7 @@ public final class ColibrìDB: @unchecked Sendable {
         }
         
         // Get table definition
-        guard let tableDef = catalog.getTable(table) else {
+        guard let tableDef = await catalog.getTable(table) else {
             throw DBError.tableNotFound(table: table)
         }
         
@@ -427,7 +422,7 @@ public final class ColibrìDB: @unchecked Sendable {
         
         // Record modification for statistics
         if config.enableStatistics {
-            statisticsManager.recordModification(table: table)
+            await statisticsManager.recordModification(table: table)
         }
         
         databaseStats.rowsInserted += 1
@@ -436,10 +431,7 @@ public final class ColibrìDB: @unchecked Sendable {
     
     /// Update a row
     /// TLA+ Action: UpdateRow
-    public func update(table: String, rid: RID, row: Row, txId: TxID) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        
+    public func update(table: String, rid: RID, row: Row, txId: TxID) async throws {
         guard isRunning else {
             throw DBError.databaseNotRunning
         }
@@ -452,7 +444,7 @@ public final class ColibrìDB: @unchecked Sendable {
         
         // Record modification for statistics
         if config.enableStatistics {
-            statisticsManager.recordModification(table: table)
+            await statisticsManager.recordModification(table: table)
         }
         
         databaseStats.rowsUpdated += 1
@@ -460,10 +452,7 @@ public final class ColibrìDB: @unchecked Sendable {
     
     /// Delete a row
     /// TLA+ Action: DeleteRow
-    public func delete(table: String, rid: RID, txId: TxID) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        
+    public func delete(table: String, rid: RID, txId: TxID) async throws {
         guard isRunning else {
             throw DBError.databaseNotRunning
         }
@@ -476,7 +465,7 @@ public final class ColibrìDB: @unchecked Sendable {
         
         // Record modification for statistics
         if config.enableStatistics {
-            statisticsManager.recordModification(table: table)
+            await statisticsManager.recordModification(table: table)
         }
         
         databaseStats.rowsDeleted += 1
@@ -486,10 +475,7 @@ public final class ColibrìDB: @unchecked Sendable {
     
     /// Execute a query
     /// TLA+ Action: ExecuteQuery
-    public func executeQuery(_ sql: String, txId: TxID) throws -> QueryResult {
-        lock.lock()
-        defer { lock.unlock() }
-        
+    public func executeQuery(_ sql: String, txId: TxID) async throws -> QueryResult {
         guard isRunning else {
             throw DBError.databaseNotRunning
         }
@@ -500,7 +486,7 @@ public final class ColibrìDB: @unchecked Sendable {
         
         // Parse query (simplified)
         let logicalPlan = LogicalPlan(table: "table1") // Simplified - would parse SQL
-        let _ = queryOptimizer.optimize(logical: logicalPlan)
+        let _ = await queryOptimizer.optimize(logical: logicalPlan)
         
         // Execute query (simplified - would use actual executor)
         let result = QueryResult(rows: [], columns: [])
@@ -556,9 +542,9 @@ public final class ColibrìDB: @unchecked Sendable {
     
     // MARK: - Helper Methods
     
-    private func completeAllTransactions() throws {
+    private func completeAllTransactions() async throws {
         for txId in activeTransactions.keys {
-            try? abort(txId: txId)
+            try? await abort(txId: txId)
         }
         activeTransactions.removeAll()
     }
@@ -588,7 +574,7 @@ public final class ColibrìDB: @unchecked Sendable {
     private func log(_ level: LogLevel, _ message: String, category: LogCategory = .database) {
         if level.priority >= config.logLevel.priority {
             Task { [category] in
-                colibriLogger.log(level, category: category, message)
+                await colibriLogger.log(level, category: category, message)
             }
         }
     }

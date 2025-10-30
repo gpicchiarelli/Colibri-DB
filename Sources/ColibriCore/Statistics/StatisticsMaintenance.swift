@@ -193,7 +193,7 @@ public struct HyperLogLogSketch: Codable {
 
 /// Manager for database statistics (TLA+: StatisticsManager)
 /// Corresponds to TLA+ module: StatisticsMaintenance.tla
-public final class StatisticsMaintenanceManager: @unchecked Sendable {
+public actor StatisticsMaintenanceManager {
     
     // TLA+ VARIABLES
     
@@ -217,8 +217,6 @@ public final class StatisticsMaintenanceManager: @unchecked Sendable {
     
     /// Sampled rows (TLA+: sampledRows)
     private var sampledRows: [String: [Row]] = [:]
-    
-    private let lock = NSLock()
     
     /// Statistics version (TLA+: statsVersion)
     private var statsVersion: [String: Int] = [:]
@@ -400,9 +398,6 @@ public final class StatisticsMaintenanceManager: @unchecked Sendable {
     /// Record modification
     /// TLA+ Action: RecordModification(table)
     public func recordModification(table: String) {
-        lock.lock()
-        defer { lock.unlock() }
-        
         modificationCount[table, default: 0] += 1
         tableStatistics[table]?.modifications += 1
         
@@ -446,9 +441,6 @@ public final class StatisticsMaintenanceManager: @unchecked Sendable {
     /// Enable/disable auto-analyze
     /// TLA+ Action: SetAutoAnalyze(enabled)
     public func setAutoAnalyze(enabled: Bool) {
-        lock.lock()
-        defer { lock.unlock() }
-        
         autoAnalyzeEnabled = enabled
     }
     

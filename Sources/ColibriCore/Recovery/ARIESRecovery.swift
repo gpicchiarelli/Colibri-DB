@@ -27,10 +27,7 @@ import Foundation
 
 /// ARIES Recovery Manager
 /// Corresponds to TLA+ module: RECOVERY.tla
-public final class ARIESRecovery: @unchecked Sendable {
-    // MARK: - State
-    private let lock = NSLock()
-    
+public actor ARIESRecovery {
     // MARK: - State Variables (TLA+ vars)
     
     /// WAL state (from WAL module)

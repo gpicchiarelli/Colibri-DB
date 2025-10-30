@@ -43,83 +43,22 @@ public struct CRC32Accelerator {
         }
     }
     
-    /// Core CRC32 calculation with hardware acceleration
+    /// Core CRC32 calculation
     /// - Parameters:
     ///   - bytes: Pointer to bytes
     ///   - length: Number of bytes
     /// - Returns: CRC32 checksum
     private static func calculateCRC32(bytes: UnsafeBufferPointer<UInt8>, length: Int) -> UInt32 {
-        var crc: UInt32 = 0xFFFFFFFF
-        
-        // Use hardware acceleration if available (CRC32C instruction)
-        if hasCRC32CInstruction() {
-            crc = calculateCRC32CHardware(bytes: bytes, length: length, initialCRC: crc)
-        } else {
-            crc = calculateCRC32Software(bytes: bytes, length: length, initialCRC: crc)
-        }
-        
-        return crc ^ 0xFFFFFFFF
+        return calculateCRC32Software(bytes: bytes, length: length, initialCRC: 0xFFFFFFFF) ^ 0xFFFFFFFF
     }
     
-    /// Check if CRC32C hardware instruction is available
-    /// - Returns: true if hardware acceleration is available
-    private static func hasCRC32CInstruction() -> Bool {
-        // On Apple Silicon, CRC32C is always available
-        #if arch(arm64)
-        return true
-        #else
-        // On Intel, check CPUID for CRC32C support
-        return checkIntelCRC32CSupport()
-        #endif
-    }
-    
-    /// Check Intel CPU support for CRC32C instruction
-    /// - Returns: true if CRC32C is supported
-    private static func checkIntelCRC32CSupport() -> Bool {
-        // Simplified check - in production, would use proper CPUID
-        // For now, assume modern Intel CPUs support CRC32C
-        return true
-    }
-    
-    /// Hardware-accelerated CRC32C calculation
+    /// Software CRC32 calculation
     /// - Parameters:
     ///   - bytes: Pointer to bytes
     ///   - length: Number of bytes
     ///   - initialCRC: Initial CRC value
     /// - Returns: CRC32 checksum
-    private static func calculateCRC32CHardware(
-        bytes: UnsafeBufferPointer<UInt8>,
-        length: Int,
-        initialCRC: UInt32
-    ) -> UInt32 {
-        var crc = initialCRC
-        
-        // Process 8 bytes at a time for optimal performance
-        let alignedLength = length & ~7
-        var i = 0
-        
-        while i < alignedLength {
-            let chunk = bytes[i..<i+8].withUnsafeBytes { $0.load(as: UInt64.self) }
-            crc = _mm_crc32_u64(crc, chunk)
-            i += 8
-        }
-        
-        // Process remaining bytes
-        while i < length {
-            crc = _mm_crc32_u8(crc, bytes[i])
-            i += 1
-        }
-        
-        return crc
-    }
-    
-    /// Software fallback CRC32 calculation
-    /// - Parameters:
-    ///   - bytes: Pointer to bytes
-    ///   - length: Number of bytes
-    ///   - initialCRC: Initial CRC value
-    /// - Returns: CRC32 checksum
-    private static func calculateCRC32Software(
+    static func calculateCRC32Software(
         bytes: UnsafeBufferPointer<UInt8>,
         length: Int,
         initialCRC: UInt32
@@ -183,38 +122,4 @@ public struct CRC32Accelerator {
     }
 }
 
-// MARK: - Hardware CRC32C Intrinsics
-
-/// Hardware CRC32C for 8-bit values
-/// - Parameters:
-///   - crc: Current CRC value
-///   - value: 8-bit value to process
-/// - Returns: Updated CRC value
-@inline(__always)
-private func _mm_crc32_u8(_ crc: UInt32, _ value: UInt8) -> UInt32 {
-    // For now, use software implementation
-    // In production, would use proper hardware intrinsics
-    return calculateCRC32Software(
-        bytes: UnsafeBufferPointer(start: [value], count: 1),
-        length: 1,
-        initialCRC: crc
-    )
-}
-
-/// Hardware CRC32C for 64-bit values
-/// - Parameters:
-///   - crc: Current CRC value
-///   - value: 64-bit value to process
-/// - Returns: Updated CRC value
-@inline(__always)
-private func _mm_crc32_u64(_ crc: UInt32, _ value: UInt64) -> UInt32 {
-    // For now, use software implementation
-    // In production, would use proper hardware intrinsics
-    return withUnsafeBytes(of: value) { bytes in
-        return calculateCRC32Software(
-            bytes: bytes.bindMemory(to: UInt8.self),
-            length: 8,
-            initialCRC: crc
-        )
-    }
-}
+// Hardware intrinsics removed - using software implementation only

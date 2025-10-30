@@ -18,10 +18,7 @@ import Foundation
 
 /// Heap Table for tuple storage using slotted pages
 /// Corresponds to TLA+ module: HeapTable.tla
-public final class HeapTable: @unchecked Sendable {
-    // MARK: - State
-    private let lock = NSLock()
-    
+public actor HeapTable {
     // MARK: - State Variables
     
     /// Buffer pool for page management

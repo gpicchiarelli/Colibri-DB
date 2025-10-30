@@ -22,15 +22,15 @@ import Foundation
 
 /// MVCC transaction manager protocol
 public protocol MVCCTransactionManager: Sendable {
-    func beginTransaction() throws -> TxID
-    func commitTransaction(txId: TxID) throws
-    func abortTransaction(txId: TxID) throws
+    func beginTransaction() async throws -> TxID
+    func commitTransaction(txId: TxID) async throws
+    func abortTransaction(txId: TxID) async throws
 }
 
 /// MVCC lock manager protocol
 public protocol MVCCLockManager: Sendable {
-    func requestLock(txId: TxID, resource: String, mode: String) throws
-    func releaseLock(txId: TxID, resource: String) throws
+    func requestLock(txId: TxID, resource: String, mode: String) async throws
+    func releaseLock(txId: TxID, resource: String) async throws
 }
 
 /// MVCC snapshot
@@ -53,11 +53,7 @@ public struct MVCCSnapshot: Codable, Sendable, Equatable {
 
 /// MVCC Manager for database Multi-Version Concurrency Control
 /// Corresponds to TLA+ module: MVCC.tla
-public final class MVCCManager: @unchecked Sendable {
-    
-    // MARK: - Thread Safety
-    
-    private let lock = NSLock()
+public actor MVCCManager {
     
     // MARK: - Constants
     
@@ -150,7 +146,7 @@ public final class MVCCManager: @unchecked Sendable {
     
     /// Begin transaction
     /// TLA+ Action: BeginTransaction(txId)
-    public func beginTransaction(txId: TxID) throws -> MVCCSnapshot {
+    public func beginTransaction(txId: TxID) async throws -> MVCCSnapshot {
         // TLA+: Add to active transactions
         activeTx.insert(txId)
         
@@ -183,7 +179,7 @@ public final class MVCCManager: @unchecked Sendable {
     
     /// Read
     /// TLA+ Action: Read(txId, key)
-    public func read(txId: TxID, key: Key) throws -> Value? {
+    public func read(txId: TxID, key: Key) async throws -> Value? {
         // TLA+: Check if transaction is active
         guard activeTx.contains(txId) else {
             throw MVCCManagerError.transactionNotActive
@@ -195,7 +191,7 @@ public final class MVCCManager: @unchecked Sendable {
         }
         
         // TLA+: Find visible version
-        let visibleVersion = try findVisibleVersion(key: key, snapshot: snapshot)
+        let visibleVersion = try await findVisibleVersion(key: key, snapshot: snapshot)
         
         // TLA+: Add to read set
         readSets[txId]?.insert(key)
@@ -206,14 +202,14 @@ public final class MVCCManager: @unchecked Sendable {
     
     /// Write
     /// TLA+ Action: Write(txId, key, value)
-    public func write(txId: TxID, key: Key, value: Value) throws {
+    public func write(txId: TxID, key: Key, value: Value) async throws {
         // TLA+: Check if transaction is active
         guard activeTx.contains(txId) else {
             throw MVCCManagerError.transactionNotActive
         }
         
         // TLA+: Check for write-write conflicts
-        if try detectWriteWriteConflict(txId: txId, key: key) {
+        if try await detectWriteWriteConflict(txId: txId, key: key) {
             throw MVCCManagerError.writeWriteConflict
         }
         
@@ -242,7 +238,7 @@ public final class MVCCManager: @unchecked Sendable {
     
     /// Commit
     /// TLA+ Action: Commit(txId)
-    public func commit(txId: TxID) throws {
+    public func commit(txId: TxID) async throws {
         // TLA+: Check if transaction is active
         guard activeTx.contains(txId) else {
             throw MVCCManagerError.transactionNotActive
@@ -265,7 +261,7 @@ public final class MVCCManager: @unchecked Sendable {
     
     /// Abort
     /// TLA+ Action: Abort(txId)
-    public func abort(txId: TxID) throws {
+    public func abort(txId: TxID) async throws {
         // TLA+: Check if transaction is active
         guard activeTx.contains(txId) else {
             throw MVCCManagerError.transactionNotActive
@@ -292,7 +288,7 @@ public final class MVCCManager: @unchecked Sendable {
     
     /// Vacuum
     /// TLA+ Action: Vacuum()
-    public func vacuum() throws {
+    public func vacuum() async throws {
         // TLA+: Remove old versions
         for key in versions.keys {
             if var keyVersions = versions[key] {
@@ -320,7 +316,7 @@ public final class MVCCManager: @unchecked Sendable {
     // MARK: - Helper Methods
     
     /// Find visible version
-    private func findVisibleVersion(key: Key, snapshot: MVCCSnapshot) throws -> Version? {
+    private func findVisibleVersion(key: Key, snapshot: MVCCSnapshot) async throws -> Version? {
         // TLA+: Find visible version
         guard let keyVersions = versions[key] else {
             return nil
@@ -335,7 +331,7 @@ public final class MVCCManager: @unchecked Sendable {
     }
     
     /// Detect write-write conflict
-    private func detectWriteWriteConflict(txId: TxID, key: Key) throws -> Bool {
+    private func detectWriteWriteConflict(txId: TxID, key: Key) async throws -> Bool {
         // TLA+: Check for write-write conflicts
         if let writeSet = writeSets[txId] {
             return writeSet.contains(key)
@@ -437,14 +433,14 @@ public final class MVCCManager: @unchecked Sendable {
     }
     
     /// Clear completed transactions
-    public func clearCompletedTransactions() throws {
+    public func clearCompletedTransactions() async throws {
         committedTx.removeAll()
         abortedTx.removeAll()
         print("Completed transactions cleared")
     }
     
     /// Reset MVCC
-    public func resetMVCC() throws {
+    public func resetMVCC() async throws {
         versions.removeAll()
         activeTx.removeAll()
         committedTx.removeAll()
@@ -539,26 +535,26 @@ public enum MVCCManagerError: Error, LocalizedError {
 
 /// Default MVCC Transaction Manager
 private class DefaultMVCCTransactionManager: @unchecked Sendable, MVCCTransactionManager {
-    func beginTransaction() throws -> TxID {
+    func beginTransaction() async throws -> TxID {
         return UInt64.random(in: 1...UInt64.max)
     }
     
-    func commitTransaction(txId: TxID) throws {
+    func commitTransaction(txId: TxID) async throws {
         // Default implementation - do nothing
     }
     
-    func abortTransaction(txId: TxID) throws {
+    func abortTransaction(txId: TxID) async throws {
         // Default implementation - do nothing
     }
 }
 
 /// Default MVCC Lock Manager
 private class DefaultMVCCLockManager: @unchecked Sendable, MVCCLockManager {
-    func requestLock(txId: TxID, resource: String, mode: String) throws {
+    func requestLock(txId: TxID, resource: String, mode: String) async throws {
         // Default implementation - do nothing
     }
     
-    func releaseLock(txId: TxID, resource: String) throws {
+    func releaseLock(txId: TxID, resource: String) async throws {
         // Default implementation - do nothing
     }
 }

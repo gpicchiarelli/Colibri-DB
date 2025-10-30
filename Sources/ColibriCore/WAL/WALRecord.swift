@@ -141,10 +141,10 @@ public struct WALRecordWithChecksum: Sendable {
             payloadLength: UInt32(payload.count)
         )
         
-        let record = WALRecord(header: header, payload: payload)
+        let record = WALRecordWithChecksum(header: header, payload: payload)
         let checksum = record.calculateChecksum()
         
-        let headerWithChecksum = WALRecordHeader(
+        let headerWithChecksum = WALRecordHeaderWithChecksum(
             type: type,
             txId: txId,
             lsn: lsn,
@@ -165,12 +165,12 @@ public struct WALRecordWithChecksum: Sendable {
         
         // Serialize header without checksum
         data.append(contentsOf: [header.type.rawValue])
-        data.append(contentsOf: header.txId.littleEndianBytes)
-        data.append(contentsOf: header.lsn.littleEndianBytes)
-        data.append(contentsOf: header.prevLsn.littleEndianBytes)
-        data.append(contentsOf: header.pageId.littleEndianBytes)
-        data.append(contentsOf: header.payloadLength.littleEndianBytes)
-        data.append(contentsOf: header.timestamp.littleEndianBytes)
+        data.append(contentsOf: txIdToBytes(header.txId))
+        data.append(contentsOf: lsnToBytes(header.lsn))
+        data.append(contentsOf: lsnToBytes(header.prevLsn))
+        data.append(contentsOf: pageIdToBytes(header.pageId))
+        withUnsafeBytes(of: header.payloadLength.littleEndian) { data.append(contentsOf: $0) }
+        withUnsafeBytes(of: header.timestamp.littleEndian) { data.append(contentsOf: $0) }
         
         // Add payload
         data.append(payload)
@@ -191,13 +191,13 @@ public struct WALRecordWithChecksum: Sendable {
         
         // Serialize header
         data.append(contentsOf: [header.type.rawValue])
-        data.append(contentsOf: header.txId.littleEndianBytes)
-        data.append(contentsOf: header.lsn.littleEndianBytes)
-        data.append(contentsOf: header.prevLsn.littleEndianBytes)
-        data.append(contentsOf: header.pageId.littleEndianBytes)
-        data.append(contentsOf: header.payloadLength.littleEndianBytes)
-        data.append(contentsOf: header.checksum.littleEndianBytes)
-        data.append(contentsOf: header.timestamp.littleEndianBytes)
+        data.append(contentsOf: txIdToBytes(header.txId))
+        data.append(contentsOf: lsnToBytes(header.lsn))
+        data.append(contentsOf: lsnToBytes(header.prevLsn))
+        data.append(contentsOf: pageIdToBytes(header.pageId))
+        withUnsafeBytes(of: header.payloadLength.littleEndian) { data.append(contentsOf: $0) }
+        withUnsafeBytes(of: header.checksum.littleEndian) { data.append(contentsOf: $0) }
+        withUnsafeBytes(of: header.timestamp.littleEndian) { data.append(contentsOf: $0) }
         
         // Add payload
         data.append(payload)
@@ -229,30 +229,27 @@ public struct WALRecordWithChecksum: Sendable {
         let checksum: UInt32
         let timestamp: UInt64
         
-        data.withUnsafeBytes { bytes in
-            let buffer = bytes.bindMemory(to: UInt8.self)
-            
-            txId = TxID(buffer.load(fromByteOffset: offset, as: UInt64.self))
-            offset += 8
-            
-            lsn = LSN(buffer.load(fromByteOffset: offset, as: UInt64.self))
-            offset += 8
-            
-            prevLsn = LSN(buffer.load(fromByteOffset: offset, as: UInt64.self))
-            offset += 8
-            
-            pageId = PageID(buffer.load(fromByteOffset: offset, as: UInt64.self))
-            offset += 8
-            
-            payloadLength = buffer.load(fromByteOffset: offset, as: UInt32.self)
-            offset += 4
-            
-            checksum = buffer.load(fromByteOffset: offset, as: UInt32.self)
-            offset += 4
-            
-            timestamp = buffer.load(fromByteOffset: offset, as: UInt64.self)
-            offset += 8
-        }
+        // Deserialize using Data's subscript - simpler and safer
+        txId = TxID(data[offset..<offset+8].withUnsafeBytes { $0.load(as: UInt64.self) })
+        offset += 8
+        
+        lsn = LSN(data[offset..<offset+8].withUnsafeBytes { $0.load(as: UInt64.self) })
+        offset += 8
+        
+        prevLsn = LSN(data[offset..<offset+8].withUnsafeBytes { $0.load(as: UInt64.self) })
+        offset += 8
+        
+        pageId = PageID(data[offset..<offset+8].withUnsafeBytes { $0.load(as: UInt64.self) })
+        offset += 8
+        
+        payloadLength = data[offset..<offset+4].withUnsafeBytes { $0.load(as: UInt32.self) }
+        offset += 4
+        
+        checksum = data[offset..<offset+4].withUnsafeBytes { $0.load(as: UInt32.self) }
+        offset += 4
+        
+        timestamp = data[offset..<offset+8].withUnsafeBytes { $0.load(as: UInt64.self) }
+        offset += 8
         
         // Extract payload
         guard data.count >= offset + Int(payloadLength) else {
@@ -276,49 +273,19 @@ public struct WALRecordWithChecksum: Sendable {
     }
 }
 
-// MARK: - Extensions for Binary Conversion
+// MARK: - Helper Functions for Binary Conversion
 
-extension TxID {
-    /// Convert to little-endian byte array
-    var littleEndianBytes: [UInt8] {
-        return withUnsafeBytes(of: self.littleEndian) { bytes in
-            return Array(bytes)
-        }
-    }
+/// Convert TxID to little-endian byte array
+private func txIdToBytes(_ txId: TxID) -> [UInt8] {
+    return withUnsafeBytes(of: txId.littleEndian) { Array($0) }
 }
 
-extension LSN {
-    /// Convert to little-endian byte array
-    var littleEndianBytes: [UInt8] {
-        return withUnsafeBytes(of: self.littleEndian) { bytes in
-            return Array(bytes)
-        }
-    }
+/// Convert LSN to little-endian byte array
+private func lsnToBytes(_ lsn: LSN) -> [UInt8] {
+    return withUnsafeBytes(of: lsn.littleEndian) { Array($0) }
 }
 
-extension PageID {
-    /// Convert to little-endian byte array
-    var littleEndianBytes: [UInt8] {
-        return withUnsafeBytes(of: self.littleEndian) { bytes in
-            return Array(bytes)
-        }
-    }
-}
-
-extension UInt32 {
-    /// Convert to little-endian byte array
-    var littleEndianBytes: [UInt8] {
-        return withUnsafeBytes(of: self.littleEndian) { bytes in
-            return Array(bytes)
-        }
-    }
-}
-
-extension UInt64 {
-    /// Convert to little-endian byte array
-    var littleEndianBytes: [UInt8] {
-        return withUnsafeBytes(of: self.littleEndian) { bytes in
-            return Array(bytes)
-        }
-    }
+/// Convert PageID to little-endian byte array
+private func pageIdToBytes(_ pageId: PageID) -> [UInt8] {
+    return withUnsafeBytes(of: pageId.littleEndian) { Array($0) }
 }

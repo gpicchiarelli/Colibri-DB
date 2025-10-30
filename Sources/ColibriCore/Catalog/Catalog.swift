@@ -63,12 +63,11 @@ public struct TableDefinition: Codable, Sendable {
 
 /// System Catalog
 /// Corresponds to TLA+ module: Catalog.tla
-public final class Catalog: @unchecked Sendable {
+public actor Catalog {
     // MARK: - State
     
     private var tables: [String: TableDefinition] = [:]
     private var schemaVersion: Int = 1
-    private let lock = NSLock()
     
     // MARK: - Initialization
     
@@ -99,9 +98,6 @@ public final class Catalog: @unchecked Sendable {
     
     /// Create table
     public func createTable(_ table: TableDefinition) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        
         guard tables[table.name] == nil else {
             throw DBError.duplicate
         }
@@ -112,9 +108,6 @@ public final class Catalog: @unchecked Sendable {
     
     /// Drop table
     public func dropTable(_ tableName: String) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        
         guard tables[tableName] != nil else {
             throw DBError.notFound
         }
@@ -125,9 +118,6 @@ public final class Catalog: @unchecked Sendable {
     
     /// Get table definition
     public func getTable(_ tableName: String) -> TableDefinition? {
-        lock.lock()
-        defer { lock.unlock() }
-        
         return tables[tableName]
     }
     

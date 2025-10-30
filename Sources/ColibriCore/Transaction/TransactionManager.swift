@@ -95,11 +95,7 @@ public enum CoordinatorState: String, Codable, Sendable, CaseIterable {
 
 /// Transaction Manager for database transaction management
 /// Corresponds to TLA+ module: TransactionManager.tla
-public final class TransactionManager: @unchecked Sendable {
-    
-    // MARK: - Thread Safety
-    
-    private let lock = NSLock()
+public actor TransactionManager {
     
     // MARK: - Constants
     
@@ -231,7 +227,7 @@ public final class TransactionManager: @unchecked Sendable {
     
     /// Begin transaction
     /// TLA+ Action: BeginTransaction()
-    public func beginTransaction() throws -> TxID {
+    public func beginTransaction() async throws -> TxID {
         // TLA+: Create transaction
         let txId = nextTID
         nextTID += 1
@@ -264,7 +260,7 @@ public final class TransactionManager: @unchecked Sendable {
     
     /// Commit transaction
     /// TLA+ Action: CommitTransaction(txId)
-    public func commitTransaction(txId: TxID) throws {
+    public func commitTransaction(txId: TxID) async throws {
         // TLA+: Check if transaction exists
         guard var transaction = transactions[txId] else {
             throw TransactionManagerError.transactionNotFound
@@ -276,7 +272,7 @@ public final class TransactionManager: @unchecked Sendable {
         }
         
         // TLA+: Prepare transaction
-        try prepareTransaction(txId: txId)
+        try await prepareTransaction(txId: txId)
         
         // TLA+: Commit transaction
         transaction.state = .committed
@@ -291,7 +287,7 @@ public final class TransactionManager: @unchecked Sendable {
     
     /// Abort transaction
     /// TLA+ Action: AbortTransaction(txId)
-    public func abortTransaction(txId: TxID) throws {
+    public func abortTransaction(txId: TxID) async throws {
         // TLA+: Check if transaction exists
         guard var transaction = transactions[txId] else {
             throw TransactionManagerError.transactionNotFound
@@ -315,7 +311,7 @@ public final class TransactionManager: @unchecked Sendable {
     
     /// Request lock
     /// TLA+ Action: RequestLock(txId, resource, mode)
-    public func requestLock(txId: TxID, resource: String, mode: String) throws {
+    public func requestLock(txId: TxID, resource: String, mode: String) async throws {
         // TLA+: Check if transaction exists
         guard transactions[txId] != nil else {
             throw TransactionManagerError.transactionNotFound
@@ -325,7 +321,7 @@ public final class TransactionManager: @unchecked Sendable {
         guard let lockMode = LockMode(rawValue: mode) else {
             throw TransactionManagerError.invalidLockMode
         }
-        try lockManager?.requestLock(txId: txId, resource: resource, mode: lockMode)
+        try await lockManager?.requestLock(txId: txId, resource: resource, mode: lockMode)
         
         // TLA+: Add to transaction locks
         txLocks[txId]?.insert(resource)
@@ -335,14 +331,14 @@ public final class TransactionManager: @unchecked Sendable {
     
     /// Release lock
     /// TLA+ Action: ReleaseLock(txId, resource)
-    public func releaseLock(txId: TxID, resource: String) throws {
+    public func releaseLock(txId: TxID, resource: String) async throws {
         // TLA+: Check if transaction exists
         guard transactions[txId] != nil else {
             throw TransactionManagerError.transactionNotFound
         }
         
         // TLA+: Release lock
-        try lockManager?.releaseLock(txId: txId, resource: resource)
+        try await lockManager?.releaseLock(txId: txId, resource: resource)
         
         // TLA+: Remove from transaction locks
         txLocks[txId]?.remove(resource)
@@ -352,7 +348,7 @@ public final class TransactionManager: @unchecked Sendable {
     
     /// Prepare transaction
     /// TLA+ Action: PrepareTransaction(txId)
-    public func prepareTransaction(txId: TxID) throws {
+    public func prepareTransaction(txId: TxID) async throws {
         // TLA+: Check if transaction exists
         guard var transaction = transactions[txId] else {
             throw TransactionManagerError.transactionNotFound
@@ -373,7 +369,7 @@ public final class TransactionManager: @unchecked Sendable {
     
     /// Receive vote
     /// TLA+ Action: ReceiveVote(txId, participant, vote)
-    public func receiveVote(txId: TxID, participant: String, vote: Bool) throws {
+    public func receiveVote(txId: TxID, participant: String, vote: Bool) async throws {
         // TLA+: Check if transaction exists
         guard transactions[txId] != nil else {
             throw TransactionManagerError.transactionNotFound
@@ -390,7 +386,7 @@ public final class TransactionManager: @unchecked Sendable {
     
     /// Make decision
     /// TLA+ Action: MakeDecision(txId)
-    public func makeDecision(txId: TxID) throws -> Bool {
+    public func makeDecision(txId: TxID) async throws -> Bool {
         // TLA+: Check if transaction exists
         guard transactions[txId] != nil else {
             throw TransactionManagerError.transactionNotFound
@@ -411,7 +407,7 @@ public final class TransactionManager: @unchecked Sendable {
     
     /// Send commit/abort
     /// TLA+ Action: SendCommitAbort(txId, decision)
-    public func sendCommitAbort(txId: TxID, decision: Bool) throws {
+    public func sendCommitAbort(txId: TxID, decision: Bool) async throws {
         // TLA+: Check if transaction exists
         guard var transaction = transactions[txId] else {
             throw TransactionManagerError.transactionNotFound
@@ -435,21 +431,21 @@ public final class TransactionManager: @unchecked Sendable {
     // MARK: - Helper Methods
     
     /// Detect deadlock
-    private func detectDeadlock() throws -> Bool {
+    private func detectDeadlock() async throws -> Bool {
         // TLA+: Detect deadlock
         // This would include building the wait-for graph and checking for cycles
         return false // Simplified
     }
     
     /// Select deadlock victim
-    private func selectDeadlockVictim() throws -> TxID {
+    private func selectDeadlockVictim() async throws -> TxID {
         // TLA+: Select deadlock victim
         // This would include selecting the transaction to abort
         return 0 // Simplified
     }
     
     /// Update wait-for graph
-    private func updateWaitForGraph(txId: TxID, waitingFor: TxID) throws {
+    private func updateWaitForGraph(txId: TxID, waitingFor: TxID) async throws {
         // TLA+: Update wait-for graph
         if waitForGraph[txId] == nil {
             waitForGraph[txId] = []
@@ -615,7 +611,7 @@ public final class TransactionManager: @unchecked Sendable {
     }
     
     /// Clear completed transactions
-    public func clearCompletedTransactions() throws {
+    public func clearCompletedTransactions() async throws {
         transactions = transactions.filter { $0.value.state == .active }
         txOperations = txOperations.filter { transactions[$0.key] != nil }
         txLocks = txLocks.filter { transactions[$0.key] != nil }
@@ -633,7 +629,7 @@ public final class TransactionManager: @unchecked Sendable {
     }
     
     /// Reset transaction manager
-    public func resetTransactionManager() throws {
+    public func resetTransactionManager() async throws {
         transactions.removeAll()
         txOperations.removeAll()
         txLocks.removeAll()
@@ -709,17 +705,17 @@ public final class TransactionManager: @unchecked Sendable {
 
 /// Transaction manager MVCC protocol
 public protocol TransactionMVCCManager: Sendable {
-    func beginTransaction(txId: TxID) throws -> Snapshot
-    func read(txId: TxID, key: String) throws -> String?
-    func write(txId: TxID, key: String, value: String) throws
-    func commit(txId: TxID) throws
-    func abort(txId: TxID) throws
+    func beginTransaction(txId: TxID) async throws -> Snapshot
+    func read(txId: TxID, key: String) async throws -> String?
+    func write(txId: TxID, key: String, value: String) async throws
+    func commit(txId: TxID) async throws
+    func abort(txId: TxID) async throws
 }
 
 /// Lock manager protocol for transaction management
 public protocol TransactionLockManager: Sendable {
-    func requestLock(txId: TxID, resource: String, mode: String) throws
-    func releaseLock(txId: TxID, resource: String) throws
+    func requestLock(txId: TxID, resource: String, mode: String) async throws
+    func releaseLock(txId: TxID, resource: String) async throws
 }
 
 

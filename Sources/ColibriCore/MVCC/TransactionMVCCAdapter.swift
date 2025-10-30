@@ -10,7 +10,7 @@
 import Foundation
 
 /// Adapter that makes MVCCManager compatible with TransactionMVCCManager protocol
-public final class TransactionMVCCAdapter: TransactionMVCCManager {
+public actor TransactionMVCCAdapter: TransactionMVCCManager {
     
     private let mvccManager: MVCCManager
     
@@ -19,8 +19,8 @@ public final class TransactionMVCCAdapter: TransactionMVCCManager {
     }
     
     /// Begin a transaction and return a snapshot
-    public func beginTransaction(txId: TxID) throws -> Snapshot {
-        let mvccSnapshot = try mvccManager.beginTransaction(txId: txId)
+    public func beginTransaction(txId: TxID) async throws -> Snapshot {
+        let mvccSnapshot = try await mvccManager.beginTransaction(txId: txId)
         
         // Convert MVCCSnapshot to Snapshot
         return Snapshot(
@@ -33,8 +33,8 @@ public final class TransactionMVCCAdapter: TransactionMVCCManager {
     }
     
     /// Read a value for a key
-    public func read(txId: TxID, key: String) throws -> String? {
-        let value = try mvccManager.read(txId: txId, key: .string(key))
+    public func read(txId: TxID, key: String) async throws -> String? {
+        let value = try await mvccManager.read(txId: txId, key: .string(key))
         if case .string(let str) = value {
             return str
         }
@@ -42,18 +42,18 @@ public final class TransactionMVCCAdapter: TransactionMVCCManager {
     }
     
     /// Write a value for a key
-    public func write(txId: TxID, key: String, value: String) throws {
-        try mvccManager.write(txId: txId, key: .string(key), value: .string(value))
+    public func write(txId: TxID, key: String, value: String) async throws {
+        try await mvccManager.write(txId: txId, key: .string(key), value: .string(value))
     }
     
     /// Commit a transaction
-    public func commit(txId: TxID) throws {
-        try mvccManager.commit(txId: txId)
+    public func commit(txId: TxID) async throws {
+        try await mvccManager.commit(txId: txId)
     }
     
     /// Abort a transaction
-    public func abort(txId: TxID) throws {
-        try mvccManager.abort(txId: txId)
+    public func abort(txId: TxID) async throws {
+        try await mvccManager.abort(txId: txId)
     }
 }
 

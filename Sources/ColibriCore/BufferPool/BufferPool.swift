@@ -23,11 +23,7 @@ import Foundation
 
 /// Buffer Pool for page caching with Clock-Sweep eviction
 /// Corresponds to TLA+ module: BufferPool.tla
-public final class BufferPool: @unchecked Sendable {
-    // MARK: - Thread Safety
-    
-    private let lock = NSLock()
-    
+public actor BufferPool {
     // MARK: - State Variables (TLA+ vars)
     
     /// Pages in memory cache
@@ -416,8 +412,7 @@ public struct BufferPoolStatistics: Sendable {
 
 
 /// Simple file-based disk manager
-public final class FileDiskManager: DiskManager, @unchecked Sendable {
-    private let lock = NSLock()
+public actor FileDiskManager: DiskManager {
     private let filePath: URL
     
     public init(filePath: URL) throws {

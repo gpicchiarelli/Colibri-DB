@@ -18,7 +18,7 @@ public protocol Clock {
 /// Hybrid Logical Clock
 /// Combines physical time with logical counter for total ordering
 /// Based on: "Logical Physical Clocks" (Kulkarni & Demirbas, 2014)
-public final class HybridLogicalClock: Clock, @unchecked Sendable {
+public actor HybridLogicalClock: Clock {
     // MARK: - State
     
     /// Physical time component (milliseconds since epoch)
@@ -29,9 +29,6 @@ public final class HybridLogicalClock: Clock, @unchecked Sendable {
     
     /// Node ID for disambiguation
     private let nodeID: UInt64
-    
-    /// Lock for thread safety
-    private let lock = NSLock()
     
     // MARK: - Initialization
     
@@ -45,9 +42,6 @@ public final class HybridLogicalClock: Clock, @unchecked Sendable {
     
     /// Generate new timestamp for local event
     public func tick() -> Timestamp {
-        lock.lock()
-        defer { lock.unlock() }
-        
         let currentTime = currentPhysicalTime()
         
         if currentTime > physicalTime {
@@ -64,9 +58,6 @@ public final class HybridLogicalClock: Clock, @unchecked Sendable {
     
     /// Update clock on receiving message
     public func update(receivedTimestamp: Timestamp) -> Timestamp {
-        lock.lock()
-        defer { lock.unlock() }
-        
         let (recvPhysical, recvLogical, _) = decodeTimestamp(receivedTimestamp)
         let currentTime = currentPhysicalTime()
         

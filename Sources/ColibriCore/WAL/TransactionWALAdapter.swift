@@ -10,9 +10,8 @@
 import Foundation
 
 /// Adapter that makes FileWAL compatible with TransactionWALManager protocol
-public final class TransactionWALAdapter: TransactionWALManager, @unchecked Sendable {
+public actor TransactionWALAdapter: TransactionWALManager {
     
-    private let lock = NSLock()
     private let fileWAL: FileWAL
     
     public init(fileWAL: FileWAL) {
