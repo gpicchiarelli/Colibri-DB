@@ -162,7 +162,7 @@ jobs:
           rm -f performance-report.md.bak
       
       - name: Upload Benchmark Results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: nightly-benchmarks-${{ github.run_number }}
           path: |
@@ -230,7 +230,7 @@ jobs:
       
       - name: Upload Sanitizer Reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sanitizer-reports
           path: |
@@ -284,7 +284,7 @@ jobs:
           echo "✅ Stability test completed successfully"
       
       - name: Upload Stability Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: stability-test-report
           path: stability-test.log
