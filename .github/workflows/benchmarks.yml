@@ -24,7 +24,7 @@ jobs:
           .build/release/benchmarks 1000 btree-bulk-build --json > bench-out/btree_bulk.json
           .build/release/benchmarks 500 planner-index-scan --json > bench-out/planner_index_scan.json
       - name: Upload JSON artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmarks-json
           path: bench-out/*.json
