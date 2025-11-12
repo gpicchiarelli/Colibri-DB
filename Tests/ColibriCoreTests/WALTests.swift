@@ -17,11 +17,17 @@ final class WALTests: XCTestCase {
         let (wal, directory) = try makeWAL()
         defer { cleanup(directory) }
         
-        XCTAssertEqual(await wal.getCurrentLSN(), 1)
-        XCTAssertEqual(await wal.getFlushedLSN(), 0)
-        XCTAssertEqual(await wal.getLastCheckpointLSN(), 0)
-        XCTAssertTrue(await wal.getAllRecords().isEmpty)
-        XCTAssertTrue(await wal.getDirtyPageTable().isEmpty)
+        let current = await wal.getCurrentLSN()
+        let flushed = await wal.getFlushedLSN()
+        let checkpoint = await wal.getLastCheckpointLSN()
+        let records = await wal.getAllRecords()
+        let dpt = await wal.getDirtyPageTable()
+        
+        XCTAssertEqual(current, 1)
+        XCTAssertEqual(flushed, 0)
+        XCTAssertEqual(checkpoint, 0)
+        XCTAssertTrue(records.isEmpty)
+        XCTAssertTrue(dpt.isEmpty)
     }
     
     func testAppendIncrementsLSN() async throws {
@@ -35,7 +41,8 @@ final class WALTests: XCTestCase {
         XCTAssertEqual(lsn1, 1)
         XCTAssertEqual(lsn2, 2)
         XCTAssertEqual(lsn3, 3)
-        XCTAssertEqual(await wal.getCurrentLSN(), 4)
+        let current = await wal.getCurrentLSN()
+        XCTAssertEqual(current, 4)
     }
     
     func testDirtyPageTracking() async throws {
@@ -78,8 +85,12 @@ final class WALTests: XCTestCase {
         let (wal, directory) = try makeWAL()
         defer { cleanup(directory) }
         
-        XCTAssertTrue(await wal.checkLogBeforeDataInvariant())
-        XCTAssertTrue(await wal.checkLogOrderInvariant())
-        XCTAssertTrue(await wal.checkCheckpointConsistency())
+        let logBeforeData = await wal.checkLogBeforeDataInvariant()
+        let logOrder = await wal.checkLogOrderInvariant()
+        let checkpointConsistency = await wal.checkCheckpointConsistency()
+        
+        XCTAssertTrue(logBeforeData)
+        XCTAssertTrue(logOrder)
+        XCTAssertTrue(checkpointConsistency)
     }
 }
