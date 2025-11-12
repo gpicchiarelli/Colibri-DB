@@ -94,9 +94,12 @@ public final class AuthenticationManager: @unchecked Sendable {
     // MARK: - State
     private let lock = NSLock()
     
-    // MARK: - Password hashing parameters
+    // MARK: - Password hashing parameters (PBKDF2-HMAC-SHA256)
+    /// Salt length in bytes (randomly generated per user)
     private let passwordSaltLength = 16
+    /// Derived key length in bytes (matches SHA256 digest size)
     private let passwordDerivedKeyLength = 32
+    /// Iteration count (OWASP recommends >= 100k); tune for target hardware
     private let passwordIterations = 150_000
     
     // MARK: - State Variables (TLA+ vars)
@@ -606,6 +609,26 @@ public enum AuthenticationError: Error, LocalizedError {
             return "Session has expired"
         case .weakPassword(let message):
             return "Weak password: \(message)"
+        }
+    }
+}
+
+extension AuthenticationError: Equatable {
+    public static func == (lhs: AuthenticationError, rhs: AuthenticationError) -> Bool {
+        switch (lhs, rhs) {
+        case (.userAlreadyExists, .userAlreadyExists),
+             (.userNotFound, .userNotFound),
+             (.invalidCredentials, .invalidCredentials),
+             (.userInactive, .userInactive),
+             (.userLockedOut, .userLockedOut),
+             (.invalidSession, .invalidSession),
+             (.sessionInactive, .sessionInactive),
+             (.sessionExpired, .sessionExpired):
+            return true
+        case let (.weakPassword(message1), .weakPassword(message2)):
+            return message1 == message2
+        default:
+            return false
         }
     }
 }
