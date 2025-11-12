@@ -3,7 +3,7 @@
 **Data Completamento**: 2025-10-19  
 **Versione**: 1.0.0  
 **Status**: ✅ **100% IMPLEMENTATO**  
-**Linguaggio**: Swift 6.0  
+**Linguaggio**: Swift 6.2  
 **Piattaforma**: macOS 13+
 
 ---

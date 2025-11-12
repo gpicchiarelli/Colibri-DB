@@ -8,44 +8,42 @@
 'WAL':
   - changed-files:
     - any-glob-to-any-file: 
-      - 'Sources/ColibriCore/Storage/WAL/**'
+      - 'Sources/ColibriCore/WAL/**'
       - 'Tests/ColibriCoreTests/*WAL*'
-      - 'specs/WAL.*'
+      - 'spec/WAL.*'
 
 'MVCC':
   - changed-files:
     - any-glob-to-any-file:
-      - 'Sources/ColibriCore/Concurrency/Transactions/MVCC.swift'
-      - 'Sources/ColibriCore/Concurrency/Transactions/VersionStore.swift'
+      - 'Sources/ColibriCore/MVCC/**'
       - 'Tests/ColibriCoreTests/*MVCC*'
-      - 'specs/MVCC.*'
+      - 'spec/MVCC.*'
 
 'Transactions':
   - changed-files:
     - any-glob-to-any-file:
-      - 'Sources/ColibriCore/Concurrency/Transactions/**'
+      - 'Sources/ColibriCore/Transaction/**'
       - 'Tests/ColibriCoreTests/*Transaction*'
-      - 'specs/TransactionManager.*'
+      - 'spec/TransactionManager.*'
 
 'Lock Manager':
   - changed-files:
     - any-glob-to-any-file:
-      - 'Sources/ColibriCore/Concurrency/Transactions/LockManager.swift'
-      - 'Sources/ColibriCore/Concurrency/Transactions/DeadlockDetector.swift'
+      - 'Sources/ColibriCore/Transaction/LockManager.swift'
       - 'Tests/ColibriCoreTests/*Lock*'
-      - 'specs/LockManager.*'
+      - 'spec/LockManager.*'
 
 'BTree':
   - changed-files:
     - any-glob-to-any-file:
-      - 'Sources/ColibriCore/Storage/Index/BTree*'
+      - 'Sources/ColibriCore/Indexes/BTree*'
       - 'Tests/ColibriCoreTests/*BTree*'
-      - 'specs/BTree.*'
+      - 'spec/BTree.*'
 
 'Indexes':
   - changed-files:
     - any-glob-to-any-file:
-      - 'Sources/ColibriCore/Storage/Index/**'
+      - 'Sources/ColibriCore/Indexes/**'
       - 'Tests/ColibriCoreTests/*Index*'
 
 'Pager':
@@ -57,9 +55,10 @@
 'Buffer Pool':
   - changed-files:
     - any-glob-to-any-file:
-      - 'Sources/ColibriCore/Storage/Buffer/**'
+      - 'Sources/ColibriCore/BufferPool/**'
+      - 'Sources/ColibriCore/Buffer/**'
       - 'Tests/ColibriCoreTests/*Buffer*'
-      - 'specs/BufferPool.*'
+      - 'spec/BufferPool.*'
 
 'Heap Storage':
   - changed-files:
@@ -137,7 +136,7 @@
 'CLI':
   - changed-files:
     - any-glob-to-any-file:
-      - 'Sources/ColibrìCLI/**'
+      - 'Sources/ColibriCLI/**'
       - 'Sources/coldb/**'
       - 'Sources/coldb-dev/**'
 
@@ -160,7 +159,7 @@
 'TLA+ Specs':
   - changed-files:
     - any-glob-to-any-file:
-      - 'specs/**'
+      - 'spec/**'
       - 'rules/tla_modules.json'
 
 'Performance':
@@ -184,13 +183,8 @@
 'API Docs':
   - changed-files:
     - any-glob-to-any-file:
-      - 'docs/wiki/API-Reference.md'
+      - 'docs/api-reference.html'
       - 'docs/api/**'
-
-'Wiki':
-  - changed-files:
-    - any-glob-to-any-file:
-      - 'docs/wiki/**'
 
 # ==============================================================================
 # Configuration & Build
@@ -247,9 +241,9 @@
 'Critical':
   - changed-files:
     - any-glob-to-any-file:
-      - 'Sources/ColibriCore/Storage/WAL/**'
-      - 'Sources/ColibriCore/Concurrency/Transactions/MVCC.swift'
-      - 'Sources/ColibriCore/Concurrency/Transactions/LockManager.swift'
+      - 'Sources/ColibriCore/WAL/**'
+      - 'Sources/ColibriCore/MVCC/**'
+      - 'Sources/ColibriCore/Transaction/LockManager.swift'
 
 'Breaking Change':
   - changed-files:
@@ -278,6 +272,6 @@
   - head-branch: ['hotfix/*']
   - changed-files:
     - any-glob-to-any-file:
-      - 'Sources/ColibriCore/Storage/WAL/**'
+      - 'Sources/ColibriCore/WAL/**'
       - 'Sources/ColibriCore/Concurrency/**'
 

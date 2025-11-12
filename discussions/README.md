@@ -66,14 +66,13 @@ Inizia esplorando le discussioni che ti interessano di più. Ogni discussione co
 ### Documentazione
 - [README principale](../README.md)
 - [Guida Contribuzione](../CONTRIBUTING.md)
-- [Wiki Documentation](../docs/wiki/)
-- [API Reference](../docs/wiki/API-Reference.md)
+- [Documentation](../docs/)
+- [API Reference](../docs/api-reference.html)
 
 ### Sviluppo
-- [Quick Start](../docs/wiki/Quick-Start.md)
-- [Development Guide](../docs/wiki/Development.md)
-- [Examples](../docs/wiki/Examples.md)
-- [Architecture](../docs/wiki/Architecture.md)
+- [Quick Start](../docs/quick-start.html)
+- [Examples](../docs/examples.html)
+- [Architecture](../docs/architecture.html)
 
 ### Community
 - [Code of Conduct](../CODE_OF_CONDUCT.md)

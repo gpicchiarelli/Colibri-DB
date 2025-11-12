@@ -16,44 +16,41 @@
     "description": "Default coverage for non-critical modules"
   },
   "modules": {
-    "Storage/WAL": {
+    "WAL": {
       "minimum": 95,
       "target": 98,
       "rationale": "Critical for durability and crash recovery",
       "files": [
-        "Sources/ColibriCore/Storage/WAL/FileWAL.swift",
-        "Sources/ColibriCore/Storage/WAL/WALManager.swift",
-        "Sources/ColibriCore/Storage/WAL/WALRecord.swift",
-        "Sources/ColibriCore/Storage/WAL/GroupCommit.swift"
+        "Sources/ColibriCore/WAL/WALManager.swift",
+        "Sources/ColibriCore/WAL/WALRecord.swift",
+        "Sources/ColibriCore/WAL/WALTypes.swift"
       ]
     },
-    "Concurrency/MVCC": {
+    "MVCC": {
       "minimum": 90,
       "target": 95,
       "rationale": "Critical for transaction correctness and isolation",
       "files": [
-        "Sources/ColibriCore/Concurrency/Transactions/MVCC.swift",
-        "Sources/ColibriCore/Concurrency/Transactions/TransactionManager.swift",
-        "Sources/ColibriCore/Concurrency/Transactions/VersionStore.swift"
+        "Sources/ColibriCore/MVCC/MVCCManager.swift",
+        "Sources/ColibriCore/MVCC/MVCCTypes.swift"
       ]
     },
-    "Concurrency/LockManager": {
+    "Transaction": {
       "minimum": 90,
       "target": 95,
-      "rationale": "Critical for deadlock prevention and concurrency",
+      "rationale": "Critical for transaction management and concurrency",
       "files": [
-        "Sources/ColibriCore/Concurrency/Transactions/LockManager.swift",
-        "Sources/ColibriCore/Concurrency/Transactions/DeadlockDetector.swift"
+        "Sources/ColibriCore/Transaction/TransactionManager.swift",
+        "Sources/ColibriCore/Transaction/LockManager.swift"
       ]
     },
-    "Storage/BTree": {
+    "Indexes/BTree": {
       "minimum": 90,
       "target": 95,
       "rationale": "Critical index structure for performance",
       "files": [
-        "Sources/ColibriCore/Storage/Index/BTree.swift",
-        "Sources/ColibriCore/Storage/Index/BTreeNode.swift",
-        "Sources/ColibriCore/Storage/Index/BTreeIterator.swift"
+        "Sources/ColibriCore/Indexes/BTreeIndex.swift",
+        "Sources/ColibriCore/Indexes/BTreeIndexManager.swift"
       ]
     },
     "Storage/Pager": {
@@ -66,70 +63,51 @@
         "Sources/ColibriCore/Storage/Pager/PageCache.swift"
       ]
     },
-    "Storage/BufferPool": {
+    "BufferPool": {
       "minimum": 85,
       "target": 90,
       "rationale": "Memory management and caching",
       "files": [
-        "Sources/ColibriCore/Storage/Buffer/LRUBufferPool.swift",
-        "Sources/ColibriCore/Storage/Buffer/BufferFrame.swift"
+        "Sources/ColibriCore/BufferPool/BufferPool.swift",
+        "Sources/ColibriCore/BufferPool/BufferPoolManager.swift",
+        "Sources/ColibriCore/Buffer/BufferManager.swift"
       ]
     },
-    "Storage/Heap": {
+    "Storage": {
       "minimum": 85,
       "target": 90,
       "rationale": "Primary storage for tuples",
       "files": [
-        "Sources/ColibriCore/Storage/Heap/HeapFile.swift",
-        "Sources/ColibriCore/Storage/Heap/HeapPage.swift",
-        "Sources/ColibriCore/Storage/Heap/TupleStorage.swift"
+        "Sources/ColibriCore/Storage/HeapTable.swift",
+        "Sources/ColibriCore/Storage/HeapTableManager.swift",
+        "Sources/ColibriCore/Storage/StorageManager.swift"
       ]
     },
-    "Query/Parser": {
+    "Query": {
       "minimum": 80,
       "target": 85,
-      "rationale": "SQL parsing correctness",
+      "rationale": "Query processing and execution",
       "files": [
-        "Sources/ColibriCore/Query/Parser/SQLParser.swift",
-        "Sources/ColibriCore/Query/Parser/Lexer.swift",
-        "Sources/ColibriCore/Query/Parser/AST.swift"
+        "Sources/ColibriCore/Query/SQLParser.swift",
+        "Sources/ColibriCore/Query/QueryExecutor.swift",
+        "Sources/ColibriCore/Query/QueryOptimizer.swift"
       ]
     },
-    "Query/Planner": {
-      "minimum": 80,
-      "target": 85,
-      "rationale": "Query optimization and execution plans",
-      "files": [
-        "Sources/ColibriCore/Query/Planner/LogicalPlanner.swift",
-        "Sources/ColibriCore/Query/Planner/PhysicalPlanner.swift",
-        "Sources/ColibriCore/Query/Planner/CostModel.swift"
-      ]
-    },
-    "Query/Executor": {
-      "minimum": 80,
-      "target": 85,
-      "rationale": "Query execution engine",
-      "files": [
-        "Sources/ColibriCore/Query/Executor/ExecutionEngine.swift",
-        "Sources/ColibriCore/Query/Executor/Operators.swift"
-      ]
-    },
-    "System/Catalog": {
+    "Catalog": {
       "minimum": 85,
       "target": 90,
       "rationale": "Metadata management",
       "files": [
-        "Sources/ColibriCore/System/Catalog/SystemCatalog.swift",
-        "Sources/ColibriCore/System/Catalog/TableMetadata.swift",
-        "Sources/ColibriCore/System/Catalog/IndexCatalog.swift"
+        "Sources/ColibriCore/Catalog/Catalog.swift",
+        "Sources/ColibriCore/Catalog/CatalogManager.swift"
       ]
     },
-    "Storage/FractalTree": {
+    "Indexes/FractalTree": {
       "minimum": 80,
       "target": 85,
       "rationale": "Advanced index structure",
       "files": [
-        "Sources/ColibriCore/Storage/Index/FractalTreeIndex.swift"
+        "Sources/ColibriCore/Indexes/FractalTreeIndex.swift"
       ]
     },
     "Util": {

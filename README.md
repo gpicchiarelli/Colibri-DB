@@ -147,8 +147,8 @@ Accogliamo contributi! Consulta [CONTRIBUTING.md](CONTRIBUTING.md) per iniziare.
 
 - **[Architettura](docs/architecture.html)** - Panoramica completa
 - **[TLA+ Specs](docs/tla-specifications.html)** - Specifiche formali
-- **[API Reference](docs/wiki/API-Reference.md)** - Riferimento completo
-- **[Quick Start](docs/wiki/Quick-Start.md)** - Guida rapida
+- **[API Reference](docs/api-reference.html)** - Riferimento completo
+- **[Quick Start](docs/quick-start.html)** - Guida rapida
 
 ## 📄 Licenza
 

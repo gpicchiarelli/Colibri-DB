@@ -350,9 +350,9 @@ swift package --disable-sandbox preview-documentation
 
 ### Aggiornamento Wiki
 
-La documentazione wiki si trova in `docs/wiki/`. Per aggiornamenti:
+La documentazione si trova in `docs/`. Per aggiornamenti:
 
-1. Modifica i file markdown appropriati
+1. Modifica i file HTML appropriati
 2. Testa la formattazione localmente
 3. Invia PR con le modifiche
 
@@ -439,7 +439,6 @@ Aggiungi qualsiasi altro contesto o screenshot.
 
 - **GitHub Issues**: Per bug e feature requests
 - **GitHub Discussions**: Per domande e discussioni
-- **Email**: [maintainer@example.com]
 - **Documentation**: [docs/](docs/)
 
 ### Risposta Times

@@ -167,7 +167,7 @@ jobs:
           cp README.md "$PACKAGE_NAME/"
           cp LICENSE "$PACKAGE_NAME/"
           cp CHANGELOG.md "$PACKAGE_NAME/"
-          cp -r docs/wiki "$PACKAGE_NAME/docs/"
+          cp -r docs "$PACKAGE_NAME/docs/"
           
           # Copy config
           cp colibridb.conf.json "$PACKAGE_NAME/config/colibridb.conf.json.example"

@@ -45,7 +45,7 @@ coldb-server --port 5432 --host 0.0.0.0
 ## Documentation
 
 For detailed information, see:
-- **Server Architecture**: `docs/wiki/Part-05-Server/`
-- **Configuration Guide**: `docs/wiki/Appendices/02-Configurazione.md`
-- **API Reference**: Inline documentation in source files
+- **Server Architecture**: `docs/architecture.html`
+- **Configuration Guide**: `docs/configuration.html`
+- **API Reference**: `docs/api-reference.html`
 

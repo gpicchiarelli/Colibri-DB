@@ -20,30 +20,29 @@
 # ==============================================================================
 
 # Write-Ahead Log - Critical for durability and recovery
-/Sources/ColibriCore/Storage/WAL/ @gpicchiarelli
-/specs/WAL.* @gpicchiarelli
+/Sources/ColibriCore/WAL/ @gpicchiarelli
+/spec/WAL.* @gpicchiarelli
 
 # MVCC - Critical for transaction isolation
-/Sources/ColibriCore/Concurrency/Transactions/MVCC.swift @gpicchiarelli
-/Sources/ColibriCore/Concurrency/Transactions/VersionStore.swift @gpicchiarelli
-/specs/MVCC.* @gpicchiarelli
+/Sources/ColibriCore/MVCC/ @gpicchiarelli
+/spec/MVCC.* @gpicchiarelli
 
 # Lock Manager - Critical for concurrency control
-/Sources/ColibriCore/Concurrency/Transactions/LockManager.swift @gpicchiarelli
-/Sources/ColibriCore/Concurrency/Transactions/DeadlockDetector.swift @gpicchiarelli
-/specs/LockManager.* @gpicchiarelli
+/Sources/ColibriCore/Transaction/LockManager.swift @gpicchiarelli
+/spec/LockManager.* @gpicchiarelli
 
 # Transaction Manager - Critical for ACID properties
-/Sources/ColibriCore/Concurrency/Transactions/TransactionManager.swift @gpicchiarelli
-/specs/TransactionManager.* @gpicchiarelli
+/Sources/ColibriCore/Transaction/TransactionManager.swift @gpicchiarelli
+/spec/TransactionManager.* @gpicchiarelli
 
 # B-Tree Index - Critical for query performance
-/Sources/ColibriCore/Storage/Index/BTree*.swift @gpicchiarelli
-/specs/BTree.* @gpicchiarelli
+/Sources/ColibriCore/Indexes/BTree*.swift @gpicchiarelli
+/spec/BTree.* @gpicchiarelli
 
 # Buffer Pool - Critical for memory management
-/Sources/ColibriCore/Storage/Buffer/ @gpicchiarelli
-/specs/BufferPool.* @gpicchiarelli
+/Sources/ColibriCore/BufferPool/ @gpicchiarelli
+/Sources/ColibriCore/Buffer/ @gpicchiarelli
+/spec/BufferPool.* @gpicchiarelli
 
 # Storage Manager - Core storage abstraction
 /Sources/ColibriCore/Storage/StorageManager.swift @gpicchiarelli
@@ -88,7 +87,7 @@
 # CLI Tools
 # ==============================================================================
 
-/Sources/ColibrìCLI/ @gpicchiarelli
+/Sources/ColibriCLI/ @gpicchiarelli
 /Sources/coldb/ @gpicchiarelli
 
 # ==============================================================================
@@ -102,7 +101,7 @@
 # ==============================================================================
 
 # TLA+ Specs - Require expertise in formal methods
-/specs/ @gpicchiarelli
+/spec/ @gpicchiarelli
 /rules/tla_modules.json @gpicchiarelli
 
 # ==============================================================================
@@ -110,10 +109,10 @@
 # ==============================================================================
 
 # API Documentation - Should match code changes
-/docs/wiki/API-Reference.md @gpicchiarelli
+/docs/api-reference.html @gpicchiarelli
 
 # Core architecture docs
-/docs/wiki/Part-02-Core-Engine/ @gpicchiarelli
+/docs/architecture.html @gpicchiarelli
 
 # All documentation
 /docs/ @gpicchiarelli

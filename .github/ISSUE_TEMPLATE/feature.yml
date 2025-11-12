@@ -14,7 +14,7 @@ body:
         
         **Before submitting:**
         - Search existing issues to avoid duplicates
-        - Check the [Roadmap](../../docs/wiki/Part-08-Future/) to see if it's planned
+        - Check existing issues and discussions to see if it's planned
         - Consider if this aligns with the project's goals
 
   - type: textarea
