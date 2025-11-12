@@ -50,7 +50,7 @@ public actor DatabaseServer {
     // MARK: - State
     
     private let config: Configuration
-    private let database: ColibrìDB
+    private var database: ColibrìDB?
     private var connections: [String: ServerConnection] = [:]
     private var isRunning: Bool = false
     
@@ -58,9 +58,12 @@ public actor DatabaseServer {
     
     public init(config: Configuration) throws {
         self.config = config
-        self.database = try ColibrìDB(config: ColibrìDBConfiguration(
-            dataDirectory: URL(fileURLWithPath: "/tmp/colibridb_data")
-        ))
+        self.database = nil  // Will be set by setDatabase()
+    }
+    
+    /// Set the database instance (must be called before start())
+    public func setDatabase(_ db: ColibrìDB) async {
+        self.database = db
     }
     
     // MARK: - Server Lifecycle

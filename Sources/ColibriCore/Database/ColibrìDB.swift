@@ -108,7 +108,7 @@ public actor ColibrìDB {
     private let wireProtocol: WireProtocolHandler
     
     /// Database Server (TLA+: Server)
-    private let databaseServer: DatabaseServer
+    private var databaseServer: DatabaseServer?
     
     /// System Catalog (TLA+: Catalog)
     private let catalog: Catalog
@@ -200,14 +200,21 @@ public actor ColibrìDB {
         // Initialize authentication
         self.authManager = AuthenticationManager()
         
-        // Initialize database server
+        // Database server will be initialized after construction to avoid circular dependency
+        self.databaseServer = nil
+    }
+    
+    /// Initialize the database server (called after construction)
+    private func initializeServer() async throws {
         let serverConfig = DatabaseServer.Configuration(
             host: "127.0.0.1",
             port: 5432,
             maxConnections: config.maxConnections,
             databaseConfig: DatabaseConfiguration()
         )
-        self.databaseServer = try DatabaseServer(config: serverConfig)
+        let server = try DatabaseServer(config: serverConfig)
+        await server.setDatabase(self)
+        self.databaseServer = server
     }
     
     // MARK: - Database Lifecycle
@@ -220,6 +227,11 @@ public actor ColibrìDB {
         }
         
         systemState = .starting
+        
+        // Initialize server if not already done (avoids circular dependency)
+        if databaseServer == nil {
+            try await initializeServer()
+        }
         
         try await withThrowingTaskGroup(of: Void.self) { group in
             // WAL is ready to use (no start method needed)
@@ -238,8 +250,10 @@ public actor ColibrìDB {
             }
             
             // Start database server
-            group.addTask {
-                try await self.databaseServer.start()
+            if let server = self.databaseServer {
+                group.addTask {
+                    try await server.start()
+                }
             }
             
             // Wait for all subsystems to start
@@ -265,8 +279,10 @@ public actor ColibrìDB {
         
         try await withThrowingTaskGroup(of: Void.self) { group in
             // Stop accepting new connections
-            group.addTask {
-                try await self.databaseServer.stop()
+            if let server = self.databaseServer {
+                group.addTask {
+                    try await server.stop()
+                }
             }
             
             // Complete all active transactions
