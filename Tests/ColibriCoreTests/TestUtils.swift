@@ -68,9 +68,9 @@ public struct TestUtils {
     }
     
     /// Wait for an async operation with timeout
-    public static func waitForAsync<T>(
+    public static func waitForAsync<T: Sendable>(
         timeout: TimeInterval = 5.0,
-        operation: @escaping () async throws -> T
+        operation: @Sendable @escaping () async throws -> T
     ) async throws -> T {
         try await withThrowingTaskGroup(of: T.self) { group in
             group.addTask {

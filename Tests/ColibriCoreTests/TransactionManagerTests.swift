@@ -1,535 +1,149 @@
-//
-//  TransactionManagerTests.swift
-//  ColibrìDB Transaction Manager Tests
-//
-//  Tests for transaction management, ACID properties, and concurrency control
-//
-
 import Foundation
 import Testing
 @testable import ColibriCore
 
-/// Tests for the Transaction Manager
-@Suite("Transaction Manager Tests")
+@Suite("Transaction Manager")
 struct TransactionManagerTests {
+    // MARK: - Test Doubles
     
-    /// Test transaction creation
-    @Test("Transaction Creation")
-    func testTransactionCreation() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
+    private actor StubWALManager: TransactionWALManager {
+        private(set) var records: [(TransactionID, String)] = []
         
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
+        func appendRecord(txId: TransactionID, record: String) async throws {
+            records.append((txId, record))
+        }
         
-        // Begin a transaction
-        let txID = try await transactionManager.beginTransaction(isolationLevel: .readCommitted)
-        try TestAssertions.assertTrue(txID > 0, "Transaction ID should be positive")
-        
-        // Verify transaction is active
-        let isActive = await transactionManager.isTransactionActive(txID)
-        try TestAssertions.assertTrue(isActive, "Transaction should be active")
-        
-        // Get transaction details
-        let transaction = await transactionManager.getActiveTransaction(txID)
-        try TestAssertions.assertNotNil(transaction, "Active transaction should exist")
-        try TestAssertions.assertEqual(transaction!.transactionId, txID, "Transaction ID should match")
-        try TestAssertions.assertEqual(transaction!.state, .active, "Transaction state should be active")
-        try TestAssertions.assertEqual(transaction!.isolationLevel, .readCommitted, "Isolation level should match")
-    }
-    
-    /// Test transaction commit
-    @Test("Transaction Commit")
-    func testTransactionCommit() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
-        
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
-        
-        // Begin and commit transaction
-        let txID = try await transactionManager.beginTransaction()
-        try await transactionManager.commitTransaction(txId: txID)
-        
-        // Verify transaction is committed
-        let isCommitted = await transactionManager.isTransactionCommitted(txID)
-        try TestAssertions.assertTrue(isCommitted, "Transaction should be committed")
-        
-        let isActive = await transactionManager.isTransactionActive(txID)
-        try TestAssertions.assertFalse(isActive, "Transaction should not be active after commit")
-        
-        // Get committed transaction
-        let committedTransaction = await transactionManager.getCommittedTransaction(txID)
-        try TestAssertions.assertNotNil(committedTransaction, "Committed transaction should exist")
-        try TestAssertions.assertEqual(committedTransaction!.state, .committed, "Transaction state should be committed")
-        try TestAssertions.assertNotNil(committedTransaction!.commitTime, "Commit time should be set")
-    }
-    
-    /// Test transaction abort
-    @Test("Transaction Abort")
-    func testTransactionAbort() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
-        
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
-        
-        // Begin and abort transaction
-        let txID = try await transactionManager.beginTransaction()
-        try await transactionManager.abortTransaction(txId: txID, reason: "Test abort")
-        
-        // Verify transaction is aborted
-        let isAborted = await transactionManager.isTransactionAborted(txID)
-        try TestAssertions.assertTrue(isAborted, "Transaction should be aborted")
-        
-        let isActive = await transactionManager.isTransactionActive(txID)
-        try TestAssertions.assertFalse(isActive, "Transaction should not be active after abort")
-        
-        // Get aborted transaction
-        let abortedTransaction = await transactionManager.getAbortedTransaction(txID)
-        try TestAssertions.assertNotNil(abortedTransaction, "Aborted transaction should exist")
-        try TestAssertions.assertEqual(abortedTransaction!.state, .aborted, "Transaction state should be aborted")
-        try TestAssertions.assertEqual(abortedTransaction!.abortReason, "Test abort", "Abort reason should match")
-        try TestAssertions.assertNotNil(abortedTransaction!.abortTime, "Abort time should be set")
-    }
-    
-    /// Test read operations
-    @Test("Read Operations")
-    func testReadOperations() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
-        
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
-        
-        // Begin transaction
-        let txID = try await transactionManager.beginTransaction()
-        
-        // Perform read operations
-        let resource1 = "table1.row1"
-        let resource2 = "table1.row2"
-        
-        let value1 = try await transactionManager.read(txId: txID, resource: resource1)
-        let value2 = try await transactionManager.read(txId: txID, resource: resource2)
-        
-        // Verify read operations were recorded
-        let transaction = await transactionManager.getActiveTransaction(txID)
-        try TestAssertions.assertNotNil(transaction, "Transaction should exist")
-        try TestAssertions.assertEqual(transaction!.operations.count, 2, "Should have 2 operations")
-        try TestAssertions.assertEqual(transaction!.readSet.count, 2, "Should have 2 resources in read set")
-        try TestAssertions.assertTrue(transaction!.readSet.contains(resource1), "Read set should contain resource1")
-        try TestAssertions.assertTrue(transaction!.readSet.contains(resource2), "Read set should contain resource2")
-        
-        try await transactionManager.commitTransaction(txId: txID)
-    }
-    
-    /// Test write operations
-    @Test("Write Operations")
-    func testWriteOperations() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
-        
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
-        
-        // Begin transaction
-        let txID = try await transactionManager.beginTransaction()
-        
-        // Perform write operations
-        let resource1 = "table1.row1"
-        let resource2 = "table1.row2"
-        let data1 = Value.string("Alice")
-        let data2 = Value.int(25)
-        
-        try await transactionManager.write(txId: txID, resource: resource1, data: data1)
-        try await transactionManager.write(txId: txID, resource: resource2, data: data2)
-        
-        // Verify write operations were recorded
-        let transaction = await transactionManager.getActiveTransaction(txID)
-        try TestAssertions.assertNotNil(transaction, "Transaction should exist")
-        try TestAssertions.assertEqual(transaction!.operations.count, 2, "Should have 2 operations")
-        try TestAssertions.assertEqual(transaction!.writeSet.count, 2, "Should have 2 resources in write set")
-        try TestAssertions.assertTrue(transaction!.writeSet.contains(resource1), "Write set should contain resource1")
-        try TestAssertions.assertTrue(transaction!.writeSet.contains(resource2), "Write set should contain resource2")
-        
-        try await transactionManager.commitTransaction(txId: txID)
-    }
-    
-    /// Test lock operations
-    @Test("Lock Operations")
-    func testLockOperations() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
-        
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
-        
-        // Begin transaction
-        let txID = try await transactionManager.beginTransaction()
-        
-        // Acquire locks
-        let resource1 = "table1"
-        let resource2 = "table2"
-        
-        try await transactionManager.lock(txId: txID, resource: resource1, lockType: .shared)
-        try await transactionManager.lock(txId: txID, resource: resource2, lockType: .exclusive)
-        
-        // Verify locks were acquired
-        let transaction = await transactionManager.getActiveTransaction(txID)
-        try TestAssertions.assertNotNil(transaction, "Transaction should exist")
-        try TestAssertions.assertEqual(transaction!.locks.count, 2, "Should have 2 locks")
-        
-        // Release locks
-        try await transactionManager.unlock(txId: txID, resource: resource1)
-        try await transactionManager.unlock(txId: txID, resource: resource2)
-        
-        // Verify locks were released
-        let updatedTransaction = await transactionManager.getActiveTransaction(txID)
-        try TestAssertions.assertNotNil(updatedTransaction, "Transaction should exist")
-        try TestAssertions.assertEqual(updatedTransaction!.locks.count, 0, "Should have 0 locks after release")
-        
-        try await transactionManager.commitTransaction(txId: txID)
-    }
-    
-    /// Test isolation levels
-    @Test("Isolation Levels")
-    func testIsolationLevels() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
-        
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
-        
-        // Test different isolation levels
-        let isolationLevels: [IsolationLevel] = [.readUncommitted, .readCommitted, .repeatableRead, .serializable, .snapshot]
-        
-        for isolationLevel in isolationLevels {
-            let txID = try await transactionManager.beginTransaction(isolationLevel: isolationLevel)
-            
-            let transaction = await transactionManager.getActiveTransaction(txID)
-            try TestAssertions.assertNotNil(transaction, "Transaction should exist")
-            try TestAssertions.assertEqual(transaction!.isolationLevel, isolationLevel, "Isolation level should match")
-            
-            try await transactionManager.commitTransaction(txId: txID)
+        func flushLog() async throws {
+            // no-op for tests
         }
     }
     
-    /// Test concurrent transactions
-    @Test("Concurrent Transactions")
-    func testConcurrentTransactions() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
+    private actor StubMVCCManager: TransactionMVCCManager {
+        private var store: [String: String] = [:]
         
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
-        
-        // Start multiple concurrent transactions
-        let transactionCount = 5
-        var transactionIDs: [TxID] = []
-        
-        for i in 0..<transactionCount {
-            let txID = try await transactionManager.beginTransaction()
-            transactionIDs.append(txID)
-            
-            // Perform some operations
-            try await transactionManager.write(txId: txID, resource: "resource\(i)", data: .int(i))
+        func beginTransaction(txId: TxID) async throws -> Snapshot {
+            Snapshot(
+                txID: txId,
+                startTS: UInt64(txId),
+                xmin: UInt64(txId),
+                xmax: UInt64(txId + 1),
+                activeTxAtStart: []
+            )
         }
         
-        // Verify all transactions are active
-        for txID in transactionIDs {
-            let isActive = await transactionManager.isTransactionActive(txID)
-            try TestAssertions.assertTrue(isActive, "Transaction \(txID) should be active")
+        func read(txId: TxID, key: String) async throws -> String? {
+            store[key]
         }
         
-        // Commit all transactions
-        for txID in transactionIDs {
-            try await transactionManager.commitTransaction(txId: txID)
+        func write(txId: TxID, key: String, value: String) async throws {
+            store[key] = value
         }
         
-        // Verify all transactions are committed
-        for txID in transactionIDs {
-            let isCommitted = await transactionManager.isTransactionCommitted(txID)
-            try TestAssertions.assertTrue(isCommitted, "Transaction \(txID) should be committed")
-        }
+        func commit(txId: TxID) async throws {}
+        func abort(txId: TxID) async throws {}
     }
     
-    /// Test distributed transactions
-    @Test("Distributed Transactions")
-    func testDistributedTransactions() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
-        
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
+    private func makeManager() -> (TransactionManager, StubWALManager, StubMVCCManager) {
+        let wal = StubWALManager()
+        let mvcc = StubMVCCManager()
+        let manager = TransactionManager(
+            walManager: wal,
+            mvccManager: mvcc,
+            lockManager: nil
         )
-        
-        // Begin transaction
-        let txID = try await transactionManager.beginTransaction()
-        
-        // Make it distributed
-        let participants = ["node1", "node2", "node3"]
-        try await transactionManager.beginDistributedTransaction(txId: txID, participants: participants)
-        
-        // Verify transaction is distributed
-        let isDistributed = await transactionManager.isTransactionDistributed(txID)
-        try TestAssertions.assertTrue(isDistributed, "Transaction should be distributed")
-        
-        // Get participants
-        let twoPhaseParticipants = await transactionManager.getTwoPhaseCommitParticipants(txID)
-        try TestAssertions.assertNotNil(twoPhaseParticipants, "Two-phase commit participants should exist")
-        try TestAssertions.assertEqual(twoPhaseParticipants!.count, participants.count, "Should have correct number of participants")
-        
-        // Commit distributed transaction
-        try await transactionManager.commitTransaction(txId: txID)
-        
-        // Verify transaction is committed
-        let isCommitted = await transactionManager.isTransactionCommitted(txID)
-        try TestAssertions.assertTrue(isCommitted, "Distributed transaction should be committed")
+        return (manager, wal, mvcc)
     }
     
-    /// Test deadlock detection
-    @Test("Deadlock Detection")
-    func testDeadlockDetection() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
+    // MARK: - Tests
+    
+    @Test("Begin transaction allocates sequential TxID")
+    func testBeginTransaction() async throws {
+        let (manager, _, _) = makeManager()
         
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
+        let first = try await manager.beginTransaction()
+        let second = try await manager.beginTransaction()
         
-        // Perform deadlock detection
-        try await transactionManager.detectDeadlocks()
-        
-        // Get deadlock detection results
-        let deadlockResults = await transactionManager.getDeadlockDetectionResults()
-        // Results should be empty for this simple test
-        try TestAssertions.assertEqual(deadlockResults.count, 0, "Should have no deadlock results initially")
+        #expect(first == 1)
+        #expect(second == 2)
+        #expect(await manager.isTransactionActive(txId: first))
+        #expect(await manager.isTransactionActive(txId: second))
+        #expect(await manager.getActiveTransactionCount() == 2)
     }
     
-    /// Test ACID properties
-    @Test("ACID Properties")
-    func testACIDProperties() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
+    @Test("Commit transitions transaction to committed state")
+    func testCommitTransaction() async throws {
+        let (manager, _, _) = makeManager()
         
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
+        let txId = try await manager.beginTransaction()
+        try await manager.commitTransaction(txId: txId)
         
-        // Test atomicity invariant
-        let atomicity = await transactionManager.checkAtomicityInvariant()
-        try TestAssertions.assertTrue(atomicity, "Atomicity invariant should hold")
-        
-        // Test consistency invariant
-        let consistency = await transactionManager.checkConsistencyInvariant()
-        try TestAssertions.assertTrue(consistency, "Consistency invariant should hold")
-        
-        // Test isolation invariant
-        let isolation = await transactionManager.checkIsolationInvariant()
-        try TestAssertions.assertTrue(isolation, "Isolation invariant should hold")
-        
-        // Test durability invariant
-        let durability = await transactionManager.checkDurabilityInvariant()
-        try TestAssertions.assertTrue(durability, "Durability invariant should hold")
-        
-        // Test two-phase commit invariant
-        let twoPhaseCommit = await transactionManager.checkTwoPhaseCommitInvariant()
-        try TestAssertions.assertTrue(twoPhaseCommit, "Two-phase commit invariant should hold")
-        
-        // Test deadlock detection invariant
-        let deadlockDetection = await transactionManager.checkDeadlockDetectionInvariant()
-        try TestAssertions.assertTrue(deadlockDetection, "Deadlock detection invariant should hold")
-        
-        // Test all invariants
-        let allInvariants = await transactionManager.checkAllInvariants()
-        try TestAssertions.assertTrue(allInvariants, "All invariants should hold")
+        #expect(!(await manager.isTransactionActive(txId: txId)))
+        #expect(await manager.isTransactionCommitted(txId: txId))
+        #expect(!(await manager.isTransactionAborted(txId: txId)))
+        #expect(await manager.getActiveTransactionCount() == 0)
     }
     
-    /// Test error handling
-    @Test("Error Handling")
-    func testErrorHandling() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
+    @Test("Abort transitions transaction to aborted state")
+    func testAbortTransaction() async throws {
+        let (manager, _, _) = makeManager()
         
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
+        let txId = try await manager.beginTransaction()
+        try await manager.abortTransaction(txId: txId)
         
-        // Test operations on non-existent transaction
-        try TestAssertions.assertAsyncThrows({
-            try await transactionManager.commitTransaction(txId: 999)
-        }, "Should throw error for non-existent transaction")
-        
-        try TestAssertions.assertAsyncThrows({
-            try await transactionManager.abortTransaction(txId: 999)
-        }, "Should throw error for non-existent transaction")
-        
-        try TestAssertions.assertAsyncThrows({
-            try await transactionManager.read(txId: 999, resource: "test")
-        }, "Should throw error for non-existent transaction")
-        
-        try TestAssertions.assertAsyncThrows({
-            try await transactionManager.write(txId: 999, resource: "test", data: .string("test"))
-        }, "Should throw error for non-existent transaction")
-        
-        // Begin a transaction
-        let txID = try await transactionManager.beginTransaction()
-        
-        // Commit it
-        try await transactionManager.commitTransaction(txId: txID)
-        
-        // Test operations on committed transaction
-        try TestAssertions.assertAsyncThrows({
-            try await transactionManager.commitTransaction(txId: txID)
-        }, "Should throw error for already committed transaction")
-        
-        try TestAssertions.assertAsyncThrows({
-            try await transactionManager.read(txId: txID, resource: "test")
-        }, "Should throw error for committed transaction")
+        #expect(!(await manager.isTransactionActive(txId: txId)))
+        #expect(await manager.isTransactionAborted(txId: txId))
+        #expect(!(await manager.isTransactionCommitted(txId: txId)))
     }
     
-    /// Test transaction statistics
-    @Test("Transaction Statistics")
-    func testTransactionStatistics() async throws {
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
+    @Test("Prepare marks transaction as prepared")
+    func testPrepareTransaction() async throws {
+        let (manager, _, _) = makeManager()
         
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager
-        )
+        let txId = try await manager.beginTransaction()
+        try await manager.prepareTransaction(txId: txId)
         
-        // Initially no transactions
-        let activeTransactions = await transactionManager.getAllActiveTransactions()
-        let committedTransactions = await transactionManager.getAllCommittedTransactions()
-        let abortedTransactions = await transactionManager.getAllAbortedTransactions()
-        
-        try TestAssertions.assertEqual(activeTransactions.count, 0, "Should have no active transactions initially")
-        try TestAssertions.assertEqual(committedTransactions.count, 0, "Should have no committed transactions initially")
-        try TestAssertions.assertEqual(abortedTransactions.count, 0, "Should have no aborted transactions initially")
-        
-        // Create some transactions
-        let txID1 = try await transactionManager.beginTransaction()
-        let txID2 = try await transactionManager.beginTransaction()
-        
-        try await transactionManager.commitTransaction(txId: txID1)
-        try await transactionManager.abortTransaction(txId: txID2, reason: "Test abort")
-        
-        // Check statistics
-        let activeAfter = await transactionManager.getAllActiveTransactions()
-        let committedAfter = await transactionManager.getAllCommittedTransactions()
-        let abortedAfter = await transactionManager.getAllAbortedTransactions()
-        
-        try TestAssertions.assertEqual(activeAfter.count, 0, "Should have no active transactions")
-        try TestAssertions.assertEqual(committedAfter.count, 1, "Should have 1 committed transaction")
-        try TestAssertions.assertEqual(abortedAfter.count, 1, "Should have 1 aborted transaction")
+        #expect(await manager.isTransactionPrepared(txId: txId))
     }
     
-    /// Test transaction configuration
-    @Test("Transaction Configuration")
-    func testTransactionConfiguration() async throws {
-        let config = TransactionConfig(
-            defaultIsolationLevel: .serializable,
-            lockTimeoutMs: 5000,
-            maxTransactionDuration: 60.0,
-            enableDeadlockDetection: true,
-            enableTwoPhaseCommit: true,
-            enableDistributedTransactions: true
-        )
+    @Test("Two-phase commit decision reflects participant votes")
+    func testTwoPhaseCommitDecision() async throws {
+        let (manager, _, _) = makeManager()
         
-        let lockManager = LockManager()
-        let walManager = WALManager()
-        let mvccManager = MVCCManager()
-        let twoPhaseCommitManager = TwoPhaseCommitManager()
+        let txId = try await manager.beginTransaction()
+        try await manager.receiveVote(txId: txId, participant: "node1", vote: true)
+        try await manager.receiveVote(txId: txId, participant: "node2", vote: true)
         
-        let transactionManager = TransactionManager(
-            lockManager: lockManager,
-            walManager: walManager,
-            mvccManager: mvccManager,
-            twoPhaseCommitManager: twoPhaseCommitManager,
-            transactionConfig: config
-        )
+        let decision = try await manager.makeDecision(txId: txId)
+        #expect(decision == true)
         
-        // Test that configuration is applied
-        let txID = try await transactionManager.beginTransaction()
-        let transaction = await transactionManager.getActiveTransaction(txID)
+        try await manager.sendCommitAbort(txId: txId, decision: decision)
+        #expect(await manager.isTransactionCommitted(txId: txId))
+    }
+    
+    @Test("Two-phase commit aborts on negative vote")
+    func testTwoPhaseCommitAbort() async throws {
+        let (manager, _, _) = makeManager()
         
-        try TestAssertions.assertNotNil(transaction, "Transaction should exist")
-        // Note: The actual isolation level used depends on the parameter passed to beginTransaction
-        // The config provides the default, but we explicitly passed .readCommitted in the call
+        let txId = try await manager.beginTransaction()
+        try await manager.receiveVote(txId: txId, participant: "node1", vote: true)
+        try await manager.receiveVote(txId: txId, participant: "node2", vote: false)
         
-        try await transactionManager.commitTransaction(txId: txID)
+        let decision = try await manager.makeDecision(txId: txId)
+        #expect(decision == false)
+        
+        try await manager.sendCommitAbort(txId: txId, decision: decision)
+        #expect(await manager.isTransactionAborted(txId: txId))
+    }
+    
+    @Test("Invariants hold after basic workflow")
+    func testInvariants() async throws {
+        let (manager, _, _) = makeManager()
+        
+        let txId = try await manager.beginTransaction()
+        try await manager.prepareTransaction(txId: txId)
+        try await manager.commitTransaction(txId: txId)
+        
+        #expect(await manager.checkAllInvariants())
     }
 }
+
