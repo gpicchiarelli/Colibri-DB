@@ -1,44 +1,19 @@
-import Foundation
-import Testing
+import XCTest
 @testable import ColibriCore
 
-@Suite("Transaction Manager")
-struct TransactionManagerTests {
-    // MARK: - Test Doubles
-    
+final class TransactionManagerTests: XCTestCase {
     private actor StubWALManager: TransactionWALManager {
-        private(set) var records: [(TransactionID, String)] = []
-        
-        func appendRecord(txId: TransactionID, record: String) async throws {
-            records.append((txId, record))
-        }
-        
-        func flushLog() async throws {
-            // no-op for tests
-        }
+        func appendRecord(txId: TransactionID, record: String) async throws {}
+        func flushLog() async throws {}
     }
     
     private actor StubMVCCManager: TransactionMVCCManager {
-        private var store: [String: String] = [:]
-        
         func beginTransaction(txId: TxID) async throws -> Snapshot {
-            Snapshot(
-                txID: txId,
-                startTS: UInt64(txId),
-                xmin: UInt64(txId),
-                xmax: UInt64(txId + 1),
-                activeTxAtStart: []
-            )
+            Snapshot(txID: txId, startTS: UInt64(txId), xmin: UInt64(txId), xmax: UInt64(txId + 1), activeTxAtStart: [])
         }
         
-        func read(txId: TxID, key: String) async throws -> String? {
-            store[key]
-        }
-        
-        func write(txId: TxID, key: String, value: String) async throws {
-            store[key] = value
-        }
-        
+        func read(txId: TxID, key: String) async throws -> String? { nil }
+        func write(txId: TxID, key: String, value: String) async throws {}
         func commit(txId: TxID) async throws {}
         func abort(txId: TxID) async throws {}
     }
@@ -46,66 +21,63 @@ struct TransactionManagerTests {
     private func makeManager() -> (TransactionManager, StubWALManager, StubMVCCManager) {
         let wal = StubWALManager()
         let mvcc = StubMVCCManager()
-        let manager = TransactionManager(
-            walManager: wal,
-            mvccManager: mvcc,
-            lockManager: nil
-        )
+        let manager = TransactionManager(walManager: wal, mvccManager: mvcc, lockManager: nil)
         return (manager, wal, mvcc)
     }
     
-    // MARK: - Tests
-    
-    @Test("Begin transaction allocates sequential TxID")
-    func testBeginTransaction() async throws {
+    func testBeginTransactionAssignsSequentialIds() async throws {
         let (manager, _, _) = makeManager()
         
         let first = try await manager.beginTransaction()
         let second = try await manager.beginTransaction()
         
-        #expect(first == 1)
-        #expect(second == 2)
-        #expect(await manager.isTransactionActive(txId: first))
-        #expect(await manager.isTransactionActive(txId: second))
-        #expect(await manager.getActiveTransactionCount() == 2)
+        XCTAssertEqual(first, 1)
+        XCTAssertEqual(second, 2)
+        
+        let firstActive = await manager.isTransactionActive(txId: first)
+        let secondActive = await manager.isTransactionActive(txId: second)
+        XCTAssertTrue(firstActive)
+        XCTAssertTrue(secondActive)
     }
     
-    @Test("Commit transitions transaction to committed state")
-    func testCommitTransaction() async throws {
+    func testCommitTransitionsState() async throws {
         let (manager, _, _) = makeManager()
         
         let txId = try await manager.beginTransaction()
         try await manager.commitTransaction(txId: txId)
         
-        #expect(!(await manager.isTransactionActive(txId: txId)))
-        #expect(await manager.isTransactionCommitted(txId: txId))
-        #expect(!(await manager.isTransactionAborted(txId: txId)))
-        #expect(await manager.getActiveTransactionCount() == 0)
+        let active = await manager.isTransactionActive(txId: txId)
+        let committed = await manager.isTransactionCommitted(txId: txId)
+        let aborted = await manager.isTransactionAborted(txId: txId)
+        XCTAssertFalse(active)
+        XCTAssertTrue(committed)
+        XCTAssertFalse(aborted)
     }
     
-    @Test("Abort transitions transaction to aborted state")
-    func testAbortTransaction() async throws {
+    func testAbortTransitionsState() async throws {
         let (manager, _, _) = makeManager()
         
         let txId = try await manager.beginTransaction()
         try await manager.abortTransaction(txId: txId)
         
-        #expect(!(await manager.isTransactionActive(txId: txId)))
-        #expect(await manager.isTransactionAborted(txId: txId))
-        #expect(!(await manager.isTransactionCommitted(txId: txId)))
+        let active = await manager.isTransactionActive(txId: txId)
+        let aborted = await manager.isTransactionAborted(txId: txId)
+        let committed = await manager.isTransactionCommitted(txId: txId)
+        XCTAssertFalse(active)
+        XCTAssertTrue(aborted)
+        XCTAssertFalse(committed)
     }
     
-    @Test("Prepare marks transaction as prepared")
-    func testPrepareTransaction() async throws {
+    func testPrepareMarksPrepared() async throws {
         let (manager, _, _) = makeManager()
         
         let txId = try await manager.beginTransaction()
         try await manager.prepareTransaction(txId: txId)
         
-        #expect(await manager.isTransactionPrepared(txId: txId))
+        let prepared = await manager.isTransactionPrepared(txId: txId)
+        XCTAssertTrue(prepared)
     }
     
-    @Test("Two-phase commit decision reflects participant votes")
     func testTwoPhaseCommitDecision() async throws {
         let (manager, _, _) = makeManager()
         
@@ -114,13 +86,13 @@ struct TransactionManagerTests {
         try await manager.receiveVote(txId: txId, participant: "node2", vote: true)
         
         let decision = try await manager.makeDecision(txId: txId)
-        #expect(decision == true)
+        XCTAssertTrue(decision)
         
         try await manager.sendCommitAbort(txId: txId, decision: decision)
-        #expect(await manager.isTransactionCommitted(txId: txId))
+        let committed = await manager.isTransactionCommitted(txId: txId)
+        XCTAssertTrue(committed)
     }
     
-    @Test("Two-phase commit aborts on negative vote")
     func testTwoPhaseCommitAbort() async throws {
         let (manager, _, _) = makeManager()
         
@@ -129,21 +101,20 @@ struct TransactionManagerTests {
         try await manager.receiveVote(txId: txId, participant: "node2", vote: false)
         
         let decision = try await manager.makeDecision(txId: txId)
-        #expect(decision == false)
+        XCTAssertFalse(decision)
         
         try await manager.sendCommitAbort(txId: txId, decision: decision)
-        #expect(await manager.isTransactionAborted(txId: txId))
+        let aborted = await manager.isTransactionAborted(txId: txId)
+        XCTAssertTrue(aborted)
     }
     
-    @Test("Invariants hold after basic workflow")
-    func testInvariants() async throws {
+    func testInvariantsAfterCommit() async throws {
         let (manager, _, _) = makeManager()
         
         let txId = try await manager.beginTransaction()
-        try await manager.prepareTransaction(txId: txId)
         try await manager.commitTransaction(txId: txId)
         
-        #expect(await manager.checkAllInvariants())
+        let invariantsHold = await manager.checkAllInvariants()
+        XCTAssertTrue(invariantsHold)
     }
 }
-

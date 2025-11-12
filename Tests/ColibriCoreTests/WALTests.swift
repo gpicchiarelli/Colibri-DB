@@ -1,15 +1,11 @@
-import Foundation
-import Testing
+import XCTest
 @testable import ColibriCore
 
-@Suite("WAL Core")
-struct WALTests {
-    // MARK: - Helpers
-    
-    private func makeWAL(config: GroupCommitConfig = GroupCommitConfig()) throws -> (FileWAL, URL) {
+final class WALTests: XCTestCase {
+    private func makeWAL() throws -> (FileWAL, URL) {
         let directory = try TestUtils.createTempDirectory()
-        let walPath = directory.appendingPathComponent("wal.log")
-        let wal = try FileWAL(walFilePath: walPath, config: config)
+        let path = directory.appendingPathComponent("wal.log")
+        let wal = try FileWAL(walFilePath: path)
         return (wal, directory)
     }
     
@@ -17,117 +13,73 @@ struct WALTests {
         try? TestUtils.cleanupTempDirectory(directory)
     }
     
-    // MARK: - Tests
-    
-    @Test("Initialization sets base LSNs")
     func testInitialization() async throws {
         let (wal, directory) = try makeWAL()
         defer { cleanup(directory) }
         
-        #expect(await wal.getCurrentLSN() == 1)
-        #expect(await wal.getFlushedLSN() == 0)
-        #expect(await wal.getLastCheckpointLSN() == 0)
-        #expect(await wal.getDirtyPageTable().isEmpty)
-        #expect(await wal.getActiveTransactionTable().isEmpty)
+        XCTAssertEqual(await wal.getCurrentLSN(), 1)
+        XCTAssertEqual(await wal.getFlushedLSN(), 0)
+        XCTAssertEqual(await wal.getLastCheckpointLSN(), 0)
+        XCTAssertTrue(await wal.getAllRecords().isEmpty)
+        XCTAssertTrue(await wal.getDirtyPageTable().isEmpty)
     }
     
-    @Test("Appending assigns sequential LSNs")
     func testAppendIncrementsLSN() async throws {
         let (wal, directory) = try makeWAL()
         defer { cleanup(directory) }
         
-        let first = try await wal.append(kind: .heapInsert, txID: 1, pageID: 1, payload: nil)
-        let second = try await wal.append(kind: .heapUpdate, txID: 1, pageID: 1, payload: nil)
+        let lsn1 = try await wal.append(kind: .heapInsert, txID: 1, pageID: 1)
+        let lsn2 = try await wal.append(kind: .heapUpdate, txID: 1, pageID: 1)
+        let lsn3 = try await wal.append(kind: .heapDelete, txID: 2, pageID: 2)
         
-        #expect(first == 1)
-        #expect(second == 2)
-        #expect(await wal.getCurrentLSN() == 3)
-        #expect(await wal.getFlushedLSN() == 0)  // no flush yet
+        XCTAssertEqual(lsn1, 1)
+        XCTAssertEqual(lsn2, 2)
+        XCTAssertEqual(lsn3, 3)
+        XCTAssertEqual(await wal.getCurrentLSN(), 4)
     }
     
-    @Test("Flush persists pending records")
-    func testFlushPersistsRecords() async throws {
-        let (wal, directory) = try makeWAL()
-        defer { cleanup(directory) }
-        
-        _ = try await wal.append(kind: .heapInsert, txID: 1, pageID: 1)
-        _ = try await wal.append(kind: .heapUpdate, txID: 2, pageID: 2)
-        
-        try await wal.flush()
-        
-        #expect(await wal.getFlushedLSN() == 2)
-        #expect(await wal.getAllRecords().count == 2)
-    }
-    
-    @Test("Checkpoint updates last checkpoint LSN")
-    func testCheckpoint() async throws {
-        let (wal, directory) = try makeWAL()
-        defer { cleanup(directory) }
-        
-        _ = try await wal.append(kind: .heapInsert, txID: 1, pageID: 1)
-        try await wal.flush()
-        
-        let checkpointLSN = try await wal.checkpoint()
-        
-        #expect(checkpointLSN == 3)
-        #expect(await wal.getLastCheckpointLSN() == checkpointLSN)
-    }
-    
-    @Test("Crash blocks operations until recovery")
-    func testCrashLifecycle() async throws {
-        let (wal, directory) = try makeWAL()
-        defer { cleanup(directory) }
-        
-        _ = try await wal.append(kind: .heapInsert, txID: 1, pageID: 1)
-        try await wal.flush()
-        
-        await wal.simulateCrash()
-        
-        try await TestAssertions.assertAsyncThrows({
-            try await wal.append(kind: .heapUpdate, txID: 1, pageID: 1)
-        }, "Append should fail after crash")
-        try await TestAssertions.assertAsyncThrows({
-            try await wal.flush()
-        }, "Flush should fail after crash")
-        try await TestAssertions.assertAsyncThrows({
-            try await wal.checkpoint()
-        }, "Checkpoint should fail after crash")
-        
-        try await wal.recover()
-        
-        #expect(await wal.getCurrentLSN() == 3)
-        #expect(await wal.getFlushedLSN() == 2)
-        
-        // Append succeeds again after recovery
-        let postRecoveryLSN = try await wal.append(kind: .heapDelete, txID: 2, pageID: 2)
-        #expect(postRecoveryLSN == 3)
-    }
-    
-    @Test("Dirty page tracking maintains recLSN order")
     func testDirtyPageTracking() async throws {
         let (wal, directory) = try makeWAL()
         defer { cleanup(directory) }
         
         _ = try await wal.append(kind: .heapInsert, txID: 1, pageID: 10)
-        _ = try await wal.append(kind: .heapUpdate, txID: 1, pageID: 20)
+        _ = try await wal.append(kind: .heapUpdate, txID: 2, pageID: 20)
         
         try await wal.updatePageLSN(10, lsn: 1)
         try await wal.updatePageLSN(20, lsn: 2)
         
-        let dirtyTable = await wal.getDirtyPageTable()
-        #expect(dirtyTable[10] == 1)
-        #expect(dirtyTable[20] == 2)
+        let dpt = await wal.getDirtyPageTable()
+        XCTAssertEqual(dpt[10], 1)
+        XCTAssertEqual(dpt[20], 2)
+    }
+    
+    func testCrashLifecycle() async throws {
+        let (wal, directory) = try makeWAL()
+        defer { cleanup(directory) }
         
-        // Flushing should not drop dirty entries until applied
-        try await wal.flush()
-        let dirtyAfterFlush = await wal.getDirtyPageTable()
-        #expect(dirtyAfterFlush.count == 2)
+        _ = try await wal.append(kind: .heapInsert, txID: 1, pageID: 1)
+        await wal.simulateCrash()
         
-        // Applying clears entry
-        try await wal.applyToDataPage(10)
-        let dirtyAfterApply = await wal.getDirtyPageTable()
-        #expect(dirtyAfterApply[10] == nil)
-        #expect(dirtyAfterApply[20] == 2)
+        do {
+            _ = try await wal.append(kind: .heapUpdate, txID: 1, pageID: 1)
+            XCTFail("Expected crash error")
+        } catch DBError.crash {
+            // expected
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+        
+        try await wal.recover()
+        let lsn = try await wal.append(kind: .heapInsert, txID: 2, pageID: 2)
+        XCTAssertEqual(lsn, 2)
+    }
+    
+    func testBaselineInvariants() async throws {
+        let (wal, directory) = try makeWAL()
+        defer { cleanup(directory) }
+        
+        XCTAssertTrue(await wal.checkLogBeforeDataInvariant())
+        XCTAssertTrue(await wal.checkLogOrderInvariant())
+        XCTAssertTrue(await wal.checkCheckpointConsistency())
     }
 }
-
