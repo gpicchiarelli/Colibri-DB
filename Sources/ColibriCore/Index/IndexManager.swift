@@ -117,12 +117,15 @@ public actor IndexManagerActor {
     /// Buffer manager
     private let bufferManager: BufferManager
     
+    /// Logger
+    private let logger: ColibriLogger
+    
     // MARK: - Initialization
     
     public init(storageManager: StorageManager, bufferManager: BufferManager) {
         self.storageManager = storageManager
         self.bufferManager = bufferManager
-        self.logger = ColibriLogger(label: "colibri.index")
+        self.logger = ColibriLogger()
         
         // TLA+ Init
         self.indexes = [:]

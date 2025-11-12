@@ -62,7 +62,7 @@ public actor DatabaseServer {
     public init(config: Configuration) throws {
         self.config = config
         self.database = nil  // Will be set by setDatabase()
-        self.logger = ColibriLogger(label: "colibri.server")
+        self.logger = ColibriLogger()
     }
     
     /// Set the database instance (must be called before start())

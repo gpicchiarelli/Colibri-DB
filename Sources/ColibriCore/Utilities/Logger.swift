@@ -310,6 +310,11 @@ public actor Logger {
     }
 }
 
+// MARK: - Type Alias for Compatibility
+
+/// Type alias for ColibriLogger to maintain compatibility with existing code
+public typealias ColibriLogger = Logger
+
 // MARK: - Global Logger Instance
 
 /// Global logger instance for ColibrìDB

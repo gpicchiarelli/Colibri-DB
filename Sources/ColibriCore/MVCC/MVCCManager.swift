@@ -117,7 +117,7 @@ public actor MVCCManager {
         // Create default managers
         self.transactionManager = DefaultMVCCTransactionManager()
         self.lockManager = DefaultMVCCLockManager()
-        self.logger = ColibriLogger(label: "colibri.mvcc")
+        self.logger = ColibriLogger()
         
         // TLA+ Init
         self.versions = [:]
@@ -134,7 +134,7 @@ public actor MVCCManager {
     public init(transactionManager: MVCCTransactionManager, lockManager: MVCCLockManager) {
         self.transactionManager = transactionManager
         self.lockManager = lockManager
-        self.logger = ColibriLogger(label: "colibri.mvcc")
+        self.logger = ColibriLogger()
         
         // TLA+ Init
         self.versions = [:]
@@ -289,7 +289,7 @@ public actor MVCCManager {
             minActiveTx = activeTx.min() ?? 0
         }
         
-        await logger.warn("Aborted transaction", metadata: ["txId": "\(txId)"])
+        await logger.warning("Aborted transaction", metadata: ["txId": "\(txId)"])
     }
     
     /// Vacuum

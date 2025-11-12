@@ -1,0 +1,58 @@
+import XCTest
+@testable import ColibriCore
+
+/// Contract tests: parametric, property-based
+final class IndexContractTests: XCTestCase {
+    
+    // MARK: - Contract: insert→seek returns value
+    func testInsertSeekContract() async throws {
+        let index: IndexProtocol = BTreeIndexMinimal()
+        
+        try await index.insert(key: .int(42), value: .string("test"))
+        let result = try await index.seek(key: .int(42))
+        
+        XCTAssertEqual(result, .string("test"), "Contract: insert→seek must return inserted value")
+    }
+    
+    // MARK: - Contract: scan returns ordered sequence
+    func testScanOrderedContract() async throws {
+        let index: IndexProtocol = BTreeIndexMinimal()
+        
+        try await index.insert(key: .int(3), value: .int(30))
+        try await index.insert(key: .int(1), value: .int(10))
+        try await index.insert(key: .int(2), value: .int(20))
+        
+        let results = try await index.scan(start: .int(1), end: .int(4))
+        
+        XCTAssertEqual(results.count, 3, "Scan must return all keys in range")
+        XCTAssertEqual(results[0].0, .int(1), "Scan must be ordered")
+        XCTAssertEqual(results[1].0, .int(2), "Scan must be ordered")
+        XCTAssertEqual(results[2].0, .int(3), "Scan must be ordered")
+    }
+    
+    // MARK: - Contract: delete reduces cardinality
+    func testDeleteContract() async throws {
+        let index: IndexProtocol = BTreeIndexMinimal()
+        
+        try await index.insert(key: .int(1), value: .int(10))
+        try await index.delete(key: .int(1))
+        
+        let result = try await index.seek(key: .int(1))
+        XCTAssertNil(result, "Delete must remove key")
+    }
+    
+    // MARK: - Contract: no phantom keys
+    func testNoPhantomKeys() async throws {
+        let index: IndexProtocol = BTreeIndexMinimal()
+        
+        // Insert and delete
+        try await index.insert(key: .int(1), value: .int(10))
+        try await index.delete(key: .int(1))
+        
+        // Scan should not return deleted key
+        let results = try await index.scan(start: .int(1), end: .int(2))
+        XCTAssertTrue(results.isEmpty, "No phantom keys after delete")
+    }
+}
+
+
