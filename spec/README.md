@@ -2,7 +2,7 @@
 
 > **Specifiche formali complete per verifica di correttezza del database**
 
-Questo directory contiene tutte le specifiche TLA+ per ColibrìDB, un database relazionale formalmente verificato implementato in Swift 6.2. Ogni specifica definisce invarianti, proprietà di liveness e comportamenti del sistema in modo matematicamente rigoroso.
+Questo directory contiene tutte le specifiche TLA+ per ColibrìDB, un database relazionale formalmente verificato implementato in Swift 6.0. Ogni specifica definisce invarianti, proprietà di liveness e comportamenti del sistema in modo matematicamente rigoroso.
 
 ## 📊 Panoramica
 

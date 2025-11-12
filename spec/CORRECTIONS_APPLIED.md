@@ -331,7 +331,7 @@ Le funzioni `Max()`, `Min()`, e `Range()` erano già presenti in CORE.tla e funz
 - **TLA+ Manual**: Leslie Lamport
 - **Specifying Systems**: Leslie Lamport
 - **TLA+ in Practice**: Chris Newcombe et al.
-- **ColibrìDB Documentation**: /docs/wiki/
+- **ColibrìDB Documentation**: /docs/
 
 ---
 

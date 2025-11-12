@@ -10,7 +10,7 @@
     - any-glob-to-any-file: 
       - 'Sources/ColibriCore/Storage/WAL/**'
       - 'Tests/ColibriCoreTests/*WAL*'
-      - 'specs/WAL.*'
+      - 'spec/WAL.*'
 
 'MVCC':
   - changed-files:
@@ -18,14 +18,14 @@
       - 'Sources/ColibriCore/Concurrency/Transactions/MVCC.swift'
       - 'Sources/ColibriCore/Concurrency/Transactions/VersionStore.swift'
       - 'Tests/ColibriCoreTests/*MVCC*'
-      - 'specs/MVCC.*'
+      - 'spec/MVCC.*'
 
 'Transactions':
   - changed-files:
     - any-glob-to-any-file:
       - 'Sources/ColibriCore/Concurrency/Transactions/**'
       - 'Tests/ColibriCoreTests/*Transaction*'
-      - 'specs/TransactionManager.*'
+      - 'spec/TransactionManager.*'
 
 'Lock Manager':
   - changed-files:
@@ -33,14 +33,14 @@
       - 'Sources/ColibriCore/Concurrency/Transactions/LockManager.swift'
       - 'Sources/ColibriCore/Concurrency/Transactions/DeadlockDetector.swift'
       - 'Tests/ColibriCoreTests/*Lock*'
-      - 'specs/LockManager.*'
+      - 'spec/LockManager.*'
 
 'BTree':
   - changed-files:
     - any-glob-to-any-file:
       - 'Sources/ColibriCore/Storage/Index/BTree*'
       - 'Tests/ColibriCoreTests/*BTree*'
-      - 'specs/BTree.*'
+      - 'spec/BTree.*'
 
 'Indexes':
   - changed-files:
@@ -59,7 +59,7 @@
     - any-glob-to-any-file:
       - 'Sources/ColibriCore/Storage/Buffer/**'
       - 'Tests/ColibriCoreTests/*Buffer*'
-      - 'specs/BufferPool.*'
+      - 'spec/BufferPool.*'
 
 'Heap Storage':
   - changed-files:
@@ -137,7 +137,7 @@
 'CLI':
   - changed-files:
     - any-glob-to-any-file:
-      - 'Sources/ColibrìCLI/**'
+      - 'Sources/ColibriCLI/**'
       - 'Sources/coldb/**'
       - 'Sources/coldb-dev/**'
 
@@ -160,7 +160,7 @@
 'TLA+ Specs':
   - changed-files:
     - any-glob-to-any-file:
-      - 'specs/**'
+      - 'spec/**'
       - 'rules/tla_modules.json'
 
 'Performance':
@@ -184,13 +184,15 @@
 'API Docs':
   - changed-files:
     - any-glob-to-any-file:
-      - 'docs/wiki/API-Reference.md'
+      - 'docs/api-reference.html'
       - 'docs/api/**'
 
-'Wiki':
+'Documentation':
   - changed-files:
     - any-glob-to-any-file:
-      - 'docs/wiki/**'
+      - 'docs/**'
+      - 'Documentation/**'
+      - '*.md'
 
 # ==============================================================================
 # Configuration & Build

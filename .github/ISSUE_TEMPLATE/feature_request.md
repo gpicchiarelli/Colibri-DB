@@ -100,7 +100,7 @@ assignees: ''
 6. **Integration**: Testing end-to-end
 
 ### Linee Guida per Contributori
-- Seguire convenzioni Swift 6.2
+- Seguire convenzioni Swift 6.0
 - Aggiungere test per nuove funzionalità
 - Documentare API pubbliche
 - Considerare impatto performance

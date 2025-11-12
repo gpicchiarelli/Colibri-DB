@@ -12,7 +12,7 @@
 This document certifies that the TLA+ specifications for ColibrìDB have been:
 
 1. ✅ **Model-Checked** using TLC Model Checker
-2. ✅ **Refined to Swift 6.2** with 100% coverage
+2. ✅ **Refined to Swift 6.0** with 100% coverage
 3. ✅ **Invariant-Verified** at runtime
 4. ✅ **Property-Tested** with 154 test cases
 5. ✅ **Integration-Validated** across all modules
@@ -348,7 +348,7 @@ MaxProbes = 10
 - [x] All invariants enforced at runtime
 - [x] All types Sendable-conformant
 - [x] Actor isolation verified
-- [x] No data races (Swift 6.2 strict mode)
+- [x] No data races (Swift 6.0 strict mode)
 - [x] Zero compilation errors
 - [x] Zero compilation warnings
 
@@ -606,7 +606,7 @@ Test Suite 'TLARefinementIntegrationTests' passed at ...
 
 | Standard | Requirement | Status |
 |----------|-------------|--------|
-| Swift 6.2 | Compiles | ✅ Zero errors |
+| Swift 6.0 | Compiles | ✅ Zero errors |
 | Sendable | Conformance | ✅ All types |
 | Actor Isolation | Verified | ✅ No data races |
 | Async/Await | Proper use | ✅ All I/O |
@@ -628,7 +628,7 @@ Test Suite 'TLARefinementIntegrationTests' passed at ...
 
 ### Concurrency Safety
 
-- ✅ **Zero Data Races**: Swift 6.2 strict concurrency verified
+- ✅ **Zero Data Races**: Swift 6.0 strict concurrency verified
 - ✅ **Actor Isolation**: All shared state actor-protected
 - ✅ **Sendable Conformance**: All types crossing isolation boundaries are Sendable
 - ✅ **No Unsafe Code**: No `nonisolated(unsafe)` in critical paths

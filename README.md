@@ -3,7 +3,7 @@
 > **RDBMS sperimentale in Swift con verifica formale TLA+**
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/gpicchiarelli/Colibri-DB/ci.yml?branch=main&style=flat-square)](https://github.com/gpicchiarelli/Colibri-DB/actions/workflows/ci.yml)
-[![Swift](https://img.shields.io/badge/Swift-6.2-orange.svg?style=flat-square)](https://swift.org)
+[![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg?style=flat-square)](https://swift.org)
 [![Platform](https://img.shields.io/badge/platform-macOS%2013%2B-lightgrey.svg?style=flat-square)](https://developer.apple.com/macos/)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg?style=flat-square)](LICENSE)
 [![TLA+ Specs](https://img.shields.io/badge/TLA%2B-69%20modules-blue.svg?style=flat-square)](spec/)
@@ -17,7 +17,7 @@
 
 ## 🎯 Panoramica
 
-ColibrìDB è un database relazionale production-ready implementato in Swift 6.2 che combina:
+ColibrìDB è un database relazionale production-ready implementato in Swift 6.0 che combina:
 
 - **Verifica Formale**: 69 specifiche TLA+ per ogni componente critico
 - **Architettura Moderna**: Swift actors, async/await, type safety
@@ -147,8 +147,8 @@ Accogliamo contributi! Consulta [CONTRIBUTING.md](CONTRIBUTING.md) per iniziare.
 
 - **[Architettura](docs/architecture.html)** - Panoramica completa
 - **[TLA+ Specs](docs/tla-specifications.html)** - Specifiche formali
-- **[API Reference](docs/wiki/API-Reference.md)** - Riferimento completo
-- **[Quick Start](docs/wiki/Quick-Start.md)** - Guida rapida
+- **[API Reference](docs/api-reference.html)** - Riferimento completo
+- **[Quick Start](docs/quick-start.html)** - Guida rapida
 
 ## 📄 Licenza
 

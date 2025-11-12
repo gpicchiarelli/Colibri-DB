@@ -33,7 +33,7 @@ ColibrDB adotta un approccio multi-livello per garantire qualità e performance:
 ## 🔧 Framework di Testing
 
 ### Swift Testing (Primario)
-Swift 6.2 introduce il nuovo framework di testing nativo:
+Swift 6.0 introduce il nuovo framework di testing nativo:
 
 ```swift
 import Testing
@@ -451,7 +451,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: swift-actions/setup-swift@v1
         with:
-          swift-version: "6.2"
+          swift-version: "6.0"
       
       - name: Run Tests
         run: swift test
@@ -469,7 +469,7 @@ jobs:
 ```yaml
 strategy:
   matrix:
-    swift-version: ["6.0", "6.1", "6.2"]
+    swift-version: ["6.0"]
     platform: ["macos-latest", "ubuntu-latest"]
     configuration: ["debug", "release"]
 ```

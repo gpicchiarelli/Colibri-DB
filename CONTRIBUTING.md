@@ -5,14 +5,14 @@ Grazie per il tuo interesse a contribuire a ColibrìDB! Questo documento fornisc
 
 ## 🎯 Panoramica
 
-ColibrìDB è un database relazionale formalmente verificato implementato in Swift 6.2. Il progetto combina rigorosità accademica con implementazione pratica, utilizzando TLA+ per la verifica formale e Swift actors per la concorrenza sicura.
+ColibrìDB è un database relazionale formalmente verificato implementato in Swift 6.0. Il progetto combina rigorosità accademica con implementazione pratica, utilizzando TLA+ per la verifica formale e Swift actors per la concorrenza sicura.
 
 ## 🚀 Quick Start
 
 ### Prerequisiti
 
 - **macOS 13+** (Apple Silicon consigliato per performance ottimali)
-- **Swift 6.2** (o toolchain compatibile)
+- **Swift 6.0** (o toolchain compatibile)
 - **Xcode 15+** (per sviluppo e debugging)
 - **TLA+ Tools** (opzionale, per verifiche formali)
 - **Git** (per version control)
@@ -74,7 +74,7 @@ git checkout -b fix/your-bug-description
 
 #### Linee Guida Codice
 
-- **Swift 6.2**: Usa le funzionalità più recenti del linguaggio
+- **Swift 6.0**: Usa le funzionalità più recenti del linguaggio
 - **Actor Model**: Usa actors per concorrenza sicura
 - **Async/Await**: Preferisci async/await su callback
 - **Error Handling**: Usa `Result` types e `throws` appropriatamente
@@ -350,9 +350,9 @@ swift package --disable-sandbox preview-documentation
 
 ### Aggiornamento Wiki
 
-La documentazione wiki si trova in `docs/wiki/`. Per aggiornamenti:
+La documentazione si trova in `docs/`. Per aggiornamenti:
 
-1. Modifica i file markdown appropriati
+1. Modifica i file HTML appropriati nella directory `docs/`
 2. Testa la formattazione localmente
 3. Invia PR con le modifiche
 
@@ -379,7 +379,7 @@ Se applicabile, aggiungi screenshot.
 
 ## Ambiente
 - OS: [e.g. macOS 13.0]
-- Swift: [e.g. 6.2]
+- Swift: [e.g. 6.0]
 - Versione: [e.g. 1.0.0]
 
 ## Log
@@ -480,7 +480,7 @@ Grazie per il tuo interesse a contribuire a ColibrìDB! Ogni contributo, grande 
 
 ### Prerequisites
 - macOS 13+
-- Swift 6.2+
+- Swift 6.0+
 - Xcode 15+ (recommended)
 
 ### Local Build and Test

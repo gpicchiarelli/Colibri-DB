@@ -316,7 +316,7 @@ public struct IndexFactory {
 - **NSLock**: Per sezioni critiche brevi
 - **NSRecursiveLock**: Per lock annidati
 - **DispatchQueue**: Per operazioni asincrone
-- **Actor**: Per stato condiviso (Swift 6.2)
+- **Actor**: Per stato condiviso (Swift 6.0)
 
 ### Esempio di Thread Safety
 ```swift

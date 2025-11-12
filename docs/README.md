@@ -2,7 +2,7 @@
 
 **Documentazione completa per il database relazionale formalmente verificato**
 
-Questa è la documentazione per ColibrìDB, un RDBMS production-ready implementato in Swift 6.2 con verifica formale TLA+.
+Questa è la documentazione per ColibrìDB, un RDBMS production-ready implementato in Swift 6.0 con verifica formale TLA+.
 
 ## 🚀 Quick Start
 
