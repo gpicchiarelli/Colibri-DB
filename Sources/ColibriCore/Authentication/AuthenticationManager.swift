@@ -94,6 +94,11 @@ public final class AuthenticationManager: @unchecked Sendable {
     // MARK: - State
     private let lock = NSLock()
     
+    // MARK: - Password hashing parameters
+    private let passwordSaltLength = 16
+    private let passwordDerivedKeyLength = 32
+    private let passwordIterations = 150_000
+    
     // MARK: - State Variables (TLA+ vars)
     
     /// User registry
@@ -150,7 +155,7 @@ public final class AuthenticationManager: @unchecked Sendable {
         
         // TLA+: Generate salt and hash password
         let salt = generateSalt()
-        let passwordHash = hashPassword(password, salt: salt)
+        let passwordHash = try hashPassword(password, salt: salt)
         
         // TLA+: Create user metadata
         let userMetadata = UserMetadata(
@@ -232,8 +237,8 @@ public final class AuthenticationManager: @unchecked Sendable {
         }
         
         // TLA+: Verify password
-        let providedHash = hashPassword(password, salt: user.salt)
-        guard providedHash == user.passwordHash else {
+        let isPasswordValid = try verifyPassword(password, storedHash: user.passwordHash, salt: user.salt)
+        guard isPasswordValid else {
             // Increment failed attempts
             failedAttempts[username, default: 0] += 1
             
@@ -362,18 +367,91 @@ public final class AuthenticationManager: @unchecked Sendable {
     
     /// Generate random salt
     private func generateSalt() -> String {
-        let salt = Data((0..<32).map { _ in UInt8.random(in: 0...255) })
+        let salt = Data((0..<passwordSaltLength).map { _ in UInt8.random(in: 0...255) })
         return salt.base64EncodedString()
     }
     
     /// Hash password with salt
-    private func hashPassword(_ password: String, salt: String) -> String {
-        let passwordData = password.data(using: .utf8)!
-        let saltData = Data(base64Encoded: salt)!
-        let combined = passwordData + saltData
+    private func hashPassword(_ password: String, salt: String) throws -> String {
+        guard let saltData = Data(base64Encoded: salt) else {
+            throw AuthenticationError.invalidCredentials
+        }
+        let derivedKey = try pbkdf2SHA256(password: password, salt: saltData, iterations: passwordIterations, keyLength: passwordDerivedKeyLength)
+        return derivedKey.base64EncodedString()
+    }
+    
+    /// Verify a password against stored hash and salt
+    private func verifyPassword(_ password: String, storedHash: String, salt: String) throws -> Bool {
+        guard
+            let saltData = Data(base64Encoded: salt),
+            let storedHashData = Data(base64Encoded: storedHash)
+        else {
+            return false
+        }
+        let derivedKey = try pbkdf2SHA256(password: password, salt: saltData, iterations: passwordIterations, keyLength: passwordDerivedKeyLength)
+        return constantTimeCompare(storedHashData, derivedKey)
+    }
+    
+    /// PBKDF2 using HMAC-SHA256
+    private func pbkdf2SHA256(password: String, salt: Data, iterations: Int, keyLength: Int) throws -> Data {
+        guard iterations > 0 else {
+            throw AuthenticationError.invalidCredentials
+        }
+        guard let passwordData = password.data(using: .utf8) else {
+            throw AuthenticationError.invalidCredentials
+        }
         
-        let hash = SHA256.hash(data: combined)
-        return Data(hash).base64EncodedString()
+        let hLen = SHA256.Digest.byteCount
+        let blocks = Int(ceil(Double(keyLength) / Double(hLen)))
+        let passwordKey = SymmetricKey(data: passwordData)
+        var derivedKey = Data()
+        
+        for blockIndex in 1...blocks {
+            var saltAndBlock = Data()
+            saltAndBlock.append(salt)
+            saltAndBlock.append(bigEndianData(of: UInt32(blockIndex)))
+            
+            var u = Data(HMAC<SHA256>.authenticationCode(for: saltAndBlock, using: passwordKey))
+            var t = u
+            
+            if iterations > 1 {
+                for _ in 2...iterations {
+                    u = Data(HMAC<SHA256>.authenticationCode(for: u, using: passwordKey))
+                    t = xor(t, u)
+                }
+            }
+            
+            derivedKey.append(t)
+        }
+        
+        return derivedKey.prefix(keyLength)
+    }
+    
+    /// Constant-time comparison to avoid timing attacks
+    private func constantTimeCompare(_ a: Data, _ b: Data) -> Bool {
+        guard a.count == b.count else {
+            return false
+        }
+        var difference: UInt8 = 0
+        for i in 0..<a.count {
+            difference |= a[i] ^ b[i]
+        }
+        return difference == 0
+    }
+    
+    /// XOR two Data values of equal length
+    private func xor(_ lhs: Data, _ rhs: Data) -> Data {
+        precondition(lhs.count == rhs.count, "Data lengths must match for XOR")
+        var result = Data(capacity: lhs.count)
+        for (byteLhs, byteRhs) in zip(lhs, rhs) {
+            result.append(byteLhs ^ byteRhs)
+        }
+        return result
+    }
+    
+    /// Encode integer as 4-byte big endian data
+    private func bigEndianData(of value: UInt32) -> Data {
+        withUnsafeBytes(of: value.bigEndian) { Data($0) }
     }
     
     /// Generate session ID
