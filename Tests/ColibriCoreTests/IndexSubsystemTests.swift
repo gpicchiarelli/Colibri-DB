@@ -21,7 +21,7 @@ struct IndexSubsystemTests {
         let subsystem = IndexSubsystem()
         
         // Assert
-        // subsystem is not optional, so no need to check for nil
+        #expect(subsystem != nil)
         let stats = await subsystem.getStats()
         #expect(stats.totalIndexes == 0)
     }
@@ -72,124 +72,124 @@ struct IndexSubsystemTests {
         #expect(index?.unique == true)
     }
     
-    @Test func testCreateBTreeIndexWithMultipleColumns() async throws {
+    @Test func testCreateARTIndex() async throws {
         // Arrange
         let subsystem = IndexSubsystem()
         
         // Act
         try await subsystem.createIndex(
             indexName: "users_name",
-            indexType: .btree,
+            indexType: .art,
             tableName: "users",
             columns: ["first_name", "last_name"]
         )
         
         // Assert
         let index = await subsystem.getIndex(indexName: "users_name")
-        #expect(index?.indexType == .btree)
+        #expect(index?.indexType == .art)
         #expect(index?.columns == ["first_name", "last_name"])
     }
     
-    @Test func testCreateHashIndexWithTimestamp() async throws {
+    @Test func testCreateLSMIndex() async throws {
         // Arrange
         let subsystem = IndexSubsystem()
         
         // Act
         try await subsystem.createIndex(
             indexName: "logs_timestamp",
-            indexType: .hash,
+            indexType: .lsm,
             tableName: "logs",
             columns: ["timestamp"]
         )
         
         // Assert
         let index = await subsystem.getIndex(indexName: "logs_timestamp")
-        #expect(index?.indexType == .hash)
+        #expect(index?.indexType == .lsm)
     }
     
-    @Test func testCreateBTreeIndexForEvents() async throws {
+    @Test func testCreateFractalIndex() async throws {
         // Arrange
         let subsystem = IndexSubsystem()
         
         // Act
         try await subsystem.createIndex(
             indexName: "events_time",
-            indexType: .btree,
+            indexType: .fractal,
             tableName: "events",
             columns: ["created_at"]
         )
         
         // Assert
         let index = await subsystem.getIndex(indexName: "events_time")
-        #expect(index?.indexType == .btree)
+        #expect(index?.indexType == .fractal)
     }
     
-    @Test func testCreateHashIndexForUsers() async throws {
+    @Test func testCreateBloomFilter() async throws {
         // Arrange
         let subsystem = IndexSubsystem()
         
         // Act
         try await subsystem.createIndex(
             indexName: "users_exists",
-            indexType: .hash,
+            indexType: .bloom,
             tableName: "users",
             columns: ["id"]
         )
         
         // Assert
         let index = await subsystem.getIndex(indexName: "users_exists")
-        #expect(index?.indexType == .hash)
+        #expect(index?.indexType == .bloom)
     }
     
-    @Test func testCreateBTreeIndexForScores() async throws {
+    @Test func testCreateSkipListIndex() async throws {
         // Arrange
         let subsystem = IndexSubsystem()
         
         // Act
         try await subsystem.createIndex(
             indexName: "scores_rank",
-            indexType: .btree,
+            indexType: .skiplist,
             tableName: "scores",
             columns: ["score"]
         )
         
         // Assert
         let index = await subsystem.getIndex(indexName: "scores_rank")
-        #expect(index?.indexType == .btree)
+        #expect(index?.indexType == .skiplist)
     }
     
-    @Test func testCreateHashIndexForCache() async throws {
+    @Test func testCreateTTreeIndex() async throws {
         // Arrange
         let subsystem = IndexSubsystem()
         
         // Act
         try await subsystem.createIndex(
             indexName: "cache_key",
-            indexType: .hash,
+            indexType: .ttree,
             tableName: "cache",
             columns: ["key"]
         )
         
         // Assert
         let index = await subsystem.getIndex(indexName: "cache_key")
-        #expect(index?.indexType == .hash)
+        #expect(index?.indexType == .ttree)
     }
     
-    @Test func testCreateBTreeIndexForPaths() async throws {
+    @Test func testCreateRadixIndex() async throws {
         // Arrange
         let subsystem = IndexSubsystem()
         
         // Act
         try await subsystem.createIndex(
             indexName: "paths_prefix",
-            indexType: .btree,
+            indexType: .radix,
             tableName: "paths",
             columns: ["path"]
         )
         
         // Assert
         let index = await subsystem.getIndex(indexName: "paths_prefix")
-        #expect(index?.indexType == .btree)
+        #expect(index?.indexType == .radix)
     }
     
     @Test func testCreateDuplicateIndexFails() async throws {
@@ -302,7 +302,7 @@ struct IndexSubsystemTests {
         let results = try await subsystem.search(tableName: "users", column: "email", key: "test@example.com")
         
         // Assert
-        // results is not optional, so no need to check for nil
+        #expect(results != nil)
         let stats = await subsystem.getStats()
         #expect(stats.totalSearches == 1)
     }
@@ -464,7 +464,7 @@ struct IndexSubsystemTests {
         )
         try await subsystem.createIndex(
             indexName: "table2_index1",
-            indexType: .btree,
+            indexType: .art,
             tableName: "table2",
             columns: ["col3"]
         )
@@ -664,7 +664,7 @@ struct IndexSubsystemTests {
         )
         
         try await subsystem.createIndex(
-            indexName: "btree_index2",
+            indexName: "art_index",
             indexType: .btree,
             tableName: "test_table",
             columns: ["name"]
@@ -673,14 +673,14 @@ struct IndexSubsystemTests {
         // Assert
         let btreeIndex = await subsystem.getIndex(indexName: "btree_index")
         let hashIndex = await subsystem.getIndex(indexName: "hash_index")
-        let btreeIndex2 = await subsystem.getIndex(indexName: "btree_index2")
+        let artIndex = await subsystem.getIndex(indexName: "art_index")
         
         #expect(btreeIndex?.indexType == .btree)
         #expect(hashIndex?.indexType == .hash)
-        #expect(btreeIndex2?.indexType == .btree)
+        #expect(artIndex?.indexType == .btree)
         
         #expect(btreeIndex?.unique == true)
         #expect(hashIndex?.unique == true)
-        #expect(btreeIndex2?.unique == false)
+        #expect(artIndex?.unique == false)
     }
 }

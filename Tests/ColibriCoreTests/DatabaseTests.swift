@@ -60,7 +60,8 @@ struct DatabaseTests {
         try await db.shutdown()
         
         // Verify database is not started after shutdown
-        try TestAssertions.assertFalse(await db.isDatabaseRunning(), "Database should not be started after shutdown")
+        let stats = await db.getStatistics()
+        try try TestAssertions.assertFalse(await db.isDatabaseRunning(), "Database should not be started after shutdown")
     }
     
     /// Test table creation
@@ -78,9 +79,14 @@ struct DatabaseTests {
         let tableDef = TestDataGenerator.generateTableDefinition(name: "test_users")
         try await db.createTable(tableDef)
         
-        // Verify table was created (simplified check)
-        let stats = await db.getStatistics()
-        try TestAssertions.assertEqual(stats.tablesCreated, 1, "Should have created 1 table")
+        // Verify table exists
+        let retrievedTable = await db.getTable("test_users")
+        try try TestAssertions.assertNotNil(retrievedTable, "Table should exist after creation")
+        try try TestAssertions.assertEqual(retrievedTable!.name, "test_users", "Table name should match")
+        
+        // Verify table is in list
+        let tables = await db.listTables()
+        try try TestAssertions.assertContains(tables, "test_users", "Table should be in list")
     }
     
     /// Test table dropping
@@ -98,16 +104,19 @@ struct DatabaseTests {
         let tableDef = TestDataGenerator.generateTableDefinition(name: "test_users")
         try await db.createTable(tableDef)
         
-        // Verify table was created
-        let statsBefore = await db.getStatistics()
-        try TestAssertions.assertEqual(statsBefore.tablesCreated, 1, "Should have created 1 table")
+        // Verify table exists
+        let tablesBefore = await db.listTables()
+        try try TestAssertions.assertContains(tablesBefore, "test_users", "Table should exist before drop")
         
         // Drop the table
         try await db.dropTable("test_users")
         
-        // Verify table was dropped
-        let statsAfter = await db.getStatistics()
-        try TestAssertions.assertEqual(statsAfter.tablesDropped, 1, "Should have dropped 1 table")
+        // Verify table no longer exists
+        let tablesAfter = await db.listTables()
+        try try TestAssertions.assertNotContains(tablesAfter, "test_users", "Table should not exist after drop")
+        
+        let retrievedTable = await db.getTable("test_users")
+        try try TestAssertions.assertNil(retrievedTable, "Table should be nil after drop")
     }
     
     /// Test transaction management
@@ -122,18 +131,18 @@ struct DatabaseTests {
         try await db.start()
         
         // Begin a transaction
-        let txID = try await db.beginTransaction()
-        try TestAssertions.assertTrue(txID > 0, "Transaction ID should be positive")
+        let txID = try await db.beginTransaction(isolationLevel: .repeatableRead)
+        try try TestAssertions.assertTrue(txID > 0, "Transaction ID should be positive")
         
         // Commit the transaction
-        try await db.commit(txId: txID)
+        try await db.commit(txID)
         
         // Begin another transaction
-        let txID2 = try await db.beginTransaction()
-        try TestAssertions.assertNotEqual(txID2, txID, "Transaction IDs should be different")
+        let txID2 = try await db.beginTransaction(isolationLevel: .readCommitted)
+        try try TestAssertions.assertNotEqual(txID2, txID, "Transaction IDs should be different")
         
         // Abort the transaction
-        try await db.abort(txId: txID2)
+        try await db.abort(txID2)
     }
     
     /// Test data operations
@@ -156,31 +165,59 @@ struct DatabaseTests {
         
         // Insert a row
         let testRow = TestDataGenerator.generateTestRow(id: 1, name: "Alice", age: 25, salary: 50000.0)
-        let rid = try await db.insert(table: "test_users", row: testRow, txId: txID)
-        try TestAssertions.assertTrue(rid.pageID > 0, "Row ID should be positive")
+        let rid = try await db.insert(table: "test_users", row: testRow, txID: txID)
+        try try TestAssertions.assertTrue(rid > 0, "Row ID should be positive")
+        
+        // Read the row back
+        let retrievedRow = try await db.read(rid: rid)
+        try try TestAssertions.assertEqual(retrievedRow.values["id"], .int(1), "ID should match")
+        try try TestAssertions.assertEqual(retrievedRow.values["name"], .string("Alice"), "Name should match")
+        try try TestAssertions.assertEqual(retrievedRow.values["age"], .int(25), "Age should match")
+        try try TestAssertions.assertEqual(retrievedRow.values["salary"], .double(50000.0), "Salary should match")
         
         // Update the row
         let updatedRow = TestDataGenerator.generateTestRow(id: 1, name: "Alice Updated", age: 26, salary: 55000.0)
-        try await db.update(table: "test_users", rid: rid, row: updatedRow, txId: txID)
+        try await db.update(rid: rid, newRow: updatedRow, txID: txID)
+        
+        // Read the updated row
+        let retrievedUpdatedRow = try await db.read(rid: rid)
+        try try TestAssertions.assertEqual(retrievedUpdatedRow.values["name"], .string("Alice Updated"), "Updated name should match")
+        try try TestAssertions.assertEqual(retrievedUpdatedRow.values["age"], .int(26), "Updated age should match")
         
         // Delete the row
-        try await db.delete(table: "test_users", rid: rid, txId: txID)
+        try await db.delete(rid: rid, txID: txID)
         
         // Commit transaction
-        try await db.commit(txId: txID)
-        
-        // Verify statistics
-        let stats = await db.getStatistics()
-        try TestAssertions.assertEqual(stats.rowsInserted, 1, "Should have inserted 1 row")
-        try TestAssertions.assertEqual(stats.rowsUpdated, 1, "Should have updated 1 row")
-        try TestAssertions.assertEqual(stats.rowsDeleted, 1, "Should have deleted 1 row")
+        try await db.commit(txID)
     }
     
-    /// Test authentication (simplified - not implemented yet)
+    /// Test authentication
     @Test("Authentication")
     func testAuthentication() async throws {
-        // Skip authentication test for now as it's not implemented
-        try TestAssertions.assertTrue(true, "Authentication test placeholder")
+        let tempDir = try TestUtils.createTempDirectory()
+        defer { try? TestUtils.cleanupTempDirectory(tempDir) }
+        
+        let config = TestUtils.createTestConfig(dataDirectory: tempDir)
+        
+        let db = try ColibrìDB(config: config)
+        try await db.start()
+        
+        // Create a user
+        try await db.createUser(username: "testuser", password: "testpass")
+        
+        // Authenticate the user
+        let token = try await db.authenticate(username: "testuser", password: "testpass")
+        try try TestAssertions.assertNotNil(token, "Authentication token should not be nil")
+        
+        // Validate the session
+        let validatedUser = await db.validateSession(token)
+        try try TestAssertions.assertNotNil(validatedUser, "Session should be valid")
+        try try TestAssertions.assertEqual(validatedUser!, "testuser", "Validated user should match")
+        
+        // Test invalid authentication
+        try try TestAssertions.assertAsyncThrows({
+            try await db.authenticate(username: "testuser", password: "wrongpass")
+        }, "Invalid password should throw")
     }
     
     /// Test database statistics
@@ -195,29 +232,54 @@ struct DatabaseTests {
         
         // Get statistics before start
         let statsBefore = await db.getStatistics()
-        try TestAssertions.assertEqual(statsBefore.transactionsStarted, 0, "Should have no transactions before start")
+        try try TestAssertions.assertFalse(statsBefore.isStarted, "Database should not be started")
         
         // Start database
         try await db.start()
         
         // Get statistics after start
         let statsAfter = await db.getStatistics()
-        try TestAssertions.assertNotNil(statsAfter.startTime, "Start time should be set")
-        try TestAssertions.assertEqual(statsAfter.bufferPoolSize, 10, "Buffer pool size should match config")
+        try try TestAssertions.assertTrue(statsAfter.isStarted, "Database should be started")
+        try try TestAssertions.assertEqual(statsAfter.bufferPoolSize, 100, "Buffer pool size should match config")
+        try try TestAssertions.assertTrue(statsAfter.currentLSN >= 0, "Current LSN should be non-negative")
     }
     
-    /// Test checkpoint operation (simplified - not implemented yet)
+    /// Test checkpoint operation
     @Test("Checkpoint Operation")
     func testCheckpointOperation() async throws {
-        // Skip checkpoint test for now as it's not implemented
-        try TestAssertions.assertTrue(true, "Checkpoint test placeholder")
+        let tempDir = try TestUtils.createTempDirectory()
+        defer { try? TestUtils.cleanupTempDirectory(tempDir) }
+        
+        let config = TestUtils.createTestConfig(dataDirectory: tempDir)
+        
+        let db = try ColibrìDB(config: config)
+        try await db.start()
+        
+        // Perform checkpoint
+        try await db.checkpoint()
+        
+        // Verify checkpoint completed without error
+        let stats = await db.getStatistics()
+        try try TestAssertions.assertTrue(await db.isDatabaseRunning(), "Database should still be started after checkpoint")
     }
     
-    /// Test vacuum operation (simplified - not implemented yet)
+    /// Test vacuum operation
     @Test("Vacuum Operation")
     func testVacuumOperation() async throws {
-        // Skip vacuum test for now as it's not implemented
-        try TestAssertions.assertTrue(true, "Vacuum test placeholder")
+        let tempDir = try TestUtils.createTempDirectory()
+        defer { try? TestUtils.cleanupTempDirectory(tempDir) }
+        
+        let config = TestUtils.createTestConfig(dataDirectory: tempDir)
+        
+        let db = try ColibrìDB(config: config)
+        try await db.start()
+        
+        // Perform vacuum
+        await db.vacuum()
+        
+        // Verify vacuum completed without error
+        let stats = await db.getStatistics()
+        try try TestAssertions.assertTrue(await db.isDatabaseRunning(), "Database should still be started after vacuum")
     }
     
     /// Test multiple concurrent transactions
@@ -245,20 +307,18 @@ struct DatabaseTests {
             
             // Insert a row in each transaction
             let testRow = TestDataGenerator.generateTestRow(id: i + 1, name: "User\(i + 1)", age: 20 + i, salary: 30000.0 + Double(i * 1000))
-            let rid = try await db.insert(table: "test_users", row: testRow, txId: txID)
-            try TestAssertions.assertTrue(rid.pageID > 0, "Row ID should be positive")
+            let rid = try await db.insert(table: "test_users", row: testRow, txID: txID)
+            try try TestAssertions.assertTrue(rid > 0, "Row ID should be positive")
         }
         
         // Commit all transactions
         for txID in transactionIDs {
-            try await db.commit(txId: txID)
+            try await db.commit(txID)
         }
         
         // Verify all transactions completed successfully
         let stats = await db.getStatistics()
-        try TestAssertions.assertTrue(await db.isDatabaseRunning(), "Database should still be started")
-        try TestAssertions.assertEqual(stats.transactionsStarted, transactionCount, "Should have started \(transactionCount) transactions")
-        try TestAssertions.assertEqual(stats.transactionsCommitted, transactionCount, "Should have committed \(transactionCount) transactions")
+        try try TestAssertions.assertTrue(await db.isDatabaseRunning(), "Database should still be started")
     }
     
     /// Test error handling
@@ -272,11 +332,11 @@ struct DatabaseTests {
         let db = try ColibrìDB(config: config)
         
         // Test operations before database start
-        try await TestAssertions.assertAsyncThrows({
+        try try TestAssertions.assertAsyncThrows({
             try await db.beginTransaction()
         }, "Should throw error when database not started")
         
-        try await TestAssertions.assertAsyncThrows({
+        try try TestAssertions.assertAsyncThrows({
             try await db.createTable(TestDataGenerator.generateTableDefinition())
         }, "Should throw error when database not started")
         
@@ -284,20 +344,20 @@ struct DatabaseTests {
         try await db.start()
         
         // Test invalid table operations
-        try await TestAssertions.assertAsyncThrows({
+        try try TestAssertions.assertAsyncThrows({
             try await db.dropTable("nonexistent_table")
         }, "Should throw error for non-existent table")
         
         // Test invalid transaction operations
         let txID = try await db.beginTransaction()
-        try await db.commit(txId: txID)
+        try await db.commit(txID)
         
-        try await TestAssertions.assertAsyncThrows({
-            try await db.commit(txId: txID)
+        try try TestAssertions.assertAsyncThrows({
+            try await db.commit(txID)
         }, "Should throw error for already committed transaction")
     }
     
-    /// Test database recovery (simplified - not fully implemented yet)
+    /// Test database recovery
     @Test("Database Recovery")
     func testDatabaseRecovery() async throws {
         let tempDir = try TestUtils.createTempDirectory()
@@ -315,8 +375,8 @@ struct DatabaseTests {
         
         let txID = try await db1.beginTransaction()
         let testRow = TestDataGenerator.generateTestRow(id: 1, name: "Alice", age: 25, salary: 50000.0)
-        let rid = try await db1.insert(table: "test_users", row: testRow, txId: txID)
-        try await db1.commit(txId: txID)
+        let rid = try await db1.insert(table: "test_users", row: testRow, txID: txID)
+        try await db1.commit(txID)
         
         // Shutdown first instance
         try await db1.shutdown()
@@ -325,8 +385,13 @@ struct DatabaseTests {
         let db2 = try ColibrìDB(config: config)
         try await db2.start()
         
-        // Verify database can start after recovery
-        try TestAssertions.assertTrue(await db2.isDatabaseRunning(), "Database should be running after recovery")
+        // Verify data was recovered
+        let retrievedRow = try await db2.read(rid: rid)
+        try try TestAssertions.assertEqual(retrievedRow.values["name"], .string("Alice"), "Data should be recovered")
+        
+        // Verify table exists
+        let tables = await db2.listTables()
+        try try TestAssertions.assertContains(tables, "test_users", "Table should be recovered")
         
         try await db2.shutdown()
     }
