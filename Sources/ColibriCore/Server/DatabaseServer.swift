@@ -72,10 +72,14 @@ public actor DatabaseServer {
     public func start() async throws {
         guard !isRunning else { return }
         
+        guard let db = database else {
+            throw DBError.internalError("Database not set")
+        }
+        
         print("Starting ColibrìDB Server on \(config.host):\(config.port)...")
         
         // Start database
-        try await database.start()
+        try await db.start()
         
         isRunning = true
         print("ColibrìDB Server started successfully")
@@ -84,6 +88,10 @@ public actor DatabaseServer {
     /// Stop the server
     public func stop() async throws {
         guard isRunning else { return }
+        
+        guard let db = database else {
+            throw DBError.internalError("Database not set")
+        }
         
         print("Stopping ColibrìDB Server...")
         
@@ -94,7 +102,7 @@ public actor DatabaseServer {
         connections.removeAll()
         
         // Shutdown database
-        try await database.shutdown()
+        try await db.shutdown()
         
         isRunning = false
         print("ColibrìDB Server stopped successfully")
@@ -108,11 +116,15 @@ public actor DatabaseServer {
             throw DBError.internalError("Server not running")
         }
         
+        guard let db = database else {
+            throw DBError.internalError("Database not set")
+        }
+        
         guard connections.count < config.maxConnections else {
             throw DBError.internalError("Max connections reached")
         }
         
-        let connection = ServerConnection(clientID: clientID, database: database)
+        let connection = ServerConnection(clientID: clientID, database: db)
         connections[clientID] = connection
         
         print("Client \(clientID) connected")
@@ -132,7 +144,9 @@ public actor DatabaseServer {
     
     /// Get server statistics
     public func getStatistics() async -> ServerStatistics {
-        let _ = await database.getStatistics()
+        if let db = database {
+            let _ = await db.getStatistics()
+        }
         
         return ServerStatistics(
             isRunning: isRunning,
