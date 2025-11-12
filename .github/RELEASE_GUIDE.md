@@ -224,7 +224,7 @@ end
 
 ### 4. Docker Image
 ```dockerfile
-FROM swift:6.2-focal
+FROM swift:6.0-focal
 
 WORKDIR /app
 COPY . .
@@ -348,7 +348,7 @@ swift run benchmarks --regression-test
 # Test compatibilità
 swift test --swift-version 6.0
 swift test --swift-version 6.1
-swift test --swift-version 6.2
+swift test --swift-version 6.0
 ```
 
 ## 🔧 Strumenti di Release

@@ -29,7 +29,7 @@ assignees: ''
 ## 🖥️ Ambiente
 <!-- Compila le informazioni sul tuo ambiente -->
 - **OS**: [es. macOS 14.0, Linux Ubuntu 22.04]
-- **Swift Version**: [es. 6.2]
+- **Swift Version**: [es. 6.0]
 - **ColibrDB Version**: [es. v0.1.0-alpha]
 - **Architecture**: [es. ARM64, x86_64]
 

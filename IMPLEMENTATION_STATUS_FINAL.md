@@ -375,7 +375,7 @@ This project demonstrates:
 - ✅ **This status report**
 - ✅ **Completeness report** (TLA_SWIFT_COMPLETENESS_REPORT.md)
 
-### Wiki Documentation (docs/wiki)
+### Documentation (docs/)
 
 Comprehensive 8-part guide:
 - Part 01: Foundations (Relational, Algebra, Transactions, Storage)

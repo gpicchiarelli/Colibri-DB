@@ -15,7 +15,7 @@ body:
         **Before submitting:**
         - Search existing issues to avoid duplicates
         - Make sure you're using the latest version
-        - Check the [Troubleshooting Guide](../../docs/wiki/Troubleshooting.md)
+        - Check the [Troubleshooting Guide](../../docs/troubleshooting.html)
 
   - type: textarea
     id: description

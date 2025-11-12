@@ -4,7 +4,7 @@
 //
 //  Created by Giacomo Picchiarelli on 2025-09-25.
 //
-//  A high-performance relational database management system written in Swift 6.2
+//  A high-performance relational database management system written in Swift 6.0
 //  with formal verification using TLA+ specifications.
 //
 // swift-tools-version: 6.0
@@ -27,7 +27,7 @@ let package = Package(
         .executable(name: "test-gc", targets: ["test-gc"])
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-testing", exact: "6.2.0"),
+        .package(url: "https://github.com/apple/swift-testing", from: "0.8.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
         .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.25.0"),
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.3.0"),

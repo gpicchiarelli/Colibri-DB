@@ -8,7 +8,7 @@
 
 ## Abstract
 
-We present a comprehensive case study of applying formal methods to database system implementation using TLA+ specification and Swift 6.2 refinement. We refined **7 core database modules** (query optimization, transaction management, concurrency control, MVCC, and indexing) from formal TLA+ specifications to production-ready Swift code with **100% coverage** of state variables, actions, and invariants.
+We present a comprehensive case study of applying formal methods to database system implementation using TLA+ specification and Swift 6.0 refinement. We refined **7 core database modules** (query optimization, transaction management, concurrency control, MVCC, and indexing) from formal TLA+ specifications to production-ready Swift code with **100% coverage** of state variables, actions, and invariants.
 
 Our methodology combines:
 1. **TLA+ formal specification** for each module
@@ -43,7 +43,7 @@ This paper makes four key contributions:
 
 1. **Complete TLA+ Specifications**: Formal models for 7 database modules (query optimization, constraints, transactions, locks, MVCC, B+Tree, hash index) totaling 2,987 lines of TLA+
 
-2. **Systematic Refinement Methodology**: Reusable process for mapping TLA+ to Swift 6.2, demonstrated on 46 state variables and 58 actions with 100% coverage
+2. **Systematic Refinement Methodology**: Reusable process for mapping TLA+ to Swift 6.0, demonstrated on 46 state variables and 58 actions with 100% coverage
 
 3. **Actor-Based Refinement Pattern**: Natural correspondence between TLA+ state machines and Swift actors, eliminating data races while preserving formal semantics
 
@@ -119,9 +119,9 @@ Each component has subtle correctness requirements:
 - MVCC: Snapshot isolation, no lost updates
 - Indexes: Balance, ordering, structure
 
-### 2.3 Swift 6.2 Actors
+### 2.3 Swift 6.0 Actors
 
-Swift 6.2 introduces **actors** for safe concurrency [SE-0306]:
+Swift 6.0 introduces **actors** for safe concurrency [SE-0306]:
 
 ```swift
 actor Counter {

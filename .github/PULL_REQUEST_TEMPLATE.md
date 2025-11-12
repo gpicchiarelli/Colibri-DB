@@ -91,7 +91,7 @@ Steps to test:
 - [ ] Code is self-documenting with clear variable/function names
 - [ ] Added/updated inline comments for complex logic
 - [ ] Updated API documentation
-- [ ] Updated user documentation (docs/wiki/)
+- [ ] Updated user documentation (docs/)
 - [ ] Updated CHANGELOG.md
 - [ ] No documentation changes needed
 
