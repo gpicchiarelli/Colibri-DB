@@ -108,5 +108,31 @@ public actor SkipList {
         
         return results
     }
+    
+    public func delete(key: Value) {
+        var update = Array(repeating: head, count: maxLevel)
+        var current: SkipListNode? = head
+        
+        for i in stride(from: level - 1, through: 0, by: -1) {
+            while let next = current?.forward[i], next.key < key {
+                current = next
+            }
+            update[i] = current!
+        }
+        
+        current = current?.forward[0]
+        
+        if let nodeToDelete = current, nodeToDelete.key == key {
+            // Remove node from all levels
+            for i in 0..<nodeToDelete.forward.count {
+                update[i].forward[i] = nodeToDelete.forward[i]
+            }
+            
+            // Update level if necessary
+            while level > 1 && head.forward[level - 1] == nil {
+                level -= 1
+            }
+        }
+    }
 }
 
