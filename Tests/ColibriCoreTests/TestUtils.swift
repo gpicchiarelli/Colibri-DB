@@ -29,7 +29,7 @@ public struct TestUtils {
     
     /// Create a test database configuration
     public static func createTestConfig(dataDirectory: URL) -> ColibrìDBConfiguration {
-        return ColibrìDBConfiguration(
+        ColibrìDBConfiguration(
             dataDirectory: dataDirectory,
             bufferPoolSize: 10,
             maxConnections: 5,
@@ -43,7 +43,7 @@ public struct TestUtils {
     
     /// Create test data
     public static func createTestData() -> [[String: Any]] {
-        return [
+        [
             ["id": 1, "name": "Alice", "age": 30],
             ["id": 2, "name": "Bob", "age": 25],
             ["id": 3, "name": "Charlie", "age": 35]
@@ -55,9 +55,9 @@ public struct TestUtils {
         timeout: TimeInterval = 5.0,
         condition: @escaping () -> Bool
     ) async throws {
-        let startTime = Date()
+        let deadline = Date().addingTimeInterval(timeout)
         
-        while Date().timeIntervalSince(startTime) < timeout {
+        while Date() < deadline {
             if condition() {
                 return
             }
@@ -65,6 +65,50 @@ public struct TestUtils {
         }
         
         throw TestError.timeout("Condition not met within \(timeout) seconds")
+    }
+    
+    /// Wait for an async operation with timeout
+    public static func waitForAsync<T>(
+        timeout: TimeInterval = 5.0,
+        operation: @escaping () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+            
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                throw TestError.timeout("Async operation exceeded \(timeout) seconds")
+            }
+            
+            guard let result = try await group.next() else {
+                throw TestError.timeout("Async task group returned no result")
+            }
+            
+            group.cancelAll()
+            return result
+        }
+    }
+    
+    /// Measure synchronous execution time
+    @discardableResult
+    public static func measureTime<T>(_ operation: () throws -> T) rethrows -> (result: T, time: TimeInterval) {
+        let start = DispatchTime.now()
+        let result = try operation()
+        let end = DispatchTime.now()
+        let elapsed = Double(end.uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000_000
+        return (result, elapsed)
+    }
+    
+    /// Measure asynchronous execution time
+    @discardableResult
+    public static func measureAsyncTime<T>(_ operation: () async throws -> T) async rethrows -> (result: T, time: TimeInterval) {
+        let start = DispatchTime.now()
+        let result = try await operation()
+        let end = DispatchTime.now()
+        let elapsed = Double(end.uptimeNanoseconds - start.uptimeNanoseconds) / 1_000_000_000
+        return (result, elapsed)
     }
     
     /// Generate random data for testing
@@ -78,6 +122,22 @@ public struct TestUtils {
             return Data((0..<size).map { _ in UInt8.random(in: 0...255) })
         }
         return data
+    }
+    
+    /// Generate a random alphanumeric string
+    public static func generateRandomString(length: Int = 10) -> String {
+        let characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        return String((0..<length).compactMap { _ in characters.randomElement() })
+    }
+    
+    /// Generate a random integer within a range
+    public static func generateRandomInt(min: Int = 0, max: Int = 1_000) -> Int {
+        Int.random(in: min...max)
+    }
+    
+    /// Generate a random double within a range
+    public static func generateRandomDouble(min: Double = 0.0, max: Double = 1.0) -> Double {
+        Double.random(in: min...max)
     }
 }
 
@@ -99,29 +159,79 @@ public struct TestDataGenerator {
     }
     
     /// Generate a test row
-    public static func generateTestRow(id: Int, name: String, age: Int, salary: Double) -> Row {
-        return [
+    public static func generateTestRow(
+        id: Int,
+        name: String? = nil,
+        age: Int? = nil,
+        salary: Double? = nil
+    ) -> Row {
+        var row: Row = [
             "id": .int(Int64(id)),
-            "name": .string(name),
-            "age": .int(Int64(age)),
-            "salary": .double(salary)
+            "name": .string(name ?? TestUtils.generateRandomString(length: 12))
         ]
+        
+        row["age"] = age.map { .int(Int64($0)) } ?? .null
+        row["salary"] = salary.map { .double($0) } ?? .null
+        return row
     }
     
     /// Generate a simple test row
     public static func generateSimpleTestRow(id: Int, name: String) -> Row {
-        return [
+        [
             "id": .int(Int64(id)),
             "name": .string(name)
+        ]
+    }
+    
+    /// Generate multiple test rows with deterministic but varied data.
+    public static func generateTestRows(count: Int) -> [Row] {
+        (1...count).map { index in
+            generateTestRow(
+                id: index,
+                name: "User\(index)",
+                age: 18 + (index % 50),
+                salary: 30_000 + Double(index * 250)
+            )
+        }
+    }
+    
+    /// Generate a representative set of SQL statements for parser tests.
+    public static func generateSQLStatements() -> [String] {
+        [
+            "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100), age INT)",
+            "INSERT INTO users VALUES (1, 'Alice', 25)",
+            "INSERT INTO users VALUES (2, 'Bob', 30)",
+            "SELECT * FROM users WHERE age > 25",
+            "UPDATE users SET age = 26 WHERE id = 1",
+            "DELETE FROM users WHERE age < 30",
+            "CREATE INDEX idx_users_age ON users(age)",
+            "DROP TABLE users"
         ]
     }
 }
 
 /// Test errors
-public enum TestError: Error {
+public enum TestError: Error, LocalizedError {
     case timeout(String)
     case assertionFailed(String)
     case setupFailed(String)
+    case teardownFailed(String)
+    case invalidTestData(String)
+    
+    public var errorDescription: String? {
+        switch self {
+        case .timeout(let message):
+            return "Test timeout: \(message)"
+        case .assertionFailed(let message):
+            return "Assertion failed: \(message)"
+        case .setupFailed(let message):
+            return "Test setup failed: \(message)"
+        case .teardownFailed(let message):
+            return "Test teardown failed: \(message)"
+        case .invalidTestData(let message):
+            return "Invalid test data: \(message)"
+        }
+    }
 }
 
 /// Test assertions
