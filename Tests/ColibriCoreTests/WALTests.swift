@@ -83,15 +83,15 @@ struct WALTests {
         
         await wal.simulateCrash()
         
-        #expect(throws: DBError.crash) {
+        try await TestAssertions.assertAsyncThrows({
             try await wal.append(kind: .heapUpdate, txID: 1, pageID: 1)
-        }
-        #expect(throws: DBError.crash) {
+        }, "Append should fail after crash")
+        try await TestAssertions.assertAsyncThrows({
             try await wal.flush()
-        }
-        #expect(throws: DBError.crash) {
+        }, "Flush should fail after crash")
+        try await TestAssertions.assertAsyncThrows({
             try await wal.checkpoint()
-        }
+        }, "Checkpoint should fail after crash")
         
         try await wal.recover()
         
