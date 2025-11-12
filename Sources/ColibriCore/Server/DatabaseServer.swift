@@ -72,14 +72,14 @@ public actor DatabaseServer {
     public func start() async throws {
         guard !isRunning else { return }
         
-        guard let db = database else {
+        guard database != nil else {
             throw DBError.internalError("Database not set")
         }
         
         print("Starting ColibrìDB Server on \(config.host):\(config.port)...")
         
-        // Start database
-        try await db.start()
+        // Note: Database is started by ColibrìDB.start(), not here
+        // This avoids circular dependency where db.start() -> server.start() -> db.start()
         
         isRunning = true
         print("ColibrìDB Server started successfully")
@@ -89,7 +89,7 @@ public actor DatabaseServer {
     public func stop() async throws {
         guard isRunning else { return }
         
-        guard let db = database else {
+        guard database != nil else {
             throw DBError.internalError("Database not set")
         }
         
@@ -101,8 +101,8 @@ public actor DatabaseServer {
         }
         connections.removeAll()
         
-        // Shutdown database
-        try await db.shutdown()
+        // Note: Database is shut down by ColibrìDB.shutdown(), not here
+        // This avoids circular dependency
         
         isRunning = false
         print("ColibrìDB Server stopped successfully")
