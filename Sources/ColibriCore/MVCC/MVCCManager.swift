@@ -15,6 +15,7 @@
 //
 
 import Foundation
+import Logging
 
 // MARK: - MVCC Types
 
@@ -99,6 +100,9 @@ public actor MVCCManager {
     /// TLA+: minActiveTx \in TxID
     private var minActiveTx: TxID = 0
     
+    /// Logger
+    private let logger: ColibriLogger
+    
     // MARK: - Dependencies
     
     /// Transaction manager
@@ -113,6 +117,7 @@ public actor MVCCManager {
         // Create default managers
         self.transactionManager = DefaultMVCCTransactionManager()
         self.lockManager = DefaultMVCCLockManager()
+        self.logger = ColibriLogger(label: "colibri.mvcc")
         
         // TLA+ Init
         self.versions = [:]
@@ -129,6 +134,7 @@ public actor MVCCManager {
     public init(transactionManager: MVCCTransactionManager, lockManager: MVCCLockManager) {
         self.transactionManager = transactionManager
         self.lockManager = lockManager
+        self.logger = ColibriLogger(label: "colibri.mvcc")
         
         // TLA+ Init
         self.versions = [:]
@@ -173,7 +179,7 @@ public actor MVCCManager {
             minActiveTx = txId
         }
         
-        print("Began transaction: \(txId) with snapshot at timestamp: \(globalTS)")
+        await logger.debug("Began transaction", metadata: ["txId": "\(txId)", "timestamp": "\(globalTS)"])
         return snapshot
     }
     
@@ -196,7 +202,7 @@ public actor MVCCManager {
         // TLA+: Add to read set
         readSets[txId]?.insert(key)
         
-        print("Read key: \(key) for transaction: \(txId)")
+        await logger.trace("Read key", metadata: ["key": "\(key)", "txId": "\(txId)"])
         return visibleVersion?.value
     }
     
@@ -233,7 +239,7 @@ public actor MVCCManager {
         // TLA+: Add to write set
         writeSets[txId]?.insert(key)
         
-        print("Wrote key: \(key) = \(value) for transaction: \(txId)")
+        await logger.debug("Wrote key", metadata: ["key": "\(key)", "txId": "\(txId)"])
     }
     
     /// Commit
@@ -256,7 +262,7 @@ public actor MVCCManager {
             minActiveTx = activeTx.min() ?? 0
         }
         
-        print("Committed transaction: \(txId)")
+        await logger.info("Committed transaction", metadata: ["txId": "\(txId)"])
     }
     
     /// Abort
@@ -283,7 +289,7 @@ public actor MVCCManager {
             minActiveTx = activeTx.min() ?? 0
         }
         
-        print("Aborted transaction: \(txId)")
+        await logger.warn("Aborted transaction", metadata: ["txId": "\(txId)"])
     }
     
     /// Vacuum
@@ -310,7 +316,7 @@ public actor MVCCManager {
             }
         }
         
-        print("Vacuum completed")
+        await logger.info("Vacuum completed")
     }
     
     // MARK: - Helper Methods
@@ -436,7 +442,7 @@ public actor MVCCManager {
     public func clearCompletedTransactions() async throws {
         committedTx.removeAll()
         abortedTx.removeAll()
-        print("Completed transactions cleared")
+        await logger.info("Completed transactions cleared")
     }
     
     /// Reset MVCC
@@ -450,7 +456,7 @@ public actor MVCCManager {
         writeSets.removeAll()
         globalTS = 0
         minActiveTx = 0
-        print("MVCC reset")
+        await logger.info("MVCC reset")
     }
     
     // MARK: - Invariant Checking (for testing)

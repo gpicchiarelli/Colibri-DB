@@ -9,6 +9,8 @@
 //
 
 import Foundation
+import Logging
+@preconcurrency import ColibriCore
 
 /// Database configuration
 public struct DatabaseConfiguration: Codable, Sendable {
@@ -53,12 +55,14 @@ public actor DatabaseServer {
     private var database: ColibrìDB?
     private var connections: [String: ServerConnection] = [:]
     private var isRunning: Bool = false
+    private let logger: ColibriLogger
     
     // MARK: - Initialization
     
     public init(config: Configuration) throws {
         self.config = config
         self.database = nil  // Will be set by setDatabase()
+        self.logger = ColibriLogger(label: "colibri.server")
     }
     
     /// Set the database instance (must be called before start())
@@ -76,13 +80,13 @@ public actor DatabaseServer {
             throw DBError.internalError("Database not set")
         }
         
-        print("Starting ColibrìDB Server on \(config.host):\(config.port)...")
+        await logger.info("Starting ColibrìDB Server", metadata: ["host": config.host, "port": "\(config.port)"])
         
         // Note: Database is started by ColibrìDB.start(), not here
         // This avoids circular dependency where db.start() -> server.start() -> db.start()
         
         isRunning = true
-        print("ColibrìDB Server started successfully")
+        await logger.info("ColibrìDB Server started successfully")
     }
     
     /// Stop the server
@@ -93,7 +97,7 @@ public actor DatabaseServer {
             throw DBError.internalError("Database not set")
         }
         
-        print("Stopping ColibrìDB Server...")
+        await logger.info("Stopping ColibrìDB Server")
         
         // Close all connections
         for (_, connection) in connections {
@@ -105,7 +109,7 @@ public actor DatabaseServer {
         // This avoids circular dependency
         
         isRunning = false
-        print("ColibrìDB Server stopped successfully")
+        await logger.info("ColibrìDB Server stopped successfully")
     }
     
     // MARK: - Connection Management
@@ -127,7 +131,7 @@ public actor DatabaseServer {
         let connection = ServerConnection(clientID: clientID, database: db)
         connections[clientID] = connection
         
-        print("Client \(clientID) connected")
+        await logger.info("Client connected", metadata: ["clientId": clientID])
         return connection
     }
     
@@ -136,7 +140,7 @@ public actor DatabaseServer {
         if let connection = connections[clientID] {
             await connection.close()
             connections[clientID] = nil
-            print("Client \(clientID) disconnected")
+            await logger.info("Client disconnected", metadata: ["clientId": clientID])
         }
     }
     

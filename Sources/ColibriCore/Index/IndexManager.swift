@@ -14,6 +14,7 @@
 //
 
 import Foundation
+import Logging
 
 // MARK: - Index Types
 
@@ -121,6 +122,7 @@ public actor IndexManagerActor {
     public init(storageManager: StorageManager, bufferManager: BufferManager) {
         self.storageManager = storageManager
         self.bufferManager = bufferManager
+        self.logger = ColibriLogger(label: "colibri.index")
         
         // TLA+ Init
         self.indexes = [:]
@@ -170,7 +172,7 @@ public actor IndexManagerActor {
         )
         indexMetrics[indexId] = metrics
         
-        print("Created index: \(metadata.name) (ID: \(indexId))")
+        await logger.info("Created index", metadata: ["name": metadata.name, "id": "\(indexId)"])
         return indexId
     }
     
@@ -188,7 +190,7 @@ public actor IndexManagerActor {
         indexMetrics.removeValue(forKey: indexId)
         indexCache.removeValue(forKey: indexId)
         
-        print("Dropped index: \(indexId)")
+        await logger.info("Dropped index", metadata: ["id": "\(indexId)"])
     }
     
     /// Insert entry
@@ -221,7 +223,7 @@ public actor IndexManagerActor {
         // TLA+: Update metrics
         updateMetrics(indexId: indexId)
         
-        print("Inserted entry into index: \(indexId)")
+        await logger.debug("Inserted entry into index", metadata: ["id": "\(indexId)"])
     }
     
     /// Delete entry
@@ -246,7 +248,7 @@ public actor IndexManagerActor {
             // TLA+: Update metrics
             updateMetrics(indexId: indexId)
             
-            print("Deleted entry from index: \(indexId)")
+            await logger.debug("Deleted entry from index", metadata: ["id": "\(indexId)"])
         } else {
             throw IndexError.entryNotFound
         }
@@ -266,7 +268,7 @@ public actor IndexManagerActor {
         // TLA+: Update metrics
         updateMetrics(indexId: indexId)
         
-        print("Looked up entries in index: \(indexId) for key: \(key)")
+        await logger.debug("Looked up entries in index", metadata: ["id": "\(indexId)", "key": key])
         return entries
     }
     
@@ -286,7 +288,7 @@ public actor IndexManagerActor {
         // TLA+: Update metrics
         updateMetrics(indexId: indexId)
         
-        print("Range scanned index: \(indexId) from \(startKey) to \(endKey)")
+        await logger.debug("Range scanned index", metadata: ["id": "\(indexId)", "start": startKey, "end": endKey])
         return entries
     }
     
@@ -418,7 +420,7 @@ public actor IndexManagerActor {
     /// Clear index cache
     public func clearIndexCache() async throws {
         indexCache.removeAll()
-        print("Index cache cleared")
+        await logger.info("Index cache cleared")
     }
     
     /// Rebuild index
@@ -439,7 +441,7 @@ public actor IndexManagerActor {
         // TLA+: Update metrics
         updateMetrics(indexId: indexId)
         
-        print("Rebuilt index: \(indexId)")
+        await logger.info("Rebuilt index", metadata: ["id": "\(indexId)"])
     }
     
     // MARK: - Invariant Checking (for testing)
