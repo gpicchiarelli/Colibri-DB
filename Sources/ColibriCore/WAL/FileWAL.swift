@@ -69,7 +69,7 @@ public actor FileWAL {
     
     private let walFilePath: URL
     private let config: GroupCommitConfig
-    private let fileHandle: FileHandle?
+    private let fileHandle: FileHandle
     
     // MARK: - Initialization
     
@@ -78,10 +78,22 @@ public actor FileWAL {
         self.config = config
         
         // Create the directory if it doesn't exist
-        try FileManager.default.createDirectory(at: walFilePath.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            at: walFilePath.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
         
-        // Don't create or open file handle - defer until first write
-        self.fileHandle = nil
+        if !FileManager.default.fileExists(atPath: walFilePath.path) {
+            FileManager.default.createFile(atPath: walFilePath.path, contents: nil)
+        }
+        
+        do {
+            let handle = try FileHandle(forUpdating: walFilePath)
+            try handle.seekToEnd()
+            self.fileHandle = handle
+        } catch {
+            throw DBError.ioError("Unable to open WAL file at \(walFilePath.path): \(error)")
+        }
         
         // Initialize state (TLA+ Init)
         self.wal = []
@@ -98,7 +110,7 @@ public actor FileWAL {
     }
     
     deinit {
-        try? fileHandle?.close()
+        try? fileHandle.close()
     }
     
     // MARK: - Core WAL Operations
@@ -172,7 +184,7 @@ public actor FileWAL {
         }
         
         // Force fsync for durability
-        try fileHandle?.synchronize()
+        try fileHandle.synchronize()
         
         // TLA+: wal' = wal \o pendingRecords
         wal.append(contentsOf: pendingRecords)
@@ -289,7 +301,7 @@ public actor FileWAL {
         
         // TLA+: wal' = Append(wal, checkpointRecord)
         try writeRecordToDisk(checkpointRecord)
-        try fileHandle?.synchronize()
+        try fileHandle.synchronize()
         
         wal.append(checkpointRecord)
         
@@ -383,10 +395,6 @@ public actor FileWAL {
     // MARK: - Private Helpers
     
     private func writeRecordToDisk(_ record: ConcreteWALRecord) throws {
-        guard let handle = fileHandle else {
-            throw DBError.ioError("WAL file not open")
-        }
-        
         // Compute CRC32 for record
         let encoder = JSONEncoder()
         let recordData = try encoder.encode(record)
@@ -404,11 +412,12 @@ public actor FileWAL {
         
         // Write header
         let headerData = try encoder.encode(header)
-        handle.write(headerData)
+        try fileHandle.seekToEnd()
+        fileHandle.write(headerData)
         
         // Write payload if present
         if let payload = record.payload {
-            handle.write(payload)
+            fileHandle.write(payload)
         }
     }
     
