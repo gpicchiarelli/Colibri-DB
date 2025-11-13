@@ -34,9 +34,9 @@ final class WALTests: XCTestCase {
         let (wal, directory) = try makeWAL()
         defer { cleanup(directory) }
         
-        let lsn1 = try await wal.append(kind: .heapInsert, txID: TxID(1), pageID: PageID(1), payload: nil)
-        let lsn2 = try await wal.append(kind: .heapUpdate, txID: TxID(1), pageID: PageID(1), payload: nil)
-        let lsn3 = try await wal.append(kind: .heapDelete, txID: TxID(2), pageID: PageID(2), payload: nil)
+        let lsn1 = try await wal.append(kind: .heapInsert, txID: 1, pageID: 1)
+        let lsn2 = try await wal.append(kind: .heapUpdate, txID: 1, pageID: 1)
+        let lsn3 = try await wal.append(kind: .heapDelete, txID: 2, pageID: 2)
         
         XCTAssertEqual(lsn1, 1)
         XCTAssertEqual(lsn2, 2)
@@ -49,26 +49,26 @@ final class WALTests: XCTestCase {
         let (wal, directory) = try makeWAL()
         defer { cleanup(directory) }
         
-        _ = try await wal.append(kind: .heapInsert, txID: TxID(1), pageID: PageID(10), payload: nil)
-        _ = try await wal.append(kind: .heapUpdate, txID: TxID(2), pageID: PageID(20), payload: nil)
+        _ = try await wal.append(kind: .heapInsert, txID: 1, pageID: 10)
+        _ = try await wal.append(kind: .heapUpdate, txID: 2, pageID: 20)
         
-        try await wal.updatePageLSN(PageID(10), lsn: LSN(1))
-        try await wal.updatePageLSN(PageID(20), lsn: LSN(2))
+        try await wal.updatePageLSN(10, lsn: 1)
+        try await wal.updatePageLSN(20, lsn: 2)
         
         let dpt = await wal.getDirtyPageTable()
-        XCTAssertEqual(dpt[PageID(10)], LSN(1))
-        XCTAssertEqual(dpt[PageID(20)], LSN(2))
+        XCTAssertEqual(dpt[10], 1)
+        XCTAssertEqual(dpt[20], 2)
     }
     
     func testCrashLifecycle() async throws {
         let (wal, directory) = try makeWAL()
         defer { cleanup(directory) }
         
-        _ = try await wal.append(kind: .heapInsert, txID: TxID(1), pageID: PageID(1), payload: nil)
+        _ = try await wal.append(kind: .heapInsert, txID: 1, pageID: 1)
         await wal.simulateCrash()
         
         do {
-            _ = try await wal.append(kind: .heapUpdate, txID: TxID(1), pageID: PageID(1), payload: nil)
+            _ = try await wal.append(kind: .heapUpdate, txID: 1, pageID: 1)
             XCTFail("Expected crash error")
         } catch DBError.crash {
             // expected
@@ -77,7 +77,7 @@ final class WALTests: XCTestCase {
         }
         
         try await wal.recover()
-        let lsn = try await wal.append(kind: .heapInsert, txID: TxID(2), pageID: PageID(2), payload: nil)
+        let lsn = try await wal.append(kind: .heapInsert, txID: 2, pageID: 2)
         XCTAssertGreaterThan(lsn, 0)
     }
     

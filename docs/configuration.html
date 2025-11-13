@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuration - ColibrìDB</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>⚙️ Configuration</h1>
+        
+        <h2>File di Configurazione</h2>
+        <p>ColibrìDB usa un file JSON per la configurazione. Il file di default è <code>colibridb.conf.json</code>.</p>
+
+        <h3>Configurazione Base</h3>
+        <div class="code-block">
+            <pre><code>{
+  "dataDir": "./data",
+  "maxConnectionsLogical": 1000,
+  "maxConnectionsPhysical": 16,
+  "bufferPoolSizeBytes": 1073741824,
+  "pageSizeBytes": 8192,
+  "walEnabled": true,
+  "checksumEnabled": true,
+  "cliEnabled": true,
+  "metricsEnabled": true,
+  "serverEnabled": false,
+  "indexImplementation": "Hash",
+  "storageEngine": "FileHeap"
+}</code></pre>
+        </div>
+
+        <h2>Parametri di Configurazione</h2>
+
+        <h3>Storage</h3>
+        <table class="config-table">
+            <tr>
+                <th>Parametro</th>
+                <th>Descrizione</th>
+                <th>Default</th>
+            </tr>
+            <tr>
+                <td><code>dataDir</code></td>
+                <td>Directory per i dati del database</td>
+                <td><code>"./data"</code></td>
+            </tr>
+            <tr>
+                <td><code>bufferPoolSizeBytes</code></td>
+                <td>Dimensione del buffer pool in bytes</td>
+                <td><code>1073741824</code> (1GB)</td>
+            </tr>
+            <tr>
+                <td><code>pageSizeBytes</code></td>
+                <td>Dimensione delle pagine in bytes</td>
+                <td><code>8192</code> (8KB)</td>
+            </tr>
+            <tr>
+                <td><code>storageEngine</code></td>
+                <td>Motore di storage da utilizzare</td>
+                <td><code>"FileHeap"</code></td>
+            </tr>
+        </table>
+
+        <h3>Connessioni</h3>
+        <table class="config-table">
+            <tr>
+                <th>Parametro</th>
+                <th>Descrizione</th>
+                <th>Default</th>
+            </tr>
+            <tr>
+                <td><code>maxConnectionsLogical</code></td>
+                <td>Numero massimo di connessioni logiche</td>
+                <td><code>1000</code></td>
+            </tr>
+            <tr>
+                <td><code>maxConnectionsPhysical</code></td>
+                <td>Numero massimo di connessioni fisiche</td>
+                <td><code>16</code></td>
+            </tr>
+        </table>
+
+        <h3>WAL (Write-Ahead Log)</h3>
+        <table class="config-table">
+            <tr>
+                <th>Parametro</th>
+                <th>Descrizione</th>
+                <th>Default</th>
+            </tr>
+            <tr>
+                <td><code>walEnabled</code></td>
+                <td>Abilita il Write-Ahead Log</td>
+                <td><code>true</code></td>
+            </tr>
+            <tr>
+                <td><code>checksumEnabled</code></td>
+                <td>Abilita checksum per integrità dati</td>
+                <td><code>true</code></td>
+            </tr>
+        </table>
+
+        <h2>Ottimizzazioni Performance</h2>
+
+        <h3>Configurazione Avanzata</h3>
+        <div class="code-block">
+            <pre><code>{
+  "performanceOptimizations": {
+    "lockStripingEnabled": true,
+    "lockStripeCount": 64,
+    "binarySerializationEnabled": true,
+    "btreeCachingEnabled": true,
+    "btreeCacheSize": 1000,
+    "queryPlanCacheEnabled": true,
+    "queryPlanCacheSize": 500,
+    "periodicCleanupEnabled": true,
+    "periodicCleanupIntervalSeconds": 300
+  }
+}</code></pre>
+        </div>
+
+        <h3>Parametri di Ottimizzazione</h3>
+        <table class="config-table">
+            <tr>
+                <th>Parametro</th>
+                <th>Descrizione</th>
+                <th>Default</th>
+            </tr>
+            <tr>
+                <td><code>lockStripingEnabled</code></td>
+                <td>Abilita lock striping per ridurre contesa</td>
+                <td><code>true</code></td>
+            </tr>
+            <tr>
+                <td><code>lockStripeCount</code></td>
+                <td>Numero di stripe per lock striping</td>
+                <td><code>64</code></td>
+            </tr>
+            <tr>
+                <td><code>binarySerializationEnabled</code></td>
+                <td>Usa serializzazione binaria per performance</td>
+                <td><code>true</code></td>
+            </tr>
+            <tr>
+                <td><code>btreeCachingEnabled</code></td>
+                <td>Abilita cache per B-Tree</td>
+                <td><code>true</code></td>
+            </tr>
+            <tr>
+                <td><code>queryPlanCacheEnabled</code></td>
+                <td>Abilita cache per piani di query</td>
+                <td><code>true</code></td>
+            </tr>
+        </table>
+
+        <h2>Logging</h2>
+
+        <h3>Configurazione Logging</h3>
+        <div class="code-block">
+            <pre><code>{
+  "logging": {
+    "level": "INFO",
+    "file": "./logs/colibridb.log",
+    "maxFileSize": "10MB",
+    "maxFiles": 5
+  }
+}</code></pre>
+        </div>
+
+        <h3>Livelli di Log</h3>
+        <ul>
+            <li><code>TRACE</code> - Informazioni molto dettagliate</li>
+            <li><code>DEBUG</code> - Informazioni di debug</li>
+            <li><code>INFO</code> - Informazioni generali</li>
+            <li><code>WARNING</code> - Avvisi</li>
+            <li><code>ERROR</code> - Errori</li>
+            <li><code>FATAL</code> - Errori fatali</li>
+        </ul>
+
+        <h2>Sicurezza</h2>
+
+        <h3>Configurazione Sicurezza</h3>
+        <div class="code-block">
+            <pre><code>{
+  "security": {
+    "encryptionEnabled": false,
+    "sslEnabled": false,
+    "authenticationRequired": false
+  }
+}</code></pre>
+        </div>
+
+        <h2>Configurazione Programmatica</h2>
+
+        <h3>Swift Configuration</h3>
+        <div class="code-block">
+            <pre><code>let config = ColibrìDBConfiguration(
+    dataDirectory: URL(fileURLWithPath: "/var/lib/colibridb"),
+    bufferPoolSize: 2000,
+    maxConnections: 500,
+    walBufferSize: 2 * 1024 * 1024,
+    checkpointInterval: 600,
+    logLevel: .info,
+    enableStatistics: true,
+    enableAutoAnalyze: true
+)</code></pre>
+        </div>
+
+        <h2>Best Practices</h2>
+
+        <h3>Produzione</h3>
+        <ul>
+            <li>Usa <code>logLevel: .warning</code> o <code>.error</code> per ridurre I/O</li>
+            <li>Imposta <code>bufferPoolSizeBytes</code> al 70-80% della RAM disponibile</li>
+            <li>Abilita <code>checksumEnabled</code> per integrità dati</li>
+            <li>Configura <code>periodicCleanupEnabled</code> per gestione memoria</li>
+        </ul>
+
+        <h3>Sviluppo</h3>
+        <ul>
+            <li>Usa <code>logLevel: .debug</code> per debugging</li>
+            <li>Abilita <code>metricsEnabled</code> per monitoring</li>
+            <li>Usa <code>cliEnabled</code> per strumenti di sviluppo</li>
+        </ul>
+
+        <h2>Prossimi Passi</h2>
+        <ul>
+            <li><a href="api-reference.html">API Reference</a> - Riferimento API completo</li>
+            <li><a href="examples.html">Examples</a> - Esempi pratici</li>
+            <li><a href="performance.html">Performance</a> - Ottimizzazione performance</li>
+        </ul>
+    </div>
+</body>
+</html>

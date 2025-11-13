@@ -141,7 +141,7 @@ public struct TemporalConstraint: Codable {
 // MARK: - Audit Event (TLA+: AuditLog)
 
 /// Audit log entry
-public struct AuditEvent: Codable, @unchecked Sendable {
+public struct AuditEvent: Codable {
     public let event: String            // TLA+: event
     public let admin: String?           // TLA+: admin
     public let user: String?            // TLA+: user

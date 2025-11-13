@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Start - ColibrìDB</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Quick Start</h1>
+        
+        <h2>Installazione</h2>
+        <div class="code-block">
+            <pre><code># Clone e build
+git clone https://github.com/gpicchiarelli/Colibri-DB.git
+cd Colibri-DB
+swift build
+
+# Avvia il database
+.build/debug/coldb --config colibridb.conf.json</code></pre>
+        </div>
+
+        <h2>Uso Base</h2>
+        <div class="code-block">
+            <pre><code>import ColibriCore
+
+// Crea database
+let config = ColibrìDBConfiguration(
+    dataDirectory: URL(fileURLWithPath: "/tmp/colibridb")
+)
+let db = try ColibrìDB(config: config)
+try await db.start()
+
+// Crea tabella
+let tableDef = TableDefinition(
+    name: "users",
+    columns: [
+        ColumnDefinition(name: "id", type: .int, nullable: false),
+        ColumnDefinition(name: "name", type: .string, nullable: false)
+    ],
+    primaryKey: ["id"]
+)
+try await db.createTable(tableDef)
+
+// Transazione ACID
+let txID = try await db.beginTransaction()
+let row: Row = ["id": .int(1), "name": .string("Alice")]
+try await db.insert(table: "users", row: row, txID: txID)
+try await db.commit(txID)
+
+// Shutdown
+try await db.shutdown()</code></pre>
+        </div>
+
+        <h2>Configurazione</h2>
+        <p>ColibrìDB usa un file di configurazione JSON:</p>
+        <div class="code-block">
+            <pre><code>{
+  "dataDir": "./data",
+  "maxConnectionsLogical": 1000,
+  "bufferPoolSizeBytes": 1073741824,
+  "pageSizeBytes": 8192,
+  "walEnabled": true,
+  "checksumEnabled": true,
+  "logging": {
+    "level": "INFO",
+    "file": "./logs/colibridb.log"
+  }
+}</code></pre>
+        </div>
+
+        <h2>Prossimi Passi</h2>
+        <ul>
+            <li><a href="api-reference.html">API Reference</a> - Riferimento completo delle API</li>
+            <li><a href="configuration.html">Configuration</a> - Configurazione avanzata</li>
+            <li><a href="examples.html">Examples</a> - Esempi pratici</li>
+        </ul>
+    </div>
+</body>
+</html>

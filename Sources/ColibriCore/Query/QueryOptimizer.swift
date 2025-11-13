@@ -233,7 +233,7 @@ public actor QueryOptimizer {
 // MARK: - Supporting Types
 
 /// Logical query plan
-public struct LogicalPlan: @unchecked Sendable {
+public struct LogicalPlan {
     public let table: String
     public let predicate: ((Row) -> Bool)?
     public let filterKey: Value?
@@ -286,7 +286,7 @@ public actor StatisticsManagerActor {
 }
 
 /// Table statistics
-public struct TableStatistics: @unchecked Sendable {
+public struct TableStatistics {
     public let pageCount: Int
     public let rowCount: Int
     public let avgRowSize: Int

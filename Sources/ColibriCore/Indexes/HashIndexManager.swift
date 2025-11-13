@@ -179,7 +179,7 @@ public actor HashIndexManager {
         // TLA+: Update load factor
         try await updateLoadFactor()
         
-        logInfo("Resized to \(numBuckets) buckets")
+        print("Resized to \(numBuckets) buckets")
     }
     
     /// Find position to insert a key
@@ -350,7 +350,7 @@ public actor HashIndexManager {
         buckets.removeAll()
         numEntries = 0
         numBuckets = INITIAL_BUCKETS
-        logInfo("Index cleared")
+        print("Index cleared")
     }
     
     // MARK: - TLA+ Invariants

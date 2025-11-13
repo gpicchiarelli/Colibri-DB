@@ -22,7 +22,7 @@ import Foundation
 /// Unified protocol for all index implementations
 /// All index types (BTree, ART, Hash, LSM, SkipList, etc.) must conform to this protocol
 /// to ensure consistent behavior and enable property-based testing.
-public protocol IndexProtocol: Sendable {
+public protocol Index: Sendable {
     
     // MARK: - Core Operations
     
@@ -91,7 +91,7 @@ public protocol IndexProtocol: Sendable {
 
 // MARK: - Default Implementations
 
-extension IndexProtocol {
+extension Index {
     
     /// Default implementation of getStatistics
     public func getStatistics() async throws -> [String: Any] {
@@ -113,10 +113,10 @@ extension IndexProtocol {
     }
 }
 
-// MARK: - Index Protocol Errors
+// MARK: - Index Errors
 
-/// Errors that can occur during index protocol operations
-public enum IndexProtocolError: Error, LocalizedError {
+/// Errors that can occur during index operations
+public enum IndexError: Error, LocalizedError {
     case keyNotFound(String)
     case duplicateKey(String)
     case invalidKey(String)
@@ -148,10 +148,10 @@ public enum IndexProtocolError: Error, LocalizedError {
     }
 }
 
-// MARK: - Index Implementation Types
+// MARK: - Index Types Enum
 
-/// Enumeration of supported index implementation types
-public enum IndexImplementationType: String, Codable, Sendable {
+/// Enumeration of supported index types
+public enum IndexType: String, Codable, Sendable {
     case btree = "BTree"
     case art = "ART"
     case hash = "Hash"
@@ -166,15 +166,15 @@ public enum IndexImplementationType: String, Codable, Sendable {
 // MARK: - Index Configuration
 
 /// Configuration options for index creation
-public struct IndexProtocolConfiguration: Codable, Sendable {
-    public let type: IndexImplementationType
+public struct IndexConfiguration: Codable, Sendable {
+    public let type: IndexType
     public let isUnique: Bool
     public let allowNulls: Bool
     public let pageSize: Int
     public let cacheSize: Int
     
     public init(
-        type: IndexImplementationType,
+        type: IndexType,
         isUnique: Bool = false,
         allowNulls: Bool = true,
         pageSize: Int = 4096,

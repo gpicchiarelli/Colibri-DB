@@ -557,21 +557,21 @@ public actor BackupManager {
     private func restoreTable(_ table: String, from backup: BackupMetadata) async throws {
         // TLA+: Restore table from backup
         // Simplified implementation
-        logInfo("Restoring table \(table) from backup \(backup.backupId)")
+        print("Restoring table \(table) from backup \(backup.backupId)")
     }
     
     /// Apply incremental changes
     private func applyIncrementalChanges(backup: BackupMetadata, targetTables: [String]) async throws {
         // TLA+: Apply incremental changes
         // Simplified implementation
-        logInfo("Applying incremental changes from backup \(backup.backupId)")
+        print("Applying incremental changes from backup \(backup.backupId)")
     }
     
     /// Restore data as of LSN
     private func restoreDataAsOfLSN(_ lsn: LSN) async throws {
         // TLA+: Restore data as of specific LSN
         // Simplified implementation
-        logInfo("Restoring data as of LSN \(lsn)")
+        print("Restoring data as of LSN \(lsn)")
     }
     
     /// Update checksum

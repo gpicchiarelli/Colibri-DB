@@ -33,7 +33,7 @@ public actor APFSOptimizer {
     }
     
     public func optimizeForSSD(path: URL) {
-        logInfo("Optimizing \(path.path) for SSD")
+        print("Optimizing \(path.path) for SSD")
     }
 }
 #endif

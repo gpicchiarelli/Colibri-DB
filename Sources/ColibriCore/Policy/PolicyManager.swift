@@ -141,7 +141,7 @@ public actor PolicyManager {
         // TLA+: Log policy addition
         auditLog.append("Added policy: \(policy.ruleId) - \(policy.name)")
         
-        logInfo("Added policy: \(policy.ruleId)")
+        print("Added policy: \(policy.ruleId)")
     }
     
     /// Remove policy
@@ -155,7 +155,7 @@ public actor PolicyManager {
         // TLA+: Log policy removal
         auditLog.append("Removed policy: \(ruleId)")
         
-        logInfo("Removed policy: \(ruleId)")
+        print("Removed policy: \(ruleId)")
     }
     
     /// Evaluate policy
@@ -194,7 +194,7 @@ public actor PolicyManager {
         // TLA+: Log evaluation
         auditLog.append("Evaluated policy: \(ruleId) - \(action.rawValue)")
         
-        logInfo("Evaluated policy: \(ruleId) - \(action.rawValue)")
+        print("Evaluated policy: \(ruleId) - \(action.rawValue)")
         return result
     }
     
@@ -211,7 +211,7 @@ public actor PolicyManager {
         case .deny:
             return false
         case .warn:
-            logInfo("Policy warning: \(result.reason)")
+            print("Policy warning: \(result.reason)")
             return true
         case .log:
             auditLog.append("Policy log: \(result.reason)")

@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring - ColibrìDB</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Monitoring</h1>
+        
+        <h2>Metriche di Sistema</h2>
+
+        <h3>Database Statistics</h3>
+        <div class="api-section">
+            <h4>Metriche Chiave</h4>
+            <div class="code-block">
+                <pre><code>let stats = await db.getStatistics()
+
+// Throughput
+print("Transactions/sec: \(stats.transactionsPerSecond)")
+print("Queries/sec: \(stats.queriesPerSecond)")
+
+// Buffer Pool
+print("Buffer pool hit rate: \(stats.bufferPoolHitRate)%")
+print("Dirty pages: \(stats.dirtyPages)")
+print("Free pages: \(stats.freePages)")
+
+// Concurrency
+print("Active transactions: \(stats.activeTransactions)")
+print("Lock contention: \(stats.lockContentionCount)")
+
+// Storage
+print("Data size: \(stats.dataSizeBytes) bytes")
+print("WAL size: \(stats.walSizeBytes) bytes")</code></pre>
+            </div>
+        </div>
+
+        <h3>System Health</h3>
+        <div class="api-section">
+            <h4>Health Check</h4>
+            <div class="code-block">
+                <pre><code>// Verifica stato sistema
+let isHealthy = await db.checkSystemHealth()
+let healthDetails = await db.getSystemHealthDetails()
+
+logInfo("System health: \(isHealthy ? "OK" : "DEGRADED")", 
+        category: .monitoring)
+
+if !isHealthy {
+    logWarning("Health issues: \(healthDetails)", category: .monitoring)
+}</code></pre>
+            </div>
+        </div>
+
+        <h2>Logging e Monitoring</h2>
+
+        <h3>Configurazione Logging</h3>
+        <div class="api-section">
+            <h4>Structured Logging</h4>
+            <div class="code-block">
+                <pre><code>// Configurazione logging strutturato
+let fileHandler = try FileLogHandler(
+    fileURL: URL(fileURLWithPath: "/var/log/colibridb.json"),
+    formatter: JSONLogFormatter()
+)
+
+let consoleHandler = ConsoleLogHandler(
+    formatter: HumanReadableLogFormatter()
+)
+
+let logger = Logger(
+    handlers: [fileHandler, consoleHandler],
+    minLevel: .info
+)</code></pre>
+            </div>
+        </div>
+
+        <h3>Log Categories</h3>
+        <div class="api-section">
+            <h4>Categorie di Log</h4>
+            <ul>
+                <li><code>database</code> - Operazioni database</li>
+                <li><code>transaction</code> - Gestione transazioni</li>
+                <li><code>storage</code> - Operazioni storage</li>
+                <li><code>query</code> - Elaborazione query</li>
+                <li><code>recovery</code> - Operazioni recovery</li>
+                <li><code>security</code> - Sicurezza e autenticazione</li>
+                <li><code>network</code> - Operazioni di rete</li>
+                <li><code>performance</code> - Metriche performance</li>
+                <li><code>monitoring</code> - Monitoring e alerting</li>
+            </ul>
+        </div>
+
+        <h2>Alerting</h2>
+
+        <h3>Alert Configuration</h3>
+        <div class="api-section">
+            <h4>Alert Rules</h4>
+            <div class="code-block">
+                <pre><code>// Configurazione alert
+struct AlertRule {
+    let name: String
+    let condition: (DatabaseStats) -> Bool
+    let severity: AlertSeverity
+    let message: String
+}
+
+let alertRules = [
+    AlertRule(
+        name: "High Memory Usage",
+        condition: { $0.memoryUsagePercent > 90 },
+        severity: .critical,
+        message: "Memory usage exceeds 90%"
+    ),
+    AlertRule(
+        name: "Low Buffer Pool Hit Rate",
+        condition: { $0.bufferPoolHitRate < 80 },
+        severity: .warning,
+        message: "Buffer pool hit rate below 80%"
+    ),
+    AlertRule(
+        name: "High Lock Contention",
+        condition: { $0.lockContentionCount > 100 },
+        severity: .warning,
+        message: "High lock contention detected"
+    )
+]</code></pre>
+            </div>
+        </div>
+
+        <h3>Alert Processing</h3>
+        <div class="api-section">
+            <h4>Alert Handler</h4>
+            <div class="code-block">
+                <pre><code>// Processa alert
+func processAlerts(stats: DatabaseStats) async {
+    for rule in alertRules {
+        if rule.condition(stats) {
+            await sendAlert(rule: rule, stats: stats)
+        }
+    }
+}
+
+func sendAlert(rule: AlertRule, stats: DatabaseStats) async {
+    let alert = Alert(
+        rule: rule,
+        timestamp: Date(),
+        stats: stats
+    )
+    
+    // Log alert
+    await logger.warning(rule.message, 
+                        category: .monitoring,
+                        metadata: [
+                            "alert_rule": rule.name,
+                            "severity": rule.severity.rawValue,
+                            "stats": stats
+                        ])
+    
+    // Invia notifica (email, webhook, etc.)
+    await notificationService.send(alert)
+}</code></pre>
+            </div>
+        </div>
+
+        <h2>Dashboard e Visualizzazione</h2>
+
+        <h3>Metriche Dashboard</h3>
+        <div class="api-section">
+            <h4>Real-time Metrics</h4>
+            <div class="code-block">
+                <pre><code>// Dashboard metrics
+struct DashboardMetrics {
+    let timestamp: Date
+    let throughput: Double
+    let latency: Double
+    let memoryUsage: Double
+    let bufferPoolHitRate: Double
+    let activeTransactions: Int
+    let lockContention: Int
+}
+
+// Aggiorna dashboard ogni 5 secondi
+Task {
+    while true {
+        let stats = await db.getStatistics()
+        let metrics = DashboardMetrics(
+            timestamp: Date(),
+            throughput: stats.transactionsPerSecond,
+            latency: stats.latencyP95,
+            memoryUsage: stats.memoryUsagePercent,
+            bufferPoolHitRate: stats.bufferPoolHitRate,
+            activeTransactions: stats.activeTransactions,
+            lockContention: stats.lockContentionCount
+        )
+        
+        await updateDashboard(metrics)
+        try await Task.sleep(nanoseconds: 5_000_000_000) // 5 secondi
+    }
+}</code></pre>
+            </div>
+        </div>
+
+        <h3>Grafana Integration</h3>
+        <div class="api-section">
+            <h4>Export Metrics</h4>
+            <div class="code-block">
+                <pre><code>// Export metrics per Grafana
+func exportMetricsForGrafana() async {
+    let stats = await db.getStatistics()
+    
+    let metrics = [
+        "colibridb_transactions_per_second": stats.transactionsPerSecond,
+        "colibridb_latency_p95": stats.latencyP95,
+        "colibridb_memory_usage_percent": stats.memoryUsagePercent,
+        "colibridb_buffer_pool_hit_rate": stats.bufferPoolHitRate,
+        "colibridb_active_transactions": Double(stats.activeTransactions),
+        "colibridb_lock_contention": Double(stats.lockContentionCount)
+    ]
+    
+    // Invia a Grafana via HTTP
+    try await sendToGrafana(metrics)
+}</code></pre>
+            </div>
+        </div>
+
+        <h2>Performance Monitoring</h2>
+
+        <h3>Query Performance</h3>
+        <div class="api-section">
+            <h4>Slow Query Detection</h4>
+            <div class="code-block">
+                <pre><code>// Monitora query lente
+let slowQueryThreshold: TimeInterval = 1.0 // 1 secondo
+
+func executeQueryWithMonitoring(_ query: String) async throws -> [Row] {
+    let startTime = Date()
+    
+    let txID = try await db.beginTransaction()
+    let results = try await db.executeQuery(query: query, txID: txID)
+    try await db.commit(txID: txID)
+    
+    let duration = Date().timeIntervalSince(startTime)
+    
+    if duration > slowQueryThreshold {
+        logWarning("Slow query detected", 
+                  category: .performance,
+                  metadata: [
+                      "query": query,
+                      "duration": duration,
+                      "threshold": slowQueryThreshold
+                  ])
+    }
+    
+    return results
+}</code></pre>
+            </div>
+        </div>
+
+        <h3>Resource Usage</h3>
+        <div class="api-section">
+            <h4>Memory Monitoring</h4>
+            <div class="code-block">
+                <pre><code>// Monitora uso memoria
+func monitorMemoryUsage() async {
+    let stats = await db.getStatistics()
+    
+    if stats.memoryUsagePercent > 80 {
+        logWarning("High memory usage", 
+                  category: .monitoring,
+                  metadata: [
+                      "usage_percent": stats.memoryUsagePercent,
+                      "buffer_pool_size": stats.bufferPoolSize,
+                      "dirty_pages": stats.dirtyPages
+                  ])
+    }
+    
+    // Trigger cleanup se necessario
+    if stats.memoryUsagePercent > 90 {
+        await db.triggerCleanup()
+    }
+}</code></pre>
+            </div>
+        </div>
+
+        <h2>Health Checks</h2>
+
+        <h3>Automated Health Checks</h3>
+        <div class="api-section">
+            <h4>Health Check Endpoint</h4>
+            <div class="code-block">
+                <pre><code>// Health check endpoint
+func healthCheck() async -> HealthStatus {
+    let stats = await db.getStatistics()
+    
+    var status = HealthStatus.healthy
+    var issues: [String] = []
+    
+    // Controlla metriche critiche
+    if stats.bufferPoolHitRate < 80 {
+        status = .degraded
+        issues.append("Low buffer pool hit rate")
+    }
+    
+    if stats.memoryUsagePercent > 90 {
+        status = .unhealthy
+        issues.append("High memory usage")
+    }
+    
+    if stats.lockContentionCount > 1000 {
+        status = .degraded
+        issues.append("High lock contention")
+    }
+    
+    return HealthStatus(
+        status: status,
+        timestamp: Date(),
+        issues: issues,
+        metrics: stats
+    )
+}</code></pre>
+            </div>
+        </div>
+
+        <h3>Load Balancer Integration</h3>
+        <div class="api-section">
+            <h4>Health Check per Load Balancer</h4>
+            <div class="code-block">
+                <pre><code>// Endpoint per load balancer
+func loadBalancerHealthCheck() async -> HTTPResponse {
+    let health = await healthCheck()
+    
+    switch health.status {
+    case .healthy:
+        return HTTPResponse(status: 200, body: "OK")
+    case .degraded:
+        return HTTPResponse(status: 200, body: "DEGRADED")
+    case .unhealthy:
+        return HTTPResponse(status: 503, body: "UNHEALTHY")
+    }
+}</code></pre>
+            </div>
+        </div>
+
+        <h2>Best Practices</h2>
+
+        <h3>Monitoring Setup</h3>
+        <div class="api-section">
+            <ul>
+                <li>Configura logging strutturato (JSON)</li>
+                <li>Imposta alert per metriche critiche</li>
+                <li>Monitora trend a lungo termine</li>
+                <li>Configura retention policy per log</li>
+                <li>Usa dashboard per visualizzazione real-time</li>
+            </ul>
+        </div>
+
+        <h3>Alert Management</h3>
+        <div class="api-section">
+            <ul>
+                <li>Imposta soglie appropriate per alert</li>
+                <li>Evita alert storm con cooldown</li>
+                <li>Configura escalation per alert critici</li>
+                <li>Documenta procedure di risposta</li>
+            </ul>
+        </div>
+
+        <h2>Prossimi Passi</h2>
+        <ul>
+            <li><a href="performance.html">Performance</a> - Ottimizzazione performance</li>
+            <li><a href="troubleshooting.html">Troubleshooting</a> - Risoluzione problemi</li>
+            <li><a href="configuration.html">Configuration</a> - Configurazione avanzata</li>
+        </ul>
+    </div>
+</body>
+</html>

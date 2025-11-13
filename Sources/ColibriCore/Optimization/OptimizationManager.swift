@@ -160,7 +160,7 @@ public actor OptimizationManager {
             timestamp: result.timestamp
         )
         
-        logInfo("Applied optimization: \(strategyId) - \(result.performanceGain)% gain")
+        print("Applied optimization: \(strategyId) - \(result.performanceGain)% gain")
         return result
     }
     
@@ -175,7 +175,7 @@ public actor OptimizationManager {
         // TLA+: Evaluate strategy
         let effectiveness = try await evaluateStrategyEffectiveness(strategy: strategy, context: context)
         
-        logInfo("Evaluated strategy: \(strategyId) - \(effectiveness)% effectiveness")
+        print("Evaluated strategy: \(strategyId) - \(effectiveness)% effectiveness")
         return effectiveness
     }
     
@@ -195,7 +195,7 @@ public actor OptimizationManager {
         // TLA+: Check thresholds
         try await checkPerformanceThresholds(metricName: metricName, value: value)
         
-        logInfo("Monitored performance: \(metricName) = \(value) \(unit)")
+        print("Monitored performance: \(metricName) = \(value) \(unit)")
     }
     
     /// Adjust strategy
@@ -219,7 +219,7 @@ public actor OptimizationManager {
         
         optimizationStrategies[strategyId] = strategy
         
-        logInfo("Adjusted strategy: \(strategyId)")
+        print("Adjusted strategy: \(strategyId)")
     }
     
     // MARK: - Helper Methods

@@ -129,7 +129,7 @@ public actor ARIESRecovery {
             throw DBError.internalError("Recovery called when not crashed")
         }
         
-        logInfo("Starting ARIES recovery...")
+        print("Starting ARIES recovery...")
         
         // Phase 1: Analysis
         try await analysisPhase()
@@ -143,7 +143,7 @@ public actor ARIESRecovery {
         // TLA+: phase' = "done"
         phase = .done
         crashed = false
-        logInfo("ARIES recovery complete")
+        print("ARIES recovery complete")
     }
     
     /// Simulate system crash
@@ -165,7 +165,7 @@ public actor ARIESRecovery {
     /// Precondition: phase = "idle"
     /// Postcondition: phase = "analysis", ATT and DPT built
     private func analysisPhase() async throws {
-        logInfo("Analysis phase: scanning WAL...")
+        print("Analysis phase: scanning WAL...")
         
         // TLA+: phase' = "analysis"
         phase = .analysis
@@ -229,7 +229,7 @@ public actor ARIESRecovery {
             }
         }
         
-        logInfo("Analysis complete: \(att.count) active transactions, \(dpt.count) dirty pages")
+        print("Analysis complete: \(att.count) active transactions, \(dpt.count) dirty pages")
     }
     
     // MARK: - Phase 2: Redo
@@ -239,7 +239,7 @@ public actor ARIESRecovery {
     /// Precondition: phase = "analysis"
     /// Postcondition: phase = "redo", all operations redone
     private func redoPhase() async throws {
-        logInfo("Redo phase: replaying operations...")
+        print("Redo phase: replaying operations...")
         
         // TLA+: phase' = "redo"
         phase = .redo
@@ -282,7 +282,7 @@ public actor ARIESRecovery {
             }
         }
         
-        logInfo("Redo phase complete")
+        print("Redo phase complete")
     }
     
     /// Apply a single redo operation
@@ -290,7 +290,7 @@ public actor ARIESRecovery {
     private func redoOperation(record: ConcreteWALRecord, page: inout Page) async throws {
         // Simplified redo - in real implementation would deserialize and apply
         // For now, just ensure page is marked dirty
-        logInfo("Redo operation: LSN=\(record.lsn), type=\(record.kind)")
+        print("Redo operation: LSN=\(record.lsn), type=\(record.kind)")
         
         // Update page LSN
         page.header.pageLSN = record.lsn
@@ -303,7 +303,7 @@ public actor ARIESRecovery {
     /// Precondition: phase = "redo"
     /// Postcondition: phase = "undo", all uncommitted transactions rolled back
     private func undoPhase() async throws {
-        logInfo("Undo phase: rolling back \(att.count) transactions...")
+        print("Undo phase: rolling back \(att.count) transactions...")
         
         // TLA+: phase' = "undo"
         phase = .undo
@@ -325,13 +325,13 @@ public actor ARIESRecovery {
             try await undoTransaction(txID: undoRecord.txId, lastLSN: undoRecord.lsn, records: records)
         }
         
-        logInfo("Undo phase complete")
+        print("Undo phase complete")
     }
     
     /// Undo a single transaction
     /// TLA+: UndoTransaction(tid, lastLSN, records)
     private func undoTransaction(txID: TxID, lastLSN: LSN, records: [ConcreteWALRecord]) async throws {
-        logInfo("Undoing transaction \(txID)")
+        print("Undoing transaction \(txID)")
         
         // Find all records for this transaction (following prevLSN chain)
         var currentLSN = lastLSN
@@ -369,7 +369,7 @@ public actor ARIESRecovery {
     /// TLA+: UndoOperation(record)
     private func undoOperation(record: ConcreteWALRecord) async throws {
         // Simplified undo - in real implementation would reverse the operation
-        logInfo("Undo operation: LSN=\(record.lsn), type=\(record.kind)")
+        print("Undo operation: LSN=\(record.lsn), type=\(record.kind)")
         
         // Get page and reverse the operation
         let page = try await bufferPool.getPage(record.pageID)

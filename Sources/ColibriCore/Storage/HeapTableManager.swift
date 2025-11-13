@@ -138,7 +138,7 @@ public actor HeapTableManager {
         // TLA+: Update free space tracking
         try await updateFreeSpaceTracking(pageID: pageID)
         
-        logInfo("Inserted row: \(rid)")
+        print("Inserted row: \(rid)")
     }
     
     /// Delete row
@@ -189,7 +189,7 @@ public actor HeapTableManager {
         // TLA+: Update free space tracking
         try await updateFreeSpaceTracking(pageID: pageID)
         
-        logInfo("Deleted row: \(rid)")
+        print("Deleted row: \(rid)")
     }
     
     /// Read row
@@ -226,7 +226,7 @@ public actor HeapTableManager {
         let rowData = readRowData(page: page, slot: slot)
         let row = parseRowData(rowData)
         
-        logInfo("Read row: \(rid)")
+        print("Read row: \(rid)")
         return row
     }
     
@@ -274,7 +274,7 @@ public actor HeapTableManager {
         let newPage = updateRowData(page: page, slot: slot, newRowData: newRowData)
         pages[pageID] = newPage
         
-        logInfo("Updated row: \(rid)")
+        print("Updated row: \(rid)")
     }
     
     // MARK: - Helper Methods
@@ -525,13 +525,13 @@ public actor HeapTableManager {
         freeList.removeAll()
         allocatedRIDs.removeAll()
         
-        logInfo("Heap table cleared")
+        print("Heap table cleared")
     }
     
     /// Reset heap table
     public func resetHeapTable() async throws {
         try await clearHeapTable()
-        logInfo("Heap table reset")
+        print("Heap table reset")
     }
     
     // MARK: - Invariant Checking (for testing)

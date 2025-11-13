@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Troubleshooting - ColibrìDB</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Troubleshooting</h1>
+        
+        <h2>Problemi Comuni</h2>
+
+        <h3>Database non si avvia</h3>
+        <div class="api-section">
+            <h4>Sintomi</h4>
+            <ul>
+                <li>Errore "Database not running"</li>
+                <li>Timeout durante l'avvio</li>
+                <li>Crash durante l'inizializzazione</li>
+            </ul>
+
+            <h4>Soluzioni</h4>
+            <ol>
+                <li><strong>Verifica configurazione:</strong>
+                    <div class="code-block">
+                        <pre><code>// Controlla che la directory dati esista
+let config = ColibrìDBConfiguration(
+    dataDirectory: URL(fileURLWithPath: "/path/to/data")
+)
+
+// Verifica permessi
+try FileManager.default.createDirectory(
+    at: config.dataDirectory,
+    withIntermediateDirectories: true
+)</code></pre>
+                    </div>
+                </li>
+                <li><strong>Controlla log:</strong>
+                    <div class="code-block">
+                        <pre><code>// Abilita logging dettagliato
+let config = ColibrìDBConfiguration(
+    logLevel: .debug
+)</code></pre>
+                    </div>
+                </li>
+                <li><strong>Verifica risorse:</strong>
+                    <div class="code-block">
+                        <pre><code>// Riduci buffer pool se memoria insufficiente
+let config = ColibrìDBConfiguration(
+    bufferPoolSize: 100  // Ridotto da 1000
+)</code></pre>
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <h3>Errori di Transazione</h3>
+        <div class="api-section">
+            <h4>Sintomi</h4>
+            <ul>
+                <li>Errore "Transaction not found"</li>
+                <li>Deadlock rilevati</li>
+                <li>Timeout transazioni</li>
+            </ul>
+
+            <h4>Soluzioni</h4>
+            <ol>
+                <li><strong>Gestisci deadlock:</strong>
+                    <div class="code-block">
+                        <pre><code>do {
+    let txID = try await db.beginTransaction()
+    // ... operazioni ...
+    try await db.commit(txID: txID)
+} catch DBError.deadlockDetected {
+    // Retry con backoff
+    try await Task.sleep(nanoseconds: 100_000_000) // 100ms
+    // Retry logic...
+}</code></pre>
+                    </div>
+                </li>
+                <li><strong>Timeout transazioni:</strong>
+                    <div class="code-block">
+                        <pre><code>// Imposta timeout appropriato
+let config = ColibrìDBConfiguration(
+    maxConnections: 100  // Riduci se necessario
+)</code></pre>
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <h3>Problemi di Performance</h3>
+        <div class="api-section">
+            <h4>Sintomi</h4>
+            <ul>
+                <li>Latenza elevata</li>
+                <li>Throughput basso</li>
+                <li>Uso memoria eccessivo</li>
+            </ul>
+
+            <h4>Soluzioni</h4>
+            <ol>
+                <li><strong>Ottimizza buffer pool:</strong>
+                    <div class="code-block">
+                        <pre><code>let config = ColibrìDBConfiguration(
+    bufferPoolSize: 2000,  // Aumenta se hai più RAM
+    walBufferSize: 2 * 1024 * 1024  // 2MB WAL buffer
+)</code></pre>
+                    </div>
+                </li>
+                <li><strong>Abilita ottimizzazioni:</strong>
+                    <div class="code-block">
+                        <pre><code>// Nel file di configurazione
+{
+  "performanceOptimizations": {
+    "lockStripingEnabled": true,
+    "lockStripeCount": 64,
+    "binarySerializationEnabled": true,
+    "queryPlanCacheEnabled": true
+  }
+}</code></pre>
+                    </div>
+                </li>
+                <li><strong>Monitora statistiche:</strong>
+                    <div class="code-block">
+                        <pre><code>let stats = await db.getStatistics()
+logInfo("Buffer pool hit rate: \(stats.bufferPoolHitRate)", 
+        category: .performance)</code></pre>
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <h3>Errori di Recovery</h3>
+        <div class="api-section">
+            <h4>Sintomi</h4>
+            <ul>
+                <li>Errore "Recovery failed"</li>
+                <li>Database corrotto</li>
+                <li>WAL corrotto</li>
+            </ul>
+
+            <h4>Soluzioni</h4>
+            <ol>
+                <li><strong>Verifica integrità WAL:</strong>
+                    <div class="code-block">
+                        <pre><code>// Abilita checksum
+let config = ColibrìDBConfiguration(
+    // Nel file di configurazione
+    "checksumEnabled": true
+)</code></pre>
+                    </div>
+                </li>
+                <li><strong>Backup e restore:</strong>
+                    <div class="code-block">
+                        <pre><code>// Crea backup prima di operazioni critiche
+try await db.createBackup(to: backupURL)
+
+// Restore se necessario
+try await db.restore(from: backupURL)</code></pre>
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <h2>Diagnostica</h2>
+
+        <h3>Log Analysis</h3>
+        <div class="api-section">
+            <h4>Livelli di Log</h4>
+            <ul>
+                <li><code>TRACE</code> - Informazioni molto dettagliate</li>
+                <li><code>DEBUG</code> - Informazioni di debug</li>
+                <li><code>INFO</code> - Informazioni generali</li>
+                <li><code>WARNING</code> - Avvisi</li>
+                <li><code>ERROR</code> - Errori</li>
+                <li><code>FATAL</code> - Errori fatali</li>
+            </ul>
+
+            <h4>Analisi Log</h4>
+            <div class="code-block">
+                <pre><code># Cerca errori nei log
+grep "ERROR" /var/log/colibridb.log
+
+# Cerca warning
+grep "WARNING" /var/log/colibridb.log
+
+# Analizza performance
+grep "performance" /var/log/colibridb.log</code></pre>
+            </div>
+        </div>
+
+        <h3>Monitoring</h3>
+        <div class="api-section">
+            <h4>Metriche Chiave</h4>
+            <ul>
+                <li>Buffer pool hit rate</li>
+                <li>Transaction throughput (TPS)</li>
+                <li>Active connections</li>
+                <li>Memory usage</li>
+                <li>Disk I/O</li>
+            </ul>
+
+            <h4>Script di Monitoring</h4>
+            <div class="code-block">
+                <pre><code>#!/bin/bash
+# monitor_colibridb.sh
+
+while true; do
+    stats=$(swift -c "let db = try ColibrìDB(config: config); print(await db.getStatistics())")
+    echo "$(date): $stats" >> /var/log/colibridb_monitor.log
+    sleep 60
+done</code></pre>
+            </div>
+        </div>
+
+        <h2>Best Practices</h2>
+
+        <h3>Configurazione Produzione</h3>
+        <div class="api-section">
+            <ul>
+                <li>Usa <code>logLevel: .warning</code> per ridurre I/O</li>
+                <li>Imposta <code>bufferPoolSizeBytes</code> al 70-80% della RAM</li>
+                <li>Abilita <code>checksumEnabled</code> per integrità</li>
+                <li>Configura <code>periodicCleanupEnabled</code></li>
+                <li>Usa directory dedicate per dati e log</li>
+            </ul>
+        </div>
+
+        <h3>Configurazione Sviluppo</h3>
+        <div class="api-section">
+            <ul>
+                <li>Usa <code>logLevel: .debug</code> per debugging</li>
+                <li>Abilita <code>metricsEnabled</code> per monitoring</li>
+                <li>Usa <code>cliEnabled</code> per strumenti</li>
+                <li>Configura timeout più lunghi per debugging</li>
+            </ul>
+        </div>
+
+        <h2>Supporto</h2>
+
+        <h3>Risorse di Supporto</h3>
+        <ul>
+            <li><strong>GitHub Issues:</strong> <a href="https://github.com/gpicchiarelli/Colibri-DB/issues">Segnala problemi</a></li>
+            <li><strong>GitHub Discussions:</strong> <a href="https://github.com/gpicchiarelli/Colibri-DB/discussions">Domande e discussioni</a></li>
+            <li><strong>Documentazione:</strong> <a href="api-reference.html">API Reference</a></li>
+            <li><strong>Esempi:</strong> <a href="examples.html">Esempi pratici</a></li>
+        </ul>
+
+        <h3>Informazioni per il Supporto</h3>
+        <p>Quando richiedi supporto, includi:</p>
+        <ul>
+            <li>Versione di ColibrìDB</li>
+            <li>Versione di Swift</li>
+            <li>Sistema operativo</li>
+            <li>Log di errore completi</li>
+            <li>Configurazione utilizzata</li>
+            <li>Passi per riprodurre il problema</li>
+        </ul>
+
+        <h2>Prossimi Passi</h2>
+        <ul>
+            <li><a href="configuration.html">Configuration</a> - Configurazione avanzata</li>
+            <li><a href="performance.html">Performance</a> - Ottimizzazione performance</li>
+            <li><a href="api-reference.html">API Reference</a> - Riferimento API completo</li>
+        </ul>
+    </div>
+</body>
+</html>

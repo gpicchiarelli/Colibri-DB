@@ -21,9 +21,6 @@ import Logging
 
 // Types are defined in Core/Types.swift and MVCCTypes.swift
 
-/// Key type for MVCC (string-based keys)
-public typealias MVCCKey = String
-
 /// MVCC transaction manager protocol
 public protocol MVCCTransactionManager: Sendable {
     func beginTransaction() async throws -> TxID
@@ -63,13 +60,13 @@ public actor MVCCManager {
     
     /// Keys
     /// TLA+: Keys
-    private let Keys: Set<MVCCKey> = []
+    private let Keys: Set<Key> = []
     
     // MARK: - State Variables (TLA+ vars)
     
     /// Versions
     /// TLA+: versions \in [Key -> [TxID -> Version]]
-    private var versions: [MVCCKey: [TxID: Version]] = [:]
+    private var versions: [Key: [TxID: Version]] = [:]
     
     /// Active transactions
     /// TLA+: activeTx \in Set(TxID)
@@ -89,11 +86,11 @@ public actor MVCCManager {
     
     /// Read sets
     /// TLA+: readSets \in [TxID -> Set(Key)]
-    private var readSets: [TxID: Set<MVCCKey>] = [:]
+    private var readSets: [TxID: Set<Key>] = [:]
     
     /// Write sets
     /// TLA+: writeSets \in [TxID -> Set(Key)]
-    private var writeSets: [TxID: Set<MVCCKey>] = [:]
+    private var writeSets: [TxID: Set<Key>] = [:]
     
     /// Global timestamp
     /// TLA+: globalTS \in Timestamp
@@ -188,7 +185,7 @@ public actor MVCCManager {
     
     /// Read
     /// TLA+ Action: Read(txId, key)
-    public func read(txId: TxID, key: MVCCKey) async throws -> Value? {
+    public func read(txId: TxID, key: Key) async throws -> Value? {
         // TLA+: Check if transaction is active
         guard activeTx.contains(txId) else {
             throw MVCCManagerError.transactionNotActive
@@ -211,7 +208,7 @@ public actor MVCCManager {
     
     /// Write
     /// TLA+ Action: Write(txId, key, value)
-    public func write(txId: TxID, key: MVCCKey, value: Value) async throws {
+    public func write(txId: TxID, key: Key, value: Value) async throws {
         // TLA+: Check if transaction is active
         guard activeTx.contains(txId) else {
             throw MVCCManagerError.transactionNotActive
@@ -325,7 +322,7 @@ public actor MVCCManager {
     // MARK: - Helper Methods
     
     /// Find visible version
-    private func findVisibleVersion(key: MVCCKey, snapshot: MVCCSnapshot) async throws -> Version? {
+    private func findVisibleVersion(key: Key, snapshot: MVCCSnapshot) async throws -> Version? {
         // TLA+: Find visible version
         guard let keyVersions = versions[key] else {
             return nil
@@ -340,7 +337,7 @@ public actor MVCCManager {
     }
     
     /// Detect write-write conflict
-    private func detectWriteWriteConflict(txId: TxID, key: MVCCKey) async throws -> Bool {
+    private func detectWriteWriteConflict(txId: TxID, key: Key) async throws -> Bool {
         // TLA+: Check for write-write conflicts
         if let writeSet = writeSets[txId] {
             return writeSet.contains(key)
@@ -378,17 +375,17 @@ public actor MVCCManager {
     }
     
     /// Get read set
-    public func getReadSet(txId: TxID) -> Set<MVCCKey> {
+    public func getReadSet(txId: TxID) -> Set<Key> {
         return readSets[txId] ?? []
     }
     
     /// Get write set
-    public func getWriteSet(txId: TxID) -> Set<MVCCKey> {
+    public func getWriteSet(txId: TxID) -> Set<Key> {
         return writeSets[txId] ?? []
     }
     
     /// Get versions for key
-    public func getVersionsForKey(key: MVCCKey) -> [Version] {
+    public func getVersionsForKey(key: Key) -> [Version] {
         if let versionDict = versions[key] {
             return Array(versionDict.values)
         } else {
@@ -437,7 +434,7 @@ public actor MVCCManager {
     }
     
     /// Get version count for key
-    public func getVersionCountForKey(key: MVCCKey) -> Int {
+    public func getVersionCountForKey(key: Key) -> Int {
         return versions[key]?.count ?? 0
     }
     
@@ -500,23 +497,6 @@ public actor MVCCManager {
         let readStability = checkReadStabilityInvariant()
         
         return snapshotIsolation && noWriteWriteConflicts && versionChainConsistency && readStability
-    }
-    
-    // MARK: - API Compatibility Wrappers
-    
-    /// Alias for commit() - for backward compatibility with tests
-    public func commitTransaction(txId: TxID) async throws {
-        try await commit(txId: txId)
-    }
-    
-    /// Alias for abort() - for backward compatibility with tests
-    public func abortTransaction(txId: TxID) async throws {
-        try await abort(txId: txId)
-    }
-    
-    /// Garbage collection - alias for vacuum()
-    public func garbageCollect() async throws {
-        try await vacuum()
     }
 }
 

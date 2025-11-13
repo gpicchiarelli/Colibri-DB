@@ -81,7 +81,7 @@ public struct Message: Codable, Sendable, Equatable {
 
 /// Distributed Clock Manager for timestamp generation
 /// Corresponds to TLA+ module: Clock.tla
-public actor DistributedClockManager: DatabaseClock {
+public actor DistributedClockManager {
     
     // MARK: - State Variables (TLA+ vars)
     
@@ -178,7 +178,7 @@ public actor DistributedClockManager: DatabaseClock {
         // TLA+: Return timestamp
         let timestamp = lamportClock
         
-        logInfo("Generated Lamport timestamp: \(timestamp)")
+        print("Generated Lamport timestamp: \(timestamp)")
         return timestamp
     }
     
@@ -191,7 +191,7 @@ public actor DistributedClockManager: DatabaseClock {
         // TLA+: Increment own clock
         vectorClock[self.nodeId] = (vectorClock[self.nodeId] ?? 0) + 1
         
-        logInfo("Updated vector clock for node: \(nodeId) to \(timestamp)")
+        print("Updated vector clock for node: \(nodeId) to \(timestamp)")
     }
     
     /// Generate HLC
@@ -211,7 +211,7 @@ public actor DistributedClockManager: DatabaseClock {
         // TLA+: Return HLC timestamp
         let timestamp = hlcPhysical * 1000000 + hlcLogical
         
-        logInfo("Generated HLC timestamp: \(timestamp)")
+        print("Generated HLC timestamp: \(timestamp)")
         return timestamp
     }
     
@@ -221,7 +221,7 @@ public actor DistributedClockManager: DatabaseClock {
         // TLA+: Get physical time
         physicalTime = UInt64(Date().timeIntervalSince1970 * 1000)
         
-        logInfo("Got physical time: \(physicalTime)")
+        print("Got physical time: \(physicalTime)")
         return physicalTime
     }
     
@@ -234,7 +234,7 @@ public actor DistributedClockManager: DatabaseClock {
         // TLA+: Add to allocated timestamps
         allocatedTimestamps.insert(oracleTimestamp)
         
-        logInfo("Allocated oracle timestamp: \(oracleTimestamp)")
+        print("Allocated oracle timestamp: \(oracleTimestamp)")
         return oracleTimestamp
     }
     
@@ -254,7 +254,7 @@ public actor DistributedClockManager: DatabaseClock {
         events.append(event)
         nextEventId += 1
         
-        logInfo("Recorded event: \(event.eventId)")
+        print("Recorded event: \(event.eventId)")
         return event
     }
     
@@ -274,7 +274,7 @@ public actor DistributedClockManager: DatabaseClock {
         messages.append(message)
         messageId += 1
         
-        logInfo("Sent message: \(message.messageId) to \(to)")
+        print("Sent message: \(message.messageId) to \(to)")
         return message
     }
     
@@ -287,7 +287,7 @@ public actor DistributedClockManager: DatabaseClock {
         // TLA+: Record receive event
         let event = await recordEvent(eventType: .receive, data: message.data)
         
-        logInfo("Received message: \(message.messageId) from \(message.from)")
+        print("Received message: \(message.messageId) from \(message.from)")
         return event
     }
     
@@ -485,11 +485,5 @@ public actor DistributedClockManager: DatabaseClock {
         let clockSkewBound = checkClockSkewBoundInvariant()
         
         return causalityPreservation && monotonicity && externalConsistency && clockSkewBound
-    }
-    
-    // MARK: - DatabaseClock Protocol
-    
-    public func getCurrentTimestamp() async -> Timestamp {
-        return await generateHLC()
     }
 }

@@ -223,29 +223,6 @@ public actor TransactionManager {
         self.globalClock = 0
     }
     
-    /// Factory method for testing with in-memory defaults
-    /// Creates a TransactionManager with temporary WAL and MVCC adapters
-    public static func makeForTesting() throws -> TransactionManager {
-        // Create temporary WAL file
-        let tempDir = FileManager.default.temporaryDirectory
-        let walPath = tempDir.appendingPathComponent("test_wal_\(UUID().uuidString).log")
-        
-        // Create FileWAL and MVCC with defaults
-        let fileWAL = try FileWAL(walFilePath: walPath)
-        let mvccManager = MVCCManager()
-        
-        // Create adapters
-        let walAdapter = fileWAL.asTransactionWALManager()
-        let mvccAdapter = mvccManager.asTransactionMVCCManager()
-        
-        // LockManager has circular dependency, so pass nil for testing
-        return TransactionManager(
-            walManager: walAdapter,
-            mvccManager: mvccAdapter,
-            lockManager: nil
-        )
-    }
-    
     // MARK: - Transaction Operations
     
     /// Begin transaction
@@ -277,7 +254,7 @@ public actor TransactionManager {
         // TLA+: Update global clock
         globalClock += 1
         
-        logInfo("Began transaction: \(txId)")
+        print("Began transaction: \(txId)")
         return txId
     }
     
@@ -305,7 +282,7 @@ public actor TransactionManager {
         // TLA+: Update global clock
         globalClock += 1
         
-        logInfo("Committed transaction: \(txId)")
+        print("Committed transaction: \(txId)")
     }
     
     /// Abort transaction
@@ -329,7 +306,7 @@ public actor TransactionManager {
         // TLA+: Update global clock
         globalClock += 1
         
-        logInfo("Aborted transaction: \(txId)")
+        print("Aborted transaction: \(txId)")
     }
     
     /// Request lock
@@ -349,7 +326,7 @@ public actor TransactionManager {
         // TLA+: Add to transaction locks
         txLocks[txId]?.insert(resource)
         
-        logInfo("Requested lock: \(resource) for transaction: \(txId)")
+        print("Requested lock: \(resource) for transaction: \(txId)")
     }
     
     /// Release lock
@@ -366,7 +343,7 @@ public actor TransactionManager {
         // TLA+: Remove from transaction locks
         txLocks[txId]?.remove(resource)
         
-        logInfo("Released lock: \(resource) for transaction: \(txId)")
+        print("Released lock: \(resource) for transaction: \(txId)")
     }
     
     /// Prepare transaction
@@ -387,7 +364,7 @@ public actor TransactionManager {
         transactions[txId] = transaction
         preparedTransactions.insert(txId)
         
-        logInfo("Prepared transaction: \(txId)")
+        print("Prepared transaction: \(txId)")
     }
     
     /// Receive vote
@@ -404,7 +381,7 @@ public actor TransactionManager {
         }
         participantVotes[txId]?[participant] = vote
         
-        logInfo("Received vote: \(vote) from participant: \(participant) for transaction: \(txId)")
+        print("Received vote: \(vote) from participant: \(participant) for transaction: \(txId)")
     }
     
     /// Make decision
@@ -424,7 +401,7 @@ public actor TransactionManager {
         let allVotes = votes.values
         let decision = allVotes.allSatisfy { $0 }
         
-        logInfo("Made decision: \(decision) for transaction: \(txId)")
+        print("Made decision: \(decision) for transaction: \(txId)")
         return decision
     }
     
@@ -448,7 +425,7 @@ public actor TransactionManager {
         // TLA+: Update global clock
         globalClock += 1
         
-        logInfo("Sent \(decision ? "commit" : "abort") for transaction: \(txId)")
+        print("Sent \(decision ? "commit" : "abort") for transaction: \(txId)")
     }
     
     // MARK: - Helper Methods
@@ -648,7 +625,7 @@ public actor TransactionManager {
         prepareTimer = prepareTimer.filter { transactions[$0.key] != nil }
         preparedTransactions.removeAll()
         
-        logInfo("Completed transactions cleared")
+        print("Completed transactions cleared")
     }
     
     /// Reset transaction manager
@@ -671,7 +648,7 @@ public actor TransactionManager {
         globalClock = 0
         nextTID = 1
         
-        logInfo("Transaction manager reset")
+        print("Transaction manager reset")
     }
     
     // MARK: - Invariant Checking (for testing)

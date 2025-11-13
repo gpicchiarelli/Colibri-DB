@@ -122,7 +122,7 @@ public actor UtilityManager {
             logBuffer.removeFirst()
         }
         
-        logInfo(logEntry)
+        print(logEntry)
     }
     
     /// Perform health check

@@ -224,7 +224,7 @@ public actor MonitorManager {
         }
         
         if value > threshold {
-            logInfo("⚠️  ALERT: Metric '\(name)' exceeded threshold: \(value) > \(threshold)")
+            print("⚠️  ALERT: Metric '\(name)' exceeded threshold: \(value) > \(threshold)")
             // In production, would send alert to monitoring system
         }
     }

@@ -27,12 +27,12 @@ final class MVCCManagerTests: XCTestCase {
         let mvcc = makeManager()
         
         _ = try await mvcc.beginTransaction(txId: 1)
-        try await mvcc.write(txId: 1, key: "user:1", value: Value.int(Int64(42)))
+        try await mvcc.write(txId: 1, key: .string("user:1"), value: .int(42))
         try await mvcc.commit(txId: 1)
         
         _ = try await mvcc.beginTransaction(txId: 2)
-        let value = try await mvcc.read(txId: 2, key: "user:1")
-        XCTAssertEqual(value, Value.int(Int64(42)))
+        let value = try await mvcc.read(txId: 2, key: .string("user:1"))
+        XCTAssertEqual(value, .int(42))
         
         let snapshotInvariant = await mvcc.checkSnapshotIsolationInvariant()
         XCTAssertTrue(snapshotInvariant, "Inv_MVCC_SnapshotIsolation deve restare vero")
@@ -42,11 +42,11 @@ final class MVCCManagerTests: XCTestCase {
         let mvcc = makeManager()
         
         _ = try await mvcc.beginTransaction(txId: 10)
-        try await mvcc.write(txId: 10, key: "order:1", value: Value.string("pending"))
+        try await mvcc.write(txId: 10, key: .string("order:1"), value: .string("pending"))
         try await mvcc.abort(txId: 10)
         
         _ = try await mvcc.beginTransaction(txId: 20)
-        let readValue = try await mvcc.read(txId: 20, key: "order:1")
+        let readValue = try await mvcc.read(txId: 20, key: .string("order:1"))
         XCTAssertNil(readValue)
         
         let wwInvariant = await mvcc.checkNoWriteWriteConflictsInvariant()

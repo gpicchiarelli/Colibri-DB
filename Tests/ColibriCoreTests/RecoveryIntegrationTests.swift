@@ -37,9 +37,9 @@ final class RecoveryIntegrationTests: XCTestCase {
         let harness = try makeHarness()
         defer { harness.cleanup() }
         
-        let beginLSN = try await harness.wal.append(kind: .begin, txID: TxID(1), pageID: PageID(0), payload: nil)
-        let insertLSN = try await harness.wal.append(kind: .heapInsert, txID: TxID(1), pageID: PageID(42), payload: nil)
-        let commitLSN = try await harness.wal.append(kind: .commit, txID: TxID(1), pageID: PageID(0), payload: nil)
+        let beginLSN = try await harness.wal.append(kind: .begin, txID: 1, pageID: 0)
+        let insertLSN = try await harness.wal.append(kind: .heapInsert, txID: 1, pageID: 42)
+        let commitLSN = try await harness.wal.append(kind: .commit, txID: 1, pageID: 0)
         
         XCTAssertEqual(beginLSN, 1)
         XCTAssertEqual(insertLSN, 2)
@@ -79,8 +79,8 @@ final class RecoveryIntegrationTests: XCTestCase {
         let harness = try makeHarness()
         defer { harness.cleanup() }
         
-        _ = try await harness.wal.append(kind: .begin, txID: TxID(11), pageID: PageID(0), payload: nil)
-        let updateLSN = try await harness.wal.append(kind: .heapUpdate, txID: TxID(11), pageID: PageID(7), payload: nil)
+        _ = try await harness.wal.append(kind: .begin, txID: 11, pageID: 0)
+        let updateLSN = try await harness.wal.append(kind: .heapUpdate, txID: 11, pageID: 7)
         try await harness.wal.updatePageLSN(7, lsn: updateLSN)
         try await harness.wal.flush()
         

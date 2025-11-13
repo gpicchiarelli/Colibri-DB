@@ -61,7 +61,7 @@ public struct VacuumTuple: Codable, Equatable, Hashable {
 // MARK: - Vacuum Statistics (TLA+: VacuumStats)
 
 /// Vacuum statistics
-public struct VacuumStats: Codable, Sendable {
+public struct VacuumStats: Codable {
     public var numScanned: Int            // TLA+: numScanned
     public var numRemoved: Int           // TLA+: numRemoved
     public var numDead: Int              // TLA+: numDead
@@ -149,9 +149,9 @@ public actor VacuumManager {
     // Dependencies
     private let mvcc: MVCCManager
     private let heapTable: HeapTable
-    private let indexManager: IndexManagerActor
+    private let indexManager: IndexManager
     
-    public init(mvcc: MVCCManager, heapTable: HeapTable, indexManager: IndexManagerActor) {
+    public init(mvcc: MVCCManager, heapTable: HeapTable, indexManager: IndexManager) {
         self.mvcc = mvcc
         self.heapTable = heapTable
         self.indexManager = indexManager

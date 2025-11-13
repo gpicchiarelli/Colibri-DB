@@ -209,39 +209,5 @@ public actor HeapTable {
         
         return newPageID
     }
-    
-    /// Scan all rows from the heap table
-    /// Returns all non-deleted rows
-    public func scanAll() async throws -> [Row] {
-        var allRows: [Row] = []
-        
-        // Scan all pages in freeSpaceMap (pages that have been used)
-        for pageID in freeSpaceMap.keys {
-            let page = try await bufferPool.getPage(pageID)
-            
-            // Scan all slots in the page
-            for (slotIndex, slot) in page.slots.enumerated() {
-                // Skip tombstone slots
-                guard !slot.tombstone else {
-                    continue
-                }
-                
-                // Read the row
-                let rid = RID(pageID: pageID, slotID: UInt32(slotIndex))
-                do {
-                    let row = try await read(rid)
-                    allRows.append(row)
-                } catch {
-                    // Skip rows that can't be read (e.g., deleted)
-                    continue
-                }
-            }
-            
-            // Unpin page
-            try await bufferPool.unpinPage(pageID)
-        }
-        
-        return allRows
-    }
 }
 

@@ -270,14 +270,14 @@ public actor SchemaEvolutionManager {
     // Dependencies
     private let transactionManager: TransactionManager
     private let catalog: Catalog
-    private let clock: DatabaseClock
+    private let clock: any Clock
     
     // Configuration
     private let maxSchemaVersions: Int
     private let maxColumnChanges: Int
     private let schemaChangeTimeout: Int
     
-    public init(transactionManager: TransactionManager, catalog: Catalog, clock: DatabaseClock,
+    public init(transactionManager: TransactionManager, catalog: Catalog, clock: any Clock,
                 maxSchemaVersions: Int = 10, maxColumnChanges: Int = 5, schemaChangeTimeout: Int = 300) {
         self.transactionManager = transactionManager
         self.catalog = catalog

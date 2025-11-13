@@ -11,14 +11,14 @@
 import Foundation
 
 /// Clock protocol for timestamp generation
-public protocol DatabaseClock {
+public protocol Clock {
     func getCurrentTimestamp() async -> Timestamp
 }
 
 /// Hybrid Logical Clock
 /// Combines physical time with logical counter for total ordering
 /// Based on: "Logical Physical Clocks" (Kulkarni & Demirbas, 2014)
-public actor HybridLogicalClock: DatabaseClock {
+public actor HybridLogicalClock: Clock {
     // MARK: - State
     
     /// Physical time component (milliseconds since epoch)

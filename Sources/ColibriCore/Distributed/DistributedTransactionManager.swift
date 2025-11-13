@@ -164,7 +164,7 @@ public actor DistributedTransactionManager {
         // TLA+: Update alive nodes
         aliveNodes = Set(nodes)
         
-        logInfo("Began distributed transaction: \(txId) on \(nodes.count) nodes")
+        print("Began distributed transaction: \(txId) on \(nodes.count) nodes")
     }
     
     /// Prepare transaction
@@ -179,7 +179,7 @@ public actor DistributedTransactionManager {
         // TLA+: Send prepare to all nodes
         try await sendPrepareToNodes(txId: txId)
         
-        logInfo("Prepared distributed transaction: \(txId)")
+        print("Prepared distributed transaction: \(txId)")
     }
     
     /// Commit transaction
@@ -205,7 +205,7 @@ public actor DistributedTransactionManager {
         // TLA+: Set state to committed
         distributedTx[txId] = .committed
         
-        logInfo("Committed distributed transaction: \(txId)")
+        print("Committed distributed transaction: \(txId)")
     }
     
     /// Abort transaction
@@ -226,7 +226,7 @@ public actor DistributedTransactionManager {
         // TLA+: Set state to aborted
         distributedTx[txId] = .aborted
         
-        logInfo("Aborted distributed transaction: \(txId)")
+        print("Aborted distributed transaction: \(txId)")
     }
     
     /// Handle replication
@@ -253,7 +253,7 @@ public actor DistributedTransactionManager {
             lastUpdate: UInt64(Date().timeIntervalSince1970 * 1000)
         )
         
-        logInfo("Handled replication for node: \(nodeId) at LSN: \(lsn)")
+        print("Handled replication for node: \(nodeId) at LSN: \(lsn)")
     }
     
     /// Handle consensus
@@ -262,7 +262,7 @@ public actor DistributedTransactionManager {
         // TLA+: Handle consensus decision
         // try await consensusManager.handleConsensusDecision(proposal: proposal, decision: decision)
         
-        logInfo("Handled consensus: \(proposal) -> \(decision)")
+        print("Handled consensus: \(proposal) -> \(decision)")
     }
     
     // MARK: - Helper Methods

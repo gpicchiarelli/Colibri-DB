@@ -98,9 +98,6 @@ public final class BTreeIndex: @unchecked Sendable {
     /// Precondition: key and rid are valid
     /// Postcondition: key inserted, tree remains balanced
     public func insert(key: Value, rid: RID) throws {
-        lock.lock()
-        defer { lock.unlock() }
-        
         guard let rootNode = nodes[root] else {
             throw DBError.internalError("Root node not found")
         }
@@ -245,11 +242,6 @@ public final class BTreeIndex: @unchecked Sendable {
         let child = parent.children[childIndex]
         let mid = Self.minDegree - 1  // Correct split point for B+Tree
         
-        // Validate bounds before splitting
-        guard mid < child.keys.count else {
-            throw DBError.internalError("Cannot split node: insufficient keys")
-        }
-        
         // Create new node
         let newNodeID = nextNodeId
         nextNodeId += 1
@@ -259,18 +251,12 @@ public final class BTreeIndex: @unchecked Sendable {
         
         // Split keys - promote middle key for internal nodes
         let promotedKey = child.keys[mid]
-        guard (mid + 1) < child.keys.count else {
-            throw DBError.internalError("Cannot split node: invalid key range")
-        }
         newNode.keys = Array(child.keys[(mid + 1)...])
         child.keys = Array(child.keys[0..<mid])
         
         if child.isLeaf {
             // Split leaf node - include promoted key in right node
             newNode.keys.insert(promotedKey, at: 0)
-            guard mid < child.rids.count else {
-                throw DBError.internalError("Cannot split leaf: insufficient RIDs")
-            }
             newNode.rids = Array(child.rids[mid...])
             child.rids = Array(child.rids[0..<mid])
             
@@ -279,9 +265,6 @@ public final class BTreeIndex: @unchecked Sendable {
             child.next = newNode
         } else {
             // Split internal node - don't include promoted key in children
-            guard (mid + 1) < child.children.count else {
-                throw DBError.internalError("Cannot split internal node: insufficient children")
-            }
             newNode.children = Array(child.children[(mid + 1)...])
             child.children = Array(child.children[0...(mid)])
             
