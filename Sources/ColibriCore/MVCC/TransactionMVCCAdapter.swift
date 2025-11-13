@@ -34,7 +34,7 @@ public actor TransactionMVCCAdapter: TransactionMVCCManager {
     
     /// Read a value for a key
     public func read(txId: TxID, key: String) async throws -> String? {
-        let value = try await mvccManager.read(txId: txId, key: .string(key))
+        let value = try await mvccManager.read(txId: txId, key: key)
         if case .string(let str) = value {
             return str
         }
@@ -43,7 +43,7 @@ public actor TransactionMVCCAdapter: TransactionMVCCManager {
     
     /// Write a value for a key
     public func write(txId: TxID, key: String, value: String) async throws {
-        try await mvccManager.write(txId: txId, key: .string(key), value: .string(value))
+        try await mvccManager.write(txId: txId, key: key, value: .string(value))
     }
     
     /// Commit a transaction

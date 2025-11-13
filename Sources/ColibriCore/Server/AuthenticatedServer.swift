@@ -289,8 +289,9 @@ public actor AuthenticatedServer {
             throw AuthServerError.permissionDenied(operation: operation)
         }
         
-        // Execute query (would delegate to query executor)
-        // ...
+        // Execute query (delegate to query executor)
+        // For now, return empty result - full implementation would parse and execute SQL
+        let result = QueryResult(rows: [], columns: [])
         
         // Update session activity
         session.lastActivity = Date()

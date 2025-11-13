@@ -197,7 +197,7 @@ public final class AuthenticationManager: @unchecked Sendable {
     
     /// Delete user
     /// TLA+ Action: DeleteUser(username)
-    public func deleteUser(username: String) throws {
+    public func deleteUser(username: String) async throws {
         // TLA+: Check if user exists
         guard users[username] != nil else {
             throw AuthenticationError.userNotFound
@@ -284,6 +284,49 @@ public final class AuthenticationManager: @unchecked Sendable {
         sessions[sessionId] = session
         
         return session
+    }
+    
+    /// Authenticate user (wrapper that returns sessionId as String)
+    /// Convenience method for tests and simple use cases
+    public func authenticate(username: String, password: String) async throws -> String {
+        let session = try await authenticateUser(username: username, password: password)
+        return session.sessionId
+    }
+    
+    /// Change user password
+    /// TLA+ Action: ChangePassword(username, oldPassword, newPassword)
+    public func changePassword(username: String, oldPassword: String, newPassword: String) async throws {
+        // TLA+: Check if user exists
+        guard let user = users[username] else {
+            throw AuthenticationError.userNotFound
+        }
+        
+        // TLA+: Verify old password
+        let isOldPasswordValid = try verifyPassword(oldPassword, storedHash: user.passwordHash, salt: user.salt)
+        guard isOldPasswordValid else {
+            throw AuthenticationError.invalidCredentials
+        }
+        
+        // TLA+: Validate new password strength
+        try validatePassword(newPassword)
+        
+        // TLA+: Generate new salt and hash new password
+        let newSalt = generateSalt()
+        let newPasswordHash = try hashPassword(newPassword, salt: newSalt)
+        
+        // TLA+: Update user metadata with new password
+        let updatedUser = UserMetadata(
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            status: user.status,
+            createdAt: user.createdAt,
+            lastLogin: user.lastLogin,
+            passwordHash: newPasswordHash,
+            salt: newSalt
+        )
+        
+        users[username] = updatedUser
     }
     
     /// Validate session

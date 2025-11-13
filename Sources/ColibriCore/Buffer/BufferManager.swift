@@ -155,7 +155,7 @@ public actor BufferManager {
             // TLA+: Page hit
             let page = bufferPool[frameIndex]!
             updateHitRate()
-            print("Page hit: \(pageId)")
+            logInfo("Page hit: \(pageId)")
             return page
         }
         
@@ -186,7 +186,7 @@ public actor BufferManager {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Page fetched: \(pageId) to frame: \(frameIndex)")
+        logInfo("Page fetched: \(pageId) to frame: \(frameIndex)")
         return page
     }
     
@@ -204,7 +204,7 @@ public actor BufferManager {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Page unpinned: \(pageId)")
+        logInfo("Page unpinned: \(pageId)")
     }
     
     /// Flush page
@@ -230,7 +230,7 @@ public actor BufferManager {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Page flushed: \(pageId)")
+        logInfo("Page flushed: \(pageId)")
     }
     
     /// Allocate frame
@@ -245,7 +245,7 @@ public actor BufferManager {
         // TLA+: Evict page
         let frameIndex = try await evictPage()
         
-        print("Frame allocated: \(frameIndex)")
+        logInfo("Frame allocated: \(frameIndex)")
         return frameIndex
     }
     
@@ -283,7 +283,7 @@ public actor BufferManager {
         metrics.evictionCount += 1
         updateMetrics()
         
-        print("Page evicted: \(pageId) from frame: \(frameIndex)")
+        logInfo("Page evicted: \(pageId) from frame: \(frameIndex)")
         return frameIndex
     }
     
@@ -470,7 +470,7 @@ public actor BufferManager {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Page pinned: \(pageId)")
+        logInfo("Page pinned: \(pageId)")
     }
     
     /// Mark page as dirty
@@ -481,7 +481,7 @@ public actor BufferManager {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Page marked as dirty: \(pageId)")
+        logInfo("Page marked as dirty: \(pageId)")
     }
     
     /// Clear buffer
@@ -497,7 +497,7 @@ public actor BufferManager {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Buffer cleared")
+        logInfo("Buffer cleared")
     }
     
     // MARK: - Invariant Checking (for testing)

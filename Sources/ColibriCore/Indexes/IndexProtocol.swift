@@ -22,7 +22,7 @@ import Foundation
 /// Unified protocol for all index implementations
 /// All index types (BTree, ART, Hash, LSM, SkipList, etc.) must conform to this protocol
 /// to ensure consistent behavior and enable property-based testing.
-public protocol Index: Sendable {
+public protocol IndexProtocol: Sendable {
     
     // MARK: - Core Operations
     
@@ -91,7 +91,7 @@ public protocol Index: Sendable {
 
 // MARK: - Default Implementations
 
-extension Index {
+extension IndexProtocol {
     
     /// Default implementation of getStatistics
     public func getStatistics() async throws -> [String: Any] {
@@ -113,10 +113,10 @@ extension Index {
     }
 }
 
-// MARK: - Index Errors
+// MARK: - Index Protocol Errors
 
-/// Errors that can occur during index operations
-public enum IndexError: Error, LocalizedError {
+/// Errors that can occur during index protocol operations
+public enum IndexProtocolError: Error, LocalizedError {
     case keyNotFound(String)
     case duplicateKey(String)
     case invalidKey(String)
@@ -148,10 +148,10 @@ public enum IndexError: Error, LocalizedError {
     }
 }
 
-// MARK: - Index Types Enum
+// MARK: - Index Implementation Types
 
-/// Enumeration of supported index types
-public enum IndexType: String, Codable, Sendable {
+/// Enumeration of supported index implementation types
+public enum IndexImplementationType: String, Codable, Sendable {
     case btree = "BTree"
     case art = "ART"
     case hash = "Hash"
@@ -166,15 +166,15 @@ public enum IndexType: String, Codable, Sendable {
 // MARK: - Index Configuration
 
 /// Configuration options for index creation
-public struct IndexConfiguration: Codable, Sendable {
-    public let type: IndexType
+public struct IndexProtocolConfiguration: Codable, Sendable {
+    public let type: IndexImplementationType
     public let isUnique: Bool
     public let allowNulls: Bool
     public let pageSize: Int
     public let cacheSize: Int
     
     public init(
-        type: IndexType,
+        type: IndexImplementationType,
         isUnique: Bool = false,
         allowNulls: Bool = true,
         pageSize: Int = 4096,

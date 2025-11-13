@@ -135,7 +135,7 @@ public actor LockManager {
             // TLA+: Update wait-for graph
             try await updateWaitForGraph(txId: txId, resource: resource)
             
-            print("Lock request queued: \(txId) for resource: \(resource) with mode: \(mode.rawValue)")
+            logInfo("Lock request queued: \(txId) for resource: \(resource) with mode: \(mode.rawValue)")
         }
     }
     
@@ -156,7 +156,7 @@ public actor LockManager {
         // TLA+: Grant locks from wait queue
         try await grantFromWaitQueue(resource: resource)
         
-        print("Released lock: \(txId) for resource: \(resource)")
+        logInfo("Released lock: \(txId) for resource: \(resource)")
     }
     
     /// Upgrade lock
@@ -187,7 +187,7 @@ public actor LockManager {
             // TLA+: Update wait-for graph
             try await updateWaitForGraph(txId: txId, resource: resource)
             
-            print("Lock upgrade queued: \(txId) for resource: \(resource) to mode: \(newMode.rawValue)")
+            logInfo("Lock upgrade queued: \(txId) for resource: \(resource) to mode: \(newMode.rawValue)")
         }
     }
     
@@ -204,7 +204,7 @@ public actor LockManager {
         // TLA+: Clear wait-for graph
         waitForGraph.removeValue(forKey: txId)
         
-        print("Released all locks for transaction: \(txId)")
+        logInfo("Released all locks for transaction: \(txId)")
     }
     
     // MARK: - Helper Methods
@@ -239,7 +239,7 @@ public actor LockManager {
         }
         lockGrantTime[txId]?[resource] = UInt64(Date().timeIntervalSince1970 * 1000)
         
-        print("Granted lock: \(txId) for resource: \(resource) with mode: \(mode.rawValue)")
+        logInfo("Granted lock: \(txId) for resource: \(resource) with mode: \(mode.rawValue)")
     }
     
     /// Grant locks from wait queue
@@ -466,13 +466,13 @@ public actor LockManager {
         lockGrantTime.removeAll()
         deadlockVictim = 0
         
-        print("All locks cleared")
+        logInfo("All locks cleared")
     }
     
     /// Reset lock manager
     public func resetLockManager() async throws {
         try await clearAllLocks()
-        print("Lock manager reset")
+        logInfo("Lock manager reset")
     }
     
     // MARK: - Invariant Checking (for testing)

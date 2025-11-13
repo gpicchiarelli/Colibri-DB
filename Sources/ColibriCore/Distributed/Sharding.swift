@@ -77,7 +77,7 @@ public actor ShardManager {
     }
     
     public func rebalance() async {
-        print("Rebalancing shards...")
+        logInfo("Rebalancing shards...")
     }
 }
 

@@ -1,25 +1,14 @@
 //
 //  QueryExecutorManager.swift
-//  ColibrìDB Query Executor Manager Implementation
+//  ColibrìDB Query Executor Manager
 //
 //  Based on: spec/QueryExecutor.tla
-//  Implements: Query execution engine with operators
+//  Implements: Query execution pipeline with operators
 //  Author: ColibrìDB Team
 //  Date: 2025-10-19
 //
-//  Key Properties:
-//  - Correctness: Query execution is correct
-//  - Completeness: Query execution is complete
-//  - No Duplicates: No duplicate results
-//  - Order Preservation: Order is preserved
-//
 
 import Foundation
-
-// MARK: - Query Executor Types
-
-
-// ScanState, JoinState, AggregationState, and SortState are defined in Query/QueryExecutor.swift
 
 // MARK: - Query Executor Manager
 
@@ -30,24 +19,28 @@ public actor SQLQueryExecutorManager {
     // MARK: - State Variables (TLA+ vars)
     
     /// Scan states
-    /// TLA+: scanState \in [String -> ScanState]
-    private var scanStates: [String: ScanState] = [:]
+    /// TLA+: scanState \in [String -> QueryScanState]
+    private var scanStates: [String: QueryScanState] = [:]
     
     /// Join states
-    /// TLA+: joinState \in [String -> JoinState]
-    private var joinStates: [String: JoinState] = [:]
-    
-    /// Aggregation states
-    /// TLA+: aggState \in [String -> AggregationState]
-    private var aggStates: [String: AggregationState] = [:]
+    /// TLA+: joinState \in [String -> QueryJoinState]
+    private var joinStates: [String: QueryJoinState] = [:]
     
     /// Sort states
-    /// TLA+: sortState \in [String -> SortState]
-    private var sortStates: [String: SortState] = [:]
+    /// TLA+: sortState \in [String -> QuerySortState]
+    private var sortStates: [String: QuerySortState] = [:]
+    
+    /// Projection states
+    /// TLA+: projectionState \in [String -> QueryProjectionState]
+    private var projectionStates: [String: QueryProjectionState] = [:]
+    
+    /// Select states
+    /// TLA+: selectState \in [String -> QuerySelectState]
+    private var selectStates: [String: QuerySelectState] = [:]
     
     /// Output buffers
-    /// TLA+: outputBuffer \in [String -> Seq(Tuple)]
-    private var outputBuffers: [String: [Tuple]] = [:]
+    /// TLA+: outputBuffer \in [String -> Seq(Row)]
+    private var outputBuffers: [String: [Row]] = [:]
     
     /// Pipeline active
     /// TLA+: pipelineActive \in BOOLEAN
@@ -56,354 +49,299 @@ public actor SQLQueryExecutorManager {
     // MARK: - Dependencies
     
     /// Storage manager
-    private let storageManager: any StorageManager
+    private let storageManager: StorageManagerActor
     
     /// Index manager
-    private let indexManager: any IndexManager
+    private let indexManager: IndexManagerActor
     
     // MARK: - Initialization
     
-    public init(storageManager: any StorageManager, indexManager: any IndexManager) {
+    public init(storageManager: StorageManagerActor, indexManager: IndexManagerActor) {
         self.storageManager = storageManager
         self.indexManager = indexManager
         
         // TLA+ Init
         self.scanStates = [:]
         self.joinStates = [:]
-        self.aggStates = [:]
         self.sortStates = [:]
+        self.projectionStates = [:]
+        self.selectStates = [:]
         self.outputBuffers = [:]
         self.pipelineActive = false
     }
     
-    // MARK: - Core Operations
+    // MARK: - Pipeline Operations
     
-    /// Execute scan
-    /// TLA+ Action: ExecuteScan(operatorId, tableName, startRID, endRID)
-    public func executeScan(operatorId: String, tableName: String, startRID: RID, endRID: RID) async throws {
-        // TLA+: Create scan state
-        let scanState = ScanState(table: tableName)
-        
+    /// Start pipeline
+    /// TLA+ Action: StartPipeline()
+    public func startPipeline() async {
+        pipelineActive = true
+    }
+    
+    /// Stop pipeline
+    /// TLA+ Action: StopPipeline()
+    public func stopPipeline() async {
+        pipelineActive = false
+    }
+    
+    // MARK: - Scan Operator
+    
+    /// Create scan operator
+    /// TLA+ Action: CreateScanOperator(operatorId, table)
+    public func createScanOperator(operatorId: String, table: String) async throws {
+        let scanState = QueryScanState(
+            table: table,
+            currentRID: nil,
+            exhausted: false
+        )
         scanStates[operatorId] = scanState
-        outputBuffers[operatorId] = []
-        
-        // TLA+: Execute scan
-        try await executeScanOperator(operatorId: operatorId)
-        
-        print("Executed scan: \(operatorId)")
     }
-    
-    /// Execute join
-    /// TLA+ Action: ExecuteJoin(operatorId, leftTable, rightTable, joinType)
-    public func executeJoin(operatorId: String, leftTable: String, rightTable: String, joinType: String) async throws {
-        // TLA+: Create join state
-        let joinState = JoinState(joinType: .nestedLoop)
-        
-        joinStates[operatorId] = joinState
-        outputBuffers[operatorId] = []
-        
-        // TLA+: Execute join
-        try await executeJoinOperator(operatorId: operatorId, leftTable: "left", rightTable: "right")
-        
-        print("Executed join: \(operatorId)")
-    }
-    
-    /// Execute aggregation
-    /// TLA+ Action: ExecuteAggregation(operatorId, function, column)
-    public func executeAggregation(operatorId: String, function: String, column: String) async throws {
-        // TLA+: Create aggregation state
-        let aggState = AggregationState()
-        
-        aggStates[operatorId] = aggState
-        outputBuffers[operatorId] = []
-        
-        // TLA+: Execute aggregation
-        try await executeAggregationOperator(operatorId: operatorId, function: "count")
-        
-        print("Executed aggregation: \(operatorId)")
-    }
-    
-    /// Execute sort
-    /// TLA+ Action: ExecuteSort(operatorId, column, order)
-    public func executeSort(operatorId: String, column: String, order: String) async throws {
-        // TLA+: Create sort state
-        let sortState = SortState()
-        
-        sortStates[operatorId] = sortState
-        outputBuffers[operatorId] = []
-        
-        // TLA+: Execute sort
-        try await executeSortOperator(operatorId: operatorId, order: "asc")
-        
-        print("Executed sort: \(operatorId)")
-    }
-    
-    /// Execute projection
-    /// TLA+ Action: ExecuteProjection(operatorId, columns)
-    public func executeProjection(operatorId: String, columns: [String]) async throws {
-        // TLA+: Execute projection
-        try await executeProjectionOperator(operatorId: operatorId, columns: columns)
-        
-        print("Executed projection: \(operatorId)")
-    }
-    
-    /// Execute selection
-    /// TLA+ Action: ExecuteSelection(operatorId, predicate)
-    public func executeSelection(operatorId: String, predicate: String) async throws {
-        // TLA+: Execute selection
-        try await executeSelectionOperator(operatorId: operatorId, predicate: predicate)
-        
-        print("Executed selection: \(operatorId)")
-    }
-    
-    /// Execute operator
-    /// TLA+ Action: ExecuteOperator(operatorId, operatorType, params)
-    public func executeOperator(operatorId: String, operatorType: String, params: [String: Any]) async throws {
-        // TLA+: Execute operator based on type
-        switch operatorType {
-        case "scan":
-            let tableName = params["tableName"] as? String ?? ""
-            let startRID = params["startRID"] as? RID ?? RID(pageID: 0, slotID: 0)
-            let endRID = params["endRID"] as? RID ?? RID(pageID: 0, slotID: 0)
-            try await executeScan(operatorId: operatorId, tableName: tableName, startRID: startRID, endRID: endRID)
-        case "join":
-            let leftTable = params["leftTable"] as? String ?? ""
-            let rightTable = params["rightTable"] as? String ?? ""
-            let joinType = params["joinType"] as? String ?? "inner"
-            try await executeJoin(operatorId: operatorId, leftTable: leftTable, rightTable: rightTable, joinType: joinType)
-        case "aggregation":
-            let function = params["function"] as? String ?? "count"
-            let column = params["column"] as? String ?? ""
-            try await executeAggregation(operatorId: operatorId, function: function, column: column)
-        case "sort":
-            let column = params["column"] as? String ?? ""
-            let order = params["order"] as? String ?? "asc"
-            try await executeSort(operatorId: operatorId, column: column, order: order)
-        case "projection":
-            let columns = params["columns"] as? [String] ?? []
-            try await executeProjection(operatorId: operatorId, columns: columns)
-        case "selection":
-            let predicate = params["predicate"] as? String ?? ""
-            try await executeSelection(operatorId: operatorId, predicate: predicate)
-        default:
-            throw SQLQueryExecutorManagerError.unknownOperatorType
-        }
-    }
-    
-    // MARK: - Helper Methods
     
     /// Execute scan operator
-    /// TLA+ Function: ExecuteScanOperator(operatorId)
-    private func executeScanOperator(operatorId: String) async throws {
+    /// TLA+ Action: ExecuteScanOperator(operatorId)
+    public func executeScanOperator(operatorId: String) async throws {
         guard var scanState = scanStates[operatorId] else {
-            throw SQLQueryExecutorManagerError.operatorNotFound
+            throw QueryExecutorError.operatorNotFound
         }
         
-        // TLA+: Scan tuples
+        // TLA+: Scan table
         while !scanState.exhausted {
-            // TLA+: Fetch next tuple
-            if let tuple = try await fetchNextTuple(tableName: scanState.table, rid: scanState.currentRID ?? RID(pageID: 0, slotID: 0)) {
-                // TLA+: Add to output buffer
-                outputBuffers[operatorId, default: []].append(tuple)
-            }
-            
-            // TLA+: Update current RID
-            if let currentRID = scanState.currentRID {
-                scanState.currentRID = RID(pageID: currentRID.pageID, slotID: currentRID.slotID + 1)
+            if let row = try await fetchNextRow(tableName: scanState.table, rid: scanState.currentRID ?? RID(pageID: 0, slotID: 0)) {
+                outputBuffers[operatorId, default: []].append(row)
+                // Update RID (simplified)
+                scanState.currentRID = RID(pageID: (scanState.currentRID?.pageID ?? 0) + 1, slotID: 0)
             } else {
-                scanState.currentRID = RID(pageID: 0, slotID: 0)
+                scanState.exhausted = true
             }
-            
-            // TLA+: Check if complete (simplified)
-            scanState.exhausted = true
         }
         
         scanStates[operatorId] = scanState
+    }
+    
+    // MARK: - Join Operator
+    
+    /// Create join operator
+    /// TLA+ Action: CreateJoinOperator(operatorId, leftTable, rightTable)
+    public func createJoinOperator(operatorId: String, leftTable: String, rightTable: String) async throws {
+        let joinState = QueryJoinState(
+            leftTable: leftTable,
+            rightTable: rightTable,
+            exhausted: false
+        )
+        joinStates[operatorId] = joinState
     }
     
     /// Execute join operator
-    /// TLA+ Function: ExecuteJoinOperator(operatorId)
-    private func executeJoinOperator(operatorId: String, leftTable: String, rightTable: String) async throws {
+    /// TLA+ Action: ExecuteJoinOperator(operatorId)
+    public func executeJoinOperator(operatorId: String) async throws {
         guard var joinState = joinStates[operatorId] else {
-            throw SQLQueryExecutorManagerError.operatorNotFound
+            throw QueryExecutorError.operatorNotFound
         }
         
-        // TLA+: Join tuples
+        // TLA+: Join tables (simplified nested loop)
+        let leftTable = joinState.leftTable
+        let rightTable = joinState.rightTable
+        
         while !joinState.exhausted {
-            // TLA+: Fetch left tuple
-            if let leftTuple = try await fetchNextTuple(tableName: leftTable, rid: RID(pageID: 0, slotID: 0)) {
-                // TLA+: Fetch right tuple
-                if let rightTuple = try await fetchNextTuple(tableName: rightTable, rid: RID(pageID: 0, slotID: 0)) {
-                    // TLA+: Join tuples
-                    let joinedTuple = leftTuple + rightTuple
-                    outputBuffers[operatorId, default: []].append(joinedTuple)
+            if let leftRow = try await fetchNextRow(tableName: leftTable, rid: RID(pageID: 0, slotID: 0)) {
+                if let rightRow = try await fetchNextRow(tableName: rightTable, rid: RID(pageID: 0, slotID: 0)) {
+                    var joinedRow = leftRow
+                    joinedRow.merge(rightRow) { (_, new) in new }
+                    outputBuffers[operatorId, default: []].append(joinedRow)
                 }
             }
-            
-            // TLA+: Mark as exhausted (simplified)
             joinState.exhausted = true
         }
         
         joinStates[operatorId] = joinState
     }
     
-    /// Execute aggregation operator
-    /// TLA+ Function: ExecuteAggregationOperator(operatorId)
-    private func executeAggregationOperator(operatorId: String, function: String) async throws {
-        guard let aggState = aggStates[operatorId] else {
-            throw SQLQueryExecutorManagerError.operatorNotFound
-        }
-        
-        // TLA+: Aggregate tuples
-        if let inputTuples = outputBuffers[operatorId] {
-            // TLA+: Aggregate
-            switch function {
-            case "count":
-                let result = [[Value.int(Int64(inputTuples.count))]]
-                outputBuffers[operatorId] = result
-            case "sum":
-                let sum = inputTuples.compactMap { tuple in
-                    if let first = tuple.first, case .int(let value) = first {
-                        return Int(value)
-                    }
-                    return nil
-                }.reduce(0, +)
-                let result = [[Value.int(Int64(sum))]]
-                outputBuffers[operatorId] = result
-            case "avg":
-                let sum = inputTuples.compactMap { tuple in
-                    if let first = tuple.first, case .int(let value) = first {
-                        return Int(value)
-                    }
-                    return nil
-                }.reduce(0, +)
-                let avg = sum / inputTuples.count
-                let result = [[Value.int(Int64(avg))]]
-                outputBuffers[operatorId] = result
-            case "min":
-                let min = inputTuples.compactMap { tuple in
-                    if let first = tuple.first, case .int(let value) = first {
-                        return Int(value)
-                    }
-                    return nil
-                }.min() ?? 0
-                let result = [[Value.int(Int64(min))]]
-                outputBuffers[operatorId] = result
-            case "max":
-                let max = inputTuples.compactMap { tuple in
-                    if let first = tuple.first, case .int(let value) = first {
-                        return Int(value)
-                    }
-                    return nil
-                }.max() ?? 0
-                let result = [[Value.int(Int64(max))]]
-                outputBuffers[operatorId] = result
-            default:
-                break
-            }
-        }
-        
-        aggStates[operatorId] = aggState
-    }
+    // MARK: - Aggregate Operator
     
-    /// Execute sort operator
-    /// TLA+ Function: ExecuteSortOperator(operatorId)
-    private func executeSortOperator(operatorId: String, order: String) async throws {
-        guard let sortState = sortStates[operatorId] else {
-            throw SQLQueryExecutorManagerError.operatorNotFound
+    /// Execute aggregate operator
+    /// TLA+ Action: ExecuteAggregateOperator(operatorId, function)
+    public func executeAggregateOperator(operatorId: String, function: String) async throws {
+        guard let inputRows = outputBuffers[operatorId] else {
+            throw QueryExecutorError.operatorNotFound
         }
         
-        // TLA+: Sort tuples
-        if let inputTuples = outputBuffers[operatorId] {
-            // TLA+: Sort
-            let sortedTuples = inputTuples.sorted { tuple1, tuple2 in
-                let value1 = tuple1.first ?? Value.null
-                let value2 = tuple2.first ?? Value.null
-                
-                if order == "asc" {
-                    return compareValues(value1, value2)
-                } else {
-                    return compareValues(value2, value1)
+        switch function {
+        case "count":
+            outputBuffers[operatorId] = [["count": Value.int(Int64(inputRows.count))]]
+        case "sum":
+            var sum: Int64 = 0
+            for row in inputRows {
+                for (_, value) in row {
+                    if case .int(let val) = value {
+                        sum += val
+                        break
+                    }
                 }
             }
-            
-            outputBuffers[operatorId] = sortedTuples
+            outputBuffers[operatorId] = [["sum": Value.int(sum)]]
+        case "avg":
+            var sum: Double = 0.0
+            var count = 0
+            for row in inputRows {
+                for (_, value) in row {
+                    if case .int(let val) = value {
+                        sum += Double(val)
+                        count += 1
+                        break
+                    }
+                }
+            }
+            let avg = count > 0 ? sum / Double(count) : 0.0
+            outputBuffers[operatorId] = [["avg": Value.double(avg)]]
+        case "min":
+            var minVal: Int64? = nil
+            for row in inputRows {
+                for (_, value) in row {
+                    if case .int(let val) = value {
+                        minVal = minVal.map { min($0, val) } ?? val
+                        break
+                    }
+                }
+            }
+            outputBuffers[operatorId] = [["min": Value.int(minVal ?? 0)]]
+        case "max":
+            var maxVal: Int64? = nil
+            for row in inputRows {
+                for (_, value) in row {
+                    if case .int(let val) = value {
+                        maxVal = maxVal.map { max($0, val) } ?? val
+                        break
+                    }
+                }
+            }
+            outputBuffers[operatorId] = [["max": Value.int(maxVal ?? 0)]]
+        default:
+            break
         }
-        
+    }
+    
+    // MARK: - Sort Operator
+    
+    /// Create sort operator
+    /// TLA+ Action: CreateSortOperator(operatorId, column)
+    public func createSortOperator(operatorId: String, column: String) async throws {
+        let sortState = QuerySortState(
+            column: column,
+            ascending: true
+        )
         sortStates[operatorId] = sortState
     }
     
+    /// Execute sort operator
+    /// TLA+ Action: ExecuteSortOperator(operatorId)
+    public func executeSortOperator(operatorId: String) async throws {
+        guard let sortState = sortStates[operatorId],
+              var inputRows = outputBuffers[operatorId] else {
+            throw QueryExecutorError.operatorNotFound
+        }
+        
+        inputRows.sort { row1, row2 in
+            compareRows(row1: row1, row2: row2, column: sortState.column)
+        }
+        
+        outputBuffers[operatorId] = inputRows
+    }
+    
+    // MARK: - Projection Operator
+    
+    /// Create projection operator
+    /// TLA+ Action: CreateProjectionOperator(operatorId, columns)
+    public func createProjectionOperator(operatorId: String, columns: [String]) async throws {
+        let projectionState = QueryProjectionState(columns: columns)
+        projectionStates[operatorId] = projectionState
+    }
+    
     /// Execute projection operator
-    /// TLA+ Function: ExecuteProjectionOperator(operatorId, columns)
-    private func executeProjectionOperator(operatorId: String, columns: [String]) async throws {
-        // TLA+: Project columns
-        if let inputTuples = outputBuffers[operatorId] {
-            let projectedTuples = inputTuples.map { tuple in
-                // Simplified projection
-                return tuple
-            }
-            outputBuffers[operatorId] = projectedTuples
+    /// TLA+ Action: ExecuteProjectionOperator(operatorId)
+    public func executeProjectionOperator(operatorId: String) async throws {
+        guard let projectionState = projectionStates[operatorId],
+              let inputRows = outputBuffers[operatorId] else {
+            throw QueryExecutorError.operatorNotFound
         }
+        
+        let projectedRows = inputRows.map { row in
+            applyProjection(row: row, columns: projectionState.columns)
+        }
+        
+        outputBuffers[operatorId] = projectedRows
     }
     
-    /// Execute selection operator
-    /// TLA+ Function: ExecuteSelectionOperator(operatorId, predicate)
-    private func executeSelectionOperator(operatorId: String, predicate: String) async throws {
-        // TLA+: Select tuples based on predicate
-        if let inputTuples = outputBuffers[operatorId] {
-            let selectedTuples = inputTuples.filter { tuple in
-                // Simplified selection
-                return applyPredicate(tuple: tuple, predicate: predicate)
-            }
-            outputBuffers[operatorId] = selectedTuples
-        }
+    // MARK: - Select Operator
+    
+    /// Create select operator
+    /// TLA+ Action: CreateSelectOperator(operatorId, predicate)
+    public func createSelectOperator(operatorId: String, predicate: String) async throws {
+        let selectState = QuerySelectState(predicate: predicate)
+        selectStates[operatorId] = selectState
     }
     
-    /// Fetch next tuple
-    /// TLA+ Function: FetchNextTuple(tableName, rid)
-    private func fetchNextTuple(tableName: String, rid: RID) async throws -> Tuple? {
-        // TLA+: Fetch tuple from storage
+    /// Execute select operator
+    /// TLA+ Action: ExecuteSelectOperator(operatorId)
+    public func executeSelectOperator(operatorId: String) async throws {
+        guard let selectState = selectStates[operatorId],
+              let inputRows = outputBuffers[operatorId] else {
+            throw QueryExecutorError.operatorNotFound
+        }
+        
+        let selectedRows = inputRows.filter { row in
+            applyPredicate(row: row, predicate: selectState.predicate)
+        }
+        
+        outputBuffers[operatorId] = selectedRows
+    }
+    
+    // MARK: - Helper Functions
+    
+    /// Fetch next row
+    /// TLA+ Function: FetchNextRow(tableName, rid)
+    private func fetchNextRow(tableName: String, rid: RID) async throws -> Row? {
+        // TLA+: Fetch row from storage
         // Simplified implementation - would need proper storage integration
-        return [Value.string("mock_data")]
+        return ["id": Value.int(Int64(rid.pageID)), "data": Value.string("mock_data")]
     }
     
     /// Apply predicate
-    /// TLA+ Function: ApplyPredicate(tuple, predicate)
-    private func applyPredicate(tuple: Tuple, predicate: String) -> Bool {
+    /// TLA+ Function: ApplyPredicate(row, predicate)
+    private func applyPredicate(row: Row, predicate: String) -> Bool {
         // Simplified predicate evaluation
         return true
     }
     
     /// Apply projection
-    /// TLA+ Function: ApplyProjection(tuple, columns)
-    private func applyProjection(tuple: Tuple, columns: [String]) -> Tuple {
-        // Simplified projection
-        return tuple
+    /// TLA+ Function: ApplyProjection(row, columns)
+    private func applyProjection(row: Row, columns: [String]) -> Row {
+        var projected: Row = [:]
+        for col in columns {
+            if let value = row[col] {
+                projected[col] = value
+            }
+        }
+        return projected
     }
     
-    /// Compare tuples
-    /// TLA+ Function: CompareTuples(tuple1, tuple2, column)
+    /// Compare rows
+    /// TLA+ Function: CompareRows(row1, row2, column)
     private func compareValues(_ value1: Value, _ value2: Value) -> Bool {
         switch (value1, value2) {
-        case (.int(let a), .int(let b)):
-            return a < b
-        case (.double(let a), .double(let b)):
-            return a < b
-        case (.string(let a), .string(let b)):
-            return a < b
-        case (.bool(let a), .bool(let b)):
-            return a == false && b == true
-        case (.null, .null):
-            return false
+        case (.int(let v1), .int(let v2)):
+            return v1 < v2
+        case (.string(let v1), .string(let v2)):
+            return v1 < v2
+        case (.double(let v1), .double(let v2)):
+            return v1 < v2
         default:
             return false
         }
     }
     
-    private func compareTuples(tuple1: Tuple, tuple2: Tuple, column: String) -> Bool {
-        // Simplified comparison
-        let value1 = tuple1.first ?? Value.null
-        let value2 = tuple2.first ?? Value.null
+    private func compareRows(row1: Row, row2: Row, column: String) -> Bool {
+        let value1 = row1[column] ?? Value.null
+        let value2 = row2[column] ?? Value.null
         return compareValues(value1, value2)
     }
     
@@ -412,145 +350,90 @@ public actor SQLQueryExecutorManager {
     /// Get operator state
     public func getOperatorState(operatorId: String) -> [String: Any]? {
         if let scanState = scanStates[operatorId] {
-            return [
-                "type": "scan",
-                "state": scanState
-            ]
-        } else if let joinState = joinStates[operatorId] {
-            return [
-                "type": "join",
-                "state": joinState
-            ]
-        } else if let aggState = aggStates[operatorId] {
-            return [
-                "type": "aggregation",
-                "state": aggState
-            ]
-        } else if let sortState = sortStates[operatorId] {
-            return [
-                "type": "sort",
-                "state": sortState
-            ]
+            return ["type": "scan", "table": scanState.table, "exhausted": scanState.exhausted]
+        }
+        if let joinState = joinStates[operatorId] {
+            return ["type": "join", "leftTable": joinState.leftTable, "rightTable": joinState.rightTable, "exhausted": joinState.exhausted]
+        }
+        if let sortState = sortStates[operatorId] {
+            return ["type": "sort", "column": sortState.column, "ascending": sortState.ascending]
+        }
+        if let projectionState = projectionStates[operatorId] {
+            return ["type": "projection", "columns": projectionState.columns]
+        }
+        if let selectState = selectStates[operatorId] {
+            return ["type": "select", "predicate": selectState.predicate]
         }
         return nil
     }
     
     /// Get output buffer
-    public func getOutputBuffer(operatorId: String) -> [Tuple] {
+    public func getOutputBuffer(operatorId: String) -> [Row] {
         return outputBuffers[operatorId] ?? []
     }
     
-    /// Check if pipeline is active
-    public func isPipelineActive() -> Bool {
-        return pipelineActive
-    }
-    
-    /// Get scan states
-    public func getScanStates() -> [String: ScanState] {
-        return scanStates
-    }
-    
-    /// Get join states
-    public func getJoinStates() -> [String: JoinState] {
-        return joinStates
-    }
-    
-    /// Get aggregation states
-    public func getAggregationStates() -> [String: AggregationState] {
-        return aggStates
-    }
-    
-    /// Get sort states
-    public func getSortStates() -> [String: SortState] {
-        return sortStates
-    }
-    
-    /// Get output buffers
-    public func getOutputBuffers() -> [String: [Tuple]] {
+    /// Get all output buffers
+    public func getOutputBuffers() -> [String: [Row]] {
         return outputBuffers
     }
     
-    /// Clear executor
-    public func clearExecutor() async throws {
-        scanStates.removeAll()
-        joinStates.removeAll()
-        aggStates.removeAll()
-        sortStates.removeAll()
+    /// Clear output buffer
+    public func clearOutputBuffer(operatorId: String) async {
+        outputBuffers.removeValue(forKey: operatorId)
+    }
+    
+    /// Clear all output buffers
+    public func clearAllOutputBuffers() async {
         outputBuffers.removeAll()
-        pipelineActive = false
-        
-        print("Executor cleared")
-    }
-    
-    /// Reset executor
-    public func resetExecutor() async throws {
-        try await clearExecutor()
-        print("Executor reset")
-    }
-    
-    // MARK: - Invariant Checking (for testing)
-    
-    /// Check correctness invariant
-    /// TLA+ Inv_QueryExecutor_Correctness
-    public func checkCorrectnessInvariant() -> Bool {
-        // Check that query execution is correct
-        return true // Simplified
-    }
-    
-    /// Check completeness invariant
-    /// TLA+ Inv_QueryExecutor_Completeness
-    public func checkCompletenessInvariant() -> Bool {
-        // Check that query execution is complete
-        return true // Simplified
-    }
-    
-    /// Check no duplicates invariant
-    /// TLA+ Inv_QueryExecutor_NoDuplicates
-    public func checkNoDuplicatesInvariant() -> Bool {
-        // Check that there are no duplicate results
-        return true // Simplified
-    }
-    
-    /// Check order preservation invariant
-    /// TLA+ Inv_QueryExecutor_OrderPreservation
-    public func checkOrderPreservationInvariant() -> Bool {
-        // Check that order is preserved
-        return true // Simplified
-    }
-    
-    /// Check all invariants
-    public func checkAllInvariants() -> Bool {
-        let correctness = checkCorrectnessInvariant()
-        let completeness = checkCompletenessInvariant()
-        let noDuplicates = checkNoDuplicatesInvariant()
-        let orderPreservation = checkOrderPreservationInvariant()
-        
-        return correctness && completeness && noDuplicates && orderPreservation
     }
 }
 
 // MARK: - Supporting Types
 
-/// SQL query executor manager error
-public enum SQLQueryExecutorManagerError: Error, LocalizedError {
+/// Query scan state
+public struct QueryScanState: Sendable {
+    let table: String
+    var currentRID: RID?
+    var exhausted: Bool
+}
+
+/// Query join state
+public struct QueryJoinState: Sendable {
+    let leftTable: String
+    let rightTable: String
+    var exhausted: Bool
+}
+
+/// Query sort state
+public struct QuerySortState: Sendable {
+    let column: String
+    let ascending: Bool
+}
+
+/// Query projection state
+public struct QueryProjectionState: Sendable {
+    let columns: [String]
+}
+
+/// Query select state
+public struct QuerySelectState: Sendable {
+    let predicate: String
+}
+
+/// Query executor error
+public enum QueryExecutorError: Error, LocalizedError {
     case operatorNotFound
-    case unknownOperatorType
-    case executionFailed
-    case invalidParameters
-    case pipelineError
+    case pipelineNotActive
+    case invalidOperator
     
     public var errorDescription: String? {
         switch self {
         case .operatorNotFound:
             return "Operator not found"
-        case .unknownOperatorType:
-            return "Unknown operator type"
-        case .executionFailed:
-            return "Execution failed"
-        case .invalidParameters:
-            return "Invalid parameters"
-        case .pipelineError:
-            return "Pipeline error"
+        case .pipelineNotActive:
+            return "Pipeline not active"
+        case .invalidOperator:
+            return "Invalid operator"
         }
     }
 }

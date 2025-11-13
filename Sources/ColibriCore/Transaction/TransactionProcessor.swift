@@ -142,7 +142,7 @@ public actor TransactionProcessor {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Began transaction: \(txId) with isolation level: \(isolationLevel.rawValue)")
+        logInfo("Began transaction: \(txId) with isolation level: \(isolationLevel.rawValue)")
         return transaction
     }
     
@@ -170,7 +170,7 @@ public actor TransactionProcessor {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Committed transaction: \(txId)")
+        logInfo("Committed transaction: \(txId)")
     }
     
     /// Abort transaction
@@ -197,7 +197,7 @@ public actor TransactionProcessor {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Aborted transaction: \(txId)")
+        logInfo("Aborted transaction: \(txId)")
     }
     
     /// Set isolation level
@@ -215,12 +215,12 @@ public actor TransactionProcessor {
         
         // TLA+: Set isolation level
         // Simplified implementation - just log the isolation level
-        print("Isolation level set to: \(isolationLevel.rawValue)")
+        logInfo("Isolation level set to: \(isolationLevel.rawValue)")
         
         // TLA+: Update transaction
         activeTransactions[txId] = transaction
         
-        print("Set isolation level for transaction: \(txId) to \(isolationLevel.rawValue)")
+        logInfo("Set isolation level for transaction: \(txId) to \(isolationLevel.rawValue)")
     }
     
     /// Create savepoint
@@ -243,7 +243,7 @@ public actor TransactionProcessor {
         // TLA+: Update transaction
         activeTransactions[txId] = transaction
         
-        print("Created savepoint: \(savepointName) for transaction: \(txId)")
+        logInfo("Created savepoint: \(savepointName) for transaction: \(txId)")
     }
     
     /// Rollback to savepoint
@@ -275,7 +275,7 @@ public actor TransactionProcessor {
         // TLA+: Update metrics
         transactionMetrics.rollbackCount += 1
         
-        print("Rolled back transaction: \(txId) to savepoint: \(savepointName)")
+        logInfo("Rolled back transaction: \(txId) to savepoint: \(savepointName)")
     }
     
     // MARK: - Helper Methods
@@ -424,7 +424,7 @@ public actor TransactionProcessor {
     public func clearCompletedTransactions() async throws {
         committedTransactions.removeAll()
         abortedTransactions.removeAll()
-        print("Completed transactions cleared")
+        logInfo("Completed transactions cleared")
     }
     
     /// Reset metrics
@@ -440,7 +440,7 @@ public actor TransactionProcessor {
             rollbackCount: 0,
             savepointCount: 0
         )
-        print("Transaction metrics reset")
+        logInfo("Transaction metrics reset")
     }
     
     // MARK: - Invariant Checking (for testing)

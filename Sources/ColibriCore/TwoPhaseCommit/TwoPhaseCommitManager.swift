@@ -131,14 +131,14 @@ public actor TwoPhaseCommitManager {
     /// Transaction manager
     private let transactionManager: TransactionManager
     
-    /// Network manager
-    private let networkManager: NetworkManager
+    /// Network manager (placeholder)
+    // private let networkManager: TwoPhaseNetworkManager
     
     // MARK: - Initialization
     
-    public init(transactionManager: TransactionManager, networkManager: NetworkManager) {
+    public init(transactionManager: TransactionManager) {
         self.transactionManager = transactionManager
-        self.networkManager = networkManager
+        // self.networkManager = networkManager
         
         // TLA+ Init
         self.coordState = .active
@@ -173,7 +173,7 @@ public actor TwoPhaseCommitManager {
         // TLA+: Start local transaction
         let _ = try await transactionManager.beginTransaction()
         
-        print("Started transaction: \(txId) with \(participants.count) participants")
+        logInfo("Started transaction: \(txId) with \(participants.count) participants")
     }
     
     /// Send prepare
@@ -198,7 +198,7 @@ public actor TwoPhaseCommitManager {
         // TLA+: Set timeout
         coordTimeout = currentTime + 30000 // 30 seconds
         
-        print("Sent prepare for transaction: \(txId)")
+        logInfo("Sent prepare for transaction: \(txId)")
     }
     
     /// Receive vote
@@ -212,7 +212,7 @@ public actor TwoPhaseCommitManager {
             try await makeDecision()
         }
         
-        print("Received vote from \(participant): \(vote)")
+        logInfo("Received vote from \(participant): \(vote)")
     }
     
     /// Make decision
@@ -237,7 +237,7 @@ public actor TwoPhaseCommitManager {
             try await sendAbortToAll()
         }
         
-        print("Made decision: \(coordDecision ?? "unknown")")
+        logInfo("Made decision: \(coordDecision ?? "unknown")")
     }
     
     /// Send commit/abort
@@ -257,7 +257,7 @@ public actor TwoPhaseCommitManager {
             messages.append(message)
         }
         
-        print("Sent \(decision) to all participants")
+        logInfo("Sent \(decision) to all participants")
     }
     
     /// Receive decision
@@ -276,7 +276,7 @@ public actor TwoPhaseCommitManager {
         // TLA+: Apply decision locally
         try await applyDecision(decision: decision)
         
-        print("Received decision: \(decision)")
+        logInfo("Received decision: \(decision)")
     }
     
     /// Send ack
@@ -293,7 +293,7 @@ public actor TwoPhaseCommitManager {
         )
         messages.append(message)
         
-        print("Sent ack to coordinator")
+        logInfo("Sent ack to coordinator")
     }
     
     // MARK: - Helper Methods

@@ -121,7 +121,7 @@ public actor BTreeIndexManager {
         // TLA+: Insert into non-full root
         try await insertNonFull(nodeId: root, key: key, rid: rid)
         
-        print("Inserted key: \(key), rid: \(rid)")
+        logInfo("Inserted key: \(key), rid: \(rid)")
     }
     
     /// Delete
@@ -144,7 +144,7 @@ public actor BTreeIndexManager {
             }
         }
         
-        print("Deleted key: \(key)")
+        logInfo("Deleted key: \(key)")
     }
     
     /// Search
@@ -192,7 +192,7 @@ public actor BTreeIndexManager {
             currentLeaf = leafNode.next ?? 0
         }
         
-        print("Range scan: \(startKey) to \(endKey), found \(results.count) results")
+        logInfo("Range scan: \(startKey) to \(endKey), found \(results.count) results")
         return results
     }
     
@@ -712,13 +712,13 @@ public actor BTreeIndexManager {
         height = 0
         nextNodeId = 1
         
-        print("Tree cleared")
+        logInfo("Tree cleared")
     }
     
     /// Reset tree
     public func resetTree() async throws {
         try await clearTree()
-        print("Tree reset")
+        logInfo("Tree reset")
     }
     
     // MARK: - Invariant Checking (for testing)

@@ -116,6 +116,9 @@ public actor ColibrìDB {
     /// Authentication Manager (TLA+: Authentication)
     private let authManager: AuthenticationManager
     
+    /// Heap tables for each table
+    private var heapTables: [String: HeapTable] = [:]
+    
     // MARK: - State Management
     
     /// Active transactions (TLA+: activeTransactions)
@@ -188,10 +191,11 @@ public actor ColibrìDB {
         self.statisticsManager = StatisticsMaintenanceManager()
         
         // Initialize schema evolution
+        let distributedClock = DistributedClockManager(nodeId: "node-1")
         self.schemaEvolution = SchemaEvolutionManager(
             transactionManager: transactionManager,
             catalog: catalog,
-            clock: HybridLogicalClock(nodeID: 1)
+            clock: distributedClock
         )
         
         // Initialize wire protocol
@@ -389,6 +393,11 @@ public actor ColibrìDB {
         defer { Task { try? await abort(txId: txId) } }
         
         try await catalog.createTable(tableDef)
+        
+        // Create heap table for storage
+        let heapTable = HeapTable(bufferPool: bufferPool, wal: wal)
+        heapTables[tableDef.name] = heapTable
+        
         try await commit(txId: txId)
         
         databaseStats.tablesCreated += 1
@@ -433,8 +442,11 @@ public actor ColibrìDB {
         // Validate row against schema
         try validateRow(row, against: tableDef)
         
-        // Insert row (simplified - would use heap table)
-        let rid = RID(pageID: 1, slotID: UInt32.random(in: 1...1000))
+        // Get or create heap table
+        let heapTable = try await getOrCreateHeapTable(table: table)
+        
+        // Insert row using heap table
+        let rid = try await heapTable.insert(row, txID: txId)
         
         // Record modification for statistics
         if config.enableStatistics {
@@ -456,7 +468,18 @@ public actor ColibrìDB {
             throw DBError.transactionNotFound(txId: txId)
         }
         
-        // Update row (simplified)
+        // Get heap table
+        guard let heapTable = heapTables[table] else {
+            throw DBError.tableNotFound(table: table)
+        }
+        
+        // Update row using heap table
+        let oldRow = try await heapTable.read(rid)
+        var updatedRow = oldRow
+        for (key, value) in row {
+            updatedRow[key] = value
+        }
+        try await heapTable.update(rid, newRow: updatedRow, txID: txId)
         
         // Record modification for statistics
         if config.enableStatistics {
@@ -477,7 +500,13 @@ public actor ColibrìDB {
             throw DBError.transactionNotFound(txId: txId)
         }
         
-        // Delete row (simplified)
+        // Get heap table
+        guard let heapTable = heapTables[table] else {
+            throw DBError.tableNotFound(table: table)
+        }
+        
+        // Delete row using heap table
+        try await heapTable.delete(rid, txID: txId)
         
         // Record modification for statistics
         if config.enableStatistics {
@@ -500,15 +529,66 @@ public actor ColibrìDB {
             throw DBError.transactionNotFound(txId: txId)
         }
         
-        // Parse query (simplified)
-        let logicalPlan = LogicalPlan(table: "table1") // Simplified - would parse SQL
-        let _ = await queryOptimizer.optimize(logical: logicalPlan)
+        // Parse SQL
+        var parser = SQLParser()
+        let ast = try parser.parse(sql)
         
-        // Execute query (simplified - would use actual executor)
-        let result = QueryResult(rows: [], columns: [])
+        // Handle different statement types
+        switch ast.kind.lowercased() {
+        case "select":
+            return try await executeSelect(ast: ast, txId: txId)
+        case "insert":
+            // INSERT is handled by insert() method
+            throw DBError.custom("Use insert() method for INSERT statements")
+        case "update":
+            // UPDATE is handled by update() method
+            throw DBError.custom("Use update() method for UPDATE statements")
+        case "delete":
+            // DELETE is handled by delete() method
+            throw DBError.custom("Use delete() method for DELETE statements")
+        default:
+            throw DBError.custom("Unsupported SQL statement: \(ast.kind)")
+        }
+    }
+    
+    /// Execute SELECT query
+    private func executeSelect(ast: ASTNode, txId: TxID) async throws -> QueryResult {
+        // Extract table name from AST
+        // AST structure: kind: "SELECT", children: [selectList, fromClause, ...]
+        // fromClause: kind: "from_clause", children: [tableRef, ...]
+        // tableRef: kind: "table_ref", attributes: ["name": "table_name"]
+        guard ast.children.count >= 2 else {
+            throw DBError.custom("Invalid SELECT AST structure")
+        }
+        
+        let fromClause = ast.children[1] // fromClause is second child
+        guard fromClause.kind == "from_clause", !fromClause.children.isEmpty else {
+            throw DBError.custom("FROM clause not found in SELECT statement")
+        }
+        
+        let tableRef = fromClause.children[0] // First table in FROM clause
+        let tableName = tableRef.attributes["name"] ?? ""
+        
+        guard !tableName.isEmpty else {
+            throw DBError.custom("Table name not found in SELECT statement")
+        }
+        
+        // Get heap table
+        let heapTable = try await getOrCreateHeapTable(table: tableName)
+        
+        // Get table schema from catalog
+        guard let tableDef = await catalog.getTable(tableName) else {
+            throw DBError.tableNotFound(table: tableName)
+        }
+        
+        // Scan all rows from heap table
+        let rows = try await heapTable.scanAll()
+        
+        // Extract column names from table definition
+        let columns = tableDef.columns.map { $0.name }
         
         databaseStats.queriesExecuted += 1
-        return result
+        return QueryResult(rows: rows, columns: columns)
     }
     
     // MARK: - Statistics and Monitoring
@@ -585,6 +665,16 @@ public actor ColibrìDB {
                 // Would validate type compatibility
             }
         }
+    }
+    
+    private func getOrCreateHeapTable(table: String) async throws -> HeapTable {
+        if let existing = heapTables[table] {
+            return existing
+        }
+        
+        let heapTable = HeapTable(bufferPool: bufferPool, wal: wal)
+        heapTables[table] = heapTable
+        return heapTable
     }
     
     private func log(_ level: LogLevel, _ message: String, category: LogCategory = .database) {

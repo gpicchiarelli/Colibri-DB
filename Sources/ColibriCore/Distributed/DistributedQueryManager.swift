@@ -120,7 +120,7 @@ public actor DistributedQueryManager {
         // TLA+: Execute fragments
         try await executeFragments()
         
-        print("Distributed query to \(nodes.count) nodes")
+        logInfo("Distributed query to \(nodes.count) nodes")
     }
     
     /// Execute fragment
@@ -158,7 +158,7 @@ public actor DistributedQueryManager {
         )
         fragments[fragmentId] = fragment
         
-        print("Executed fragment: \(fragmentId)")
+        logInfo("Executed fragment: \(fragmentId)")
     }
     
     /// Aggregate results
@@ -182,7 +182,7 @@ public actor DistributedQueryManager {
         // TLA+: Set phase to completion
         phase = .completion
         
-        print("Aggregated \(allResults.count) results")
+        logInfo("Aggregated \(allResults.count) results")
     }
     
     // MARK: - Helper Methods

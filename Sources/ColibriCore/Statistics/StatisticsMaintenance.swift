@@ -34,7 +34,7 @@ import Foundation
 // MARK: - Table Statistics
 
 /// Statistics for a table (TLA+: TableStatistics)
-public struct TableStatisticsMaintenance: Codable {
+public struct TableStatisticsMaintenance: Codable, Sendable {
     public var rowCount: Int64          // TLA+: rowCount
     public var pageCount: Int64         // TLA+: pageCount
     public var tupleSize: Int           // TLA+: tupleSize (avg row size)
@@ -56,7 +56,7 @@ public struct TableStatisticsMaintenance: Codable {
 // MARK: - Column Statistics
 
 /// Statistics for a column (TLA+: ColumnStatistics)
-public struct ColumnStatistics: Codable {
+public struct ColumnStatistics: Codable, Sendable {
     public let columnName: String
     public var nullFraction: Int        // TLA+: nullFraction (percentage 0-100)
     public var distinctValues: Int64    // TLA+: distinctValues (NDV)
@@ -97,7 +97,7 @@ public struct ColumnStatistics: Codable {
 // MARK: - Index Statistics
 
 /// Statistics for an index (TLA+: IndexStatistics)
-public struct IndexStatisticsMaintenance: Codable {
+public struct IndexStatisticsMaintenance: Codable, Sendable {
     public var distinctKeys: Int64      // TLA+: distinctKeys
     public var height: Int              // TLA+: height
     public var pages: Int64             // TLA+: pages (leaf pages)
@@ -117,7 +117,7 @@ public struct IndexStatisticsMaintenance: Codable {
 // MARK: - Histogram
 
 /// Histogram for selectivity estimation (TLA+: Histogram, HistogramBucket)
-public struct Histogram: Codable {
+public struct Histogram: Codable, Sendable {
     public let type: HistogramType      // TLA+: histogram type
     public let buckets: [HistogramBucket]
     public let bucketCount: Int
@@ -129,14 +129,14 @@ public struct Histogram: Codable {
     }
 }
 
-public enum HistogramType: String, Codable {
+public enum HistogramType: String, Codable, Sendable {
     case equiDepth = "equi-depth"   // Equal number of rows per bucket
     case equiWidth = "equi-width"   // Equal value range per bucket
     case maxDiff = "max-diff"       // Maximum difference
     case vOptimal = "v-optimal"     // V-Optimal
 }
 
-public struct HistogramBucket: Codable {
+public struct HistogramBucket: Codable, Sendable {
     public let minValue: String         // TLA+: minValue
     public let maxValue: String         // TLA+: maxValue
     public let frequency: Int64         // TLA+: frequency

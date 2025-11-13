@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct Database {
+public struct Database: @unchecked Sendable {
     public let name: String
     public let owner: String
     public let createdAt: Date
