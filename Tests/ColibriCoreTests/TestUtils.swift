@@ -165,20 +165,20 @@ public struct TestDataGenerator {
         salary: Double? = nil
     ) -> Row {
         var row: Row = [
-            "id": .int(Int64(id)),
-            "name": .string(name ?? TestUtils.generateRandomString(length: 12))
+            "id": Value.int(Int64(id)),
+            "name": Value.string(name ?? TestUtils.generateRandomString(length: 12))
         ]
         
-        row["age"] = age.map { .int(Int64($0)) } ?? .null
-        row["salary"] = salary.map { .double($0) } ?? .null
+        row["age"] = age.map { Value.int(Int64($0)) } ?? .null
+        row["salary"] = salary.map { Value.double($0) } ?? .null
         return row
     }
     
     /// Generate a simple test row
     public static func generateSimpleTestRow(id: Int, name: String) -> Row {
         [
-            "id": .int(Int64(id)),
-            "name": .string(name)
+            "id": Value.int(Int64(id)),
+            "name": Value.string(name)
         ]
     }
     

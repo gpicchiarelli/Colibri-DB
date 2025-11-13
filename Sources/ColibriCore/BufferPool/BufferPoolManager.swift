@@ -126,7 +126,7 @@ public actor BufferPoolManagerActor {
             // TLA+: Set reference bit
             referenceBit[pageId] = true
             
-            print("Page hit: \(pageId)")
+            logInfo("Page hit: \(pageId)")
             return page
         }
         
@@ -146,7 +146,7 @@ public actor BufferPoolManagerActor {
         lruOrder.append(pageId)
         referenceBit[pageId] = true
         
-        print("Page miss: \(pageId) - loaded from disk")
+        logInfo("Page miss: \(pageId) - loaded from disk")
         return page
     }
     
@@ -166,7 +166,7 @@ public actor BufferPoolManagerActor {
             // TLA+: Update LRU order
             updateLRUOrder(pageId: pageId)
             
-            print("Updated page: \(pageId)")
+            logInfo("Updated page: \(pageId)")
         } else {
             // TLA+: Add new page
             cache[pageId] = page
@@ -178,7 +178,7 @@ public actor BufferPoolManagerActor {
                 dirty.insert(pageId)
             }
             
-            print("Added page: \(pageId)")
+            logInfo("Added page: \(pageId)")
         }
     }
     
@@ -193,7 +193,7 @@ public actor BufferPoolManagerActor {
         // TLA+: Increment pin count
         pinCount[pageId] = (pinCount[pageId] ?? 0) + 1
         
-        print("Pinned page: \(pageId)")
+        logInfo("Pinned page: \(pageId)")
     }
     
     /// Unpin page
@@ -209,7 +209,7 @@ public actor BufferPoolManagerActor {
             pinCount[pageId] = count - 1
         }
         
-        print("Unpinned page: \(pageId)")
+        logInfo("Unpinned page: \(pageId)")
     }
     
     /// Flush page
@@ -231,7 +231,7 @@ public actor BufferPoolManagerActor {
         // TLA+: Mark as clean
         dirty.remove(pageId)
         
-        print("Flushed page: \(pageId)")
+        logInfo("Flushed page: \(pageId)")
     }
     
     /// Flush all
@@ -242,7 +242,7 @@ public actor BufferPoolManagerActor {
             try await flushPage(pageId: pageId)
         }
         
-        print("Flushed all pages")
+        logInfo("Flushed all pages")
     }
     
     /// Update flushed LSN
@@ -251,7 +251,7 @@ public actor BufferPoolManagerActor {
         // TLA+: Update flushed LSN
         flushedLSN = lsn
         
-        print("Updated flushed LSN: \(lsn)")
+        logInfo("Updated flushed LSN: \(lsn)")
     }
     
     /// Clock sweep
@@ -281,7 +281,7 @@ public actor BufferPoolManagerActor {
             }
         }
         
-        print("Clock sweep completed - evicted \(evictedPages.count) pages")
+        logInfo("Clock sweep completed - evicted \(evictedPages.count) pages")
     }
     
     // MARK: - Helper Methods
@@ -311,7 +311,7 @@ public actor BufferPoolManagerActor {
         cache.removeValue(forKey: pageId)
         referenceBit.removeValue(forKey: pageId)
         
-        print("Evicted page: \(pageId)")
+        logInfo("Evicted page: \(pageId)")
     }
     
     /// Check if page is in cache
@@ -433,13 +433,13 @@ public actor BufferPoolManagerActor {
         clockHand = 0
         flushedLSN = 0
         
-        print("Cache cleared")
+        logInfo("Cache cleared")
     }
     
     /// Reset buffer pool
     public func resetBufferPool() async throws {
         try await clearCache()
-        print("Buffer pool reset")
+        logInfo("Buffer pool reset")
     }
     
     // MARK: - Invariant Checking (for testing)

@@ -380,7 +380,7 @@ public actor SystemMonitor {
             try? await checkThreshold(metricId: metricId)
         }
         
-        print("Updated metric: \(metricId) = \(value)")
+        logInfo("Updated metric: \(metricId) = \(value)")
     }
     
     /// Check threshold
@@ -418,7 +418,7 @@ public actor SystemMonitor {
         
         alerts[alert.alertId] = alert
         
-        print("Created alert: \(alert.alertId) for metric: \(metricId)")
+        logInfo("Created alert: \(alert.alertId) for metric: \(metricId)")
     }
     
     /// Clear alert
@@ -443,7 +443,7 @@ public actor SystemMonitor {
             alerts[alertId] = alert
         }
         
-        print("Cleared alert: \(alertId)")
+        logInfo("Cleared alert: \(alertId)")
     }
     
     /// Update health check
@@ -464,7 +464,7 @@ public actor SystemMonitor {
         
         healthChecks[componentId] = healthCheck
         
-        print("Updated health check: \(componentId) = \(status)")
+        logInfo("Updated health check: \(componentId) = \(status)")
     }
     
     /// Update performance data
@@ -485,7 +485,7 @@ public actor SystemMonitor {
         
         performanceData[componentId] = perfData
         
-        print("Updated performance data: \(componentId)")
+        logInfo("Updated performance data: \(componentId)")
     }
     
     /// Update resource usage
@@ -505,7 +505,7 @@ public actor SystemMonitor {
         
         self.resourceUsage[resourceId] = resourceUsage
         
-        print("Updated resource usage: \(resourceId) = \(utilizationPercent)%")
+        logInfo("Updated resource usage: \(resourceId) = \(utilizationPercent)%")
     }
     
     /// Update query metric
@@ -526,7 +526,7 @@ public actor SystemMonitor {
         
         queryMetrics[queryId] = queryMetric
         
-        print("Updated query metric: \(queryId)")
+        logInfo("Updated query metric: \(queryId)")
     }
     
     /// Update system diagnostics
@@ -547,7 +547,7 @@ public actor SystemMonitor {
         
         systemDiagnostics = diagnostics
         
-        print("Updated system diagnostics")
+        logInfo("Updated system diagnostics")
     }
     
     /// Update log aggregator
@@ -565,7 +565,7 @@ public actor SystemMonitor {
             isEnabled: true
         )
         
-        print("Updated log aggregator: \(logLevel) = \(logCount)")
+        logInfo("Updated log aggregator: \(logLevel) = \(logCount)")
     }
     
     // MARK: - Query Operations

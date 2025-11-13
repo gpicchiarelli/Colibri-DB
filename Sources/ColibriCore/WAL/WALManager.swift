@@ -147,7 +147,7 @@ public actor WALManager {
             try await flushLog()
         }
         
-        print("Appended WAL record: \(nextLSN - 1) for transaction: \(txId)")
+        logInfo("Appended WAL record: \(nextLSN - 1) for transaction: \(txId)")
         return nextLSN - 1
     }
     
@@ -172,7 +172,7 @@ public actor WALManager {
         // TLA+: Reset group commit timer
         groupCommitTimer = 0
         
-        print("Flushed WAL log to disk")
+        logInfo("Flushed WAL log to disk")
     }
     
     /// Apply to data page
@@ -194,7 +194,7 @@ public actor WALManager {
         // TLA+: Update data applied
         dataApplied[pageId] = lsn
         
-        print("Applied WAL record: \(lsn) to page: \(pageId)")
+        logInfo("Applied WAL record: \(lsn) to page: \(pageId)")
     }
     
     /// Update page LSN
@@ -206,7 +206,7 @@ public actor WALManager {
         // TLA+: Update dirty page table
         dirtyPageTable[pageId] = lsn
         
-        print("Updated page LSN: \(pageId) to \(lsn)")
+        logInfo("Updated page LSN: \(pageId) to \(lsn)")
     }
     
     /// Checkpoint
@@ -221,7 +221,7 @@ public actor WALManager {
         // TLA+: Clear dirty page table
         dirtyPageTable.removeAll()
         
-        print("Checkpoint completed at LSN: \(lastCheckpointLSN)")
+        logInfo("Checkpoint completed at LSN: \(lastCheckpointLSN)")
     }
     
     /// Simulate crash
@@ -233,15 +233,18 @@ public actor WALManager {
         // TLA+: Clear pending records
         pendingRecords.removeAll()
         
-        print("Simulated crash")
+        logInfo("Simulated crash")
     }
     
     /// Recover
     /// TLA+ Action: Recover()
+    /// Note: Recovery is idempotent - can be called multiple times safely
     public func recover() async throws {
-        // TLA+: Check if crashed
-        guard crashed else {
-            throw WALManagerError.notCrashed
+        // TLA+: Recover from WAL (idempotent operation)
+        // If not crashed, recovery is a no-op (idempotent)
+        if !crashed {
+            // Already recovered or never crashed - idempotent no-op
+            return
         }
         
         // TLA+: Recover from WAL
@@ -250,7 +253,7 @@ public actor WALManager {
         // TLA+: Clear crashed flag
         crashed = false
         
-        print("Recovery completed")
+        logInfo("Recovery completed")
     }
     
     // MARK: - Helper Methods
@@ -372,13 +375,13 @@ public actor WALManager {
         groupCommitTimer = 0
         crashed = false
         
-        print("WAL cleared")
+        logInfo("WAL cleared")
     }
     
     /// Reset WAL
     public func resetWAL() async throws {
         try await clearWAL()
-        print("WAL reset")
+        logInfo("WAL reset")
     }
     
     // MARK: - Invariant Checking (for testing)

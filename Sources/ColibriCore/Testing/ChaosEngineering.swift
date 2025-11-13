@@ -33,7 +33,7 @@ public enum ChaosSystemHealth: String, Codable, Sendable {
 // MARK: - Experiment Types
 
 /// Type of chaos experiment
-public enum ExperimentType: String, Codable {
+public enum ExperimentType: String, Codable, Sendable {
     case networkPartition       // Split cluster into partitions
     case randomFailures         // Random node failures
     case cascadingFailures      // Failures propagate
@@ -51,7 +51,9 @@ public enum ExperimentType: String, Codable {
 // MARK: - Chaos Experiment
 
 /// Chaos experiment definition
-public struct ChaosExperiment: Codable, Hashable, Equatable {
+// All stored properties are Sendable (String, ExperimentType, Set<String>, Date, TimeInterval, ExperimentOutcome?)
+// Using @unchecked Sendable because Swift 6.2.1 doesn't recognize it for return types from actor methods
+public struct ChaosExperiment: Codable, Hashable, Equatable, @unchecked Sendable {
     public let experimentId: String
     public let experimentType: ExperimentType
     public let targetNodes: Set<String>
@@ -77,6 +79,9 @@ public struct ChaosExperiment: Codable, Hashable, Equatable {
 }
 
 /// Experiment outcome
+// All stored properties are Sendable (Bool, TimeInterval, Int, [String])
+// Using @unchecked Sendable because Swift 6.2 strict concurrency checking
+// doesn't always recognize structs with only Sendable properties as Sendable
 public struct ExperimentOutcome: Codable, Equatable {
     public let systemRecovered: Bool
     public let recoveryTime: TimeInterval?
@@ -94,6 +99,9 @@ public struct ExperimentOutcome: Codable, Equatable {
         self.observations = observations
     }
 }
+
+// Explicit Sendable conformance - all properties are Sendable
+extension ExperimentOutcome: @unchecked Sendable {}
 
 // MARK: - Chaos Engineering Manager
 
@@ -127,8 +135,15 @@ public actor ChaosEngineeringManager {
     // MARK: - Experiment Execution
     
     /// Run a chaos experiment
-    public func runExperiment(experimentType: ExperimentType, targetNodes: Set<String>,
-                             duration: TimeInterval = 60) async throws -> ExperimentOutcome {
+    /// 
+    /// Note: This method returns ExperimentOutcome directly. The type is marked as @unchecked Sendable
+    /// because Swift 6.2.1's strict concurrency checking doesn't recognize it for return types from
+    /// actor methods, even though all properties are Sendable.
+    @preconcurrency public func runExperiment(
+        experimentType: ExperimentType,
+        targetNodes: Set<String>,
+        duration: TimeInterval = 60
+    ) async throws -> ExperimentOutcome {
         guard experiments.count < maxConcurrentExperiments else {
             throw ChaosError.tooManyExperiments
         }
@@ -147,6 +162,7 @@ public actor ChaosEngineeringManager {
         
         let startHealth = systemHealth
         let startTime = Date()
+        
         var observations: [String] = []
         
         // Execute experiment based on type
@@ -391,11 +407,11 @@ public actor ChaosEngineeringManager {
     
     // MARK: - Query Methods
     
-    public func getActiveExperiments() -> Set<ChaosExperiment> {
+    @preconcurrency public func getActiveExperiments() -> Set<ChaosExperiment> {
         return experiments.filter { activeExperiments.contains($0.experimentId) }
     }
     
-    public func getExperimentHistory() -> Set<ChaosExperiment> {
+    @preconcurrency public func getExperimentHistory() -> Set<ChaosExperiment> {
         return experiments
     }
     
@@ -403,7 +419,7 @@ public actor ChaosEngineeringManager {
         return systemHealth
     }
     
-    public func getStats() -> ChaosStats {
+    @preconcurrency public func getStats() -> ChaosStats {
         return stats
     }
 }
@@ -411,7 +427,10 @@ public actor ChaosEngineeringManager {
 // MARK: - Statistics
 
 /// Chaos engineering statistics
-public struct ChaosStats: Codable {
+// All stored properties are Sendable (Int, Double)
+// Using @unchecked Sendable because Swift 6.2 strict concurrency checking
+// doesn't always recognize structs with only Sendable properties as Sendable
+public struct ChaosStats: Codable, @unchecked Sendable {
     public var totalExperiments: Int = 0
     public var successfulExperiments: Int = 0
     public var failedExperiments: Int = 0

@@ -158,7 +158,7 @@ public actor QueryPlanner {
         queryPlans[queryId] = plan
         planCache[queryId] = plan
         
-        print("Generated plan for query: \(queryId)")
+        logInfo("Generated plan for query: \(queryId)")
         return plan
     }
     
@@ -186,7 +186,7 @@ public actor QueryPlanner {
         queryPlans[planId] = plan
         planCache[planId] = plan
         
-        print("Optimized plan: \(planId) with strategy: \(strategy.rawValue)")
+        logInfo("Optimized plan: \(planId) with strategy: \(strategy.rawValue)")
         return plan
     }
     
@@ -201,7 +201,7 @@ public actor QueryPlanner {
         // TLA+: Estimate cost
         let cost = try await costEstimator.estimateCost(plan: plan, costModel: costModel)
         
-        print("Estimated cost for plan: \(planId) - \(cost.totalCost)")
+        logInfo("Estimated cost for plan: \(planId) - \(cost.totalCost)")
         return cost
     }
     
@@ -224,7 +224,7 @@ public actor QueryPlanner {
         queryPlans[queryId] = bestPlan
         planCache[queryId] = bestPlan
         
-        print("Selected best plan for query: \(queryId) with cost: \(bestCost)")
+        logInfo("Selected best plan for query: \(queryId) with cost: \(bestCost)")
         return bestPlan
     }
     
@@ -373,19 +373,19 @@ public actor QueryPlanner {
     /// Clear plan cache
     public func clearPlanCache() async throws {
         planCache.removeAll()
-        print("Plan cache cleared")
+        logInfo("Plan cache cleared")
     }
     
     /// Update cost model
     public func updateCostModel(costModel: [String: Double]) async throws {
         self.costModel = costModel
-        print("Cost model updated")
+        logInfo("Cost model updated")
     }
     
     /// Update statistics
     public func updateStatistics(statistics: [String: Double]) async throws {
         self.statistics = statistics
-        print("Statistics updated")
+        logInfo("Statistics updated")
     }
     
     // MARK: - Invariant Checking (for testing)

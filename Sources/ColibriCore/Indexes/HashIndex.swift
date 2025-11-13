@@ -113,7 +113,7 @@ public actor HashIndex {
         // TLA+: Update load factor
         updateLoadFactor()
         
-        print("Inserted key: \(key) at position: \(position)")
+        logInfo("Inserted key: \(key) at position: \(position)")
     }
     
     /// Search for entry
@@ -143,7 +143,7 @@ public actor HashIndex {
             // TLA+: Update load factor
             updateLoadFactor()
             
-            print("Deleted key: \(key) at position: \(position)")
+            logInfo("Deleted key: \(key) at position: \(position)")
         }
     }
     
@@ -165,7 +165,7 @@ public actor HashIndex {
             }
         }
         
-        print("Resized hash table to \(newSize) buckets")
+        logInfo("Resized hash table to \(newSize) buckets")
     }
     
     // MARK: - Helper Methods

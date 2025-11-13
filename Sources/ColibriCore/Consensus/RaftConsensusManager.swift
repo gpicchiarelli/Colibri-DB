@@ -177,14 +177,14 @@ public actor RaftConsensusManager {
     // MARK: - Dependencies
     
     /// Network manager
-    private let networkManager: NetworkManager
+    private let networkManager: RaftNetworkManager
     
     /// State machine
     private let stateMachine: StateMachine
     
     // MARK: - Initialization
     
-    public init(serverId: ServerID, servers: [ServerID], networkManager: NetworkManager, stateMachine: StateMachine) {
+    public init(serverId: ServerID, servers: [ServerID], networkManager: RaftNetworkManager, stateMachine: StateMachine) {
         self.networkManager = networkManager
         self.stateMachine = stateMachine
         
@@ -233,7 +233,7 @@ public actor RaftConsensusManager {
         // TLA+: Send request vote to all servers
         try await sendRequestVoteToAll()
         
-        print("Started election for term: \(currentTerm)")
+        logInfo("Started election for term: \(currentTerm)")
     }
     
     /// Send heartbeat
@@ -250,7 +250,7 @@ public actor RaftConsensusManager {
         // TLA+: Reset heartbeat timer
         heartbeatTimer = 0
         
-        print("Sent heartbeat for term: \(currentTerm)")
+        logInfo("Sent heartbeat for term: \(currentTerm)")
     }
     
     /// Append entries
@@ -267,7 +267,7 @@ public actor RaftConsensusManager {
         // TLA+: Send append entries to all servers
         try await sendAppendEntriesToAll()
         
-        print("Appended \(entries.count) entries to log")
+        logInfo("Appended \(entries.count) entries to log")
     }
     
     /// Request vote
@@ -297,7 +297,7 @@ public actor RaftConsensusManager {
         // TLA+: Set state to follower
         state = .follower
         
-        print("Voted for candidate: \(candidateId) in term: \(term)")
+        logInfo("Voted for candidate: \(candidateId) in term: \(term)")
         return true
     }
     
@@ -310,7 +310,7 @@ public actor RaftConsensusManager {
         // TLA+: Update last applied
         lastApplied += 1
         
-        print("Applied log entry: \(entry.command)")
+        logInfo("Applied log entry: \(entry.command)")
     }
     
     /// Handle client request
@@ -331,7 +331,7 @@ public actor RaftConsensusManager {
         // TLA+: Append to log
         try await appendEntries(entries: [entry])
         
-        print("Handled client request: \(request)")
+        logInfo("Handled client request: \(request)")
     }
     
     /// Change configuration
@@ -352,7 +352,7 @@ public actor RaftConsensusManager {
             matchIndex[serverId] = 0
         }
         
-        print("Changed configuration to \(newServers.count) servers")
+        logInfo("Changed configuration to \(newServers.count) servers")
     }
     
     // MARK: - Helper Methods
@@ -539,6 +539,13 @@ public actor RaftConsensusManager {
 }
 
 // MARK: - Supporting Types
+
+/// Raft Network Manager Protocol
+public protocol RaftNetworkManager: Sendable {
+    func sendAppendEntries(to: ServerID, term: Term, entries: [LogEntry]) async throws
+    func sendVoteRequest(to: ServerID, term: Term, candidateId: ServerID) async throws -> Bool
+    func broadcastHeartbeat() async throws
+}
 
 /// State machine
 public protocol StateMachine: Sendable {

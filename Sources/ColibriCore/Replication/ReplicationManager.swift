@@ -383,13 +383,13 @@ public actor ReplicationManager {
         // TLA+: Apply data change to local storage
         // This would integrate with the storage engine
         // For now, just log the operation
-        print("Applying data change: \(logEntry.operation) at LSN \(logEntry.lsn)")
+        logInfo("Applying data change: \(logEntry.operation) at LSN \(logEntry.lsn)")
     }
     
     /// Apply checkpoint
     private func applyCheckpoint(_ logEntry: ReplicationLogEntry) async throws {
         // TLA+: Apply checkpoint to local storage
-        print("Applying checkpoint at LSN \(logEntry.lsn)")
+        logInfo("Applying checkpoint at LSN \(logEntry.lsn)")
     }
     
     // MARK: - Consistency Management

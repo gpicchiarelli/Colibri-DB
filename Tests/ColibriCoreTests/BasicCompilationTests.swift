@@ -16,10 +16,10 @@ final class BasicCompilationTests: XCTestCase {
     func testBasicTypes() throws {
         // Test Value type
         let intValue = Value.int(42)
-        XCTAssertEqual(intValue, .int(42))
+        XCTAssertEqual(intValue, Value.int(42))
         
         let stringValue = Value.string("test")
-        XCTAssertEqual(stringValue, .string("test"))
+        XCTAssertEqual(stringValue, Value.string("test"))
         
         let nullValue = Value.null
         XCTAssertEqual(nullValue, .null)

@@ -196,7 +196,7 @@ public actor ARIESRecoveryManager {
         // TLA+: Clear crashed flag
         crashed = false
         
-        print("Recovery completed")
+        logInfo("Recovery completed")
     }
     
     /// Simulate crash
@@ -205,7 +205,7 @@ public actor ARIESRecoveryManager {
         // TLA+: Set crashed flag
         crashed = true
         
-        print("Simulated crash")
+        logInfo("Simulated crash")
     }
     
     /// Analysis phase
@@ -217,7 +217,7 @@ public actor ARIESRecoveryManager {
         // TLA+: Build ATT and DPT
         try await buildATTAndDPT()
         
-        print("Analysis phase completed")
+        logInfo("Analysis phase completed")
     }
     
     /// Redo phase
@@ -232,7 +232,7 @@ public actor ARIESRecoveryManager {
         // TLA+: Redo operations
         try await redoOperations()
         
-        print("Redo phase completed")
+        logInfo("Redo phase completed")
     }
     
     /// Undo phase
@@ -247,7 +247,7 @@ public actor ARIESRecoveryManager {
         // TLA+: Undo operations
         try await undoOperations()
         
-        print("Undo phase completed")
+        logInfo("Undo phase completed")
     }
     
     /// Redo operation
@@ -272,7 +272,7 @@ public actor ARIESRecoveryManager {
             pageLSN[record.pageID] = lsn
         }
         
-        print("Redo operation: \(lsn)")
+        logInfo("Redo operation: \(lsn)")
     }
     
     /// Undo operation
@@ -294,7 +294,7 @@ public actor ARIESRecoveryManager {
         // TLA+: Write CLR
         try await writeCLR(record: record)
         
-        print("Undo operation: \(lsn)")
+        logInfo("Undo operation: \(lsn)")
     }
     
     // MARK: - Helper Methods
@@ -512,13 +512,13 @@ public actor ARIESRecoveryManager {
         flushedLSN = 0
         crashed = false
         
-        print("Recovery state cleared")
+        logInfo("Recovery state cleared")
     }
     
     /// Reset recovery manager
     public func resetRecoveryManager() async throws {
         try await clearRecoveryState()
-        print("Recovery manager reset")
+        logInfo("Recovery manager reset")
     }
     
     // MARK: - Invariant Checking (for testing)

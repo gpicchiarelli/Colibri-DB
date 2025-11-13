@@ -91,14 +91,14 @@ public actor ShardingManager {
     /// Storage manager
     private let storageManager: StorageManagerActor
     
-    /// Network manager
-    private let networkManager: NetworkManager
+    /// Network manager (placeholder)
+    // private let networkManager: ShardNetworkManager
     
     // MARK: - Initialization
     
-    public init(storageManager: StorageManagerActor, networkManager: NetworkManager, strategy: ShardStrategy = .hash) {
+    public init(storageManager: StorageManagerActor, strategy: ShardStrategy = .hash) {
         self.storageManager = storageManager
-        self.networkManager = networkManager
+        // self.networkManager = networkManager
         self.strategy = strategy
         
         // TLA+ Init
@@ -122,7 +122,7 @@ public actor ShardingManager {
         // TLA+: Insert data into shard
         try await insertDataIntoShard(shardId: shardId, key: key, row: row)
         
-        print("Inserted key: \(key) into shard: \(shardId)")
+        logInfo("Inserted key: \(key) into shard: \(shardId)")
     }
     
     /// Lookup key
@@ -139,7 +139,7 @@ public actor ShardingManager {
         // TLA+: Lookup data in shard
         let row = try await lookupDataInShard(shardId: shardId, key: key)
         
-        print("Looked up key: \(key) in shard: \(shardId)")
+        logInfo("Looked up key: \(key) in shard: \(shardId)")
         return row
     }
     
@@ -157,7 +157,7 @@ public actor ShardingManager {
         // TLA+: Delete data from shard
         try await deleteDataFromShard(shardId: shardId, key: key)
         
-        print("Deleted key: \(key) from shard: \(shardId)")
+        logInfo("Deleted key: \(key) from shard: \(shardId)")
     }
     
     /// Rebalance shards
@@ -171,7 +171,7 @@ public actor ShardingManager {
         // TLA+: Rebalance shards
         try await performShardRebalancing()
         
-        print("Rebalanced shards")
+        logInfo("Rebalanced shards")
     }
     
     /// Change strategy
@@ -184,7 +184,7 @@ public actor ShardingManager {
         // TLA+: Migrate data to new strategy
         try await migrateDataToNewStrategy(oldStrategy: oldStrategy, newStrategy: newStrategy)
         
-        print("Changed strategy from \(oldStrategy) to \(newStrategy)")
+        logInfo("Changed strategy from \(oldStrategy) to \(newStrategy)")
     }
     
     // MARK: - Helper Methods

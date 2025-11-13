@@ -175,7 +175,7 @@ public actor StorageManagerActor {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Allocated page: \(pageId) in area: \(area.rawValue)")
+        logInfo("Allocated page: \(pageId) in area: \(area.rawValue)")
         return pageId
     }
     
@@ -198,7 +198,7 @@ public actor StorageManagerActor {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Deallocated page: \(pageId)")
+        logInfo("Deallocated page: \(pageId)")
     }
     
     /// Read record
@@ -212,7 +212,7 @@ public actor StorageManagerActor {
         // TLA+: Update metrics
         metrics.ioOperations += 1
         
-        print("Read record: \(recordId)")
+        logInfo("Read record: \(recordId)")
         return record
     }
     
@@ -236,7 +236,7 @@ public actor StorageManagerActor {
         metrics.ioOperations += 1
         updateMetrics()
         
-        print("Wrote record: \(recordId)")
+        logInfo("Wrote record: \(recordId)")
     }
     
     /// Update record
@@ -264,7 +264,7 @@ public actor StorageManagerActor {
         metrics.ioOperations += 1
         updateMetrics()
         
-        print("Updated record: \(recordId)")
+        logInfo("Updated record: \(recordId)")
     }
     
     /// Delete record
@@ -282,7 +282,7 @@ public actor StorageManagerActor {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Deleted record: \(recordId)")
+        logInfo("Deleted record: \(recordId)")
     }
     
     /// Manage free space
@@ -302,7 +302,7 @@ public actor StorageManagerActor {
         // TLA+: Update metrics
         updateMetrics()
         
-        print("Managed free space: \(freePages.count) free pages, \(usedPages.count) used pages")
+        logInfo("Managed free space: \(freePages.count) free pages, \(usedPages.count) used pages")
     }
     
     // MARK: - Helper Methods

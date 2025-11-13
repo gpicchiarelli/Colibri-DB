@@ -1,0 +1,133 @@
+═══════════════════════════════════════════════════════════════════════════
+  COLIBRI-DB RECOVERY RUNBOOK
+═══════════════════════════════════════════════════════════════════════════
+
+PURPOSE: Recover database after crash or corruption
+
+WHEN TO USE:
+  - Server crashed unexpectedly
+  - Data corruption detected
+  - WAL replay failed
+  - Power loss during operation
+
+───────────────────────────────────────────────────────────────────────────
+1. IMMEDIATE ACTIONS (DO NOT SKIP)
+───────────────────────────────────────────────────────────────────────────
+
+$ coldb-server stop  # Stop server if running
+
+$ cp -r /var/lib/colibri-db/ /var/lib/colibri-db.backup.$(date +%s)
+# CRITICAL: Backup before recovery
+
+───────────────────────────────────────────────────────────────────────────
+2. VERIFY FILESYSTEM INTEGRITY
+───────────────────────────────────────────────────────────────────────────
+
+$ ls -lh /var/lib/colibri-db/data/
+# Check: No zero-byte files
+
+$ ls -lh /var/lib/colibri-db/wal/
+# Check: WAL files present and non-empty
+
+$ du -sh /var/lib/colibri-db/
+# Note: Total size for verification
+
+───────────────────────────────────────────────────────────────────────────
+3. RUN RECOVERY (AUTOMATIC WAL REPLAY)
+───────────────────────────────────────────────────────────────────────────
+
+$ coldb recover --data-dir /var/lib/colibri-db/
+
+# Expected output:
+#   [INFO] Starting recovery...
+#   [INFO] Last checkpoint: LSN 1234567
+#   [INFO] Replaying WAL from LSN 1234568
+#   [INFO] Applied 42 log records
+#   [INFO] Recovery complete ✓
+#   [INFO] Database consistent
+
+───────────────────────────────────────────────────────────────────────────
+4. VERIFY RECOVERY SUCCESS
+───────────────────────────────────────────────────────────────────────────
+
+$ coldb check --data-dir /var/lib/colibri-db/
+
+# Must show:
+#   WAL integrity:    OK ✓
+#   Data consistency: OK ✓
+#   Index integrity:  OK ✓
+#   MVCC state:       OK ✓
+
+───────────────────────────────────────────────────────────────────────────
+5. START SERVER IN RECOVERY MODE
+───────────────────────────────────────────────────────────────────────────
+
+$ coldb-server --recovery-mode --config colibridb.conf.json
+
+# Recovery mode: Read-only, no new writes accepted
+
+───────────────────────────────────────────────────────────────────────────
+6. RUN DIAGNOSTIC QUERIES
+───────────────────────────────────────────────────────────────────────────
+
+$ coldb sql "SELECT COUNT(*) FROM pg_class;"
+# Verify: Table count matches expected
+
+$ coldb sql "SELECT pg_database_size('main');"
+# Verify: Size reasonable
+
+$ coldb diagnostics
+# Expected: No critical errors
+
+───────────────────────────────────────────────────────────────────────────
+7. EXIT RECOVERY MODE (IF ALL CHECKS PASS)
+───────────────────────────────────────────────────────────────────────────
+
+$ coldb-server stop
+
+$ coldb-server --config colibridb.conf.json
+# Normal mode: Read-write operations enabled
+
+───────────────────────────────────────────────────────────────────────────
+8. POST-RECOVERY VERIFICATION
+───────────────────────────────────────────────────────────────────────────
+
+$ coldb health
+# Must show: All systems OK ✓
+
+$ coldb sql "BEGIN; SELECT 1; COMMIT;"
+# Must succeed: Transaction execution OK
+
+───────────────────────────────────────────────────────────────────────────
+9. ESCALATION (IF RECOVERY FAILS)
+───────────────────────────────────────────────────────────────────────────
+
+SCENARIO: WAL corrupted, replay fails
+ACTION:  $ coldb recover --force-checkpoint --skip-corrupted-records
+
+SCENARIO: Data file corrupted
+ACTION:  $ coldb restore --from-backup /path/to/backup.tar.gz
+
+SCENARIO: Index corruption
+ACTION:  $ coldb reindex --all
+
+SCENARIO: Complete data loss
+ACTION:  $ coldb restore --from-replica replica-node-01:5432
+
+───────────────────────────────────────────────────────────────────────────
+10. CONTACT SUPPORT (LAST RESORT)
+───────────────────────────────────────────────────────────────────────────
+
+If recovery fails after all steps:
+
+1. Collect logs:   $ tar -czf logs.tar.gz /var/lib/colibri-db/logs/
+2. Collect state:  $ coldb dump-state > state.json
+3. Email:          support@colibri-db.org
+4. Include:        - logs.tar.gz
+                   - state.json
+                   - Steps attempted
+                   - Error messages
+
+───────────────────────────────────────────────────────────────────────────
+═══════════════════════════════════════════════════════════════════════════
+

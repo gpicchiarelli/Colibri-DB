@@ -175,7 +175,7 @@ public actor FaultInjectionManager {
         // Crash handler
         faultHandlers[.crash] = { fault in
             // Simulate crash: stop processing, lose in-memory state
-            print("💥 Node \(fault.nodeId) crashed")
+            logInfo("💥 Node \(fault.nodeId) crashed")
         }
         
         // Network delay handler
@@ -189,19 +189,19 @@ public actor FaultInjectionManager {
             let lossRate = fault.parameters["lossRate"] ?? 0.1
             // Simulate packet loss
             if Double.random(in: 0...1) < lossRate {
-                print("📦 Packet lost on node \(fault.nodeId)")
+                logInfo("📦 Packet lost on node \(fault.nodeId)")
             }
         }
         
         // Disk error handler
         faultHandlers[.diskError] = { fault in
-            print("💾 Disk error on node \(fault.nodeId)")
+            logInfo("💾 Disk error on node \(fault.nodeId)")
             throw FaultInjectionError.diskIOFailure
         }
         
         // Recovery handlers
         recoveryHandlers[.crash] = { fault in
-            print("🔄 Node \(fault.nodeId) recovering from crash")
+            logInfo("🔄 Node \(fault.nodeId) recovering from crash")
         }
     }
     
