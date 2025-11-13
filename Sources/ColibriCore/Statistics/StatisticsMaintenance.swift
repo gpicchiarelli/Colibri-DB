@@ -150,6 +150,155 @@ public struct HistogramBucket: Codable, Sendable {
     }
 }
 
+// MARK: - Correlation Statistics
+
+/// Correlation statistics between columns (TLA+: CorrelationStats)
+public struct CorrelationStats: Codable, Sendable {
+    public let column1: String
+    public let column2: String
+    public var correlationCoeff: Int        // -100 to 100 (scaled)
+    public var jointCardinality: Int64
+    public var independenceFactor: Int      // 0-100
+    public var lastUpdated: Date
+    
+    public init(column1: String, column2: String, correlationCoeff: Int = 0,
+                jointCardinality: Int64 = 0, independenceFactor: Int = 0) {
+        self.column1 = column1
+        self.column2 = column2
+        self.correlationCoeff = correlationCoeff
+        self.jointCardinality = jointCardinality
+        self.independenceFactor = independenceFactor
+        self.lastUpdated = Date()
+    }
+}
+
+// MARK: - Statistics Metadata
+
+/// Statistics metadata (TLA+: StatisticsMetadata)
+public struct StatisticsMetadata: Codable, Sendable {
+    public let tableName: String
+    public var lastFullScan: Date
+    public var lastSampleScan: Date
+    public var changeCount: Int64
+    public var changeThreshold: Int64
+    public var autoRefresh: Bool
+    public var refreshStrategy: RefreshStrategy
+    
+    public enum RefreshStrategy: String, Codable, Sendable {
+        case full = "full"
+        case sample = "sample"
+        case incremental = "incremental"
+    }
+    
+    public init(tableName: String, changeThreshold: Int64 = 1000, autoRefresh: Bool = true,
+                refreshStrategy: RefreshStrategy = .sample) {
+        self.tableName = tableName
+        self.lastFullScan = Date()
+        self.lastSampleScan = Date()
+        self.changeCount = 0
+        self.changeThreshold = changeThreshold
+        self.autoRefresh = autoRefresh
+        self.refreshStrategy = refreshStrategy
+    }
+}
+
+// MARK: - Pending Update
+
+/// Pending statistics update (TLA+: PendingUpdate)
+public struct PendingUpdate: Codable, Sendable {
+    public let tableName: String
+    public var updateType: UpdateType
+    public var priority: Int              // 1-10, higher = more urgent
+    public var submittedAt: Date
+    public var estimatedDuration: Int    // milliseconds
+    public var affectedColumns: [String]
+    
+    public enum UpdateType: String, Codable, Sendable {
+        case full = "full"
+        case sample = "sample"
+        case incremental = "incremental"
+    }
+    
+    public init(tableName: String, updateType: UpdateType = .sample, priority: Int = 5,
+                estimatedDuration: Int = 100, affectedColumns: [String] = []) {
+        self.tableName = tableName
+        self.updateType = updateType
+        self.priority = priority
+        self.submittedAt = Date()
+        self.estimatedDuration = estimatedDuration
+        self.affectedColumns = affectedColumns
+    }
+}
+
+// MARK: - Sampling Job
+
+/// Sampling job for statistics collection (TLA+: SamplingJob)
+public struct SamplingJob: Codable, Sendable {
+    public let tableName: String
+    public let jobId: Int
+    public var status: JobStatus
+    public var startTime: Date
+    public var endTime: Date?
+    public var sampleSize: Int
+    public var actualSampleSize: Int
+    public var progress: Int              // 0-100
+    public var errorMessage: String
+    
+    public enum JobStatus: String, Codable, Sendable {
+        case pending = "pending"
+        case running = "running"
+        case completed = "completed"
+        case failed = "failed"
+    }
+    
+    public init(tableName: String, jobId: Int, sampleSize: Int) {
+        self.tableName = tableName
+        self.jobId = jobId
+        self.status = .pending
+        self.startTime = Date()
+        self.endTime = nil
+        self.sampleSize = sampleSize
+        self.actualSampleSize = 0
+        self.progress = 0
+        self.errorMessage = ""
+    }
+}
+
+// MARK: - Cost Model
+
+/// Cost model for query optimization (TLA+: CostModel)
+public struct CostModel: Codable, Sendable {
+    public var cpuCostPerTuple: Int
+    public var ioCostPerPage: Int
+    public var memoryCostPerMB: Int
+    public var networkCostPerMB: Int
+    public var selectivityFactors: [String: Int]      // Column -> selectivity factor
+    public var joinCostFactors: [String: Int]          // Join type -> cost factor
+    public var lastUpdated: UInt64
+    
+    public init(cpuCostPerTuple: Int = 1, ioCostPerPage: Int = 10,
+                memoryCostPerMB: Int = 100, networkCostPerMB: Int = 50,
+                selectivityFactors: [String: Int] = [:],
+                joinCostFactors: [String: Int] = [:],
+                lastUpdated: UInt64 = 0) {
+        self.cpuCostPerTuple = cpuCostPerTuple
+        self.ioCostPerPage = ioCostPerPage
+        self.memoryCostPerMB = memoryCostPerMB
+        self.networkCostPerMB = networkCostPerMB
+        self.selectivityFactors = selectivityFactors
+        self.joinCostFactors = joinCostFactors
+        self.lastUpdated = lastUpdated
+    }
+    
+    /// Calculate total cost for a query operation
+    public func calculateCost(tuples: Int, pages: Int, memoryMB: Int = 0, networkMB: Int = 0) -> Int {
+        return tuples * cpuCostPerTuple +
+               pages * ioCostPerPage +
+               memoryMB * memoryCostPerMB +
+               networkMB * networkCostPerMB
+    }
+}
+
 // MARK: - HyperLogLog Sketch
 
 /// HyperLogLog sketch for cardinality estimation (TLA+: HLLSketch)
@@ -233,12 +382,39 @@ public actor StatisticsMaintenanceManager {
     /// Last analyzed time tracking
     private var lastAnalyzed: [String: Date] = [:]
     
+    /// Correlation statistics (TLA+: correlationStats)
+    private var correlationStats: [String: [String: CorrelationStats]] = [:]
+    
+    /// Statistics metadata (TLA+: statisticsMetadata)
+    private var statisticsMetadata: [String: StatisticsMetadata] = [:]
+    
+    /// Pending updates (TLA+: pendingUpdates)
+    private var pendingUpdates: [String: PendingUpdate] = [:]
+    
+    /// Sampling jobs (TLA+: samplingJobs)
+    private var samplingJobs: [String: SamplingJob] = [:]
+    
+    /// Cost model (TLA+: costModel)
+    private var costModel: CostModel = CostModel()
+    
     // Configuration (TLA+: CONSTANTS)
     private let maxHistogramBuckets: Int = 100
     private let statsThreshold: Double = 0.20  // 20% change triggers auto-analyze
     private let defaultSampleSize: Int = 300   // 300 blocks
+    private let maxStatisticsAge: TimeInterval = 86400  // 24 hours
     
-    public init() {}
+    public init() {
+        // Initialize cost model (TLA+: Init)
+        costModel = CostModel(
+            cpuCostPerTuple: 1,
+            ioCostPerPage: 10,
+            memoryCostPerMB: 100,
+            networkCostPerMB: 50,
+            selectivityFactors: [:],
+            joinCostFactors: [:],
+            lastUpdated: UInt64(Date().timeIntervalSince1970 * 1000)
+        )
+    }
     
     // MARK: - ANALYZE Operations
     
@@ -393,6 +569,123 @@ public actor StatisticsMaintenanceManager {
         return (mcvs, freqs)
     }
     
+    // MARK: - Correlation Statistics (TLA+: UpdateCorrelationStats)
+    
+    /// Update correlation statistics between columns
+    /// TLA+ Action: UpdateCorrelationStats(tableName, column1, column2, correlationCoeff, jointCardinality, independenceFactor)
+    public func updateCorrelationStats(tableName: String, column1: String, column2: String,
+                                      correlationCoeff: Int, jointCardinality: Int64,
+                                      independenceFactor: Int) {
+        let key = "\(column1)_\(column2)"
+        let correlation = CorrelationStats(
+            column1: column1,
+            column2: column2,
+            correlationCoeff: correlationCoeff,
+            jointCardinality: jointCardinality,
+            independenceFactor: independenceFactor
+        )
+        
+        if correlationStats[tableName] == nil {
+            correlationStats[tableName] = [:]
+        }
+        correlationStats[tableName]?[key] = correlation
+    }
+    
+    /// Get correlation statistics
+    public func getCorrelationStats(tableName: String, column1: String, column2: String) -> CorrelationStats? {
+        let key = "\(column1)_\(column2)"
+        return correlationStats[tableName]?[key]
+    }
+    
+    // MARK: - Statistics Metadata (TLA+: MarkStatisticsStale)
+    
+    /// Mark statistics as stale
+    /// TLA+ Action: MarkStatisticsStale(tableName, affectedColumns)
+    public func markStatisticsStale(tableName: String, affectedColumns: [String]) {
+        // Mark table stats as stale
+        if var stats = tableStatistics[tableName] {
+            // Note: TableStatisticsMaintenance doesn't have isStale, but we track via metadata
+            tableStatistics[tableName] = stats
+        }
+        
+        // Update metadata
+        if var metadata = statisticsMetadata[tableName] {
+            metadata.changeCount += 1
+            statisticsMetadata[tableName] = metadata
+        } else {
+            statisticsMetadata[tableName] = StatisticsMetadata(tableName: tableName)
+        }
+        
+        // Create pending update
+        let pendingUpdate = PendingUpdate(
+            tableName: tableName,
+            updateType: .incremental,
+            priority: 5,
+            estimatedDuration: 100,
+            affectedColumns: affectedColumns
+        )
+        pendingUpdates[tableName] = pendingUpdate
+    }
+    
+    // MARK: - Sampling Jobs (TLA+: StartSamplingJob, ProgressSamplingJob, CompleteSamplingJob)
+    
+    /// Start sampling job
+    /// TLA+ Action: StartSamplingJob(tableName, jobId, sampleSize)
+    public func startSamplingJob(tableName: String, jobId: Int, sampleSize: Int) {
+        var job = SamplingJob(tableName: tableName, jobId: jobId, sampleSize: sampleSize)
+        job.status = .running
+        samplingJobs[tableName] = job
+    }
+    
+    /// Progress sampling job
+    /// TLA+ Action: ProgressSamplingJob(tableName, progress, actualSampleSize)
+    public func progressSamplingJob(tableName: String, progress: Int, actualSampleSize: Int) {
+        if var job = samplingJobs[tableName] {
+            job.progress = progress
+            job.actualSampleSize = actualSampleSize
+            samplingJobs[tableName] = job
+        }
+    }
+    
+    /// Complete sampling job
+    /// TLA+ Action: CompleteSamplingJob(tableName, success, errorMessage)
+    public func completeSamplingJob(tableName: String, success: Bool, errorMessage: String = "") {
+        if var job = samplingJobs[tableName] {
+            job.status = success ? .completed : .failed
+            job.endTime = Date()
+            job.errorMessage = errorMessage
+            samplingJobs[tableName] = job
+            
+            // Update metadata
+            if var metadata = statisticsMetadata[tableName] {
+                metadata.lastSampleScan = Date()
+                statisticsMetadata[tableName] = metadata
+            }
+        }
+    }
+    
+    // MARK: - Cost Model (TLA+: UpdateCostModel)
+    
+    /// Update cost model
+    /// TLA+ Action: UpdateCostModel(cpuCost, ioCost, memoryCost, networkCost, selectivityFactors, joinCostFactors)
+    public func updateCostModel(cpuCost: Int, ioCost: Int, memoryCost: Int, networkCost: Int,
+                                selectivityFactors: [String: Int], joinCostFactors: [String: Int]) {
+        costModel = CostModel(
+            cpuCostPerTuple: cpuCost,
+            ioCostPerPage: ioCost,
+            memoryCostPerMB: memoryCost,
+            networkCostPerMB: networkCost,
+            selectivityFactors: selectivityFactors,
+            joinCostFactors: joinCostFactors,
+            lastUpdated: UInt64(Date().timeIntervalSince1970 * 1000)
+        )
+    }
+    
+    /// Get cost model
+    public func getCostModel() -> CostModel {
+        return costModel
+    }
+    
     // MARK: - Incremental Updates (TLA+: RecordModification, UpdateRowCount)
     
     /// Record modification
@@ -421,14 +714,59 @@ public actor StatisticsMaintenanceManager {
     // MARK: - Auto-Analyze (TLA+: AutoAnalyzeTrigger, ShouldAutoAnalyze)
     
     /// Check if auto-analyze should trigger
-    /// TLA+ Helper: ShouldAutoAnalyze(table)
+    /// TLA+ Helper: ShouldAutoAnalyze(table) / NeedsRefresh(table)
     private func shouldAutoAnalyze(table: String) -> Bool {
         guard autoAnalyzeEnabled else { return false }
         guard analyzeInProgress[table] != true else { return false }
         guard let stats = tableStatistics[table] else { return true }
         
+        // Check if statistics are stale (TLA+: NeedsRefresh)
+        if let metadata = statisticsMetadata[table] {
+            // Check change count threshold
+            if metadata.changeCount >= metadata.changeThreshold {
+                return true
+            }
+        }
+        
+        // Check age
+        let age = Date().timeIntervalSince(stats.lastAnalyzed)
+        if age > maxStatisticsAge {
+            return true
+        }
+        
+        // Check modification threshold
         let threshold = Int64(Double(stats.rowCount) * statsThreshold)
         return modificationCount[table, default: 0] >= threshold
+    }
+    
+    /// Check if statistics need refresh (TLA+: NeedsRefresh)
+    public func needsRefresh(tableName: String) -> Bool {
+        guard let metadata = statisticsMetadata[tableName],
+              let stats = tableStatistics[tableName] else {
+            return true
+        }
+        
+        // Check if stale
+        let age = Date().timeIntervalSince(stats.lastAnalyzed)
+        if age > maxStatisticsAge {
+            return true
+        }
+        
+        // Check change count
+        if metadata.changeCount >= metadata.changeThreshold {
+            return true
+        }
+        
+        return false
+    }
+    
+    /// Get optimal sample size for table (TLA+: GetOptimalSampleSize)
+    public func getOptimalSampleSize(tableName: String) -> Int {
+        if let stats = tableStatistics[tableName] {
+            let rowCount = Int(stats.rowCount)
+            return rowCount <= defaultSampleSize ? rowCount : defaultSampleSize
+        }
+        return defaultSampleSize
     }
     
     /// Auto-analyze table
@@ -542,7 +880,41 @@ public actor StatisticsMaintenanceManager {
     public func getFreshnessScore(table: String) -> Double {
         guard let lastTime = lastAnalyzed[table] else { return 0.0 }
         let age = Date().timeIntervalSince(lastTime)
-        return max(0.0, 1.0 - (age / 86400.0))  // 24 hour threshold
+        return max(0.0, 1.0 - (age / maxStatisticsAge))
+    }
+    
+    /// Get statistics metadata
+    public func getStatisticsMetadata(tableName: String) -> StatisticsMetadata? {
+        return statisticsMetadata[tableName]
+    }
+    
+    /// Get pending updates
+    public func getPendingUpdates() -> [String: PendingUpdate] {
+        return pendingUpdates
+    }
+    
+    /// Get sampling jobs
+    public func getSamplingJobs() -> [String: SamplingJob] {
+        return samplingJobs
+    }
+    
+    /// Calculate join selectivity from correlation (TLA+: CalculateJoinSelectivityFromCorrelation)
+    public func calculateJoinSelectivity(table1: String, column1: String,
+                                        table2: String, column2: String,
+                                        joinType: String) -> Double {
+        guard let correlation = getCorrelationStats(tableName: table1, column1: column1, column2: column2) else {
+            return 0.1  // Default selectivity
+        }
+        
+        // TLA+: CalculateJoinSelectivityFromCorrelation
+        switch joinType {
+        case "inner":
+            return Double(correlation.independenceFactor) / 100.0
+        case "left", "right", "full":
+            return 1.0
+        default:
+            return 0.1
+        }
     }
     
     // MARK: - TLA+ Invariants Implementation

@@ -296,6 +296,9 @@ public actor SchemaEvolutionManager {
             throw SchemaEvolutionError.schemaAlreadyExists(schemaName)
         }
         
+        // Validate DDL statement with Catalog
+        try await validateDDLStatement(ddlStatement: ddlStatement)
+        
         let currentTime = UInt64(Date().timeIntervalSince1970 * 1000)
         let newVersion = SchemaVersion(
             version: 1,
@@ -308,6 +311,18 @@ public actor SchemaEvolutionManager {
         
         schemas[schemaName] = newVersion
         schemaVersions[schemaName] = [newVersion]
+        
+        // Apply to Catalog (TLA+: atomicity - all-or-nothing)
+        do {
+            // Parse DDL and create table in catalog
+            // This is simplified - in production would parse SQL properly
+            try await applySchemaChangeToCatalog(schemaName: schemaName, ddlStatement: ddlStatement)
+        } catch {
+            // Rollback on failure
+            schemas.removeValue(forKey: schemaName)
+            schemaVersions.removeValue(forKey: schemaName)
+            throw error
+        }
         
         let change = SchemaChange(
             changeId: changeHistory.count + 1,
@@ -660,8 +675,51 @@ public actor SchemaEvolutionManager {
     }
     
     private func validateForeignKeyConstraint(constraint: ConstraintValidator.Constraint, schemaVersion: SchemaVersion) async throws -> Bool {
-        // Simplified validation - in production would check referenced table
+        // Validate foreign key with Catalog
+        // In production, would check if referenced table exists in catalog
+        // For now, simplified validation
+        // Note: Catalog doesn't expose tableExists yet, so we validate schema exists
+        guard schemas.keys.contains(schemaVersion.schemaName) else {
+            throw SchemaEvolutionError.constraintValidationFailed("Schema not found")
+        }
         return true
+    }
+    
+    // MARK: - Catalog Integration
+    
+    /// Validate DDL statement with Catalog
+    private func validateDDLStatement(ddlStatement: String) async throws {
+        // Basic validation - in production would use SQL parser
+        guard !ddlStatement.isEmpty else {
+            throw SchemaEvolutionError.invalidDDLStatement("Empty DDL statement")
+        }
+        
+        // Check for SQL injection patterns (simplified)
+        let dangerousPatterns = ["DROP DATABASE", "TRUNCATE", "--", "/*"]
+        for pattern in dangerousPatterns {
+            if ddlStatement.uppercased().contains(pattern) {
+                throw SchemaEvolutionError.invalidDDLStatement("Potentially dangerous DDL statement")
+            }
+        }
+    }
+    
+    /// Apply schema change to Catalog
+    private func applySchemaChangeToCatalog(schemaName: String, ddlStatement: String) async throws {
+        // Parse DDL and apply to catalog
+        // This is simplified - in production would parse SQL properly
+        if ddlStatement.uppercased().contains("CREATE TABLE") {
+            // Extract table name and columns from DDL
+            // For now, create a basic table definition
+            let tableDef = TableDefinition(
+                name: schemaName,
+                columns: [
+                    ColumnDefinition(name: "id", type: .int, nullable: false)
+                ],
+                primaryKey: ["id"]
+            )
+            // Catalog.createTable is synchronous, but we're in async context
+            try catalog.createTable(tableDef)
+        }
     }
     
     // MARK: - Query Methods
