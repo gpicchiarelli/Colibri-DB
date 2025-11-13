@@ -18,7 +18,7 @@ import Foundation
 public indirect enum QueryPlanNode: Sendable {
     case scan(table: String)
     case indexScan(table: String, index: String, key: String)
-    case filter(predicate: String, child: QueryPlanNode)
+    case filter(predicate: @Sendable (Row) -> Bool, child: QueryPlanNode)
     case project(columns: [String], child: QueryPlanNode)
     case sort(columns: [String], child: QueryPlanNode)
     case limit(count: Int, child: QueryPlanNode)
@@ -96,7 +96,7 @@ public actor QueryOptimizer {
         // Apply filters
         if let predicate = plan.predicate {
             candidates = candidates.map { candidate in
-                .filter(predicate: String(describing: predicate), child: candidate)
+                .filter(predicate: predicate, child: candidate)
             }
         }
         
@@ -235,7 +235,7 @@ public actor QueryOptimizer {
 /// Logical query plan
 public struct LogicalPlan: @unchecked Sendable {
     public let table: String
-    public let predicate: ((Row) -> Bool)?
+    public let predicate: (@Sendable (Row) -> Bool)?
     public let filterKey: Value?
     public let projection: [String]?
     public let sortColumns: [String]?
@@ -243,7 +243,7 @@ public struct LogicalPlan: @unchecked Sendable {
     
     public init(
         table: String,
-        predicate: ((Row) -> Bool)? = nil,
+        predicate: (@Sendable (Row) -> Bool)? = nil,
         filterKey: Value? = nil,
         projection: [String]? = nil,
         sortColumns: [String]? = nil,

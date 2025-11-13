@@ -24,6 +24,7 @@
  */
 
 import Foundation
+@preconcurrency import ColibriCore
 
 // MARK: - Database Configuration
 
@@ -398,6 +399,15 @@ public actor ColibrìDB {
         let heapTable = HeapTable(bufferPool: bufferPool, wal: wal)
         heapTables[tableDef.name] = heapTable
         
+        // Register table storage in QueryExecutor
+        await queryExecutor.registerTableStorage(tableName: tableDef.name, storage: heapTable)
+        
+        // Register indexes if any
+        for indexDef in tableDef.indexes {
+            // Note: Index registration would require IndexManager integration
+            // For now, we skip this - indexes will be registered when created separately
+        }
+        
         try await commit(txId: txId)
         
         databaseStats.tablesCreated += 1
@@ -534,18 +544,15 @@ public actor ColibrìDB {
         let ast = try parser.parse(sql)
         
         // Handle different statement types
-        switch ast.kind.lowercased() {
-        case "select":
+        switch ast.kind.uppercased() {
+        case "SELECT":
             return try await executeSelect(ast: ast, txId: txId)
-        case "insert":
-            // INSERT is handled by insert() method
-            throw DBError.custom("Use insert() method for INSERT statements")
-        case "update":
-            // UPDATE is handled by update() method
-            throw DBError.custom("Use update() method for UPDATE statements")
-        case "delete":
-            // DELETE is handled by delete() method
-            throw DBError.custom("Use delete() method for DELETE statements")
+        case "INSERT":
+            return try await executeInsert(ast: ast, txId: txId)
+        case "UPDATE":
+            return try await executeUpdate(ast: ast, txId: txId)
+        case "DELETE":
+            return try await executeDelete(ast: ast, txId: txId)
         default:
             throw DBError.custom("Unsupported SQL statement: \(ast.kind)")
         }
@@ -553,42 +560,236 @@ public actor ColibrìDB {
     
     /// Execute SELECT query
     private func executeSelect(ast: ASTNode, txId: TxID) async throws -> QueryResult {
-        // Extract table name from AST
-        // AST structure: kind: "SELECT", children: [selectList, fromClause, ...]
-        // fromClause: kind: "from_clause", children: [tableRef, ...]
-        // tableRef: kind: "table_ref", attributes: ["name": "table_name"]
-        guard ast.children.count >= 2 else {
-            throw DBError.custom("Invalid SELECT AST structure")
+        // Convert AST to LogicalPlan
+        let converter = ASTToLogicalPlanConverter()
+        let logicalPlan = try converter.convert(ast)
+        
+        // Optimize logical plan to physical plan
+        let physicalPlan = await queryOptimizer.optimize(logical: logicalPlan)
+        
+        // Execute physical plan using QueryExecutor
+        let tuples = try await queryExecutor.executePlan(physicalPlan, txID: txId)
+        
+        // Convert ExecutorTuple back to Row using schema
+        guard let tableDef = await catalog.getTable(logicalPlan.table) else {
+            throw DBError.tableNotFound(table: logicalPlan.table)
         }
         
-        let fromClause = ast.children[1] // fromClause is second child
-        guard fromClause.kind == "from_clause", !fromClause.children.isEmpty else {
-            throw DBError.custom("FROM clause not found in SELECT statement")
+        let columnNames = logicalPlan.projection ?? tableDef.columns.map { $0.name }
+        
+        // Convert tuples to rows
+        var rows: [Row] = []
+        for tuple in tuples {
+            var row: Row = [:]
+            
+            // If projection is specified, use projection column order
+            // Otherwise, use full table schema order
+            if let projection = logicalPlan.projection {
+                // Projection: map tuple values to projected columns
+                for (index, columnName) in projection.enumerated() {
+                    if index < tuple.values.count {
+                        row[columnName] = tuple.values[index]
+                    }
+                }
+            } else {
+                // Full schema: map tuple values to all columns in schema order
+                for (index, columnDef) in tableDef.columns.enumerated() {
+                    if index < tuple.values.count {
+                        row[columnDef.name] = tuple.values[index]
+                    }
+                }
+            }
+            
+            rows.append(row)
         }
         
-        let tableRef = fromClause.children[0] // First table in FROM clause
-        let tableName = tableRef.attributes["name"] ?? ""
+        databaseStats.queriesExecuted += 1
+        return QueryResult(rows: rows, columns: columnNames)
+    }
+    
+    /// Execute INSERT statement
+    private func executeInsert(ast: ASTNode, txId: TxID) async throws -> QueryResult {
+        // Extract table name
+        guard let tableName = ast.attributes["table"] else {
+            throw DBError.custom("INSERT statement missing table name")
+        }
         
-        guard !tableName.isEmpty else {
-            throw DBError.custom("Table name not found in SELECT statement")
+        // Extract column names (optional)
+        let columnNames: [String] = {
+            if let columnsStr = ast.attributes["columns"], !columnsStr.isEmpty {
+                return columnsStr.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }
+            }
+            return []
+        }()
+        
+        // Extract VALUES (children of INSERT AST are the values)
+        let values = ast.children
+        
+        // Get table definition
+        guard let tableDef = await catalog.getTable(tableName) else {
+            throw DBError.tableNotFound(table: tableName)
+        }
+        
+        // Convert VALUES to Row
+        let converter = ASTToRowConverter()
+        let row = try converter.convertInsertValues(values, columns: columnNames, tableDef: tableDef)
+        
+        // Insert row
+        let rid = try await insert(table: tableName, row: row, txId: txId)
+        
+        // Return empty result (INSERT doesn't return rows)
+        return QueryResult(rows: [], columns: [])
+    }
+    
+    /// Execute UPDATE statement
+    private func executeUpdate(ast: ASTNode, txId: TxID) async throws -> QueryResult {
+        // Extract table name
+        guard let tableName = ast.attributes["table"] else {
+            throw DBError.custom("UPDATE statement missing table name")
+        }
+        
+        // Get table definition
+        guard let tableDef = await catalog.getTable(tableName) else {
+            throw DBError.tableNotFound(table: tableName)
+        }
+        
+        // Extract assignments and WHERE clause
+        // AST structure: children = [assignment1, assignment2, ..., whereClause]
+        var assignments: [ASTNode] = []
+        var whereClause: ASTNode?
+        
+        for (index, child) in ast.children.enumerated() {
+            if child.kind == "where_clause" {
+                whereClause = child
+            } else if child.kind == "assignment" {
+                assignments.append(child)
+            }
+        }
+        
+        // Convert assignments to Row (partial row with only updated columns)
+        var updateRow: Row = [:]
+        for assignment in assignments {
+            guard let columnName = assignment.attributes["column"] else {
+                continue
+            }
+            guard assignment.children.count >= 1 else {
+                continue
+            }
+            
+            // Evaluate value expression
+            let converter = ASTToRowConverter()
+            let value = try converter.evaluateValueExpression(assignment.children[0])
+            updateRow[columnName] = value
         }
         
         // Get heap table
         let heapTable = try await getOrCreateHeapTable(table: tableName)
         
-        // Get table schema from catalog
-        guard let tableDef = await catalog.getTable(tableName) else {
-            throw DBError.tableNotFound(table: tableName)
+        // Get WHERE predicate if present
+        let predicate: (@Sendable (Row) -> Bool)?
+        if let whereClause = whereClause, whereClause.kind != "empty" {
+            // Extract predicate from WHERE clause directly
+            let logicalPlanConverter = ASTToLogicalPlanConverter()
+            // Create a SELECT AST with WHERE clause to extract predicate
+            let selectAST = ASTNode(
+                kind: "SELECT",
+                children: [
+                    ASTNode(kind: "select_list", children: []),
+                    ASTNode(kind: "from_clause", children: [
+                        ASTNode(kind: "table_ref", attributes: ["name": tableName])
+                    ]),
+                    whereClause
+                ]
+            )
+            predicate = try logicalPlanConverter.extractPredicate(from: selectAST)
+        } else {
+            predicate = nil
         }
         
-        // Scan all rows from heap table
-        let rows = try await heapTable.scanAll()
+        // Scan all rows with RIDs and update matching ones
+        var updatedCount = 0
+        let allRowsWithRID = try await heapTable.scanAllWithRID()
         
-        // Extract column names from table definition
-        let columns = tableDef.columns.map { $0.name }
+        for (rid, row) in allRowsWithRID {
+            // Check predicate if present
+            if let predicate = predicate, !predicate(row) {
+                continue
+            }
+            
+            // Merge updateRow with existing row
+            var mergedRow = row
+            for (key, value) in updateRow {
+                mergedRow[key] = value
+            }
+            
+            // Update row using heap table
+            try await update(table: tableName, rid: rid, row: mergedRow, txId: txId)
+            updatedCount += 1
+        }
         
         databaseStats.queriesExecuted += 1
-        return QueryResult(rows: rows, columns: columns)
+        return QueryResult(rows: [], columns: [])
+    }
+    
+    /// Execute DELETE statement
+    private func executeDelete(ast: ASTNode, txId: TxID) async throws -> QueryResult {
+        // Extract table name
+        guard let tableName = ast.attributes["table"] else {
+            throw DBError.custom("DELETE statement missing table name")
+        }
+        
+        // Get heap table
+        let heapTable = try await getOrCreateHeapTable(table: tableName)
+        
+        // Extract WHERE clause (first child)
+        var whereClause: ASTNode?
+        if !ast.children.isEmpty {
+            let firstChild = ast.children[0]
+            if firstChild.kind == "where_clause" {
+                whereClause = firstChild
+            }
+        }
+        
+        // Get WHERE predicate if present
+        let predicate: (@Sendable (Row) -> Bool)?
+        if let whereClause = whereClause, whereClause.kind != "empty" {
+            // Extract predicate from WHERE clause directly
+            let logicalPlanConverter = ASTToLogicalPlanConverter()
+            // Create a SELECT AST with WHERE clause to extract predicate
+            let selectAST = ASTNode(
+                kind: "SELECT",
+                children: [
+                    ASTNode(kind: "select_list", children: []),
+                    ASTNode(kind: "from_clause", children: [
+                        ASTNode(kind: "table_ref", attributes: ["name": tableName])
+                    ]),
+                    whereClause
+                ]
+            )
+            predicate = try logicalPlanConverter.extractPredicate(from: selectAST)
+        } else {
+            // No WHERE clause - delete all rows
+            predicate = nil
+        }
+        
+        // Scan all rows with RIDs and delete matching ones
+        // This is simplified - in production would use index for WHERE clauses
+        var deletedCount = 0
+        let allRowsWithRID = try await heapTable.scanAllWithRID()
+        
+        for (rid, row) in allRowsWithRID {
+            // Check predicate if present
+            if let predicate = predicate, !predicate(row) {
+                continue
+            }
+            
+            // Delete row using heap table
+            try await delete(table: tableName, rid: rid, txId: txId)
+            deletedCount += 1
+        }
+        
+        databaseStats.queriesExecuted += 1
+        return QueryResult(rows: [], columns: [])
     }
     
     // MARK: - Statistics and Monitoring

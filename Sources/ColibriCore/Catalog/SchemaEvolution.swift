@@ -717,8 +717,8 @@ public actor SchemaEvolutionManager {
                 ],
                 primaryKey: ["id"]
             )
-            // Catalog.createTable is synchronous, but we're in async context
-            try catalog.createTable(tableDef)
+            // Catalog.createTable is actor-isolated, need await
+            try await catalog.createTable(tableDef)
         }
     }
     

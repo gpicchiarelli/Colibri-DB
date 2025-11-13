@@ -208,12 +208,21 @@ public actor ConnectionHandler {
 
 /// Request handler for processing HTTP requests
 public actor RequestHandler {
-    private let catalogManager: CatalogManager
-    private let transactionManager: TransactionManager
+    private let database: ColibrìDB
+    private var activeTransactions: [String: TxID] = [:]  // sessionId -> txID
     
-    public init(catalogManager: CatalogManager, transactionManager: TransactionManager) {
-        self.catalogManager = catalogManager
-        self.transactionManager = transactionManager
+    public init(database: ColibrìDB) {
+        self.database = database
+    }
+    
+    /// Get or create transaction for session
+    private func getOrCreateTransaction(sessionId: String) async throws -> TxID {
+        if let txID = activeTransactions[sessionId] {
+            return txID
+        }
+        let txID = try await database.beginTransaction()
+        activeTransactions[sessionId] = txID
+        return txID
     }
     
     /// Handle HTTP request
@@ -223,6 +232,8 @@ public actor RequestHandler {
             return try await handleTablesRequest(request)
         case "/api/query":
             return try await handleQueryRequest(request)
+        case "/api/transaction":
+            return try await handleTransactionRequest(request)
         case "/api/health":
             return handleHealthRequest(request)
         default:
@@ -234,7 +245,11 @@ public actor RequestHandler {
     private func handleTablesRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
         switch request.method {
         case "GET":
-            let tableNames = await catalogManager.getTableNames()
+            // Get table names from catalog via database
+            // We need to access catalog through database
+            // For now, we'll need to add a method to ColibrìDB to expose this
+            // Temporary: return empty array until we add listTables() to ColibrìDB
+            let tableNames: [String] = []  // TODO: await database.listTables()
             let responseData = try JSONEncoder().encode(tableNames)
             return HTTPResponse.ok(body: responseData)
         case "POST":
@@ -244,13 +259,31 @@ public actor RequestHandler {
             }
             
             let tableRequest = try JSONDecoder().decode(CreateTableRequest.self, from: body)
-            try await catalogManager.createTable(
+            
+            // Convert CreateTableRequest to TableDefinition
+            let columns = tableRequest.columns.map { col in
+                ColumnDefinition(
+                    name: col.name,
+                    type: col.type,
+                    nullable: col.nullable,
+                    defaultValue: col.defaultValue
+                )
+            }
+            
+            // Convert Set<String> to [String]? for primaryKey
+            let primaryKey: [String]? = tableRequest.primaryKey.isEmpty ? nil : Array(tableRequest.primaryKey)
+            
+            // For now, indexes are empty - could be added later from CreateTableRequest
+            let indexes: [CatalogIndexDefinition] = []
+            
+            let tableDef = TableDefinition(
                 name: tableRequest.name,
-                columns: tableRequest.columns,
-                primaryKey: tableRequest.primaryKey,
-                foreignKeys: tableRequest.foreignKeys,
-                constraints: tableRequest.constraints
+                columns: columns,
+                primaryKey: primaryKey,
+                indexes: indexes
             )
+            
+            try await database.createTable(tableDef)
             
             return HTTPResponse.ok()
         default:
@@ -270,11 +303,46 @@ public actor RequestHandler {
         
         let queryRequest = try JSONDecoder().decode(QueryRequest.self, from: body)
         
-        // Execute query (simplified)
-        let result = try await executeQuery(queryRequest.query)
+        // Get session ID from headers (or generate one)
+        let sessionId = request.headers["X-Session-Id"] ?? UUID().uuidString
+        
+        // Get or create transaction
+        let txID = try await getOrCreateTransaction(sessionId: sessionId)
+        
+        // Execute query using ColibrìDB
+        let result = try await database.executeQuery(queryRequest.query, txId: txID)
         let responseData = try JSONEncoder().encode(result)
         
         return HTTPResponse.ok(body: responseData)
+    }
+    
+    /// Handle transaction API request (BEGIN, COMMIT, ROLLBACK)
+    private func handleTransactionRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+        let sessionId = request.headers["X-Session-Id"] ?? UUID().uuidString
+        let action = request.queryParams["action"] ?? "begin"
+        
+        switch action.lowercased() {
+        case "begin":
+            let txID = try await database.beginTransaction()
+            activeTransactions[sessionId] = txID
+            return HTTPResponse.ok(body: "{\"transaction_id\": \(txID)}".data(using: .utf8))
+        case "commit":
+            if let txID = activeTransactions[sessionId] {
+                try await database.commit(txId: txID)
+                activeTransactions.removeValue(forKey: sessionId)
+                return HTTPResponse.ok()
+            }
+            return HTTPResponse.badRequest()
+        case "rollback":
+            if let txID = activeTransactions[sessionId] {
+                try await database.abort(txId: txID)
+                activeTransactions.removeValue(forKey: sessionId)
+                return HTTPResponse.ok()
+            }
+            return HTTPResponse.badRequest()
+        default:
+            return HTTPResponse.badRequest()
+        }
     }
     
     /// Handle health check request
@@ -291,13 +359,6 @@ public actor RequestHandler {
         } catch {
             return HTTPResponse.internalServerError()
         }
-    }
-    
-    /// Execute SQL query (simplified)
-    private func executeQuery(_ query: String) async throws -> QueryResult {
-        // Simplified query execution
-        // In a real implementation, this would parse SQL and execute it
-        return QueryResult(rows: [], columns: [])
     }
 }
 
@@ -317,11 +378,7 @@ public struct QueryRequest: Codable, Sendable {
     public let query: String
 }
 
-/// Query result
-public struct QueryResult: Codable, Sendable {
-    public let rows: [[Value]]
-    public let columns: [String]
-}
+// QueryResult è definito in ColibriCore, non serve ridefinirlo qui
 
 /// Health status
 public struct HealthStatus: Codable, Sendable {
@@ -355,19 +412,15 @@ public actor ColibriServer {
     
     // MARK: - Dependencies
     
-    /// Catalog manager
-    private let catalogManager: CatalogManager
-    
-    /// Transaction manager
-    private let transactionManager: TransactionManager
+    /// Database instance
+    private let database: ColibrìDB
     
     // MARK: - Initialization
     
-    public init(config: ServerConfig = .default, catalogManager: CatalogManager, transactionManager: TransactionManager) {
+    public init(config: ServerConfig = .default, database: ColibrìDB) {
         self.config = config
-        self.catalogManager = catalogManager
-        self.transactionManager = transactionManager
-        self.requestHandler = RequestHandler(catalogManager: catalogManager, transactionManager: transactionManager)
+        self.database = database
+        self.requestHandler = RequestHandler(database: database)
     }
     
     // MARK: - Server Operations

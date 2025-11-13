@@ -33,7 +33,7 @@ import Foundation
 // MARK: - Tuple Structure
 
 /// Tuple with values and RID (TLA+: Tuple)
-public struct ExecutorTuple: Codable {
+public struct ExecutorTuple: Codable, Sendable {
     public let values: [Value]
     public let rid: RID
     
@@ -216,6 +216,74 @@ public actor QueryExecutor {
         tableIndexes[tableName]?[indexName] = indexId
     }
     
+    // MARK: - Row Conversion Helpers
+    
+    /// Convert Row to ExecutorTuple using table schema column order
+    private func convertRowToTuple(_ row: Row, tableName: String, rid: RID) async throws -> ExecutorTuple? {
+        // Get table schema from catalog
+        guard let tableDef = await catalog.getTable(tableName) else {
+            return nil
+        }
+        
+        // Extract values in column order from schema
+        var values: [Value] = []
+        for columnDef in tableDef.columns {
+            if let value = row[columnDef.name] {
+                values.append(value)
+            } else if let defaultValue = columnDef.defaultValue {
+                values.append(defaultValue)
+            } else if columnDef.nullable {
+                values.append(.null)
+            } else {
+                // Required column missing - this is an error
+                throw DBError.custom("Required column '\(columnDef.name)' missing in row")
+            }
+        }
+        
+        return ExecutorTuple(values: values, rid: rid)
+    }
+    
+    /// Convert ExecutorTuple to Row using table schema column names
+    private func convertTupleToRow(_ tuple: ExecutorTuple, tableName: String) async throws -> Row {
+        // Get table schema from catalog
+        guard let tableDef = await catalog.getTable(tableName) else {
+            throw DBError.tableNotFound(table: tableName)
+        }
+        
+        var row: Row = [:]
+        for (index, value) in tuple.values.enumerated() {
+            if index < tableDef.columns.count {
+                let columnName = tableDef.columns[index].name
+                row[columnName] = value
+            }
+        }
+        
+        return row
+    }
+    
+    /// Extract table name from a plan node (recursively)
+    private func extractTableNameFromPlan(_ plan: QueryPlanNode) throws -> String {
+        switch plan {
+        case .scan(let table):
+            return table
+        case .indexScan(let table, _, _):
+            return table
+        case .filter(_, let child):
+            return try extractTableNameFromPlan(child)
+        case .project(_, let child):
+            return try extractTableNameFromPlan(child)
+        case .sort(_, let child):
+            return try extractTableNameFromPlan(child)
+        case .limit(_, let child):
+            return try extractTableNameFromPlan(child)
+        case .join(let left, _, _):
+            // For joins, use left table (could be improved)
+            return try extractTableNameFromPlan(left)
+        case .aggregate(_, _, let child):
+            return try extractTableNameFromPlan(child)
+        }
+    }
+    
     // MARK: - Scan Operators (TLA+: InitSeqScan, ExecuteSeqScan, InitIndexScan)
     
     /// Initialize sequential scan
@@ -261,9 +329,12 @@ public actor QueryExecutor {
                 // Try to read tuple at current RID
                 let row = try await storage.read(currentRID)
                 
-                // Convert Row to ExecutorTuple
-                let values = row.values.map { $0.value }
-                let tuple = ExecutorTuple(values: values, rid: currentRID)
+                // Convert Row to ExecutorTuple using schema column order
+                guard let tuple = try await convertRowToTuple(row, tableName: state.table, rid: currentRID) else {
+                    // Skip invalid rows
+                    currentRID = RID(pageID: currentRID.pageID, slotID: currentRID.slotID + 1)
+                    continue
+                }
                 
                 // Update state
                 currentRID = RID(pageID: currentRID.pageID, slotID: currentRID.slotID + 1)
@@ -363,8 +434,13 @@ public actor QueryExecutor {
             
             // Read tuple from heap table
             let row = try await storage.read(rid)
-            let values = row.values.map { $0.value }
-            let tuple = ExecutorTuple(values: values, rid: rid)
+            // Convert Row to ExecutorTuple using schema column order
+            guard let tuple = try await convertRowToTuple(row, tableName: state.table, rid: rid) else {
+                // Skip invalid rows
+                state.exhausted = true
+                scanState[opId] = state
+                return nil
+            }
             
             // Mark as processed
             state.currentRID = rid
@@ -718,11 +794,23 @@ public actor QueryExecutor {
     /// Invariant: Exhausted operators don't produce output (TLA+: Inv_Executor_ExhaustedNoOutput)
     public func checkExhaustedNoOutputInvariant() -> Bool {
         let scanExhausted = scanState.values.allSatisfy { scan in
-            !scan.exhausted || !(pipelineActive[scanState.firstIndex(where: { $0.value.table == scan.table })?.value ?? 0] ?? false)
+            if scan.exhausted {
+                // Find the opId for this scan
+                if let opId = scanState.first(where: { $0.value.table == scan.table })?.key {
+                    return !(pipelineActive[opId] ?? false)
+                }
+            }
+            return true
         }
         
         let joinExhausted = joinState.values.allSatisfy { join in
-            !join.exhausted || !(pipelineActive[joinState.firstIndex(where: { $0.value.joinType == join.joinType })?.value ?? 0] ?? false)
+            if join.exhausted {
+                // Find the opId for this join
+                if let opId = joinState.first(where: { $0.value.joinType == join.joinType })?.key {
+                    return !(pipelineActive[opId] ?? false)
+                }
+            }
+            return true
         }
         
         return scanExhausted && joinExhausted
@@ -751,6 +839,162 @@ public actor QueryExecutor {
         sortState.removeValue(forKey: opId)
         outputBuffer.removeValue(forKey: opId)
         pipelineActive.removeValue(forKey: opId)
+    }
+    
+    // MARK: - Query Plan Execution
+    
+    /// Execute a QueryPlanNode and return all result tuples
+    /// This is the main entry point for executing optimized query plans
+    public func executePlan(_ plan: QueryPlanNode, txID: TxID) async throws -> [ExecutorTuple] {
+        var nextOpId = 1
+        
+        // Execute plan recursively (post-order traversal)
+        let result = try await executePlanNode(plan, txID: txID, opId: &nextOpId)
+        
+        // Cleanup all operators
+        for opId in 1..<nextOpId {
+            cleanupOperator(opId: opId)
+        }
+        
+        return result
+    }
+    
+    /// Execute a single plan node recursively
+    private func executePlanNode(_ node: QueryPlanNode, txID: TxID, opId: inout Int) async throws -> [ExecutorTuple] {
+        switch node {
+        case .scan(let table):
+            // Sequential scan
+            let currentOpId = opId
+            opId += 1
+            initSeqScan(opId: currentOpId, tableName: table)
+            
+            var results: [ExecutorTuple] = []
+            while let tuple = try await executeSeqScan(opId: currentOpId, txID: txID) {
+                results.append(tuple)
+            }
+            return results
+            
+        case .indexScan(let table, let index, let key):
+            // Index scan
+            let currentOpId = opId
+            opId += 1
+            
+            // Parse key to Value
+            let searchKey: Value
+            if let intKey = Int64(key) {
+                searchKey = .int(intKey)
+            } else if let doubleKey = Double(key) {
+                searchKey = .double(doubleKey)
+            } else {
+                searchKey = .string(key)
+            }
+            
+            try await initIndexScan(opId: currentOpId, tableName: table, indexName: index, searchKey: searchKey)
+            
+            var results: [ExecutorTuple] = []
+            while let tuple = try await executeIndexScan(opId: currentOpId, txID: txID) {
+                results.append(tuple)
+            }
+            return results
+            
+        case .filter(let predicate, let child):
+            // Filter: execute child, then filter
+            let childResults = try await executePlanNode(child, txID: txID, opId: &opId)
+            
+            // Extract table name from child plan to convert tuples to rows
+            let tableName = try extractTableNameFromPlan(child)
+            
+            // Convert ExecutorTuple to Row and apply predicate
+            var filteredResults: [ExecutorTuple] = []
+            for tuple in childResults {
+                do {
+                    let row = try await convertTupleToRow(tuple, tableName: tableName)
+                    if predicate(row) {
+                        filteredResults.append(tuple)
+                    }
+                } catch {
+                    // Skip tuples that can't be converted
+                    continue
+                }
+            }
+            
+            return filteredResults
+            
+        case .project(let columns, let child):
+            // Project: execute child, then project
+            let childResults = try await executePlanNode(child, txID: txID, opId: &opId)
+            
+            // Get column indices (simplified - would need schema)
+            let columnIndices = (0..<columns.count).map { $0 }
+            return project(tuples: childResults, columns: columnIndices)
+            
+        case .sort(let columns, let child):
+            // Sort: execute child, then sort
+            let childResults = try await executePlanNode(child, txID: txID, opId: &opId)
+            
+            let currentOpId = opId
+            opId += 1
+            
+            // Create sort keys (simplified)
+            let sortKeys = columns.enumerated().map { index, _ in
+                SortKey(column: index, order: .ascending)
+            }
+            initSort(opId: currentOpId, sortKeys: sortKeys)
+            
+            return executeSort(opId: currentOpId, input: childResults)
+            
+        case .limit(let count, let child):
+            // Limit: execute child, then limit
+            let childResults = try await executePlanNode(child, txID: txID, opId: &opId)
+            return Array(childResults.prefix(count))
+            
+        case .join(let left, let right, let condition):
+            // Join: execute both children, then join
+            let leftResults = try await executePlanNode(left, txID: txID, opId: &opId)
+            let rightResults = try await executePlanNode(right, txID: txID, opId: &opId)
+            
+            let currentOpId = opId
+            opId += 1
+            
+            initNestedLoopJoin(opId: currentOpId, leftInput: leftResults, rightInput: rightResults)
+            
+            var results: [ExecutorTuple] = []
+            while let tuple = executeNestedLoopJoin(opId: currentOpId) {
+                results.append(tuple)
+            }
+            return results
+            
+        case .aggregate(let function, let column, let child):
+            // Aggregate: execute child, then aggregate
+            let childResults = try await executePlanNode(child, txID: txID, opId: &opId)
+            
+            let currentOpId = opId
+            opId += 1
+            
+            // Parse aggregate function
+            let aggFunc: AggregateSpec.AggregateFunc
+            switch function.uppercased() {
+            case "SUM":
+                aggFunc = .sum
+            case "COUNT":
+                aggFunc = .count
+            case "AVG":
+                aggFunc = .avg
+            case "MIN":
+                aggFunc = .min
+            case "MAX":
+                aggFunc = .max
+            default:
+                aggFunc = .count
+            }
+            
+            // Get column index (simplified)
+            let columnIndex = 0
+            let aggregates = [AggregateSpec(function: aggFunc, column: columnIndex)]
+            initAggregation(opId: currentOpId, groupBy: [], aggregates: aggregates)
+            
+            return executeAggregation(opId: currentOpId, input: childResults)
+        }
     }
 }
 

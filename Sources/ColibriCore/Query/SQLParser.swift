@@ -87,7 +87,7 @@ public enum ExprKind: String {
 }
 
 /// AST Node (TLA+: ASTNode)
-public struct ASTNode {
+public struct ASTNode: Sendable {
     public let kind: String
     public let children: [ASTNode]
     public let attributes: [String: String]
