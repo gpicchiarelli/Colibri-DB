@@ -19,6 +19,7 @@ let package = Package(
     products: [
         .library(name: "ColibriCore", targets: ["ColibriCore"]),
         .library(name: "ColibriServer", targets: ["ColibriServer"]),
+        .executable(name: "coldb", targets: ["coldb"]),
         .executable(name: "coldb-server", targets: ["coldb-server"]),
         .executable(name: "benchmarks", targets: ["benchmarks"])
     ],
@@ -42,6 +43,10 @@ let package = Package(
                 .product(name: "NIO", package: "swift-nio"),
                 .product(name: "NIOHTTP1", package: "swift-nio")
             ]
+        ),
+        .executableTarget(
+            name: "coldb",
+            dependencies: ["ColibriCore"]
         ),
         .executableTarget(
             name: "coldb-server",

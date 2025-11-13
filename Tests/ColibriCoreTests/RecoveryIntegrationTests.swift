@@ -29,10 +29,7 @@ final class RecoveryIntegrationTests: XCTestCase {
     }
     
     func testCommittedTransactionSurvivesCrashRecovery() async throws {
-        let skipDueToToolchainCrash = ProcessInfo.processInfo.environment["COLIBRI_RUN_RECOVERY_TESTS"] != "1"
-        if skipDueToToolchainCrash {
-            throw XCTSkip("Il toolchain Swift 6.0 crasha con 'Range requires lowerBound <= upperBound' durante la costruzione dell'harness TLA-aligned (radice openrdar SR-XXXX). Test sospeso finché non abbiamo workaround.")
-        }
+        // Test enabled - recovery should work now
         
         let harness = try makeHarness()
         defer { harness.cleanup() }
@@ -71,10 +68,7 @@ final class RecoveryIntegrationTests: XCTestCase {
     }
     
     func testUncommittedTransactionProducesClrAndAbortDuringRecovery() async throws {
-        let skipDueToToolchainCrash = ProcessInfo.processInfo.environment["COLIBRI_RUN_RECOVERY_TESTS"] != "1"
-        if skipDueToToolchainCrash {
-            throw XCTSkip("Il toolchain Swift 6.0 crasha con 'Range requires lowerBound <= upperBound' durante la costruzione dell'harness TLA-aligned (radice openrdar SR-XXXX). Test sospeso finché non abbiamo workaround.")
-        }
+        // Test enabled - recovery should work now
         
         let harness = try makeHarness()
         defer { harness.cleanup() }
