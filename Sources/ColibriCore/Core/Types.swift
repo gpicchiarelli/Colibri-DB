@@ -346,6 +346,8 @@ public enum DBError: Error, Sendable {
     case databaseNotRunning
     case transactionNotFound(txId: TxID)
     case tableNotFound(table: String)
+    case indexNotFound(String)
+    case bufferOverflow
     case schemaMismatch(expected: Int, actual: Int)
     case nullConstraintViolation(column: String)
     case invalidConfiguration

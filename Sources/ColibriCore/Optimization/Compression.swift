@@ -12,7 +12,7 @@ import Foundation
 import Compression
 
 /// Compression algorithm
-public enum CompressionAlgorithm {
+public enum CompressionAlgorithm: Sendable {
     case none
     case lz4
     case zlib
