@@ -28,11 +28,11 @@ public struct PerformanceMetrics: Codable, Sendable {
 
 /// Performance monitor protocol
 public protocol PerformanceMonitor: Sendable {
-    func recordQueryLatency(_ latency: TimeInterval)
-    func recordTransaction(_ duration: TimeInterval)
-    func recordCacheHit(_ hit: Bool)
-    func recordDiskIO(_ latency: TimeInterval)
-    func getMetrics() -> PerformanceMetrics
+    func recordQueryLatency(_ latency: TimeInterval) async
+    func recordTransaction(_ duration: TimeInterval) async
+    func recordCacheHit(_ hit: Bool) async
+    func recordDiskIO(_ latency: TimeInterval) async
+    func getMetrics() async -> PerformanceMetrics
 }
 
 /// Default performance monitor implementation
@@ -49,19 +49,19 @@ public actor DefaultPerformanceMonitor: PerformanceMonitor {
     
     public init() {}
     
-    public func recordQueryLatency(_ latency: TimeInterval) {
+    public func recordQueryLatency(_ latency: TimeInterval) async {
         queryCount += 1
         totalQueryLatency += latency
         metrics.queryLatency = totalQueryLatency / Double(queryCount)
     }
     
-    public func recordTransaction(_ duration: TimeInterval) {
+    public func recordTransaction(_ duration: TimeInterval) async {
         transactionCount += 1
         totalTransactionTime += duration
         metrics.transactionThroughput = Double(transactionCount) / totalTransactionTime
     }
     
-    public func recordCacheHit(_ hit: Bool) {
+    public func recordCacheHit(_ hit: Bool) async {
         if hit {
             cacheHits += 1
         } else {
@@ -73,13 +73,13 @@ public actor DefaultPerformanceMonitor: PerformanceMonitor {
         }
     }
     
-    public func recordDiskIO(_ latency: TimeInterval) {
+    public func recordDiskIO(_ latency: TimeInterval) async {
         diskIOCount += 1
         totalDiskIOLatency += latency
         metrics.diskIOLatency = totalDiskIOLatency / Double(diskIOCount)
     }
     
-    public func getMetrics() -> PerformanceMetrics {
+    public func getMetrics() async -> PerformanceMetrics {
         return metrics
     }
 }

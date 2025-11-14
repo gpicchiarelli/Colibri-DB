@@ -596,12 +596,6 @@ public protocol BufferPoolManager: Sendable {
     func unpinPage(pageID: PageID) async throws
 }
 
-/// WAL manager
-public protocol HeapWALManager: Sendable {
-    func appendRecord(txId: TxID, kind: String, data: Data) async throws -> LSN
-    func flushLog() async throws
-}
-
 /// Heap table manager error
 public enum HeapTableManagerError: Error, LocalizedError {
     case ridAlreadyAllocated

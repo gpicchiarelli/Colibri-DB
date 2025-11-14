@@ -32,10 +32,10 @@ public struct ResourceAllocation: Codable, Sendable {
 
 /// Resource manager protocol
 public protocol ResourceManager: Sendable {
-    func allocate(_ type: ResourceType, amount: Int64) throws
-    func deallocate(_ type: ResourceType, amount: Int64)
-    func getAvailable(_ type: ResourceType) -> Int64
-    func getUsed(_ type: ResourceType) -> Int64
+    func allocate(_ type: ResourceType, amount: Int64) async throws
+    func deallocate(_ type: ResourceType, amount: Int64) async
+    func getAvailable(_ type: ResourceType) async -> Int64
+    func getUsed(_ type: ResourceType) async -> Int64
 }
 
 /// Default resource manager implementation
@@ -48,15 +48,15 @@ public actor DefaultResourceManager: ResourceManager {
         // Initialize with default limits if not provided
         if limits.isEmpty {
             self.limits = [
-                .memory: 8 * 1024 * 1024 * 1024, // 8GB
-                .disk: 100 * 1024 * 1024 * 1024, // 100GB
-                .cpu: 100, // 100%
-                .network: 1000 * 1024 * 1024 // 1GB/s
+                .memory: Int64(8 * 1024 * 1024 * 1024), // 8GB
+                .disk: Int64(100 * 1024 * 1024 * 1024), // 100GB
+                .cpu: Int64(100),
+                .network: Int64(1000 * 1024 * 1024) // 1GB/s
             ]
         }
     }
     
-    public func allocate(_ type: ResourceType, amount: Int64) throws {
+    public func allocate(_ type: ResourceType, amount: Int64) async throws {
         let current = allocations[type] ?? 0
         let limit = limits[type] ?? Int64.max
         
@@ -67,18 +67,18 @@ public actor DefaultResourceManager: ResourceManager {
         allocations[type] = current + amount
     }
     
-    public func deallocate(_ type: ResourceType, amount: Int64) {
+    public func deallocate(_ type: ResourceType, amount: Int64) async {
         let current = allocations[type] ?? 0
         allocations[type] = max(0, current - amount)
     }
     
-    public func getAvailable(_ type: ResourceType) -> Int64 {
+    public func getAvailable(_ type: ResourceType) async -> Int64 {
         let limit = limits[type] ?? Int64.max
         let used = allocations[type] ?? 0
         return max(0, limit - used)
     }
     
-    public func getUsed(_ type: ResourceType) -> Int64 {
+    public func getUsed(_ type: ResourceType) async -> Int64 {
         return allocations[type] ?? 0
     }
 }

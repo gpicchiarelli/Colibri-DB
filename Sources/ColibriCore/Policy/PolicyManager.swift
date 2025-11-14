@@ -107,15 +107,15 @@ public actor PolicyManager {
     // MARK: - Dependencies
     
     /// Audit manager
-    private let auditManager: AuditManager
+    private let auditLogger: PolicyAuditLogger
     
     /// Security manager
-    private let securityManager: SecurityManager
+    private let securityManager: PolicySecurityManager
     
     // MARK: - Initialization
     
-    public init(auditManager: AuditManager, securityManager: SecurityManager) {
-        self.auditManager = auditManager
+    public init(auditLogger: PolicyAuditLogger, securityManager: PolicySecurityManager) {
+        self.auditLogger = auditLogger
         self.securityManager = securityManager
         
         // TLA+ Init
@@ -220,7 +220,7 @@ public actor PolicyManager {
             try await securityManager.encryptData(data: context["data"] ?? "")
             return true
         case .audit:
-            try await auditManager.auditEvent(event: result.reason, metadata: result.metadata)
+            try await auditLogger.auditEvent(event: result.reason, metadata: result.metadata)
             return true
         }
     }
@@ -361,13 +361,13 @@ public actor PolicyManager {
 
 // MARK: - Supporting Types
 
-/// Audit manager
-public protocol AuditManager: Sendable {
+/// Audit logger used by PolicyManager
+public protocol PolicyAuditLogger: Sendable {
     func auditEvent(event: String, metadata: [String: String]) async throws
 }
 
-/// Security manager
-public protocol SecurityManager: Sendable {
+/// Security manager dependency for PolicyManager (distinct from core security subsystem)
+public protocol PolicySecurityManager: Sendable {
     func encryptData(data: String) async throws
     func decryptData(data: String) async throws
 }

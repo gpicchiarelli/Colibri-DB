@@ -10,10 +10,10 @@
 import Foundation
 import CryptoKit
 
-/// Encryption service protocol
+/// Encryption service protocol (async to integrate with actors)
 public protocol EncryptionService: Sendable {
-    func encrypt(_ data: Data) throws -> Data
-    func decrypt(_ data: Data) throws -> Data
+    func encrypt(data: Data) async throws -> Data
+    func decrypt(data: Data) async throws -> Data
 }
 
 /// Default encryption service implementation
@@ -25,7 +25,7 @@ public actor DefaultEncryptionService: EncryptionService {
         self.key = key ?? SymmetricKey(size: .bits256)
     }
     
-    public func encrypt(_ data: Data) throws -> Data {
+    public func encrypt(data: Data) async throws -> Data {
         let sealedBox = try AES.GCM.seal(data, using: key)
         guard let encrypted = sealedBox.combined else {
             throw EncryptionError.encryptionFailed
@@ -33,7 +33,7 @@ public actor DefaultEncryptionService: EncryptionService {
         return encrypted
     }
     
-    public func decrypt(_ data: Data) throws -> Data {
+    public func decrypt(data: Data) async throws -> Data {
         let sealedBox = try AES.GCM.SealedBox(combined: data)
         return try AES.GCM.open(sealedBox, using: key)
     }

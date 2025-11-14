@@ -33,17 +33,3 @@ public actor EncryptionServiceImpl: EncryptionService {
     }
 }
 
-public enum EncryptionError: Error, LocalizedError {
-    case encryptionFailed
-    case decryptionFailed
-    
-    public var errorDescription: String? {
-        switch self {
-        case .encryptionFailed:
-            return "Encryption failed"
-        case .decryptionFailed:
-            return "Decryption failed"
-        }
-    }
-}
-

@@ -8,8 +8,8 @@
 import Foundation
 import Logging
 
-/// Performance metrics
-public struct PerformanceMetrics: Codable, Sendable {
+/// Performance metrics (baseline module)
+public struct PerformanceBaselineMetrics: Codable, Sendable {
     public let tps: Double  // Transactions per second
     public let p50Latency: Double  // Median latency (ms)
     public let p95Latency: Double  // 95th percentile latency (ms)
@@ -31,7 +31,7 @@ public struct PerformanceTargets {
     public static let maxP95Latency: Double = 10.0  // 10ms p95 max
     public static let maxRegressionPercent: Double = 2.0  // 2% regression max
     
-    public static func check(_ metrics: PerformanceMetrics) -> PerformanceGateResult {
+    public static func check(_ metrics: PerformanceBaselineMetrics) -> PerformanceGateResult {
         var passed = true
         var failures: [String] = []
         
@@ -49,8 +49,8 @@ public struct PerformanceTargets {
     }
     
     public static func checkRegression(
-        baseline: PerformanceMetrics,
-        current: PerformanceMetrics
+        baseline: PerformanceBaselineMetrics,
+        current: PerformanceBaselineMetrics
     ) -> PerformanceGateResult {
         var passed = true
         var failures: [String] = []
@@ -77,7 +77,7 @@ public struct PerformanceTargets {
 public struct PerformanceGateResult {
     public let passed: Bool
     public let failures: [String]
-    public let metrics: PerformanceMetrics
+    public let metrics: PerformanceBaselineMetrics
     
     public func log(to logger: Logging.Logger) {
         var metadata: Logging.Logger.Metadata = [
@@ -106,7 +106,7 @@ public actor PerformanceHarness {
         warmup: Int = 1000,
         iterations: Int = 10_000,
         operation: () async throws -> Void
-    ) async throws -> PerformanceMetrics {
+    ) async throws -> PerformanceBaselineMetrics {
         
         // Warmup
         for _ in 0..<warmup {
@@ -139,7 +139,7 @@ public actor PerformanceHarness {
         // Estimate allocations (simplified)
         let allocations = 10  // Placeholder
         
-        return PerformanceMetrics(
+        return PerformanceBaselineMetrics(
             tps: tps,
             p50: p50,
             p95: p95,
@@ -149,7 +149,7 @@ public actor PerformanceHarness {
     }
     
     /// Save baseline
-    public func saveBaseline(_ metrics: PerformanceMetrics, to path: String) throws {
+    public func saveBaseline(_ metrics: PerformanceBaselineMetrics, to path: String) throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
         let data = try encoder.encode(metrics)
@@ -157,10 +157,10 @@ public actor PerformanceHarness {
     }
     
     /// Load baseline
-    public func loadBaseline(from path: String) throws -> PerformanceMetrics {
+    public func loadBaseline(from path: String) throws -> PerformanceBaselineMetrics {
         let data = try Data(contentsOf: URL(fileURLWithPath: path))
         let decoder = JSONDecoder()
-        return try decoder.decode(PerformanceMetrics.self, from: data)
+        return try decoder.decode(PerformanceBaselineMetrics.self, from: data)
     }
 }
 

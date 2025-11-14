@@ -9,8 +9,8 @@
 
 import Foundation
 
-/// Concrete implementation of PerformanceMonitor protocol
-public actor PerformanceMonitorImpl: PerformanceMonitor {
+/// Concrete implementation of OptimizationPerformanceMonitor protocol
+public actor OptimizationPerformanceMonitorImpl: OptimizationPerformanceMonitor {
     private var metrics: [String: Double] = [:]
     private var resourceUsage: [String: Double] = [:]
     

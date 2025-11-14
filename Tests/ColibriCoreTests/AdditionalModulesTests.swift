@@ -502,8 +502,8 @@ final class AdditionalModulesTests: XCTestCase {
     }
     
     func testOptimizationManagerCreation() async throws {
-        let performanceMonitor = PerformanceMonitorImpl()
-        let resourceManager = ResourceManagerImpl()
+        let performanceMonitor = OptimizationPerformanceMonitorImpl()
+        let resourceManager = OptimizationResourceManagerImpl()
         let optimizationManager = OptimizationManager(performanceMonitor: performanceMonitor, resourceManager: resourceManager)
         XCTAssertNotNil(optimizationManager, "OptimizationManager should be created")
     }
@@ -536,7 +536,7 @@ final class AdditionalModulesTests: XCTestCase {
         let auditManager = RBACAuditManagerAdapter(rbacManager: rbacManager)
         // SecurityManager is a protocol defined in PolicyManager, create a simple implementation
         let securityManager = SimpleSecurityManager()
-        let policyManager = PolicyManager(auditManager: auditManager, securityManager: securityManager)
+        let policyManager = PolicyManager(auditLogger: auditManager, securityManager: securityManager)
         XCTAssertNotNil(policyManager, "PolicyManager should be created")
     }
     

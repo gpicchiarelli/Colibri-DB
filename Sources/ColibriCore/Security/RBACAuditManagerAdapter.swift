@@ -9,12 +9,6 @@
 
 import Foundation
 
-/// Audit manager protocol (for PolicyManager)
-public protocol AuditManager: Sendable {
-    func log(_ event: AuditEvent) async
-    func getAuditLog(limit: Int) async -> [AuditEvent]
-}
-
 /// Adapter to use RBACManager's audit log as AuditManager
 public actor RBACAuditManagerAdapter: AuditManager {
     private let rbacManager: RBACManager
@@ -29,7 +23,56 @@ public actor RBACAuditManagerAdapter: AuditManager {
     }
     
     public func getAuditLog(limit: Int = 100) async -> [AuditEvent] {
-        return await rbacManager.getAuditLog()
+        let rbacEvents = await rbacManager.getAuditLog()
+        let sliced = rbacEvents.suffix(limit)
+        return sliced.map { event in
+            let eventType = mapEventType(event.event)
+            let timestamp = Date(timeIntervalSince1970: TimeInterval(event.time))
+            let userId = event.user ?? event.admin
+            let detailsComponents: [String] = [
+                "event=\(event.event)",
+                event.role.map { "role=\($0)" },
+                event.permission.map { "permission=\(String(describing: $0))" },
+                event.sessionId.map { "session=\($0)" }
+            ].compactMap { $0 }
+            let details = detailsComponents.joined(separator: "; ")
+            
+            return AuditEvent(
+                eventType: eventType,
+                userId: userId,
+                timestamp: timestamp,
+                details: details.isEmpty ? event.event : details,
+                success: true
+            )
+        }
+    }
+    
+    private func mapEventType(_ eventName: String) -> AuditEventType {
+        switch eventName {
+        case "LOGIN", "SESSION_STARTED":
+            return .login
+        case "LOGOUT", "SESSION_ENDED":
+            return .logout
+        case "PERMISSION_DENIED", "ACCESS_DENIED":
+            return .accessDenied
+        case "ROLE_ASSIGNED", "ROLE_REVOKED", "PERMISSION_GRANTED", "PERMISSION_REVOKED":
+            return .dataModification
+        default:
+            return .query
+        }
+    }
+}
+
+extension RBACAuditManagerAdapter: PolicyAuditLogger {
+    public func auditEvent(event: String, metadata: [String: String]) async throws {
+        let details = metadata.map { "\($0.key)=\($0.value)" }.sorted().joined(separator: "; ")
+        let auditEvent = AuditEvent(
+            eventType: mapEventType(event),
+            userId: metadata["user"] ?? metadata["admin"],
+            details: details.isEmpty ? event : details,
+            success: true
+        )
+        await log(auditEvent)
     }
 }
 

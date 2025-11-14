@@ -49,8 +49,8 @@ public struct SystemConfig: Codable, Sendable {
 
 // MARK: - Resource Usage
 
-/// Resource type
-public enum ResourceType: String, Codable, Sendable {
+/// Resource type (scoped to SystemManagement to avoid conflicts)
+public enum SystemResourceType: String, Codable, Sendable {
     case connections
     case memory
     case cpu
@@ -60,12 +60,12 @@ public enum ResourceType: String, Codable, Sendable {
 
 /// Resource usage tracking
 public struct ResourceUsageSystem: Codable {
-    public let resourceType: ResourceType
+    public let resourceType: SystemResourceType
     public var currentUsage: Int64
     public var maxLimit: Int64
     public var lastUpdated: Date
     
-    public init(resourceType: ResourceType, currentUsage: Int64 = 0, maxLimit: Int64) {
+    public init(resourceType: SystemResourceType, currentUsage: Int64 = 0, maxLimit: Int64) {
         self.resourceType = resourceType
         self.currentUsage = currentUsage
         self.maxLimit = maxLimit
@@ -143,7 +143,7 @@ public actor SystemManagement {
     private var systemConfig: SystemConfig
     
     // Resource tracking
-    private var resourceUsage: [ResourceType: ResourceUsageSystem] = [:]
+    private var resourceUsage: [SystemResourceType: ResourceUsageSystem] = [:]
     
     // Performance metrics
     private var performanceMetrics: [String: PerformanceMetric] = [:]
@@ -214,7 +214,7 @@ public actor SystemManagement {
     // MARK: - Resource Management
     
     /// Allocate resource
-    public func allocateResource(userId: String, resource: ResourceType, amount: Int64) throws {
+    public func allocateResource(userId: String, resource: SystemResourceType, amount: Int64) throws {
         guard var usage = resourceUsage[resource] else {
             throw SystemManagementError.invalidResourceType
         }
@@ -238,7 +238,7 @@ public actor SystemManagement {
     }
     
     /// Deallocate resource
-    public func deallocateResource(resource: ResourceType, amount: Int64) {
+    public func deallocateResource(resource: SystemResourceType, amount: Int64) {
         guard var usage = resourceUsage[resource] else { return }
         
         usage.currentUsage = max(0, usage.currentUsage - amount)
@@ -249,19 +249,19 @@ public actor SystemManagement {
     }
     
     /// Check quota (simplified - would integrate with actual quota system)
-    private func checkQuota(userId: String, resource: ResourceType, amount: Int64) -> Bool {
+    private func checkQuota(userId: String, resource: SystemResourceType, amount: Int64) -> Bool {
         // Simplified: always allow for now
         // Real implementation would check ResourceQuotas
         return true
     }
     
     /// Get resource usage
-    public func getResourceUsage(resource: ResourceType) -> ResourceUsageSystem? {
+    public func getResourceUsage(resource: SystemResourceType) -> ResourceUsageSystem? {
         return resourceUsage[resource]
     }
     
     /// Get all resource usage
-    public func getAllResourceUsage() -> [ResourceType: ResourceUsageSystem] {
+    public func getAllResourceUsage() -> [SystemResourceType: ResourceUsageSystem] {
         return resourceUsage
     }
     
@@ -446,8 +446,8 @@ public struct SystemManagementStats: Codable {
 
 public enum SystemManagementError: Error, LocalizedError {
     case invalidResourceType
-    case quotaExceeded(resource: ResourceType)
-    case resourceLimitReached(resource: ResourceType)
+    case quotaExceeded(resource: SystemResourceType)
+    case resourceLimitReached(resource: SystemResourceType)
     case configurationError(message: String)
     
     public var errorDescription: String? {

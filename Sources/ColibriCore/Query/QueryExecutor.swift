@@ -921,12 +921,23 @@ public actor QueryExecutor {
             return filteredResults
             
         case .project(let columns, let child):
-            // Project: execute child, then project
+            // Project: execute child, then keep only requested columns
             let childResults = try await executePlanNode(child, txID: txID, opId: &opId)
+            let tableName = try extractTableNameFromPlan(child)
             
-            // Get column indices (simplified - would need schema)
-            let columnIndices = (0..<columns.count).map { $0 }
-            return project(tuples: childResults, columns: columnIndices)
+            var projected: [ExecutorTuple] = []
+            for tuple in childResults {
+                do {
+                    let row = try await convertTupleToRow(tuple, tableName: tableName)
+                    let projectedValues = columns.map { columnName in
+                        row[columnName] ?? .null
+                    }
+                    projected.append(ExecutorTuple(values: projectedValues, rid: tuple.rid))
+                } catch {
+                    continue
+                }
+            }
+            return projected
             
         case .sort(let columns, let child):
             // Sort: execute child, then sort

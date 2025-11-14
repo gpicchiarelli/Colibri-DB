@@ -113,14 +113,14 @@ public actor OptimizationManager {
     // MARK: - Dependencies
     
     /// Performance monitor
-    private let performanceMonitor: PerformanceMonitor
+    private let performanceMonitor: OptimizationPerformanceMonitor
     
     /// Resource manager
-    private let resourceManager: ResourceManager
+    private let resourceManager: OptimizationResourceManager
     
     // MARK: - Initialization
     
-    public init(performanceMonitor: PerformanceMonitor, resourceManager: ResourceManager) {
+    public init(performanceMonitor: OptimizationPerformanceMonitor, resourceManager: OptimizationResourceManager) {
         self.performanceMonitor = performanceMonitor
         self.resourceManager = resourceManager
         
@@ -436,14 +436,14 @@ public actor OptimizationManager {
 
 // MARK: - Supporting Types
 
-/// Performance monitor
-public protocol PerformanceMonitor: Sendable {
+/// Optimization-specific performance monitor abstraction
+public protocol OptimizationPerformanceMonitor: Sendable {
     func getPerformanceMetrics() async throws -> [String: Double]
     func getResourceUsage() async throws -> [String: Double]
 }
 
-/// Resource manager
-public protocol ResourceManager: Sendable {
+/// Optimization-specific resource manager abstraction
+public protocol OptimizationResourceManager: Sendable {
     func allocateResource(resourceType: String, amount: Double) async throws
     func deallocateResource(resourceType: String, amount: Double) async throws
     func getResourceUsage(resourceType: String) async throws -> Double

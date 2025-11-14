@@ -9,8 +9,8 @@
 
 import Foundation
 
-/// Simple implementation of SecurityManager protocol
-public actor SimpleSecurityManager: SecurityManager {
+/// Simple implementation of PolicySecurityManager protocol
+public actor SimpleSecurityManager: PolicySecurityManager {
     public init() {}
     
     public func encryptData(data: String) async throws {

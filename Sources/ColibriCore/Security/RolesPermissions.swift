@@ -140,8 +140,8 @@ public struct TemporalConstraint: Codable {
 
 // MARK: - Audit Event (TLA+: AuditLog)
 
-/// Audit log entry
-public struct AuditEvent: Codable, @unchecked Sendable {
+/// RBAC-specific audit log entry
+public struct RBACAuditEvent: Codable, @unchecked Sendable {
     public let event: String            // TLA+: event
     public let admin: String?           // TLA+: admin
     public let user: String?            // TLA+: user
@@ -195,7 +195,7 @@ public actor RBACManager {
     private var temporalConstraints: [String: TemporalConstraint] = [:]
     
     /// Audit log (TLA+: auditLog)
-    private var auditLog: [AuditEvent] = []
+    private var auditLog: [RBACAuditEvent] = []
     
     /// Current time (TLA+: currentTime)
     private var currentTime: Int = 0
@@ -444,7 +444,7 @@ public actor RBACManager {
         
         userRoles[user, default: []].insert(role)
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "ROLE_ASSIGNED",
             admin: admin,
             user: user,
@@ -470,7 +470,7 @@ public actor RBACManager {
             }
         }
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "ROLE_REVOKED",
             admin: admin,
             user: user,
@@ -494,7 +494,7 @@ public actor RBACManager {
         
         rolePermissions[role, default: []].insert(permission)
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "PERMISSION_GRANTED",
             admin: admin,
             role: role,
@@ -512,7 +512,7 @@ public actor RBACManager {
         
         rolePermissions[role]?.remove(permission)
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "PERMISSION_REVOKED",
             admin: admin,
             role: role,
@@ -550,7 +550,7 @@ public actor RBACManager {
         
         roleHierarchy[juniorRole, default: []].insert(seniorRole)
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "ROLE_INHERITANCE_ADDED",
             admin: admin,
             role: seniorRole,
@@ -568,7 +568,7 @@ public actor RBACManager {
         
         roleHierarchy[juniorRole]?.remove(seniorRole)
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "ROLE_INHERITANCE_REMOVED",
             admin: admin,
             role: seniorRole,
@@ -588,7 +588,7 @@ public actor RBACManager {
         
         sessions[sessionId] = RBACSession(user: user, activeRoles: Set(), context: context)
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "SESSION_CREATED",
             user: user,
             sessionId: sessionId,
@@ -630,7 +630,7 @@ public actor RBACManager {
         sessions[sessionId]?.activeRoles.insert(role)
         roleActivations[role]?.activeCount += 1
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "ROLE_ACTIVATED",
             user: user,
             role: role,
@@ -657,7 +657,7 @@ public actor RBACManager {
         sessions[sessionId]?.activeRoles.remove(role)
         roleActivations[role]?.activeCount -= 1
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "ROLE_DEACTIVATED",
             user: user,
             role: role,
@@ -682,7 +682,7 @@ public actor RBACManager {
         
         sessions.removeValue(forKey: sessionId)
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "SESSION_CLOSED",
             sessionId: sessionId,
             time: currentTime
@@ -700,7 +700,7 @@ public actor RBACManager {
         
         constraints.insert(constraint)
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "CONSTRAINT_ADDED",
             admin: admin,
             time: currentTime,
@@ -717,7 +717,7 @@ public actor RBACManager {
         
         constraints.remove(constraint)
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "CONSTRAINT_REMOVED",
             admin: admin,
             time: currentTime,
@@ -740,7 +740,7 @@ public actor RBACManager {
         
         temporalConstraints[role] = constraint
         
-        let event = AuditEvent(
+        let event = RBACAuditEvent(
             event: "TEMPORAL_CONSTRAINT_SET",
             admin: admin,
             role: role,
@@ -782,7 +782,7 @@ public actor RBACManager {
         return constraints
     }
     
-    public func getAuditLog() -> [AuditEvent] {
+    public func getAuditLog() -> [RBACAuditEvent] {
         return auditLog
     }
     

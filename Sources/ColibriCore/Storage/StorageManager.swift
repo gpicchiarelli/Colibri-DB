@@ -495,18 +495,6 @@ public protocol DiskManager: Sendable {
     func deletePage(pageId: PageID) async throws
 }
 
-/// Compression service
-public protocol CompressionService: Sendable {
-    func compress(data: Data) async throws -> Data
-    func decompress(data: Data) async throws -> Data
-}
-
-/// Encryption service
-public protocol EncryptionService: Sendable {
-    func encrypt(data: Data) async throws -> Data
-    func decrypt(data: Data) async throws -> Data
-}
-
 /// Storage error
 public enum StorageError: Error, LocalizedError {
     case pageNotFound

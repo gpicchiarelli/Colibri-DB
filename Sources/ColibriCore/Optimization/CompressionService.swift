@@ -9,13 +9,13 @@
 
 import Foundation
 
-/// Compression service protocol
+/// Compression service protocol (async, Sendable-safe)
 public protocol CompressionService: Sendable {
-    func compress(_ data: Data) throws -> Data
-    func decompress(_ data: Data, originalSize: Int) throws -> Data
+    func compress(data: Data) async throws -> Data
+    func decompress(data: Data) async throws -> Data
 }
 
-/// Default compression service implementation
+/// Default compression service implementation (stateless helper)
 public struct DefaultCompressionService: CompressionService {
     private let algorithm: CompressionAlgorithm
     
@@ -23,12 +23,14 @@ public struct DefaultCompressionService: CompressionService {
         self.algorithm = algorithm
     }
     
-    public func compress(_ data: Data) throws -> Data {
+    public func compress(data: Data) async throws -> Data {
         return try CompressionManager.compress(data, algorithm: algorithm)
     }
     
-    public func decompress(_ data: Data, originalSize: Int) throws -> Data {
-        return try CompressionManager.decompress(data, algorithm: algorithm, originalSize: originalSize)
+    public func decompress(data: Data) async throws -> Data {
+        // Without the original size, fall back to a reasonable estimate (4x)
+        let estimatedSize = max(data.count * 4, 1)
+        return try CompressionManager.decompress(data, algorithm: algorithm, originalSize: estimatedSize)
     }
 }
 

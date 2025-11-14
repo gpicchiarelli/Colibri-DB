@@ -9,8 +9,8 @@
 
 import Foundation
 
-/// Concrete implementation of ResourceManager protocol
-public actor ResourceManagerImpl: ResourceManager {
+/// Concrete implementation of OptimizationResourceManager protocol
+public actor OptimizationResourceManagerImpl: OptimizationResourceManager {
     private var allocations: [String: Double] = [:]
     private var limits: [String: Double] = [:]
     
@@ -32,7 +32,7 @@ public actor ResourceManagerImpl: ResourceManager {
         let limit = limits[resourceType] ?? Double.infinity
         
         guard current + amount <= limit else {
-            throw ResourceError.insufficientResources
+            throw OptimizationResourceError.insufficientResources
         }
         
         allocations[resourceType] = current + amount
@@ -48,7 +48,7 @@ public actor ResourceManagerImpl: ResourceManager {
     }
 }
 
-public enum ResourceError: Error, LocalizedError {
+public enum OptimizationResourceError: Error, LocalizedError {
     case insufficientResources
     
     public var errorDescription: String? {
