@@ -420,6 +420,35 @@ public struct SQLParser {
     // MARK: - Expression Parsing (TLA+: ParseExpression)
     
     private mutating func parseExpression() throws -> ASTNode {
+        var node = try parsePrimaryExpression()
+        
+        while true {
+            if match(.operator, "=") {
+                currentPos += 1
+                let right = try parsePrimaryExpression()
+                node = ASTNode(
+                    kind: ExprKind.binaryOp.rawValue,
+                    children: [node, right],
+                    attributes: ["operator": "="]
+                )
+            } else if match(.keyword, "AND") || match(.keyword, "OR") {
+                let opToken = currentToken()
+                currentPos += 1
+                let right = try parsePrimaryExpression()
+                node = ASTNode(
+                    kind: ExprKind.binaryOp.rawValue,
+                    children: [node, right],
+                    attributes: ["operator": opToken.value.uppercased()]
+                )
+            } else {
+                break
+            }
+        }
+        
+        return node
+    }
+    
+    private mutating func parsePrimaryExpression() throws -> ASTNode {
         let token = currentToken()
         
         switch token.type {
@@ -463,7 +492,7 @@ public struct SQLParser {
             return ASTNode(kind: ExprKind.functionCall.rawValue, children: args, attributes: ["function": name])
         } else {
             // Column reference
-            return ASTNode(kind: ExprKind.columnRef.rawValue, attributes: ["column": name])
+            return ASTNode(kind: ExprKind.columnRef.rawValue, attributes: ["name": name])
         }
     }
     

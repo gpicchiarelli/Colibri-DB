@@ -49,6 +49,48 @@ final class AdditionalModulesTests: XCTestCase {
         }
     }
     
+    /// Minimal storage manager mock used to satisfy IndexManager dependencies
+    private actor MockStorageManager: StorageManager {
+        func readPage(pageId: UInt64) async throws -> Data {
+            return Data()
+        }
+        
+        func writePage(pageId: UInt64, data: Data) async throws {
+            // No-op
+        }
+        
+        func deletePage(pageId: UInt64) async throws {
+            // No-op
+        }
+    }
+    
+    /// Minimal WAL manager mock for ARIES recovery tests
+    private actor MockRecoveryWALManager: WALManagerProtocol {
+        func appendRecord(txId: TxID, kind: String, data: Data) async throws -> LSN {
+            return 1
+        }
+        
+        func flushLog() async throws {
+            // No-op
+        }
+    }
+    
+    /// Helper to build a TransactionManager with proper dependencies for tests
+    private func makeTransactionManager(tempDir: URL) throws -> TransactionManager {
+        let walPath = tempDir.appendingPathComponent("wal.log")
+        let wal = try FileWAL(walFilePath: walPath)
+        let walAdapter = wal.asTransactionWALManager()
+        
+        let mvccManager = MVCCManager()
+        let mvccAdapter = mvccManager.asTransactionMVCCManager()
+        
+        // Create lock manager after temporary transaction manager
+        let tempTransactionManager = TransactionManager(walManager: walAdapter, mvccManager: mvccAdapter, lockManager: nil)
+        let lockManager = LockManager(transactionManager: tempTransactionManager)
+        
+        return TransactionManager(walManager: walAdapter, mvccManager: mvccAdapter, lockManager: lockManager)
+    }
+    
     // MARK: - Backup Manager Tests
     
     func testBackupManagerCreation() async throws {
@@ -298,10 +340,8 @@ final class AdditionalModulesTests: XCTestCase {
         
         let dataPath = tempDir.appendingPathComponent("data.db")
         let diskManager = try FileDiskManager(filePath: dataPath)
-        let compressionService = CompressionServiceImpl()
-        let encryptionService = EncryptionServiceImpl()
-        let storageManager = StorageManagerActor(diskManager: diskManager, compressionService: compressionService, encryptionService: encryptionService)
         let bufferManager = BufferManager(diskManager: diskManager)
+        let storageManager = MockStorageManager()
         
         let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager)
         XCTAssertNotNil(indexManager, "IndexManagerActor should be created")
@@ -313,13 +353,18 @@ final class AdditionalModulesTests: XCTestCase {
         
         let dataPath = tempDir.appendingPathComponent("data.db")
         let diskManager = try FileDiskManager(filePath: dataPath)
-        let compressionService = CompressionServiceImpl()
-        let encryptionService = EncryptionServiceImpl()
-        let storageManager = StorageManagerActor(diskManager: diskManager, compressionService: compressionService, encryptionService: encryptionService)
         let bufferManager = BufferManager(diskManager: diskManager)
+        let storageManager = MockStorageManager()
         
         let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager)
-        let indexId = try await indexManager.createIndex(name: "test_index", type: .btree, columns: ["id"])
+        let metadata = IndexMetadata(
+            name: "test_index",
+            tableName: "users",
+            columns: ["id"],
+            indexType: .btree,
+            unique: false
+        )
+        let indexId = try await indexManager.createIndex(metadata: metadata)
         
         XCTAssertNotNil(indexId, "Index should be created")
     }
@@ -332,7 +377,7 @@ final class AdditionalModulesTests: XCTestCase {
     }
     
     func testBloomFilterCreation() async throws {
-        let bloomFilter = BloomFilter(size: 1000, hashCount: 3)
+        var bloomFilter = BloomFilter(size: 1000, hashCount: 3)
         XCTAssertNotNil(bloomFilter, "BloomFilter should be created")
         
         bloomFilter.insert(.int(42))
@@ -416,7 +461,12 @@ final class AdditionalModulesTests: XCTestCase {
     
     func testMVCCTypesCreation() async throws {
         // MVCCTypes is a namespace, test MVCCSnapshot
-        let snapshot = MVCCSnapshot(txID: TxID(1), startTS: 1, xmin: 1, xmax: 2, activeTxAtStart: [])
+        let snapshot = MVCCSnapshot(
+            txId: TxID(1),
+            timestamp: 1,
+            activeTransactions: [],
+            committedTransactions: []
+        )
         XCTAssertNotNil(snapshot, "MVCCSnapshot should be created")
     }
     
@@ -543,11 +593,8 @@ final class AdditionalModulesTests: XCTestCase {
         
         let dataPath = tempDir.appendingPathComponent("data.db")
         let diskManager = try FileDiskManager(filePath: dataPath)
+        let walManager = MockRecoveryWALManager()
         
-        let groupCommitManager = GroupCommitManager(config: .default) { _ in }
-        let walManager = WALManager(diskManager: diskManager, groupCommitManager: groupCommitManager)
-        
-        // WALManager conforms to WALManagerProtocol via extension
         let recoveryManager = ARIESRecoveryManager(walManager: walManager, diskManager: diskManager)
         XCTAssertNotNil(recoveryManager, "ARIESRecoveryManager should be created")
     }
@@ -585,11 +632,10 @@ final class AdditionalModulesTests: XCTestCase {
     func testReplicationManagerCreation() async throws {
         let tempDir = try TestUtils.createTempDirectory()
         defer { try? TestUtils.cleanupTempDirectory(tempDir) }
-        
         let walPath = tempDir.appendingPathComponent("wal.log")
         let wal = try FileWAL(walFilePath: walPath)
         
-        let transactionManager = TransactionManager()
+        let transactionManager = try makeTransactionManager(tempDir: tempDir)
         let replicationManager = ReplicationManager(wal: wal, transactionManager: transactionManager)
         
         XCTAssertNotNil(replicationManager, "ReplicationManager should be created")
@@ -689,10 +735,9 @@ final class AdditionalModulesTests: XCTestCase {
         let wal = try FileWAL(walFilePath: walPath)
         let heapTable = HeapTable(bufferPool: bufferPool, wal: wal)
         
-        let dataPath2 = tempDir.appendingPathComponent("data2.db")
-        let diskManager2 = try FileDiskManager(filePath: dataPath2)
-        let storageManager = StorageManager(diskManager: diskManager2)
+        let diskManager2 = try FileDiskManager(filePath: tempDir.appendingPathComponent("data2.db"))
         let bufferManager = BufferManager(diskManager: diskManager2)
+        let storageManager = MockStorageManager()
         let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager)
         
         let mvcc = MVCCManager()
@@ -710,7 +755,10 @@ final class AdditionalModulesTests: XCTestCase {
     // MARK: - Transaction Tests
     
     func testLockManagerCreation() async throws {
-        let transactionManager = TransactionManager()
+        let tempDir = try TestUtils.createTempDirectory()
+        defer { try? TestUtils.cleanupTempDirectory(tempDir) }
+        
+        let transactionManager = try makeTransactionManager(tempDir: tempDir)
         let lockManager = LockManager(transactionManager: transactionManager)
         XCTAssertNotNil(lockManager, "LockManager should be created")
     }
@@ -723,7 +771,10 @@ final class AdditionalModulesTests: XCTestCase {
     // MARK: - Two Phase Commit Tests
     
     func testTwoPhaseCommitManagerCreation() async throws {
-        let transactionManager = TransactionManager()
+        let tempDir = try TestUtils.createTempDirectory()
+        defer { try? TestUtils.cleanupTempDirectory(tempDir) }
+        
+        let transactionManager = try makeTransactionManager(tempDir: tempDir)
         let twoPhaseCommitManager = TwoPhaseCommitManager(transactionManager: transactionManager)
         XCTAssertNotNil(twoPhaseCommitManager, "TwoPhaseCommitManager should be created")
     }
@@ -765,20 +816,18 @@ final class AdditionalModulesTests: XCTestCase {
     
     func testAllModulesCanBeCreated() async throws {
         // Test that all major modules can be created
-        let mvccManager = MVCCManager()
-        XCTAssertNotNil(mvccManager, "MVCCManager should be created")
-        
-        let transactionManager = TransactionManager()
-        XCTAssertNotNil(transactionManager, "TransactionManager should be created")
-        
         let tempDir = try TestUtils.createTempDirectory()
         defer { try? TestUtils.cleanupTempDirectory(tempDir) }
         
+        let mvccManager = MVCCManager()
+        XCTAssertNotNil(mvccManager, "MVCCManager should be created")
+        
+        let transactionManager = try makeTransactionManager(tempDir: tempDir)
+        XCTAssertNotNil(transactionManager, "TransactionManager should be created")
+        
         let dataPath = tempDir.appendingPathComponent("data.db")
         let diskManager = try FileDiskManager(filePath: dataPath)
-        let compressionService = CompressionServiceImpl()
-        let encryptionService = EncryptionServiceImpl()
-        let storageManager = StorageManagerActor(diskManager: diskManager, compressionService: compressionService, encryptionService: encryptionService)
+        let storageManager = MockStorageManager()
         let bufferManager = BufferManager(diskManager: diskManager)
         let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager)
         XCTAssertNotNil(indexManager, "IndexManagerActor should be created")

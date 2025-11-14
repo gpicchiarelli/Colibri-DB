@@ -78,6 +78,19 @@ try await db.insert(table: "users", row: row, txID: txID)
 try await db.commit(txID)
 ```
 
+## 🧪 Test Suite
+
+### Test end-to-end SQL
+
+Due smoke test coprono l’intera pipeline SQL (parser → optimizer → executor → storage):
+
+```bash
+swift test --filter ColibrìDBTests/testSQLInsertAndSelectEndToEnd
+swift test --filter ColibrìDBTests/testSQLUpdateAndDeleteEndToEnd
+```
+
+> 🔎 Nota: l’intero target `ColibriCoreTests` attualmente non compila a causa del file `Tests/ColibriCoreTests/VACUUMTests 2.swift`. Fino alla sua correzione, esegui i test focalizzati usando i comandi sopra (o escludi temporaneamente quel file dal build).
+
 ## 🏗️ Architettura
 
 ```

@@ -432,12 +432,16 @@ public actor FileDiskManager: DiskManager {
         try handle.seek(toOffset: UInt64(offset))
         
         let data = handle.readData(ofLength: PAGE_SIZE)
-        guard data.count == PAGE_SIZE else {
-            // Return empty data if not found
-            return Data()
+        if data.count == PAGE_SIZE {
+            return data
         }
         
-        return data
+        // If the page hasn't been written yet, return a zeroed page
+        var padded = Data(count: PAGE_SIZE)
+        if data.count > 0 {
+            padded.replaceSubrange(0..<data.count, with: data)
+        }
+        return padded
     }
     
     public func writePage(pageId: PageID, data: Data) async throws {
@@ -447,8 +451,15 @@ public actor FileDiskManager: DiskManager {
         let offset = Int64(pageId) * Int64(PAGE_SIZE)
         try handle.seek(toOffset: UInt64(offset))
         
-        // Write data
-        try handle.write(contentsOf: data)
+        // Ensure we always write exactly PAGE_SIZE bytes
+        if data.count == PAGE_SIZE {
+            try handle.write(contentsOf: data)
+        } else {
+            var padded = Data(count: PAGE_SIZE)
+            let copyCount = min(data.count, PAGE_SIZE)
+            padded.replaceSubrange(0..<copyCount, with: data.prefix(copyCount))
+            try handle.write(contentsOf: padded)
+        }
         
         // Force fsync for durability
         try handle.synchronize()

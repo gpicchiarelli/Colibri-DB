@@ -294,6 +294,97 @@ class ColibrìDBTests: XCTestCase {
         XCTAssertEqual(stats.rowsDeleted, 1)
     }
     
+    // MARK: - SQL End-to-End Tests
+    
+    func testSQLInsertAndSelectEndToEnd() async throws {
+        try await database.start()
+        
+        // Create table
+        let tableDef = TableDefinition(
+            name: "sql_table",
+            columns: [
+                ColumnDefinition(name: "id", type: .int, nullable: false),
+                ColumnDefinition(name: "name", type: .string, nullable: false)
+            ],
+            primaryKey: ["id"]
+        )
+        
+        try await database.createTable(tableDef)
+        
+        // Insert two rows via SQL
+        let txInsert1 = try await database.beginTransaction()
+        _ = try await database.executeQuery("INSERT INTO sql_table (id, name) VALUES (1, 'Alice')", txId: txInsert1)
+        try await database.commit(txId: txInsert1)
+        
+        let txInsert2 = try await database.beginTransaction()
+        _ = try await database.executeQuery("INSERT INTO sql_table (id, name) VALUES (2, 'Bob')", txId: txInsert2)
+        try await database.commit(txId: txInsert2)
+        
+        // Select rows via SQL
+        let txSelect = try await database.beginTransaction()
+        let result = try await database.executeQuery("SELECT id, name FROM sql_table", txId: txSelect)
+        try await database.commit(txId: txSelect)
+        
+        XCTAssertEqual(result.rows.count, 2)
+        let names = Set(result.rows.compactMap { row -> String? in
+            guard case let .string(value) = row["name"] else { return nil }
+            return value
+        })
+        XCTAssertEqual(names, ["Alice", "Bob"])
+        
+        let stats = await database.getStatistics()
+        XCTAssertEqual(stats.rowsInserted, 2)
+    }
+    
+    func testSQLUpdateAndDeleteEndToEnd() async throws {
+        try await database.start()
+        
+        // Create table
+        let tableDef = TableDefinition(
+            name: "sql_table_ops",
+            columns: [
+                ColumnDefinition(name: "id", type: .int, nullable: false),
+                ColumnDefinition(name: "name", type: .string, nullable: false)
+            ],
+            primaryKey: ["id"]
+        )
+        
+        try await database.createTable(tableDef)
+        
+        // Insert initial row via SQL
+        let txInsert = try await database.beginTransaction()
+        _ = try await database.executeQuery("INSERT INTO sql_table_ops (id, name) VALUES (1, 'Initial')", txId: txInsert)
+        try await database.commit(txId: txInsert)
+        
+        // Update row via SQL
+        let txUpdate = try await database.beginTransaction()
+        _ = try await database.executeQuery("UPDATE sql_table_ops SET name = 'Updated' WHERE id = 1", txId: txUpdate)
+        try await database.commit(txId: txUpdate)
+        
+        // Verify update
+        let txVerifyUpdate = try await database.beginTransaction()
+        let updateResult = try await database.executeQuery("SELECT name FROM sql_table_ops WHERE id = 1", txId: txVerifyUpdate)
+        try await database.commit(txId: txVerifyUpdate)
+        XCTAssertEqual(updateResult.rows.count, 1)
+        XCTAssertEqual(updateResult.rows.first?["name"], Value.string("Updated"))
+        
+        // Delete row via SQL
+        let txDelete = try await database.beginTransaction()
+        _ = try await database.executeQuery("DELETE FROM sql_table_ops WHERE id = 1", txId: txDelete)
+        try await database.commit(txId: txDelete)
+        
+        // Verify delete
+        let txVerifyDelete = try await database.beginTransaction()
+        let deleteResult = try await database.executeQuery("SELECT id FROM sql_table_ops WHERE id = 1", txId: txVerifyDelete)
+        try await database.commit(txId: txVerifyDelete)
+        XCTAssertEqual(deleteResult.rows.count, 0)
+        
+        let stats = await database.getStatistics()
+        XCTAssertEqual(stats.rowsInserted, 1)
+        XCTAssertEqual(stats.rowsUpdated, 1)
+        XCTAssertEqual(stats.rowsDeleted, 1)
+    }
+    
     // MARK: - TLA+ Invariant Tests
     
     func testConsistencyInvariant() async throws {

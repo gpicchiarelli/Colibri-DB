@@ -9,6 +9,12 @@
 
 import Foundation
 
+/// Audit manager protocol (for PolicyManager)
+public protocol AuditManager: Sendable {
+    func log(_ event: AuditEvent) async
+    func getAuditLog(limit: Int) async -> [AuditEvent]
+}
+
 /// Adapter to use RBACManager's audit log as AuditManager
 public actor RBACAuditManagerAdapter: AuditManager {
     private let rbacManager: RBACManager
@@ -17,10 +23,13 @@ public actor RBACAuditManagerAdapter: AuditManager {
         self.rbacManager = rbacManager
     }
     
-    public func auditEvent(event: String, metadata: [String: String]) async throws {
-        // RBACManager already logs events internally, so we just need to access them
+    public func log(_ event: AuditEvent) async {
+        // RBACManager already logs events, so we just need to access them
         // The event is already logged by RBACManager operations
-        // This is a no-op adapter since RBACManager handles its own audit logging
+    }
+    
+    public func getAuditLog(limit: Int = 100) async -> [AuditEvent] {
+        return await rbacManager.getAuditLog()
     }
 }
 

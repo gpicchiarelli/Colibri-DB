@@ -133,6 +133,11 @@ public actor MonitorManager {
         return health
     }
     
+    /// Backwards-compatible alias for test utilities
+    public func getSystemHealth() -> SystemHealth {
+        return health
+    }
+    
     /// Perform health check
     public func performHealthCheck(db: ColibrìDB) async -> SystemHealth {
         var components: [String: HealthStatus] = [:]
