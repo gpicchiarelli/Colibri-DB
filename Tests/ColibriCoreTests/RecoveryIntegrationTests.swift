@@ -4,10 +4,6 @@ import XCTest
 /// Integration tests for ARIES recovery and WAL durability.
 /// Anchored to TLA+ modules `WAL.tla` and `RECOVERY.tla`.
 final class RecoveryIntegrationTests: XCTestCase {
-    
-    override func setUpWithError() throws {
-        throw XCTSkip("Recovery integration suite requires full WAL/ARIES harness not yet stabilized")
-    }
     private struct Harness {
         let directory: URL
         let wal: FileWAL

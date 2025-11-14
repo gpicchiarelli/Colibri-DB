@@ -225,18 +225,18 @@ public actor TransactionManager {
     
     /// Factory method for testing with in-memory defaults
     /// Creates a TransactionManager with temporary WAL and MVCC adapters
-    public static func makeForTesting() throws -> TransactionManager {
+    public static func makeForTesting(mvccManager: MVCCManager? = nil) throws -> TransactionManager {
         // Create temporary WAL file
         let tempDir = FileManager.default.temporaryDirectory
         let walPath = tempDir.appendingPathComponent("test_wal_\(UUID().uuidString).log")
         
         // Create FileWAL and MVCC with defaults
         let fileWAL = try FileWAL(walFilePath: walPath)
-        let mvccManager = MVCCManager()
+        let mvccInstance = mvccManager ?? MVCCManager()
         
         // Create adapters
         let walAdapter = fileWAL.asTransactionWALManager()
-        let mvccAdapter = mvccManager.asTransactionMVCCManager()
+        let mvccAdapter = mvccInstance.asTransactionMVCCManager()
         
         // LockManager has circular dependency, so pass nil for testing
         return TransactionManager(
@@ -276,6 +276,24 @@ public actor TransactionManager {
         
         // TLA+: Update global clock
         globalClock += 1
+
+        // Coordinate with MVCC so the transaction becomes visible to snapshot manager
+        do {
+            let snapshot = try await mvccManager.beginTransaction(txId: txId)
+            txSnapshots[txId] = snapshot
+        } catch {
+            // Roll back bookkeeping if MVCC reject transaction
+            transactions.removeValue(forKey: txId)
+            txOperations.removeValue(forKey: txId)
+            txLocks.removeValue(forKey: txId)
+            txStartTime.removeValue(forKey: txId)
+            txWALRecords.removeValue(forKey: txId)
+            txWriteSets.removeValue(forKey: txId)
+            txReadSets.removeValue(forKey: txId)
+            globalClock -= 1
+            nextTID -= 1
+            throw error
+        }
         
         logInfo("Began transaction: \(txId)")
         return txId
@@ -296,6 +314,9 @@ public actor TransactionManager {
         
         // TLA+: Prepare transaction
         try await prepareTransaction(txId: txId)
+
+        // Coordinate commit with MVCC before finalizing transaction state
+        try await mvccManager.commit(txId: txId)
         
         // TLA+: Commit transaction
         transaction.state = .committed
@@ -322,6 +343,7 @@ public actor TransactionManager {
         }
         
         // TLA+: Abort transaction
+        try await mvccManager.abort(txId: txId)
         transaction.state = .aborted
         transaction.endTime = globalClock
         transactions[txId] = transaction

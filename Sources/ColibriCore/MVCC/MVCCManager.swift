@@ -95,6 +95,10 @@ public actor MVCCManager {
     /// TLA+: writeSets \in [TxID -> Set(Key)]
     private var writeSets: [TxID: Set<MVCCKey>] = [:]
     
+    /// Snapshot value cache for repeatable reads
+    private var snapshotValueCache: [TxID: [MVCCKey: Value]] = [:]
+    private var snapshotNilKeys: [TxID: Set<MVCCKey>] = [:]
+    
     /// Global timestamp
     /// TLA+: globalTS \in Timestamp
     private var globalTS: Timestamp = 0
@@ -130,6 +134,8 @@ public actor MVCCManager {
         self.snapshots = [:]
         self.readSets = [:]
         self.writeSets = [:]
+        self.snapshotValueCache = [:]
+        self.snapshotNilKeys = [:]
         self.globalTS = 0
         self.minActiveTx = 0
     }
@@ -147,6 +153,8 @@ public actor MVCCManager {
         self.snapshots = [:]
         self.readSets = [:]
         self.writeSets = [:]
+        self.snapshotValueCache = [:]
+        self.snapshotNilKeys = [:]
         self.globalTS = 0
         self.minActiveTx = 0
     }
@@ -176,6 +184,8 @@ public actor MVCCManager {
         // TLA+: Initialize read and write sets
         readSets[txId] = []
         writeSets[txId] = []
+        snapshotValueCache[txId] = [:]
+        snapshotNilKeys[txId] = []
         
         // TLA+: Update minimum active transaction
         if minActiveTx == 0 || txId < minActiveTx {
@@ -193,6 +203,15 @@ public actor MVCCManager {
         guard activeTx.contains(txId) else {
             throw MVCCManagerError.transactionNotActive
         }
+
+        if let cachedValue = snapshotValueCache[txId]?[key] {
+            await logger.trace("Read key (cached)", metadata: ["key": "\(key)", "txId": "\(txId)"])
+            return cachedValue
+        }
+        if snapshotNilKeys[txId]?.contains(key) == true {
+            await logger.trace("Read key (cached nil)", metadata: ["key": "\(key)", "txId": "\(txId)"])
+            return nil
+        }
         
         // TLA+: Get snapshot
         guard let snapshot = snapshots[txId] else {
@@ -204,6 +223,18 @@ public actor MVCCManager {
         
         // TLA+: Add to read set
         readSets[txId]?.insert(key)
+
+        if let value = visibleVersion?.value {
+            if snapshotValueCache[txId] == nil {
+                snapshotValueCache[txId] = [:]
+            }
+            snapshotValueCache[txId]?[key] = value
+        } else {
+            if snapshotNilKeys[txId] == nil {
+                snapshotNilKeys[txId] = []
+            }
+            snapshotNilKeys[txId]?.insert(key)
+        }
         
         await logger.trace("Read key", metadata: ["key": "\(key)", "txId": "\(txId)"])
         return visibleVersion?.value
@@ -241,6 +272,12 @@ public actor MVCCManager {
         
         // TLA+: Add to write set
         writeSets[txId]?.insert(key)
+
+        if snapshotValueCache[txId] == nil {
+            snapshotValueCache[txId] = [:]
+        }
+        snapshotValueCache[txId]?[key] = value
+        snapshotNilKeys[txId]?.remove(key)
         
         await logger.debug("Wrote key", metadata: ["key": "\(key)", "txId": "\(txId)"])
     }
@@ -251,6 +288,13 @@ public actor MVCCManager {
         // TLA+: Check if transaction is active
         guard activeTx.contains(txId) else {
             throw MVCCManagerError.transactionNotActive
+        }
+
+        do {
+            try validateSnapshot(for: txId)
+        } catch {
+            try await abort(txId: txId)
+            throw error
         }
         
         // TLA+: Move to committed transactions
@@ -266,6 +310,8 @@ public actor MVCCManager {
         }
         
         await logger.info("Committed transaction", metadata: ["txId": "\(txId)"])
+
+        clearTransactionState(txId)
     }
     
     /// Abort
@@ -293,6 +339,8 @@ public actor MVCCManager {
         }
         
         await logger.warning("Aborted transaction", metadata: ["txId": "\(txId)"])
+
+        clearTransactionState(txId)
     }
     
     /// Vacuum
@@ -330,10 +378,15 @@ public actor MVCCManager {
         guard let keyVersions = versions[key] else {
             return nil
         }
+
+        // Transactions must see their own uncommitted writes first
+        if let ownVersion = keyVersions[snapshot.txId] {
+            return ownVersion
+        }
         
         // TLA+: Find latest committed version visible to snapshot
         let visibleVersions = keyVersions.filter { version in
-            committedTx.contains(version.key) && version.value.beginTS <= snapshot.timestamp
+            snapshot.committedTransactions.contains(version.key) && version.value.beginTS <= snapshot.timestamp
         }
         
         return visibleVersions.max { $0.value.beginTS < $1.value.beginTS }?.value
@@ -353,6 +406,38 @@ public actor MVCCManager {
         // TLA+: Check if version is visible to snapshot
         return committedTx.contains(version.beginTx) && version.beginTS <= snapshot.timestamp
     }
+
+    /// Validate that no read-set keys were changed by transactions that committed after the snapshot
+    private func validateSnapshot(for txId: TxID) throws {
+        guard let snapshot = snapshots[txId] else {
+            throw MVCCManagerError.snapshotNotFound
+        }
+
+        guard let reads = readSets[txId], !reads.isEmpty else {
+            return
+        }
+
+        let writes = writeSets[txId] ?? []
+
+        for key in reads where !writes.contains(key) {
+            guard let keyVersions = versions[key] else { continue }
+            for writerTx in keyVersions.keys where writerTx != txId {
+                if committedTx.contains(writerTx) && !snapshot.committedTransactions.contains(writerTx) {
+                    throw MVCCManagerError.isolationViolation
+                }
+            }
+        }
+    }
+
+    /// Clear per-transaction bookkeeping after completion
+    private func clearTransactionState(_ txId: TxID) {
+        readSets[txId] = nil
+        writeSets[txId] = nil
+        snapshots[txId] = nil
+        snapshotValueCache[txId] = nil
+        snapshotNilKeys[txId] = nil
+    }
+
     
     
     // MARK: - Query Operations

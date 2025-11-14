@@ -201,14 +201,19 @@ public actor FileWAL {
     
     /// Flush all pending records to disk (async version)
     public func flush() async throws {
-        // TLA+: Flush all pending records to disk
-        for record in pendingRecords {
-            try await writeRecordToDisk(record)
-            flushedLSN = max(flushedLSN, record.lsn)
+        guard !pendingRecords.isEmpty else {
+            return
         }
-        pendingRecords.removeAll()
         
-        // Reset group commit timer
+        for record in pendingRecords {
+            try writeRecordToDisk(record)
+        }
+        
+        try fileHandle.synchronize()
+        
+        wal.append(contentsOf: pendingRecords)
+        flushedLSN = pendingRecords.last?.lsn ?? flushedLSN
+        pendingRecords.removeAll()
         groupCommitTimer = 0
     }
     
@@ -438,6 +443,9 @@ public actor FileWAL {
     /// Check log order invariant
     /// TLA+ Inv_WAL_LogOrderInvariant
     public func checkLogOrderInvariant() -> Bool {
+        guard wal.count > 1 else {
+            return true
+        }
         // LSNs are monotonically increasing
         for i in 1..<wal.count {
             if wal[i].lsn <= wal[i-1].lsn {
