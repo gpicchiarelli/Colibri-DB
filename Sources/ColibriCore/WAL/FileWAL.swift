@@ -107,6 +107,23 @@ public actor FileWAL {
         self.dirtyPageTable = [:]
         self.groupCommitTimer = 0
         self.crashed = false
+
+        if FileManager.default.fileExists(atPath: walFilePath.path) {
+            let data = try Data(contentsOf: walFilePath)
+            if !data.isEmpty {
+                let decoder = JSONDecoder()
+                if let stored = try? decoder.decode([ConcreteWALRecord].self, from: data) {
+                    wal = stored.sorted { $0.lsn < $1.lsn }
+                    for record in wal {
+                        txLastLSN[record.txID] = record.lsn
+                    }
+                    flushedLSN = wal.last?.lsn ?? 0
+                    nextLSN = flushedLSN + 1
+                }
+            }
+        }
+
+        try fileHandle.seekToEnd()
     }
     
     deinit {
@@ -177,25 +194,12 @@ public actor FileWAL {
             return
         }
         
-        // TLA+: wal' = wal \o pendingRecords
-        // Serialize and write all pending records
-        for record in pendingRecords {
-            try writeRecordToDisk(record)
-        }
-        
-        // Force fsync for durability
-        try fileHandle.synchronize()
-        
-        // TLA+: wal' = wal \o pendingRecords
         wal.append(contentsOf: pendingRecords)
-        
-        // TLA+: flushedLSN' = nextLSN - 1
-        flushedLSN = nextLSN - 1
-        
-        // TLA+: pendingRecords' = <<>>
+        if let maxLSN = pendingRecords.last?.lsn {
+            flushedLSN = max(flushedLSN, maxLSN)
+        }
         pendingRecords.removeAll()
-        
-        // Reset group commit timer
+        try persistRecordsToDisk()
         groupCommitTimer = 0
     }
     
@@ -205,15 +209,12 @@ public actor FileWAL {
             return
         }
         
-        for record in pendingRecords {
-            try writeRecordToDisk(record)
-        }
-        
-        try fileHandle.synchronize()
-        
         wal.append(contentsOf: pendingRecords)
-        flushedLSN = pendingRecords.last?.lsn ?? flushedLSN
+        if let maxLSN = pendingRecords.last?.lsn {
+            flushedLSN = max(flushedLSN, maxLSN)
+        }
         pendingRecords.removeAll()
+        try persistRecordsToDisk()
         groupCommitTimer = 0
     }
     
@@ -304,22 +305,12 @@ public actor FileWAL {
             payload: payload
         )
         
-        // TLA+: wal' = Append(wal, checkpointRecord)
-        try writeRecordToDisk(checkpointRecord)
-        try fileHandle.synchronize()
-        
         wal.append(checkpointRecord)
-        
-        // TLA+: flushedLSN' = nextLSN
-        flushedLSN = nextLSN
-        
-        // TLA+: lastCheckpointLSN' = nextLSN
-        lastCheckpointLSN = nextLSN
-        
         let checkpointLSN = nextLSN
-        
-        // TLA+: nextLSN' = nextLSN + 1
+        flushedLSN = checkpointLSN
+        lastCheckpointLSN = checkpointLSN
         nextLSN += 1
+        try persistRecordsToDisk()
         
         return checkpointLSN
     }
@@ -399,31 +390,13 @@ public actor FileWAL {
     
     // MARK: - Private Helpers
     
-    private func writeRecordToDisk(_ record: ConcreteWALRecord) throws {
-        // Compute CRC32 for record
+    private func persistRecordsToDisk() throws {
         let encoder = JSONEncoder()
-        let recordData = try encoder.encode(record)
-        let crc32 = CRC32.checksum(data: recordData)
-        
-        // Create header
-        let header = WALRecordHeader(
-            crc32: crc32,
-            type: record.kind,
-            lsn: record.lsn,
-            prevLSN: record.prevLSN,
-            pageID: record.pageID,
-            length: UInt32(record.payload?.count ?? 0)
-        )
-        
-        // Write header
-        let headerData = try encoder.encode(header)
-        try fileHandle.seekToEnd()
-        fileHandle.write(headerData)
-        
-        // Write payload if present
-        if let payload = record.payload {
-            fileHandle.write(payload)
-        }
+        let data = try encoder.encode(wal)
+        try fileHandle.truncate(atOffset: 0)
+        try fileHandle.seek(toOffset: 0)
+        fileHandle.write(data)
+        try fileHandle.synchronize()
     }
     
     // MARK: - Invariant Checking (for testing)
