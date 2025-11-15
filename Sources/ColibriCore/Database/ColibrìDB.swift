@@ -38,6 +38,8 @@ public struct ColibrìDBConfiguration: Codable, Sendable {
     public let logLevel: LogLevel
     public let enableStatistics: Bool
     public let enableAutoAnalyze: Bool
+    public let defaultIsolationLevel: IsolationLevel
+    public let groupCommitConfig: GroupCommitConfig
     
     public init(
         dataDirectory: URL,
@@ -49,6 +51,32 @@ public struct ColibrìDBConfiguration: Codable, Sendable {
         enableStatistics: Bool = true,
         enableAutoAnalyze: Bool = true
     ) {
+        self.init(
+            dataDirectory: dataDirectory,
+            bufferPoolSize: bufferPoolSize,
+            maxConnections: maxConnections,
+            walBufferSize: walBufferSize,
+            checkpointInterval: checkpointInterval,
+            logLevel: logLevel,
+            enableStatistics: enableStatistics,
+            enableAutoAnalyze: enableAutoAnalyze,
+            defaultIsolationLevel: .serializable,
+            groupCommitConfig: .default
+        )
+    }
+    
+    public init(
+        dataDirectory: URL,
+        bufferPoolSize: Int = 1000,
+        maxConnections: Int = 100,
+        walBufferSize: Int = 1024 * 1024,
+        checkpointInterval: TimeInterval = 300,
+        logLevel: LogLevel = .info,
+        enableStatistics: Bool = true,
+        enableAutoAnalyze: Bool = true,
+        defaultIsolationLevel: IsolationLevel = .serializable,
+        groupCommitConfig: GroupCommitConfig = .default
+    ) {
         self.dataDirectory = dataDirectory
         self.bufferPoolSize = bufferPoolSize
         self.maxConnections = maxConnections
@@ -57,6 +85,8 @@ public struct ColibrìDBConfiguration: Codable, Sendable {
         self.logLevel = logLevel
         self.enableStatistics = enableStatistics
         self.enableAutoAnalyze = enableAutoAnalyze
+        self.defaultIsolationLevel = defaultIsolationLevel
+        self.groupCommitConfig = groupCommitConfig
     }
 }
 
@@ -77,6 +107,7 @@ public actor ColibrìDB {
     
     /// Write-Ahead Log (TLA+: WAL)
     private let wal: FileWAL
+    private let groupCommitManager: GroupCommitManager
     
     /// Buffer Pool (TLA+: BufferPool)
     private let bufferPool: BufferPool
@@ -120,6 +151,9 @@ public actor ColibrìDB {
     /// Heap tables for each table
     private var heapTables: [String: HeapTable] = [:]
     
+    /// Page directories per table
+    private var pageDirectories: [String: PageDirectory] = [:]
+    
     /// Primary key indexes per table (single-column PK fast path)
     private var primaryKeyIndexes: [String: PrimaryKeyIndex] = [:]
     
@@ -149,9 +183,16 @@ public actor ColibrìDB {
         self.catalog = Catalog()
         
         // Initialize storage layer
-        self.wal = try FileWAL(
+        let fileWAL = try FileWAL(
             walFilePath: config.dataDirectory.appendingPathComponent("wal.log")
         )
+        self.wal = fileWAL
+        self.groupCommitManager = GroupCommitManager(config: config.groupCommitConfig) { [weak fileWAL] targetLSN in
+            guard let wal = fileWAL else {
+                throw GroupCommitError.managerShutdown
+            }
+            try await wal.flush(upTo: targetLSN)
+        }
         
         // Create a separate disk manager for buffer pool
         let diskManager = try FileDiskManager(
@@ -288,6 +329,9 @@ public actor ColibrìDB {
         isShuttingDown = true
         systemState = .shuttingDown
         
+        try await groupCommitManager.forceFlush()
+        await groupCommitManager.shutdown()
+        
         try await withThrowingTaskGroup(of: Void.self) { group in
             // Stop accepting new connections
             if let server = self.databaseServer {
@@ -347,6 +391,15 @@ public actor ColibrìDB {
         activeTransactions[txId] = transaction
         databaseStats.transactionsStarted += 1
         
+        // Log BEGIN record
+        let beginRecord = BeginRecord(
+            txID: txId,
+            timestamp: currentTimestampMillis(),
+            isolationLevel: config.defaultIsolationLevel
+        )
+        let payload = try JSONEncoder().encode(beginRecord)
+        _ = try await logTransactionRecord(kind: .begin, txId: txId, payload: payload)
+        
         return txId
     }
     
@@ -356,6 +409,14 @@ public actor ColibrìDB {
         guard let transaction = activeTransactions[txId] else {
             throw DBError.transactionNotFound(txId: txId)
         }
+        
+        let commitRecord = CommitRecord(
+            txID: txId,
+            timestamp: currentTimestampMillis()
+        )
+        let payload = try JSONEncoder().encode(commitRecord)
+        let commitLSN = try await logTransactionRecord(kind: .commit, txId: txId, payload: payload)
+        _ = try await groupCommitManager.awaitCommit(tid: txId, targetLSN: commitLSN)
         
         try await transactionManager.commitTransaction(txId: txId)
         
@@ -378,6 +439,13 @@ public actor ColibrìDB {
         }
         
         try await transactionManager.abortTransaction(txId: txId)
+        
+        let abortRecord = AbortRecord(
+            txID: txId,
+            timestamp: currentTimestampMillis()
+        )
+        let payload = try JSONEncoder().encode(abortRecord)
+        _ = try await logTransactionRecord(kind: .abort, txId: txId, payload: payload)
         
         var updatedTransaction = transaction
         updatedTransaction.state = .aborted
@@ -419,8 +487,8 @@ public actor ColibrìDB {
         
         try await catalog.createTable(effectiveTableDef)
         
-        // Create heap table for storage
-        let heapTable = HeapTable(bufferPool: bufferPool, wal: wal)
+        let directory = try await pageDirectory(for: tableDef.name)
+        let heapTable = await HeapTable(bufferPool: bufferPool, wal: wal, pageDirectory: directory)
         heapTables[tableDef.name] = heapTable
         
         if let primaryKey = effectiveTableDef.primaryKey, primaryKey.count == 1 {
@@ -995,9 +1063,26 @@ public actor ColibrìDB {
             return existing
         }
         
-        let heapTable = HeapTable(bufferPool: bufferPool, wal: wal)
+        let directory = try await pageDirectory(for: table)
+        let heapTable = await HeapTable(bufferPool: bufferPool, wal: wal, pageDirectory: directory)
         heapTables[table] = heapTable
         return heapTable
+    }
+    
+    private func pageDirectory(for table: String) async throws -> PageDirectory {
+        if let existing = pageDirectories[table] {
+            return existing
+        }
+        let dirURL = config.dataDirectory
+            .appendingPathComponent("tables", isDirectory: true)
+            .appendingPathComponent("\(table)_pagedir.json", isDirectory: false)
+        try FileManager.default.createDirectory(
+            at: dirURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        let directory = try PageDirectory(fileURL: dirURL)
+        pageDirectories[table] = directory
+        return directory
     }
     
     private func log(_ level: LogLevel, _ message: String, category: LogCategory = .database) {
@@ -1006,6 +1091,23 @@ public actor ColibrìDB {
                 await colibriLogger.log(level, category: category, message)
             }
         }
+    }
+    
+    private func logTransactionRecord(
+        kind: WALRecordKind,
+        txId: TxID,
+        payload: Data? = nil
+    ) async throws -> LSN {
+        return try await wal.append(
+            kind: kind,
+            txID: txId,
+            pageID: 0,
+            payload: payload
+        )
+    }
+    
+    private func currentTimestampMillis() -> UInt64 {
+        return UInt64(Date().timeIntervalSince1970 * 1000)
     }
 }
 

@@ -218,6 +218,17 @@ public actor FileWAL {
         groupCommitTimer = 0
     }
     
+    /// Flush records until the specified LSN is durable
+    public func flush(upTo targetLSN: LSN) async throws {
+        guard targetLSN > flushedLSN else {
+            return
+        }
+        try await flush()
+        if flushedLSN < targetLSN {
+            throw DBError.internalError("Unable to flush WAL up to requested LSN \(targetLSN)")
+        }
+    }
+    
     /// Apply a WAL record to data pages (write page to disk)
     /// Can only apply if WAL record has been flushed (Log-Before-Data rule)
     /// TLA+ Action: ApplyToDataPage(pid)
@@ -371,6 +382,11 @@ public actor FileWAL {
     /// Get all WAL records (for recovery)
     public func getAllRecords() -> [ConcreteWALRecord] {
         return wal
+    }
+    
+    /// Get the last LSN written by the specified transaction
+    public func lastLSN(for txID: TxID) -> LSN? {
+        return txLastLSN[txID]
     }
     
     /// Get records since a specific LSN

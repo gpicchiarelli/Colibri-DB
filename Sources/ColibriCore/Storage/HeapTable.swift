@@ -21,24 +21,22 @@ import Foundation
 public actor HeapTable {
     // MARK: - State Variables
     
-    /// Buffer pool for page management
     private let bufferPool: BufferPool
-    
-    /// WAL for logging changes
     private let wal: FileWAL
-    
-    /// Free space map: pageID -> free bytes
-    private var freeSpaceMap: [PageID: Int] = [:]
-    
-    /// Next page ID to allocate
-    private var nextPageID: PageID = 1
+    private let pageDirectory: PageDirectory
+    private var nextPageID: PageID
     
     // MARK: - Initialization
     
-    public init(bufferPool: BufferPool, wal: FileWAL) {
+    public init(
+        bufferPool: BufferPool,
+        wal: FileWAL,
+        pageDirectory: PageDirectory
+    ) async {
         self.bufferPool = bufferPool
         self.wal = wal
-        self.nextPageID = 1
+        self.pageDirectory = pageDirectory
+        self.nextPageID = await pageDirectory.nextAvailablePageID()
     }
     
     // MARK: - Core Operations
@@ -48,14 +46,9 @@ public actor HeapTable {
     /// Precondition: row is valid
     /// Postcondition: row inserted, RID assigned
     public func insert(_ row: Row, txID: TxID) async throws -> RID {
-        // Serialize row to data
         let encoder = JSONEncoder()
         let rowData = try encoder.encode(row)
-        
-        // Find a page with enough free space
-        let pageID = try findPageWithSpace(Int(rowData.count))
-        
-        // Get page from buffer pool (pins it)
+        let pageID = try await pageWithSpace(for: Int(rowData.count) + MemoryLayout<PageSlot>.size)
         var page = try await bufferPool.getPage(pageID)
         
         // Find free slot
@@ -80,27 +73,17 @@ public actor HeapTable {
         // Copy data
         page.data.replaceSubrange(Int(offset)..<Int(newFreeStart), with: rowData)
         
-        // Log the insert to WAL
         let lsn = try await wal.append(
             kind: .heapInsert,
             txID: txID,
             pageID: pageID,
             payload: rowData
         )
-        
-        // Update page LSN
         page.header.pageLSN = lsn
         try await wal.updatePageLSN(pageID, lsn: lsn)
-        
-        // Write page back (mark as dirty)
+        try await refreshPageMetadata(pageID: pageID, page: &page, lsn: lsn)
         try await bufferPool.putPage(pageID, page: page, isDirty: true)
-        
-        // Update free space map
-        freeSpaceMap[pageID] = Int(page.header.freeEnd - page.header.freeStart)
-        
-        // Unpin page
         try await bufferPool.unpinPage(pageID)
-        
         return RID(pageID: pageID, slotID: slotID)
     }
     
@@ -145,7 +128,7 @@ public actor HeapTable {
     /// Postcondition: row updated (in-place or new slot)
     public func update(_ rid: RID, newRow: Row, txID: TxID) async throws -> RID {
         let encoder = JSONEncoder()
-        let rowData = try encoder.encode(newRow)
+        let newRowData = try encoder.encode(newRow)
         
         var page = try await bufferPool.getPage(rid.pageID)
         guard Int(rid.slotID) < page.slots.count else {
@@ -159,26 +142,29 @@ public actor HeapTable {
             throw DBError.notFound
         }
         
-        if rowData.count <= slot.length {
+        let existingRowData = page.data.subdata(in: Int(slot.offset)..<Int(slot.offset + slot.length))
+        if newRowData.count <= slot.length {
             let start = Int(slot.offset)
-            let end = start + Int(rowData.count)
-            page.data.replaceSubrange(start..<end, with: rowData)
-            if rowData.count < slot.length {
-                let padding = [UInt8](repeating: 0, count: Int(slot.length) - rowData.count)
+            let end = start + newRowData.count
+            page.data.replaceSubrange(start..<end, with: newRowData)
+            if newRowData.count < slot.length {
+                let padding = [UInt8](repeating: 0, count: Int(slot.length) - newRowData.count)
                 page.data.replaceSubrange(end..<start + Int(slot.length), with: padding)
             }
-            slot.length = UInt16(rowData.count)
+            slot.length = UInt16(newRowData.count)
             page.slots[Int(rid.slotID)] = slot
             
+            let payload = HeapUpdateLogRecord(oldRowData: existingRowData, newRowData: newRowData)
             let lsn = try await wal.append(
                 kind: .heapUpdate,
                 txID: txID,
                 pageID: rid.pageID,
-                payload: rowData
+                payload: try encoder.encode(payload)
             )
             page.header.pageLSN = lsn
             try await wal.updatePageLSN(rid.pageID, lsn: lsn)
             
+            try await refreshPageMetadata(pageID: rid.pageID, page: &page, lsn: lsn)
             try await bufferPool.putPage(rid.pageID, page: page, isDirty: true)
             try await bufferPool.unpinPage(rid.pageID)
             return rid
@@ -205,115 +191,122 @@ public actor HeapTable {
         // Mark slot as tombstone
         page.slots[Int(rid.slotID)].tombstone = true
         
-        // Log the delete to WAL
         let slot = page.slots[Int(rid.slotID)]
         let rowData = page.data.subdata(in: Int(slot.offset)..<Int(slot.offset + slot.length))
-        
+        let encoder = JSONEncoder()
+        let payload = HeapDeleteLogRecord(oldRowData: rowData)
         let lsn = try await wal.append(
             kind: .heapDelete,
             txID: txID,
             pageID: rid.pageID,
-            payload: rowData
+            payload: try encoder.encode(payload)
         )
-        
-        // Update page LSN
         page.header.pageLSN = lsn
         try await wal.updatePageLSN(rid.pageID, lsn: lsn)
-        
-        // Write page back (mark as dirty)
+        try await refreshPageMetadata(pageID: rid.pageID, page: &page, lsn: lsn)
         try await bufferPool.putPage(rid.pageID, page: page, isDirty: true)
-        
-        // Unpin page
         try await bufferPool.unpinPage(rid.pageID)
     }
     
     // MARK: - Helper Methods
     
-    /// Find a page with enough free space
-    private func findPageWithSpace(_ requiredBytes: Int) throws -> PageID {
-        // Check existing pages
-        for (pageID, freeBytes) in freeSpaceMap {
-            if freeBytes >= requiredBytes {
-                return pageID
-            }
+    private func pageWithSpace(for requiredBytes: Int) async throws -> PageID {
+        if let pageID = await pageDirectory.page(withFreeSpace: requiredBytes) {
+            return pageID
         }
-        
-        // Allocate new page
-        let newPageID = nextPageID
-        nextPageID += 1
-        
-        // Initialize empty page
-        let page = Page(pageID: newPageID)
-        freeSpaceMap[newPageID] = PAGE_SIZE - MemoryLayout<PageHeader>.size
-        
-        return newPageID
+        return try await allocatePage()
     }
     
     /// Scan all rows from the heap table
     /// Returns all non-deleted rows
     public func scanAll() async throws -> [Row] {
         var allRows: [Row] = []
+        let pageIDs = await pageDirectory.allPageIDs()
         
-        // Scan all pages in freeSpaceMap (pages that have been used)
-        for pageID in freeSpaceMap.keys {
+        for pageID in pageIDs {
             let page = try await bufferPool.getPage(pageID)
-            
-            // Scan all slots in the page
-            for (slotIndex, slot) in page.slots.enumerated() {
-                // Skip tombstone slots
-                guard !slot.tombstone else {
-                    continue
-                }
-                
-                // Read the row
+            for (slotIndex, slot) in page.slots.enumerated() where !slot.tombstone {
                 let rid = RID(pageID: pageID, slotID: UInt32(slotIndex))
-                do {
-                    let row = try await read(rid)
+                if let row = try? await read(rid) {
                     allRows.append(row)
-                } catch {
-                    // Skip rows that can't be read (e.g., deleted)
-                    continue
                 }
             }
-            
-            // Unpin page
             try await bufferPool.unpinPage(pageID)
         }
-        
         return allRows
     }
     
     /// Scan all rows with their RIDs
     public func scanAllWithRID() async throws -> [(RID, Row)] {
-        var allRows: [(RID, Row)] = []
+        var results: [(RID, Row)] = []
+        let pageIDs = await pageDirectory.allPageIDs()
         
-        // Scan all pages in freeSpaceMap (pages that have been used)
-        for pageID in freeSpaceMap.keys {
+        for pageID in pageIDs {
             let page = try await bufferPool.getPage(pageID)
-            
-            // Scan all slots in the page
-            for (slotIndex, slot) in page.slots.enumerated() {
-                // Skip tombstone slots
-                guard !slot.tombstone else {
-                    continue
-                }
-                
-                // Read the row
+            for (slotIndex, slot) in page.slots.enumerated() where !slot.tombstone {
                 let rid = RID(pageID: pageID, slotID: UInt32(slotIndex))
-                do {
-                    let row = try await read(rid)
-                    allRows.append((rid, row))
-                } catch {
-                    // Skip rows that can't be read (e.g., deleted)
-                    continue
+                if let row = try? await read(rid) {
+                    results.append((rid, row))
                 }
             }
-            
-            // Unpin page
             try await bufferPool.unpinPage(pageID)
         }
-        
-        return allRows
+        return results
+    }
+    
+    private func allocatePage() async throws -> PageID {
+        let pageID = nextPageID
+        nextPageID += 1
+        var page = try await bufferPool.getPage(pageID)
+        page.header = PageHeader(pageID: pageID)
+        page.slots.removeAll(keepingCapacity: false)
+        page.data = Data(count: PAGE_SIZE)
+        page.header.checksum = pageChecksum(page)
+        try await bufferPool.putPage(pageID, page: page, isDirty: true)
+        try await bufferPool.unpinPage(pageID)
+        try await pageDirectory.registerPage(
+            pageID: pageID,
+            freeBytes: computeFreeBytes(for: page),
+            checksum: page.header.checksum,
+            lsn: 0
+        )
+        return pageID
+    }
+    
+    private func computeFreeBytes(for page: Page) -> Int {
+        return Int(page.header.freeEnd) - Int(page.header.freeStart)
+    }
+    
+    private func pageChecksum(_ page: Page) -> UInt32 {
+        var checksum: UInt32 = 0
+        page.data.withUnsafeBytes { buffer in
+            for byte in buffer {
+                checksum = checksum &+ UInt32(byte)
+                checksum = (checksum << 5) | (checksum >> 27)
+            }
+        }
+        return checksum
+    }
+    
+    private func refreshPageMetadata(pageID: PageID, page: inout Page, lsn: LSN) async throws {
+        let checksum = pageChecksum(page)
+        page.header.checksum = checksum
+        let freeBytes = computeFreeBytes(for: page)
+        try await pageDirectory.updatePage(
+            pageID: pageID,
+            freeBytes: freeBytes,
+            checksum: checksum,
+            lsn: lsn
+        )
+    }
+    
+    private struct HeapUpdateLogRecord: Codable {
+        let oldRowData: Data
+        let newRowData: Data
+    }
+    
+    private struct HeapDeleteLogRecord: Codable {
+        let oldRowData: Data
     }
 }
 

@@ -21,7 +21,8 @@ final class VACUUMTests {
         let wal = try FileWAL(walFilePath: tempDir.appendingPathComponent("wal.log"))
         let diskManager = try FileDiskManager(filePath: tempDir.appendingPathComponent("data.db"))
         let bufferPool = BufferPool(poolSize: 10, diskManager: diskManager)
-        return HeapTable(bufferPool: bufferPool, wal: wal)
+        let pageDir = try PageDirectory(fileURL: tempDir.appendingPathComponent("table.pagedir"), inMemory: true)
+        return await HeapTable(bufferPool: bufferPool, wal: wal, pageDirectory: pageDir)
     }
     
     /// Create a mock StorageManager for testing

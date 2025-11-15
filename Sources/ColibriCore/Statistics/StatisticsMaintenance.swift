@@ -53,6 +53,21 @@ public struct TableStatisticsMaintenance: Codable, Sendable {
     }
 }
 
+/// Snapshot of table statistics gathered from storage
+public struct TableStatisticsSnapshot: Sendable {
+    public let rowCount: Int64
+    public let pageCount: Int64
+    public let avgRowSize: Int
+    public let deadTuples: Int64
+    
+    public init(rowCount: Int64, pageCount: Int64, avgRowSize: Int, deadTuples: Int64) {
+        self.rowCount = rowCount
+        self.pageCount = pageCount
+        self.avgRowSize = avgRowSize
+        self.deadTuples = deadTuples
+    }
+}
+
 // MARK: - Column Statistics
 
 /// Statistics for a column (TLA+: ColumnStatistics)

@@ -14,6 +14,16 @@ import XCTest
 /// Covers Backup, Monitoring, MultiTenancy, Optimization, and other modules
 final class AdditionalModulesTests: XCTestCase {
     
+    private func makeHeapTable(tempDir: URL) async throws -> HeapTable {
+        let walPath = tempDir.appendingPathComponent("wal.log")
+        let wal = try FileWAL(walFilePath: walPath)
+        let dataPath = tempDir.appendingPathComponent("data.db")
+        let diskManager = try FileDiskManager(filePath: dataPath)
+        let bufferPool = BufferPool(poolSize: 8, diskManager: diskManager)
+        let pageDir = try PageDirectory(fileURL: tempDir.appendingPathComponent("table.pagedir"), inMemory: true)
+        return await HeapTable(bufferPool: bufferPool, wal: wal, pageDirectory: pageDir)
+    }
+    
     override func setUpWithError() throws {
         throw XCTSkip("Additional modules suite pending buffer manager stabilization")
     }
@@ -107,7 +117,8 @@ final class AdditionalModulesTests: XCTestCase {
         let dataPath = tempDir.appendingPathComponent("data.db")
         let diskManager = try FileDiskManager(filePath: dataPath)
         let bufferPool = BufferPool(poolSize: 8, diskManager: diskManager)
-        let heapTable = HeapTable(bufferPool: bufferPool, wal: wal)
+        let pageDir = try PageDirectory(fileURL: tempDir.appendingPathComponent("table.pagedir"), inMemory: true)
+        let heapTable = await HeapTable(bufferPool: bufferPool, wal: wal, pageDirectory: pageDir)
         
         let walAdapter = wal.asTransactionWALManager()
         let mvccManager = MVCCManager()
@@ -132,7 +143,8 @@ final class AdditionalModulesTests: XCTestCase {
         let dataPath = tempDir.appendingPathComponent("data.db")
         let diskManager = try FileDiskManager(filePath: dataPath)
         let bufferPool = BufferPool(poolSize: 8, diskManager: diskManager)
-        let heapTable = HeapTable(bufferPool: bufferPool, wal: wal)
+        let pageDir = try PageDirectory(fileURL: tempDir.appendingPathComponent("table.pagedir"), inMemory: true)
+        let heapTable = await HeapTable(bufferPool: bufferPool, wal: wal, pageDirectory: pageDir)
         
         let walAdapter = wal.asTransactionWALManager()
         let mvccManager = MVCCManager()
@@ -731,13 +743,7 @@ final class AdditionalModulesTests: XCTestCase {
         let tempDir = try TestUtils.createTempDirectory()
         defer { try? TestUtils.cleanupTempDirectory(tempDir) }
         
-        let dataPath = tempDir.appendingPathComponent("data.db")
-        let diskManager = try FileDiskManager(filePath: dataPath)
-        let bufferPool = BufferPool(poolSize: 8, diskManager: diskManager)
-        
-        let walPath = tempDir.appendingPathComponent("wal.log")
-        let wal = try FileWAL(walFilePath: walPath)
-        let heapTable = HeapTable(bufferPool: bufferPool, wal: wal)
+        let heapTable = try await makeHeapTable(tempDir: tempDir)
         
         let diskManager2 = try FileDiskManager(filePath: tempDir.appendingPathComponent("data2.db"))
         let bufferManager = BufferManager(diskManager: diskManager2)
@@ -870,11 +876,7 @@ final class AdditionalModulesTests: XCTestCase {
             
             let walPath = tempDir.appendingPathComponent("wal.log")
             let wal = try FileWAL(walFilePath: walPath)
-            
-            let dataPath = tempDir.appendingPathComponent("data.db")
-            let diskManager = try FileDiskManager(filePath: dataPath)
-            let bufferPool = BufferPool(poolSize: 8, diskManager: diskManager)
-            let heapTable = HeapTable(bufferPool: bufferPool, wal: wal)
+            let heapTable = try await makeHeapTable(tempDir: tempDir)
             
             let walAdapter = wal.asTransactionWALManager()
             let mvccManager = MVCCManager()
