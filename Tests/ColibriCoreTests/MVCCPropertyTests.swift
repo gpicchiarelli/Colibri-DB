@@ -46,6 +46,7 @@ final class MVCCPropertyTests: XCTestCase {
             
             // Read multiple keys - should see consistent snapshot
             var snapshotValues: [String: Value] = [:]
+            var localWrites: Set<String> = []
             for keyIdx in 0..<min(10, keyCount) {
                 let key = "key_\(keyIdx)"
                 if let value = try await mvccManager.read(txId: txId, key: key) {
@@ -58,10 +59,14 @@ final class MVCCPropertyTests: XCTestCase {
                 let writeKey = "key_\(i % keyCount)"
                 let writeValue = Value.string("value_\(i)")
                 try await mvccManager.write(txId: txId, key: writeKey, value: writeValue)
+                localWrites.insert(writeKey)
             }
             
             // Re-read keys - should see SAME snapshot (repeatable read)
             for (key, originalValue) in snapshotValues {
+                if localWrites.contains(key) {
+                    continue
+                }
                 if let currentValue = try await mvccManager.read(txId: txId, key: key) {
                     if currentValue != originalValue {
                         inconsistencies += 1

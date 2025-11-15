@@ -98,6 +98,7 @@ public actor MVCCManager {
     /// Snapshot value cache for repeatable reads
     private var snapshotValueCache: [TxID: [MVCCKey: Value]] = [:]
     private var snapshotNilKeys: [TxID: Set<MVCCKey>] = [:]
+    private var readVersionTimestamps: [TxID: [MVCCKey: Timestamp]] = [:]
     
     /// Global timestamp
     /// TLA+: globalTS \in Timestamp
@@ -186,6 +187,7 @@ public actor MVCCManager {
         writeSets[txId] = []
         snapshotValueCache[txId] = [:]
         snapshotNilKeys[txId] = []
+        readVersionTimestamps[txId] = [:]
         
         // TLA+: Update minimum active transaction
         if minActiveTx == 0 || txId < minActiveTx {
@@ -225,6 +227,10 @@ public actor MVCCManager {
         readSets[txId]?.insert(key)
 
         if let value = visibleVersion?.value {
+            if readVersionTimestamps[txId] == nil {
+                readVersionTimestamps[txId] = [:]
+            }
+            readVersionTimestamps[txId]?[key] = visibleVersion?.beginTS ?? 0
             if snapshotValueCache[txId] == nil {
                 snapshotValueCache[txId] = [:]
             }
@@ -234,6 +240,10 @@ public actor MVCCManager {
                 snapshotNilKeys[txId] = []
             }
             snapshotNilKeys[txId]?.insert(key)
+            if readVersionTimestamps[txId] == nil {
+                readVersionTimestamps[txId] = [:]
+            }
+            readVersionTimestamps[txId]?[key] = 0
         }
         
         await logger.trace("Read key", metadata: ["key": "\(key)", "txId": "\(txId)"])
@@ -413,18 +423,41 @@ public actor MVCCManager {
             throw MVCCManagerError.snapshotNotFound
         }
 
+        guard let writes = writeSets[txId], !writes.isEmpty else {
+            // Read-only transactions never need to re-validate; they always commit under SI
+            return
+        }
+
         guard let reads = readSets[txId], !reads.isEmpty else {
             return
         }
 
-        let writes = writeSets[txId] ?? []
+        let readVersions = readVersionTimestamps[txId] ?? [:]
 
         for key in reads where !writes.contains(key) {
             guard let keyVersions = versions[key] else { continue }
-            for writerTx in keyVersions.keys where writerTx != txId {
-                if committedTx.contains(writerTx) && !snapshot.committedTransactions.contains(writerTx) {
+
+            let committedVersions = keyVersions
+                .filter { committedTx.contains($0.key) }
+                .map { $0.value }
+
+            guard let latestCommitted = committedVersions.max(by: { $0.beginTS < $1.beginTS }) else {
+                continue
+            }
+
+            let observedTS = readVersions[key] ?? 0
+
+            if observedTS == 0 {
+                // Transaction observed no version for this key. If a committed version now exists
+                // beyond the snapshot timestamp, we detected a phantom write.
+                if latestCommitted.beginTS > snapshot.timestamp {
                     throw MVCCManagerError.isolationViolation
                 }
+                continue
+            }
+
+            if latestCommitted.beginTS > snapshot.timestamp || latestCommitted.beginTS > observedTS {
+                throw MVCCManagerError.isolationViolation
             }
         }
     }
@@ -436,6 +469,7 @@ public actor MVCCManager {
         snapshots[txId] = nil
         snapshotValueCache[txId] = nil
         snapshotNilKeys[txId] = nil
+        readVersionTimestamps[txId] = nil
     }
 
     
