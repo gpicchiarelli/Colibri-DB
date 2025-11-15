@@ -18,7 +18,7 @@ import Foundation
 public indirect enum QueryPlanNode: Sendable {
     case scan(table: String)
     case indexScan(table: String, index: String, key: String)
-    case filter(predicate: @Sendable (Row) -> Bool, child: QueryPlanNode)
+    case filter(column: String?, predicate: @Sendable (Row) -> Bool, child: QueryPlanNode)
     case project(columns: [String], child: QueryPlanNode)
     case sort(columns: [String], child: QueryPlanNode)
     case limit(count: Int, child: QueryPlanNode)
@@ -32,7 +32,7 @@ public actor QueryOptimizer {
     // MARK: - Dependencies
     
     private let catalog: Catalog
-    private let statistics: StatisticsManagerActor
+    private let statistics: StatisticsMaintenanceManager
     
     // MARK: - Cost Model Constants
     
@@ -47,7 +47,7 @@ public actor QueryOptimizer {
     
     // MARK: - Initialization
     
-    public init(catalog: Catalog, statistics: StatisticsManagerActor) {
+    public init(catalog: Catalog, statistics: StatisticsMaintenanceManager) {
         self.catalog = catalog
         self.statistics = statistics
     }
@@ -102,7 +102,7 @@ public actor QueryOptimizer {
         // Apply filters
         if let predicate = plan.predicate {
             candidates = candidates.map { candidate in
-                .filter(predicate: predicate, child: candidate)
+                .filter(column: plan.filterColumn, predicate: predicate, child: candidate)
             }
         }
         
@@ -142,10 +142,14 @@ public actor QueryOptimizer {
         case .indexScan(let table, let index, _):
             return await estimateIndexScanCost(table: table, index: index)
             
-        case .filter(_, let child):
+        case .filter(let column, _, let child):
             let childCost = await estimateCost(plan: child)
-            let selectivity = 0.1  // Assume 10% selectivity
-            return childCost + (childCost * selectivity * Self.costPerTuple)
+            if let table = baseTable(of: child), let column {
+                let selectivity = await equalitySelectivity(table: table, column: column)
+                let childCard = await estimateCardinality(plan: child)
+                return childCost + (Double(childCard) * selectivity * Self.costPerTuple)
+            }
+            return childCost * 1.1
             
         case .project(_, let child):
             let childCost = await estimateCost(plan: child)
@@ -156,32 +160,37 @@ public actor QueryOptimizer {
             
         case .aggregate(_, _, let child):
             let childCost = await estimateCost(plan: child)
-            return childCost + (childCost * 0.5)  // Hash aggregation overhead
+            return childCost + (childCost * 0.5)
             
         case .sort(_, let child):
             let childCost = await estimateCost(plan: child)
             let cardinality = await estimateCardinality(plan: child)
-            let sortCost = Double(cardinality) * log2(Double(cardinality)) * Self.costPerCPU
+            let sortCost = Double(max(cardinality, 1)) * log2(Double(max(cardinality, 1))) * Self.costPerCPU
             return childCost + sortCost
             
         case .limit(_, let child):
-            return await estimateCost(plan: child) * 0.1  // Assume early termination
+            let childCost = await estimateCost(plan: child)
+            return childCost * 0.1
         }
     }
     
     /// Estimate scan cost
     private func estimateScanCost(table: String) async -> Double {
-        let pageCount = await statistics.getPageCount(table: table)
-        return Double(pageCount) * Self.costPerPageIO
+        if let stats = await statistics.getTableStatistics(table) {
+            return Double(max(Int(stats.pageCount), 1)) * Self.costPerPageIO
+        }
+        return 100.0 * Self.costPerPageIO
     }
     
     /// Estimate index scan cost
     private func estimateIndexScanCost(table: String, index: String) async -> Double {
-        let indexHeight = await statistics.getIndexHeight(table: table, index: index)
-        let resultPages = await statistics.getResultPages(table: table, index: index)
-        
-        // Cost = tree traversal + result fetch
-        return Double(indexHeight + resultPages) * Self.costPerPageIO
+        if let stats = await statistics.getTableStatistics(table) {
+            let rowCount = max(Int(stats.rowCount), 1)
+            let traversalCost = 3 * Self.costPerPageIO  // assume B+Tree height 3
+            let fetchCost = Double(rowCount) * 0.1 * Self.costPerTuple
+            return traversalCost + fetchCost
+        }
+        return await estimateScanCost(table: table) * 0.3
     }
     
     /// Estimate join cost
@@ -205,16 +214,22 @@ public actor QueryOptimizer {
     private func estimateCardinality(plan: QueryPlanNode) async -> Int {
         switch plan {
         case .scan(let table):
-            let rowCount = await statistics.getRowCount(table: table)
-            return rowCount  // Return row count directly
+            if let stats = await statistics.getTableStatistics(table) {
+                return max(Int(stats.rowCount), 1)
+            }
+            return 1000
             
         case .indexScan(let table, _, _):
-            let rowCount = await statistics.getRowCount(table: table)
-            return rowCount / 10  // Assume 10% selectivity
+            let base = await estimateCardinality(plan: .scan(table: table))
+            return max(base / 10, 1)
             
-        case .filter(_, let child):
+        case .filter(let column, _, let child):
             let childCard = await estimateCardinality(plan: child)
-            return childCard / 10  // Assume 10% selectivity
+            if let table = baseTable(of: child), let column {
+                let sel = await equalitySelectivity(table: table, column: column)
+                return max(Int(Double(childCard) * sel), 1)
+            }
+            return max(childCard / 10, 1)
             
         case .project(_, let child):
             return await estimateCardinality(plan: child)
@@ -222,10 +237,10 @@ public actor QueryOptimizer {
         case .join(let left, let right, _):
             let leftCard = await estimateCardinality(plan: left)
             let rightCard = await estimateCardinality(plan: right)
-            return leftCard * rightCard / 10  // Assume 10% join selectivity
+            return max((leftCard * rightCard) / 10, 1)
             
         case .aggregate(_, _, let child):
-            return await estimateCardinality(plan: child) / 100  // Assume groups
+            return max(await estimateCardinality(plan: child) / 100, 1)
             
         case .sort(_, let child):
             return await estimateCardinality(plan: child)
@@ -246,6 +261,28 @@ public actor QueryOptimizer {
         case .bytes(let data): return data.base64EncodedString()
         case .null: return "NULL"
         }
+    }
+    
+    private func baseTable(of plan: QueryPlanNode) -> String? {
+        switch plan {
+        case .scan(let table):
+            return table
+        case .indexScan(let table, _, _):
+            return table
+        case .filter(_, _, let child),
+             .project(_, let child),
+             .sort(_, let child),
+             .limit(_, let child),
+             .aggregate(_, _, let child):
+            return baseTable(of: child)
+        case .join(let left, _, _):
+            return baseTable(of: left)
+        }
+    }
+    
+    private func equalitySelectivity(table: String, column: String) async -> Double {
+        let selectivity = await statistics.estimateSelectivity(table: table, column: column, predicate: "=")
+        return min(max(selectivity, 0.0001), 1.0)
     }
 }
 
@@ -280,43 +317,4 @@ public struct LogicalPlan: @unchecked Sendable {
     }
 }
 
-/// Statistics manager interface
-public actor StatisticsManagerActor {
-    private var tableStats: [String: TableStatistics] = [:]
-    
-    public init() {}
-    
-    public func getPageCount(table: String) -> Int {
-        return tableStats[table]?.pageCount ?? 100
-    }
-    
-    public func getRowCount(table: String) -> Int {
-        return tableStats[table]?.rowCount ?? 1000
-    }
-    
-    public func getIndexHeight(table: String, index: String) -> Int {
-        return 3  // Typical B+Tree height
-    }
-    
-    public func getResultPages(table: String, index: String) -> Int {
-        return 10  // Estimated result pages
-    }
-    
-    public func updateStatistics(table: String, stats: TableStatistics) {
-        tableStats[table] = stats
-    }
-}
-
-/// Table statistics
-public struct TableStatistics: @unchecked Sendable {
-    public let pageCount: Int
-    public let rowCount: Int
-    public let avgRowSize: Int
-    
-    public init(pageCount: Int, rowCount: Int, avgRowSize: Int) {
-        self.pageCount = pageCount
-        self.rowCount = rowCount
-        self.avgRowSize = avgRowSize
-    }
-}
 

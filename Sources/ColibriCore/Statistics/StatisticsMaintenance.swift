@@ -431,7 +431,29 @@ public actor StatisticsMaintenanceManager {
         )
     }
     
+    public func registerTable(_ table: String) {
+        if tableStatistics[table] == nil {
+            tableStatistics[table] = TableStatisticsMaintenance()
+        }
+        if statisticsMetadata[table] == nil {
+            statisticsMetadata[table] = StatisticsMetadata(tableName: table)
+        }
+        modificationCount[table] = 0
+    }
+    
     // MARK: - ANALYZE Operations
+    
+    public func beginAnalyze(table: String) -> Bool {
+        if analyzeInProgress[table] == true {
+            return false
+        }
+        analyzeInProgress[table] = true
+        return true
+    }
+    
+    public func endAnalyze(table: String) {
+        analyzeInProgress[table] = false
+    }
     
     /// Start ANALYZE on table
     /// TLA+ Action: StartAnalyze(table)
@@ -724,6 +746,26 @@ public actor StatisticsMaintenanceManager {
             stats.rowCount += delta
             tableStatistics[table] = stats
         }
+    }
+    
+    /// Apply a snapshot gathered from storage
+    public func updateTableStatistics(table: String, snapshot: TableStatisticsSnapshot) {
+        var stats = TableStatisticsMaintenance(
+            pageCount: Int(snapshot.pageCount),
+            rowCount: Int(snapshot.rowCount),
+            avgRowSize: snapshot.avgRowSize
+        )
+        stats.deadTuples = snapshot.deadTuples
+        stats.lastAnalyzed = Date()
+        stats.modifications = 0
+        tableStatistics[table] = stats
+        modificationCount[table] = 0
+        lastAnalyzed[table] = stats.lastAnalyzed
+        
+        var metadata = statisticsMetadata[table] ?? StatisticsMetadata(tableName: table)
+        metadata.lastFullScan = Date()
+        metadata.changeCount = 0
+        statisticsMetadata[table] = metadata
     }
     
     // MARK: - Auto-Analyze (TLA+: AutoAnalyzeTrigger, ShouldAutoAnalyze)

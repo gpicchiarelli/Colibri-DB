@@ -268,7 +268,7 @@ public actor QueryExecutor {
             return table
         case .indexScan(let table, _, _):
             return table
-        case .filter(_, let child):
+        case .filter(_, _, let child):
             return try extractTableNameFromPlan(child)
         case .project(_, let child):
             return try extractTableNameFromPlan(child)
@@ -897,7 +897,7 @@ public actor QueryExecutor {
             }
             return results
             
-        case .filter(let predicate, let child):
+        case .filter(_, let predicate, let child):
             // Filter: execute child, then filter
             let childResults = try await executePlanNode(child, txID: txID, opId: &opId)
             

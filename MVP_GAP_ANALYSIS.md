@@ -193,7 +193,7 @@ func executePlan(_ plan: QueryPlanNode, txId: TxID) async throws -> [ExecutorTup
     switch plan {
     case .scan(let table):
         return try await executeSeqScan(table: table, txId: txId)
-    case .filter(let predicate, let child):
+    case .filter(let column, let predicate, let child):
         let tuples = try await executePlan(child, txId: txId)
         return select(tuples: tuples, predicate: ...)
     // etc.

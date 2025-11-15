@@ -18,6 +18,13 @@ import Foundation
 
 /// Heap Table for tuple storage using slotted pages
 /// Corresponds to TLA+ module: HeapTable.tla
+public struct HeapTableStatistics: Sendable {
+    public let rowCount: Int64
+    public let deadTuples: Int64
+    public let pageCount: Int
+    public let avgRowSize: Int
+}
+
 public actor HeapTable {
     // MARK: - State Variables
     
@@ -307,6 +314,34 @@ public actor HeapTable {
     
     private struct HeapDeleteLogRecord: Codable {
         let oldRowData: Data
+    }
+    
+    public func collectStatistics() async throws -> HeapTableStatistics {
+        let pageIDs = await pageDirectory.allPageIDs()
+        var liveTuples: Int64 = 0
+        var deadTuples: Int64 = 0
+        var totalBytes: Int64 = 0
+        
+        for pageID in pageIDs {
+            let page = try await bufferPool.getPage(pageID)
+            for slot in page.slots {
+                if slot.tombstone {
+                    deadTuples += 1
+                } else {
+                    liveTuples += 1
+                    totalBytes += Int64(slot.length)
+                }
+            }
+            try await bufferPool.unpinPage(pageID)
+        }
+        
+        let avgRowSize = liveTuples > 0 ? Int(totalBytes / liveTuples) : 0
+        return HeapTableStatistics(
+            rowCount: liveTuples,
+            deadTuples: deadTuples,
+            pageCount: pageIDs.count,
+            avgRowSize: avgRowSize
+        )
     }
 }
 

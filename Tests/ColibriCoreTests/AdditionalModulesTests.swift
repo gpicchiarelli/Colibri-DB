@@ -586,7 +586,7 @@ final class AdditionalModulesTests: XCTestCase {
     
     func testQueryOptimizerCreation() async throws {
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         XCTAssertNotNil(optimizer, "QueryOptimizer should be created")
     }

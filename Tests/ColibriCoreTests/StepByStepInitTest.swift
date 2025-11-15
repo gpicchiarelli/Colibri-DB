@@ -46,32 +46,29 @@ final class StepByStepInitTest {
         print("Step 12: Creating QueryExecutor...")
         let _ = QueryExecutor(transactionManager: transactionManager, catalog: catalog)
         
-        print("Step 13: Creating StatisticsManagerActor...")
-        let _ = StatisticsManagerActor()
+        print("Step 13: Creating StatisticsMaintenanceManager...")
+        let statistics = StatisticsMaintenanceManager()
         
         print("Step 14: Creating QueryOptimizer...")
-        let _ = QueryOptimizer(catalog: catalog, statistics: StatisticsManagerActor())
+        let _ = QueryOptimizer(catalog: catalog, statistics: statistics)
         
-        print("Step 15: Creating StatisticsMaintenanceManager...")
-        let _ = StatisticsMaintenanceManager()
-        
-        print("Step 16: Creating HybridLogicalClock...")
+        print("Step 15: Creating HybridLogicalClock...")
         let clock = HybridLogicalClock(nodeID: 1)
         
-        print("Step 17: Creating SchemaEvolutionManager...")
+        print("Step 16: Creating SchemaEvolutionManager...")
         let _ = SchemaEvolutionManager(
             transactionManager: transactionManager,
             catalog: catalog,
             clock: clock
         )
         
-        print("Step 18: Creating WireProtocolHandler...")
+        print("Step 17: Creating WireProtocolHandler...")
         let _ = WireProtocolHandler()
         
-        print("Step 19: Creating AuthenticationManager...")
+        print("Step 18: Creating AuthenticationManager...")
         let authManager = AuthenticationManager()
         
-        print("Step 20: Creating DatabaseServer...")
+        print("Step 19: Creating DatabaseServer...")
         let config = ColibrìDBConfiguration(
             dataDirectory: tempDir,
             bufferPoolSize: 10,

@@ -10,6 +10,23 @@
 import XCTest
 @testable import ColibriCore
 
+private func seedTableStats(
+    _ manager: StatisticsMaintenanceManager,
+    table: String,
+    rowCount: Int64 = 1000,
+    pageCount: Int64 = 100,
+    avgRowSize: Int = 100
+) async {
+    await manager.registerTable(table)
+    let snapshot = TableStatisticsSnapshot(
+        rowCount: rowCount,
+        pageCount: pageCount,
+        avgRowSize: avgRowSize,
+        deadTuples: 0
+    )
+    await manager.updateTableStatistics(table: table, snapshot: snapshot)
+}
+
 /// Tests for the Query Optimizer
 /// Covers cost-based optimization, plan generation, and cost estimation
 final class QueryOptimizerTests {
@@ -19,7 +36,7 @@ final class QueryOptimizerTests {
     func testQueryOptimizerCreation() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         
         // Act
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
@@ -33,7 +50,7 @@ final class QueryOptimizerTests {
     func testGenerateScanPlan() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(table: "users")
@@ -54,7 +71,7 @@ final class QueryOptimizerTests {
     func testGenerateIndexScanPlan() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock table with index
@@ -81,7 +98,7 @@ final class QueryOptimizerTests {
     func testGenerateFilterPlan() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -101,7 +118,7 @@ final class QueryOptimizerTests {
         // Assert
         XCTAssert(physicalPlan != nil)
         // Should have filter node
-        if case .filter(_, _) = physicalPlan {
+        if case .filter(_, _, _) = physicalPlan {
             // Expected filter plan
         } else {
             // Could be scan plan if no indexes
@@ -111,7 +128,7 @@ final class QueryOptimizerTests {
     func testGenerateProjectPlan() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -135,7 +152,7 @@ final class QueryOptimizerTests {
     func testGenerateSortPlan() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -159,7 +176,7 @@ final class QueryOptimizerTests {
     func testGenerateLimitPlan() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -183,7 +200,7 @@ final class QueryOptimizerTests {
     func testGenerateComplexPlan() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -213,15 +230,17 @@ final class QueryOptimizerTests {
     func testEstimateScanCost() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock statistics
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 100,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 1000,
+            pageCount: 100,
             avgRowSize: 200
-        ))
+        )
         
         let logicalPlan = LogicalPlan(table: "users")
         
@@ -236,15 +255,17 @@ final class QueryOptimizerTests {
     func testEstimateIndexScanCost() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock statistics
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 100,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 1000,
+            pageCount: 100,
             avgRowSize: 200
-        ))
+        )
         
         let logicalPlan = LogicalPlan(
             table: "users",
@@ -262,7 +283,7 @@ final class QueryOptimizerTests {
     func testEstimateFilterCost() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -287,20 +308,24 @@ final class QueryOptimizerTests {
     func testEstimateJoinCost() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock statistics for both tables
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 50,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 500,
+            pageCount: 50,
             avgRowSize: 200
-        ))
-        await statistics.updateStatistics(table: "orders", stats: TableStatistics(
-            pageCount: 100,
+        )
+        await seedTableStats(
+            statistics,
+            table: "orders",
             rowCount: 1000,
+            pageCount: 100,
             avgRowSize: 150
-        ))
+        )
         
         // Act
         let logicalPlan = LogicalPlan(table: "users") // Simplified for join test
@@ -314,15 +339,17 @@ final class QueryOptimizerTests {
     func testEstimateSortCost() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock statistics
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 100,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 1000,
+            pageCount: 100,
             avgRowSize: 200
-        ))
+        )
         
         let logicalPlan = LogicalPlan(
             table: "users",
@@ -340,15 +367,17 @@ final class QueryOptimizerTests {
     func testEstimateAggregateCost() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock statistics
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 100,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 1000,
+            pageCount: 100,
             avgRowSize: 200
-        ))
+        )
         
         let logicalPlan = LogicalPlan(table: "users")
         
@@ -365,7 +394,7 @@ final class QueryOptimizerTests {
     func testCostModelConstants() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Act & Assert
@@ -380,15 +409,17 @@ final class QueryOptimizerTests {
     func testCostComparison() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock statistics
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 100,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 1000,
+            pageCount: 100,
             avgRowSize: 200
-        ))
+        )
         
         // Act
         let scanPlan = LogicalPlan(table: "users")
@@ -411,15 +442,17 @@ final class QueryOptimizerTests {
     func testStatisticsIntegration() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock statistics
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 50,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 500,
+            pageCount: 50,
             avgRowSize: 200
-        ))
+        )
         
         let logicalPlan = LogicalPlan(table: "users")
         
@@ -434,25 +467,29 @@ final class QueryOptimizerTests {
     func testStatisticsUpdate() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Initial statistics
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 50,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 500,
+            pageCount: 50,
             avgRowSize: 200
-        ))
+        )
         
         let logicalPlan = LogicalPlan(table: "users")
         let initialPlan = await optimizer.optimize(logical: logicalPlan)
         
         // Update statistics
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 100,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 1000,
+            pageCount: 100,
             avgRowSize: 200
-        ))
+        )
         
         // Act
         let updatedPlan = await optimizer.optimize(logical: logicalPlan)
@@ -468,7 +505,7 @@ final class QueryOptimizerTests {
     func testScanPlanNode() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(table: "users")
@@ -488,7 +525,7 @@ final class QueryOptimizerTests {
     func testIndexScanPlanNode() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -507,7 +544,7 @@ final class QueryOptimizerTests {
     func testFilterPlanNode() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -532,7 +569,7 @@ final class QueryOptimizerTests {
     func testProjectPlanNode() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -551,7 +588,7 @@ final class QueryOptimizerTests {
     func testSortPlanNode() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -570,7 +607,7 @@ final class QueryOptimizerTests {
     func testLimitPlanNode() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -591,15 +628,17 @@ final class QueryOptimizerTests {
     func testEmptyTableOptimization() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock empty table statistics
-        await statistics.updateStatistics(table: "empty_table", stats: TableStatistics(
-            pageCount: 0,
+        await seedTableStats(
+            statistics,
+            table: "empty_table",
             rowCount: 0,
+            pageCount: 0,
             avgRowSize: 0
-        ))
+        )
         
         let logicalPlan = LogicalPlan(table: "empty_table")
         
@@ -614,15 +653,17 @@ final class QueryOptimizerTests {
     func testLargeTableOptimization() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock large table statistics
-        await statistics.updateStatistics(table: "large_table", stats: TableStatistics(
-            pageCount: 10000,
-            rowCount: 1000000,
+        await seedTableStats(
+            statistics,
+            table: "large_table",
+            rowCount: 1_000_000,
+            pageCount: 10_000,
             avgRowSize: 500
-        ))
+        )
         
         let logicalPlan = LogicalPlan(table: "large_table")
         
@@ -637,7 +678,7 @@ final class QueryOptimizerTests {
     func testComplexPredicateOptimization() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         let logicalPlan = LogicalPlan(
@@ -667,15 +708,17 @@ final class QueryOptimizerTests {
     func testOptimizationPerformance() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock statistics
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 100,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 1000,
+            pageCount: 100,
             avgRowSize: 200
-        ))
+        )
         
         let logicalPlan = LogicalPlan(
             table: "users",
@@ -707,15 +750,17 @@ final class QueryOptimizerTests {
     func testMultipleOptimizationCalls() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock statistics
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 100,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 1000,
+            pageCount: 100,
             avgRowSize: 200
-        ))
+        )
         
         let logicalPlan = LogicalPlan(table: "users")
         
@@ -739,15 +784,17 @@ final class QueryOptimizerTests {
     func testEndToEndOptimization() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Mock table with statistics
-        await statistics.updateStatistics(table: "users", stats: TableStatistics(
-            pageCount: 50,
+        await seedTableStats(
+            statistics,
+            table: "users",
             rowCount: 500,
+            pageCount: 50,
             avgRowSize: 200
-        ))
+        )
         
         // Complex logical plan
         let logicalPlan = LogicalPlan(
@@ -775,19 +822,24 @@ final class QueryOptimizerTests {
     func testOptimizationWithDifferentTableSizes() async throws {
         // Arrange
         let catalog = Catalog()
-        let statistics = StatisticsManagerActor()
+        let statistics = StatisticsMaintenanceManager()
         let optimizer = QueryOptimizer(catalog: catalog, statistics: statistics)
         
         // Test with different table sizes
-        let tableSizes = [
-            ("small_table", TableStatistics(pageCount: 10, rowCount: 100, avgRowSize: 100)),
-            ("medium_table", TableStatistics(pageCount: 100, rowCount: 1000, avgRowSize: 200)),
-            ("large_table", TableStatistics(pageCount: 1000, rowCount: 10000, avgRowSize: 300))
+        let tableSizes: [(String, Int64, Int64, Int)] = [
+            ("small_table", 100, 10, 100),
+            ("medium_table", 1_000, 100, 200),
+            ("large_table", 10_000, 1_000, 300)
         ]
         
-        for (tableName, tableStats) in tableSizes {
-            // Act
-            await statistics.updateStatistics(table: tableName, stats: tableStats)
+        for (tableName, rows, pages, width) in tableSizes {
+            await seedTableStats(
+                statistics,
+                table: tableName,
+                rowCount: rows,
+                pageCount: pages,
+                avgRowSize: width
+            )
             let logicalPlan = LogicalPlan(table: tableName)
             let physicalPlan = await optimizer.optimize(logical: logicalPlan)
             

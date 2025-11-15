@@ -225,6 +225,8 @@ public actor ColibrìDB {
         )
         
         // Initialize query processing
+        self.statisticsManager = StatisticsMaintenanceManager()
+        
         self.queryExecutor = QueryExecutor(
             transactionManager: transactionManager,
             catalog: catalog
@@ -232,11 +234,8 @@ public actor ColibrìDB {
         
         self.queryOptimizer = QueryOptimizer(
             catalog: catalog,
-            statistics: StatisticsManagerActor()
+            statistics: statisticsManager
         )
-        
-        // Initialize statistics
-        self.statisticsManager = StatisticsMaintenanceManager()
         
         // Initialize schema evolution
         let distributedClock = DistributedClockManager(nodeId: "node-1")
@@ -491,6 +490,10 @@ public actor ColibrìDB {
         let heapTable = await HeapTable(bufferPool: bufferPool, wal: wal, pageDirectory: directory)
         heapTables[tableDef.name] = heapTable
         
+        if config.enableStatistics {
+            await statisticsManager.registerTable(tableDef.name)
+        }
+        
         if let primaryKey = effectiveTableDef.primaryKey, primaryKey.count == 1 {
             let column = primaryKey[0]
             primaryKeyColumns[tableDef.name] = column
@@ -507,6 +510,10 @@ public actor ColibrìDB {
         }
         
         try await commit(txId: txId)
+        
+        if config.enableStatistics {
+            try? await analyzeTable(tableDef.name)
+        }
         
         databaseStats.tablesCreated += 1
         log(.info, "Table '\(tableDef.name)' created successfully")
@@ -565,6 +572,8 @@ public actor ColibrìDB {
         // Record modification for statistics
         if config.enableStatistics {
             await statisticsManager.recordModification(table: table)
+            await statisticsManager.updateRowCount(table: table, delta: 1)
+            scheduleAutoAnalyzeIfNeeded(for: table)
         }
         
         databaseStats.rowsInserted += 1
@@ -604,6 +613,7 @@ public actor ColibrìDB {
         // Record modification for statistics
         if config.enableStatistics {
             await statisticsManager.recordModification(table: table)
+            scheduleAutoAnalyzeIfNeeded(for: table)
         }
         
         databaseStats.rowsUpdated += 1
@@ -633,6 +643,8 @@ public actor ColibrìDB {
         // Record modification for statistics
         if config.enableStatistics {
             await statisticsManager.recordModification(table: table)
+            await statisticsManager.updateRowCount(table: table, delta: -1)
+            scheduleAutoAnalyzeIfNeeded(for: table)
         }
         
         databaseStats.rowsDeleted += 1
@@ -1067,6 +1079,36 @@ public actor ColibrìDB {
         let heapTable = await HeapTable(bufferPool: bufferPool, wal: wal, pageDirectory: directory)
         heapTables[table] = heapTable
         return heapTable
+    }
+    
+    private func scheduleAutoAnalyzeIfNeeded(for table: String) {
+        guard config.enableAutoAnalyze else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            let needsRefresh = await self.statisticsManager.needsRefresh(tableName: table)
+            guard needsRefresh else { return }
+            try? await self.analyzeTable(table)
+        }
+    }
+    
+    private func analyzeTable(_ table: String) async throws {
+        guard config.enableStatistics else { return }
+        guard await statisticsManager.beginAnalyze(table: table) else { return }
+        defer {
+            Task {
+                await self.statisticsManager.endAnalyze(table: table)
+            }
+        }
+        
+        let heapTable = try await getOrCreateHeapTable(table: table)
+        let heapSnapshot = try await heapTable.collectStatistics()
+        let snapshot = TableStatisticsSnapshot(
+            rowCount: heapSnapshot.rowCount,
+            pageCount: Int64(heapSnapshot.pageCount),
+            avgRowSize: heapSnapshot.avgRowSize,
+            deadTuples: heapSnapshot.deadTuples
+        )
+        await statisticsManager.updateTableStatistics(table: table, snapshot: snapshot)
     }
     
     private func pageDirectory(for table: String) async throws -> PageDirectory {
