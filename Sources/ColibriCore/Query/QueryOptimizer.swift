@@ -87,8 +87,14 @@ public actor QueryOptimizer {
         // Generate index scan plans if applicable
         if let indexes = await catalog.getTable(plan.table)?.indexes {
             for index in indexes {
-                if let key = plan.filterKey {
-                    candidates.append(.indexScan(table: plan.table, index: index.name, key: String(describing: key)))
+                if let key = plan.filterKey,
+                   let filterColumn = plan.filterColumn,
+                   index.columns.contains(filterColumn) {
+                    candidates.append(.indexScan(
+                        table: plan.table,
+                        index: index.name,
+                        key: encodeFilterValue(key)
+                    ))
                 }
             }
         }
@@ -228,6 +234,19 @@ public actor QueryOptimizer {
             return count
         }
     }
+    
+    private func encodeFilterValue(_ value: Value) -> String {
+        switch value {
+        case .int(let v): return String(v)
+        case .double(let v): return String(v)
+        case .bool(let v): return v ? "1" : "0"
+        case .string(let v): return v
+        case .decimal(let v): return NSDecimalNumber(decimal: v).stringValue
+        case .date(let v): return String(v.timeIntervalSince1970)
+        case .bytes(let data): return data.base64EncodedString()
+        case .null: return "NULL"
+        }
+    }
 }
 
 // MARK: - Supporting Types
@@ -237,6 +256,7 @@ public struct LogicalPlan: @unchecked Sendable {
     public let table: String
     public let predicate: (@Sendable (Row) -> Bool)?
     public let filterKey: Value?
+    public let filterColumn: String?
     public let projection: [String]?
     public let sortColumns: [String]?
     public let limit: Int?
@@ -245,6 +265,7 @@ public struct LogicalPlan: @unchecked Sendable {
         table: String,
         predicate: (@Sendable (Row) -> Bool)? = nil,
         filterKey: Value? = nil,
+        filterColumn: String? = nil,
         projection: [String]? = nil,
         sortColumns: [String]? = nil,
         limit: Int? = nil
@@ -252,6 +273,7 @@ public struct LogicalPlan: @unchecked Sendable {
         self.table = table
         self.predicate = predicate
         self.filterKey = filterKey
+        self.filterColumn = filterColumn
         self.projection = projection
         self.sortColumns = sortColumns
         self.limit = limit

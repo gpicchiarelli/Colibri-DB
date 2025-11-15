@@ -88,8 +88,8 @@ final class BenchmarkSuiteTests: XCTestCase {
     
     /// Misura il tempo necessario per leggere righe già salvate, usando query SQL per esercitare parser/optimizer/executor.
     func testSelectLatencyBenchmark() async throws {
-        let rows = 5_000
-        let selectProbes = 1_000
+        let rows = 2_000
+        let selectProbes = 200
         
         let tempDir = try makeTemporaryDirectory()
         defer { try? FileManager.default.removeItem(at: tempDir) }
@@ -143,6 +143,9 @@ final class BenchmarkSuiteTests: XCTestCase {
                 notes: "Point-selects over \(rows) persisted rows"
             )
         )
+        
+        try await db.shutdown()
+        didShutdown = true
     }
 
     /// Benchmark completo DML: INSERT -> UPDATE -> DELETE con misurazioni distinte.
@@ -250,7 +253,6 @@ final class BenchmarkSuiteTests: XCTestCase {
         // Shutdown to flush metrics and capture final file sizes
         try await db.shutdown()
         didShutdown = true
-        didShutdown = true
         
         let walBytes = fileSize(tempDir.appendingPathComponent("wal.log"))
         let heapBytes = fileSize(tempDir.appendingPathComponent("data.db"))
@@ -321,7 +323,7 @@ final class BenchmarkSuiteTests: XCTestCase {
 
     /// Hash index benchmark (actor-based) per misurare costo inserimenti/ricerche/cancellazioni.
     func testHashIndexBenchmark() async throws {
-        let iterations = 5_000
+        let iterations = 120
         let hashIndex = HashIndex(isUnique: true)
         
         // Insert

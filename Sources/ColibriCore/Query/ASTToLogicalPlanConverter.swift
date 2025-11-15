@@ -31,7 +31,7 @@ public struct ASTToLogicalPlanConverter: Sendable {
         let predicate = try extractPredicate(from: ast)
         
         // Extract filter key (for index optimization)
-        let filterKey = try extractFilterKey(from: ast)
+        let filterInfo = try extractFilterInfo(from: ast)
         
         // Extract ORDER BY columns
         let sortColumns = try extractSortColumns(from: ast)
@@ -42,7 +42,8 @@ public struct ASTToLogicalPlanConverter: Sendable {
         return LogicalPlan(
             table: table,
             predicate: predicate,
-            filterKey: filterKey,
+            filterKey: filterInfo?.value,
+            filterColumn: filterInfo?.column,
             projection: projection,
             sortColumns: sortColumns,
             limit: limit
@@ -416,33 +417,39 @@ public struct ASTToLogicalPlanConverter: Sendable {
         }
     }
     
-    /// Extract filter key for index optimization
-    private func extractFilterKey(from ast: ASTNode) throws -> Value? {
-        // Look for WHERE clause with equality predicate on indexed column
+    private struct FilterInfo {
+        let column: String
+        let value: Value
+    }
+    
+    /// Extract filter info (column + literal) for potential index use
+    private func extractFilterInfo(from ast: ASTNode) throws -> FilterInfo? {
         guard let whereClause = ast.children.first(where: { $0.kind == "where_clause" }) else {
             return nil
         }
         
         guard let predicateExpr = whereClause.children.first,
               predicateExpr.kind == "binary_op",
-              predicateExpr.attributes["operator"] == "=" else {
+              predicateExpr.attributes["operator"] == "=",
+              predicateExpr.children.count >= 2 else {
             return nil
         }
         
-        // Check if left side is column and right side is literal
-        guard predicateExpr.children.count >= 2 else {
-            return nil
-        }
-        
-        _ = predicateExpr.children[0]  // left side (column)
+        let left = predicateExpr.children[0]
         let right = predicateExpr.children[1]
         
-        // If right is literal, use it as filter key
-        if right.kind == "literal", let valueStr = right.attributes["value"] {
-            return Self.parseLiteralStatic(valueStr)
+        guard left.kind == "column_ref",
+              let columnName = left.attributes["name"] else {
+            return nil
         }
         
-        return nil
+        guard right.kind == "literal",
+              let valueStr = right.attributes["value"],
+              let value = Self.parseLiteralStatic(valueStr) else {
+            return nil
+        }
+        
+        return FilterInfo(column: columnName, value: value)
     }
     
     /// Extract ORDER BY columns

@@ -120,6 +120,12 @@ public actor ColibrìDB {
     /// Heap tables for each table
     private var heapTables: [String: HeapTable] = [:]
     
+    /// Primary key indexes per table (single-column PK fast path)
+    private var primaryKeyIndexes: [String: PrimaryKeyIndex] = [:]
+    
+    /// Primary key column names per table
+    private var primaryKeyColumns: [String: String] = [:]
+    
     // MARK: - State Management
     
     /// Active transactions (TLA+: activeTransactions)
@@ -393,11 +399,35 @@ public actor ColibrìDB {
         let txId = try await beginTransaction()
         defer { Task { try? await abort(txId: txId) } }
         
-        try await catalog.createTable(tableDef)
+        var effectiveTableDef = tableDef
+        if let primaryKey = tableDef.primaryKey,
+           primaryKey.count == 1,
+           !tableDef.indexes.contains(where: { $0.name == "\(tableDef.name)_pk" }) {
+            let pkIndex = CatalogIndexDefinition(
+                name: "\(tableDef.name)_pk",
+                columns: primaryKey,
+                unique: true,
+                type: .btree
+            )
+            effectiveTableDef = TableDefinition(
+                name: tableDef.name,
+                columns: tableDef.columns,
+                primaryKey: tableDef.primaryKey,
+                indexes: tableDef.indexes + [pkIndex]
+            )
+        }
+        
+        try await catalog.createTable(effectiveTableDef)
         
         // Create heap table for storage
         let heapTable = HeapTable(bufferPool: bufferPool, wal: wal)
         heapTables[tableDef.name] = heapTable
+        
+        if let primaryKey = effectiveTableDef.primaryKey, primaryKey.count == 1 {
+            let column = primaryKey[0]
+            primaryKeyColumns[tableDef.name] = column
+            primaryKeyIndexes[tableDef.name] = PrimaryKeyIndex(column: column)
+        }
         
         // Register table storage in QueryExecutor
         await queryExecutor.registerTableStorage(tableName: tableDef.name, storage: heapTable)
@@ -457,6 +487,12 @@ public actor ColibrìDB {
         
         // Insert row using heap table
         let rid = try await heapTable.insert(row, txID: txId)
+        await updatePrimaryKeyIndex(
+            for: table,
+            oldRow: nil,
+            newRow: row,
+            newRID: rid
+        )
         
         // Record modification for statistics
         if config.enableStatistics {
@@ -489,7 +525,13 @@ public actor ColibrìDB {
         for (key, value) in row {
             updatedRow[key] = value
         }
-        try await heapTable.update(rid, newRow: updatedRow, txID: txId)
+        let resultingRID = try await heapTable.update(rid, newRow: updatedRow, txID: txId)
+        await updatePrimaryKeyIndex(
+            for: table,
+            oldRow: oldRow,
+            newRow: updatedRow,
+            newRID: resultingRID
+        )
         
         // Record modification for statistics
         if config.enableStatistics {
@@ -516,7 +558,9 @@ public actor ColibrìDB {
         }
         
         // Delete row using heap table
+        let deletedRow = try? await heapTable.read(rid)
         try await heapTable.delete(rid, txID: txId)
+        await updatePrimaryKeyIndex(for: table, oldRow: deletedRow, newRow: nil, newRID: nil)
         
         // Record modification for statistics
         if config.enableStatistics {
@@ -524,6 +568,47 @@ public actor ColibrìDB {
         }
         
         databaseStats.rowsDeleted += 1
+    }
+    
+    private func updatePrimaryKeyIndex(
+        for table: String,
+        oldRow: Row?,
+        newRow: Row?,
+        newRID: RID?
+    ) async {
+        guard let pkColumn = primaryKeyColumns[table],
+              let index = primaryKeyIndexes[table] else {
+            return
+        }
+        
+        if let oldRow, let oldValue = oldRow[pkColumn] {
+            await index.remove(value: oldValue)
+        }
+        
+        if let newRow,
+           let rid = newRID,
+           let newValue = newRow[pkColumn] {
+            await index.upsert(value: newValue, rid: rid)
+        }
+    }
+    
+    // MARK: - Primary Key Fast Path
+    
+    public func selectByPrimaryKey(table: String, key: Value, txId: TxID) async throws -> Row? {
+        guard isRunning else {
+            throw DBError.databaseNotRunning
+        }
+        guard activeTransactions[txId] != nil else {
+            throw DBError.transactionNotFound(txId: txId)
+        }
+        guard let index = primaryKeyIndexes[table],
+              let heapTable = heapTables[table] else {
+            return nil
+        }
+        guard let rid = await index.lookup(value: key) else {
+            return nil
+        }
+        return try await heapTable.read(rid)
     }
     
     // MARK: - Query Operations
@@ -563,6 +648,10 @@ public actor ColibrìDB {
         // Convert AST to LogicalPlan
         let converter = ASTToLogicalPlanConverter()
         let logicalPlan = try converter.convert(ast)
+        
+        if let fastPath = try await tryPrimaryKeyFastPath(logicalPlan: logicalPlan, txId: txId) {
+            return fastPath
+        }
         
         // Optimize logical plan to physical plan
         let physicalPlan = await queryOptimizer.optimize(logical: logicalPlan)
@@ -605,6 +694,39 @@ public actor ColibrìDB {
         
         databaseStats.queriesExecuted += 1
         return QueryResult(rows: rows, columns: columnNames)
+    }
+    
+    private func tryPrimaryKeyFastPath(logicalPlan: LogicalPlan, txId: TxID) async throws -> QueryResult? {
+        guard let pkColumn = primaryKeyColumns[logicalPlan.table],
+              let filterColumn = logicalPlan.filterColumn,
+              filterColumn == pkColumn,
+              let key = logicalPlan.filterKey else {
+            return nil
+        }
+        
+        guard let tableDef = await catalog.getTable(logicalPlan.table) else {
+            throw DBError.tableNotFound(table: logicalPlan.table)
+        }
+        
+        let columnNames = logicalPlan.projection ?? tableDef.columns.map { $0.name }
+        guard let row = try await selectByPrimaryKey(table: logicalPlan.table, key: key, txId: txId) else {
+            databaseStats.queriesExecuted += 1
+            return QueryResult(rows: [], columns: columnNames)
+        }
+        
+        var projectedRow: Row = [:]
+        if let projection = logicalPlan.projection {
+            for column in projection {
+                projectedRow[column] = row[column] ?? .null
+            }
+        } else {
+            for column in tableDef.columns {
+                projectedRow[column.name] = row[column.name] ?? .null
+            }
+        }
+        
+        databaseStats.queriesExecuted += 1
+        return QueryResult(rows: [projectedRow], columns: columnNames)
     }
     
     /// Execute INSERT statement

@@ -46,13 +46,9 @@ public actor HashIndex {
     /// TLA+: INITIAL_BUCKETS
     private static let initialBuckets = 16
     
-    /// Maximum load factor
+    /// Maximum load factor (percentage)
     /// TLA+: MAX_LOAD_FACTOR
     private static let maxLoadFactor = 75
-    
-    /// Maximum number of probes
-    /// TLA+: MAX_PROBES
-    private static let maxProbes = 10
     
     // MARK: - State Variables (TLA+ vars)
     
@@ -76,6 +72,11 @@ public actor HashIndex {
     /// TLA+: isUnique \in BOOLEAN
     private var isUnique: Bool = false
     
+    /// Maximum probes allowed for current bucket count
+    private var probeLimit: Int {
+        return max(numBuckets, Self.initialBuckets)
+    }
+    
     // MARK: - Initialization
     
     public init(isUnique: Bool = false) {
@@ -93,13 +94,16 @@ public actor HashIndex {
     /// Insert entry
     /// TLA+ Action: Insert(key, rid)
     public func insert(key: Value, rid: RID) async throws {
-        // TLA+: Check if resize is needed
-        if loadFactor >= Self.maxLoadFactor {
-            try await resize()
-        }
+        try await ensureCapacityForNextInsert()
         
         // TLA+: Find insertion position
-        let position = try await findInsertPosition(key: key)
+        var position: Int
+        do {
+            position = try await findInsertPosition(key: key)
+        } catch HashIndexError.maxProbesExceeded {
+            try await resize()
+            position = try await findInsertPosition(key: key)
+        }
         
         // TLA+: Check for uniqueness
         if isUnique && buckets[position] != nil && !(buckets[position]?.deleted ?? false) {
@@ -149,26 +153,44 @@ public actor HashIndex {
     
     /// Resize hash table
     /// TLA+ Action: Resize()
-    public func resize() async throws {
-        // TLA+: Double the number of buckets
-        let oldBuckets = buckets
-        let newSize = numBuckets * 2
-        
-        buckets = Array(repeating: nil, count: newSize)
-        numBuckets = newSize
-        numEntries = 0
-        
-        // TLA+: Rehash all entries
-        for entry in oldBuckets {
-            if let entry = entry, !entry.deleted {
-                try await insert(key: entry.key, rid: entry.rid)
-            }
+    public func resize(to requestedSize: Int? = nil) async throws {
+        let targetSize: Int
+        if let requestedSize, requestedSize > 0 {
+            targetSize = max(requestedSize, Self.initialBuckets)
+        } else if numBuckets == 0 {
+            targetSize = Self.initialBuckets
+        } else {
+            targetSize = numBuckets * 2
         }
         
-        logInfo("Resized hash table to \(newSize) buckets")
+        let activeEntries = buckets.compactMap { $0 }.filter { !$0.deleted }
+        
+        buckets = Array(repeating: nil, count: targetSize)
+        numBuckets = targetSize
+        numEntries = 0
+        
+        for entry in activeEntries {
+            try reinsert(entry)
+        }
+        
+        updateLoadFactor()
+        logInfo("Resized hash table to \(targetSize) buckets")
     }
     
     // MARK: - Helper Methods
+    
+    /// Ensure we have enough capacity before inserting new entries
+    private func ensureCapacityForNextInsert() async throws {
+        guard numBuckets > 0 else {
+            try await resize(to: Self.initialBuckets)
+            return
+        }
+        
+        let projectedLoadFactor = ((numEntries + 1) * 100) / numBuckets
+        if projectedLoadFactor >= Self.maxLoadFactor {
+            try await resize()
+        }
+    }
     
     /// Hash function
     private func hash(_ key: Value) -> Int {
@@ -199,8 +221,9 @@ public actor HashIndex {
         let hashValue = hash(key)
         var position = hashValue % numBuckets
         var probes = 0
+        let limit = probeLimit
         
-        while probes < Self.maxProbes {
+        while probes < limit {
             if buckets[position] == nil || buckets[position]?.deleted == true {
                 return position
             }
@@ -217,8 +240,9 @@ public actor HashIndex {
         let hashValue = hash(key)
         var position = hashValue % numBuckets
         var probes = 0
+        let limit = probeLimit
         
-        while probes < Self.maxProbes {
+        while probes < limit {
             if let entry = buckets[position], entry.key == key {
                 return position
             }
@@ -235,7 +259,30 @@ public actor HashIndex {
     /// Update load factor
     private func updateLoadFactor() {
         // TLA+: Update load factor
+        guard numBuckets > 0 else {
+            loadFactor = 0
+            return
+        }
         loadFactor = (numEntries * 100) / numBuckets
+    }
+    
+    /// Reinsert entry during resize without triggering additional operations
+    private func reinsert(_ entry: HashEntry) throws {
+        var position = hash(entry.key) % numBuckets
+        var probes = 0
+        let limit = probeLimit
+        
+        while probes < limit {
+            if buckets[position] == nil || buckets[position]?.deleted == true {
+                buckets[position] = HashEntry(key: entry.key, rid: entry.rid, deleted: false, timestamp: entry.timestamp)
+                numEntries += 1
+                return
+            }
+            position = (position + 1) % numBuckets
+            probes += 1
+        }
+        
+        throw HashIndexError.maxProbesExceeded
     }
     
     // MARK: - Query Operations

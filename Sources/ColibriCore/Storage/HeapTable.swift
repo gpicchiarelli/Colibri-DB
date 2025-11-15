@@ -143,11 +143,50 @@ public actor HeapTable {
     /// TLA+ Action: UpdateRow(rid, newRow)
     /// Precondition: rid exists
     /// Postcondition: row updated (in-place or new slot)
-    public func update(_ rid: RID, newRow: Row, txID: TxID) async throws {
-        // For simplicity, delete old and insert new
-        // A real implementation would try in-place update first
-        try await delete(rid, txID: txID)
-        _ = try await insert(newRow, txID: txID)
+    public func update(_ rid: RID, newRow: Row, txID: TxID) async throws -> RID {
+        let encoder = JSONEncoder()
+        let rowData = try encoder.encode(newRow)
+        
+        var page = try await bufferPool.getPage(rid.pageID)
+        guard Int(rid.slotID) < page.slots.count else {
+            try await bufferPool.unpinPage(rid.pageID)
+            throw DBError.notFound
+        }
+        
+        var slot = page.slots[Int(rid.slotID)]
+        guard !slot.tombstone else {
+            try await bufferPool.unpinPage(rid.pageID)
+            throw DBError.notFound
+        }
+        
+        if rowData.count <= slot.length {
+            let start = Int(slot.offset)
+            let end = start + Int(rowData.count)
+            page.data.replaceSubrange(start..<end, with: rowData)
+            if rowData.count < slot.length {
+                let padding = [UInt8](repeating: 0, count: Int(slot.length) - rowData.count)
+                page.data.replaceSubrange(end..<start + Int(slot.length), with: padding)
+            }
+            slot.length = UInt16(rowData.count)
+            page.slots[Int(rid.slotID)] = slot
+            
+            let lsn = try await wal.append(
+                kind: .heapUpdate,
+                txID: txID,
+                pageID: rid.pageID,
+                payload: rowData
+            )
+            page.header.pageLSN = lsn
+            try await wal.updatePageLSN(rid.pageID, lsn: lsn)
+            
+            try await bufferPool.putPage(rid.pageID, page: page, isDirty: true)
+            try await bufferPool.unpinPage(rid.pageID)
+            return rid
+        } else {
+            try await bufferPool.unpinPage(rid.pageID)
+            try await delete(rid, txID: txID)
+            return try await insert(newRow, txID: txID)
+        }
     }
     
     /// Delete a row from the heap table
