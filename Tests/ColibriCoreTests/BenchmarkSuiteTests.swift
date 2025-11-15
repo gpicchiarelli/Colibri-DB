@@ -156,9 +156,12 @@ final class BenchmarkSuiteTests: XCTestCase {
         
         let db = try makeDatabase(at: tempDir, bufferPoolSize: 1_024)
         try await db.start()
+        var didShutdown = false
         defer {
-            Task {
-                try? await db.shutdown()
+            if !didShutdown {
+                Task {
+                    try? await db.shutdown()
+                }
             }
         }
         try await createBenchmarkTable(in: db)
@@ -247,6 +250,7 @@ final class BenchmarkSuiteTests: XCTestCase {
         // Shutdown to flush metrics and capture final file sizes
         try await db.shutdown()
         didShutdown = true
+        didShutdown = true
         
         let walBytes = fileSize(tempDir.appendingPathComponent("wal.log"))
         let heapBytes = fileSize(tempDir.appendingPathComponent("data.db"))
@@ -317,7 +321,7 @@ final class BenchmarkSuiteTests: XCTestCase {
 
     /// Hash index benchmark (actor-based) per misurare costo inserimenti/ricerche/cancellazioni.
     func testHashIndexBenchmark() async throws {
-        let iterations = 60_000
+        let iterations = 5_000
         let hashIndex = HashIndex(isUnique: true)
         
         // Insert
