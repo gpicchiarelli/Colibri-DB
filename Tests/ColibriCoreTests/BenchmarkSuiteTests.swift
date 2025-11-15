@@ -407,7 +407,8 @@ final class BenchmarkSuiteTests: XCTestCase {
             checkpointInterval: 30,
             logLevel: .error,
             enableStatistics: false,
-            enableAutoAnalyze: false
+            enableAutoAnalyze: false,
+            disableWALFsyncForBenchmarks: true
         )
         return try ColibrìDB(config: config)
     }

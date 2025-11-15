@@ -70,12 +70,18 @@ public actor FileWAL {
     private let walFilePath: URL
     private let config: GroupCommitConfig
     private let fileHandle: FileHandle
+    private let fsyncEnabled: Bool
     
     // MARK: - Initialization
     
-    public init(walFilePath: URL, config: GroupCommitConfig = GroupCommitConfig()) throws {
+    public init(
+        walFilePath: URL,
+        config: GroupCommitConfig = GroupCommitConfig(),
+        fsyncOnFlush: Bool = true
+    ) throws {
         self.walFilePath = walFilePath
         self.config = config
+        self.fsyncEnabled = fsyncOnFlush
         
         // Create the directory if it doesn't exist
         try FileManager.default.createDirectory(
@@ -141,6 +147,7 @@ public actor FileWAL {
         kind: WALRecordKind,
         txID: TxID,
         pageID: PageID,
+        undoNextLSN: LSN = 0,
         payload: Data? = nil
     ) throws -> LSN {
         guard !crashed else {
@@ -157,7 +164,7 @@ public actor FileWAL {
             kind: kind,
             txID: txID,
             pageID: pageID,
-            undoNextLSN: 0,
+            undoNextLSN: undoNextLSN,
             payload: payload
         )
         
@@ -412,7 +419,9 @@ public actor FileWAL {
         try fileHandle.truncate(atOffset: 0)
         try fileHandle.seek(toOffset: 0)
         fileHandle.write(data)
-        try fileHandle.synchronize()
+        if fsyncEnabled {
+            try fileHandle.synchronize()
+        }
     }
     
     // MARK: - Invariant Checking (for testing)

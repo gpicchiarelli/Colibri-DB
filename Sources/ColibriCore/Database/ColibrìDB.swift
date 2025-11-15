@@ -40,6 +40,7 @@ public struct ColibrìDBConfiguration: Codable, Sendable {
     public let enableAutoAnalyze: Bool
     public let defaultIsolationLevel: IsolationLevel
     public let groupCommitConfig: GroupCommitConfig
+    public let disableWALFsyncForBenchmarks: Bool
     
     public init(
         dataDirectory: URL,
@@ -61,7 +62,8 @@ public struct ColibrìDBConfiguration: Codable, Sendable {
             enableStatistics: enableStatistics,
             enableAutoAnalyze: enableAutoAnalyze,
             defaultIsolationLevel: .serializable,
-            groupCommitConfig: .default
+            groupCommitConfig: .default,
+            disableWALFsyncForBenchmarks: false
         )
     }
     
@@ -75,7 +77,8 @@ public struct ColibrìDBConfiguration: Codable, Sendable {
         enableStatistics: Bool = true,
         enableAutoAnalyze: Bool = true,
         defaultIsolationLevel: IsolationLevel = .serializable,
-        groupCommitConfig: GroupCommitConfig = .default
+        groupCommitConfig: GroupCommitConfig = .default,
+        disableWALFsyncForBenchmarks: Bool = false
     ) {
         self.dataDirectory = dataDirectory
         self.bufferPoolSize = bufferPoolSize
@@ -87,6 +90,7 @@ public struct ColibrìDBConfiguration: Codable, Sendable {
         self.enableAutoAnalyze = enableAutoAnalyze
         self.defaultIsolationLevel = defaultIsolationLevel
         self.groupCommitConfig = groupCommitConfig
+        self.disableWALFsyncForBenchmarks = disableWALFsyncForBenchmarks
     }
 }
 
@@ -184,7 +188,8 @@ public actor ColibrìDB {
         
         // Initialize storage layer
         let fileWAL = try FileWAL(
-            walFilePath: config.dataDirectory.appendingPathComponent("wal.log")
+            walFilePath: config.dataDirectory.appendingPathComponent("wal.log"),
+            fsyncOnFlush: !config.disableWALFsyncForBenchmarks
         )
         self.wal = fileWAL
         self.groupCommitManager = GroupCommitManager(config: config.groupCommitConfig) { [weak fileWAL] targetLSN in

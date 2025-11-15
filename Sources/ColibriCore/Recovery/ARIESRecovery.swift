@@ -198,7 +198,7 @@ public actor ARIESRecovery {
                     att[record.txID] = entry
                 }
                 
-            case .heapInsert, .heapUpdate, .heapDelete:
+            case .heapInsert, .heapUpdate, .heapDelete, .clr:
                 // Update ATT
                 if var entry = att[record.txID] {
                     entry = ATTEntry(lastLSN: record.lsn, status: entry.status)
@@ -255,7 +255,7 @@ public actor ARIESRecovery {
         // Redo from minRecLSN
         for record in records where record.lsn >= minRecLSN {
             switch record.kind {
-            case .heapInsert, .heapUpdate, .heapDelete:
+            case .heapInsert, .heapUpdate, .heapDelete, .clr:
                 // Check if page is in DPT
                 if dpt[record.pageID] != nil {
                     // Get page
@@ -343,16 +343,30 @@ public actor ARIESRecovery {
             }
             
             // Undo the operation
+            if record.kind == .clr {
+                currentLSN = record.undoNextLSN
+                continue
+            }
+            
             if record.kind != .begin && record.kind != .commit && record.kind != .abort {
                 try await undoOperation(record: record)
                 
                 // Write CLR (Compensation Log Record)
                 // TLA+: clrRecords' = Append(clrRecords, newLSN)
+                let clrPayload = try JSONEncoder().encode(
+                    CLRRecord(
+                        txID: txID,
+                        undoNextLSN: record.prevLSN,
+                        pageID: record.pageID,
+                        operation: record.kind
+                    )
+                )
                 let clrLSN = try await wal.append(
                     kind: .clr,
                     txID: txID,
                     pageID: record.pageID,
-                    payload: nil
+                    undoNextLSN: record.prevLSN,
+                    payload: clrPayload
                 )
                 clrRecords.append(clrLSN)
             }
