@@ -208,8 +208,14 @@ public final class BTreeIndex: @unchecked Sendable {
         if node.isLeaf {
             // Insert key into leaf node
             let pos = findInsertPosition(keys: node.keys, key: key)
-            node.keys.insert(key, at: pos)
-            node.rids.insert([rid], at: pos)
+            
+            if pos < node.keys.count && node.keys[pos] == key {
+                // Existing key – append RID to the same slot
+                node.rids[pos].append(rid)
+            } else {
+                node.keys.insert(key, at: pos)
+                node.rids.insert([rid], at: pos)
+            }
         } else {
             // Find child to recurse into
             let pos = findChildIndex(keys: node.keys, key: key)

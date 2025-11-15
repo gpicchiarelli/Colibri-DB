@@ -473,10 +473,14 @@ public actor ARTIndex {
         }
         
         // Traverse all children
+        let prefixCount = min(node.prefixLen, node.prefix.count)
+        
         for byte in 0..<256 {
             if let child = node.getChild(UInt8(byte)) {
                 var newKey = currentKey
-                newKey.append(contentsOf: node.prefix[0..<node.prefixLen])
+                if prefixCount > 0 {
+                    newKey.append(contentsOf: node.prefix[0..<prefixCount])
+                }
                 newKey.append(UInt8(byte))
                 collectLeaves(node: child, currentKey: newKey, results: &results)
             }

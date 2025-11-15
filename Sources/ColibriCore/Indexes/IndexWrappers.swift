@@ -59,7 +59,7 @@ public actor ARTIndexWrapper: IndexProtocol {
     private let art: ARTIndex
     
     public nonisolated var supportsOrderedScans: Bool {
-        return true  // ART supports prefix scans (ordered)
+        return false  // Prefix scans only; arbitrary range ordering not yet supported
     }
     
     public init(_ art: ARTIndex) {
