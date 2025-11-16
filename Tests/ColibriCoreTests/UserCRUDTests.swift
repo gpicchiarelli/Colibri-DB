@@ -6,7 +6,7 @@ final class UserCRUDTests: XCTestCase {
         let auth = AuthenticationManager()
         
         // Create
-        try auth.createUser(username: "u1", email: "u1@example.com", password: "Passw0rd!", role: .user)
+        try await auth.createUser(username: "u1", email: "u1@example.com", password: "Passw0rd!", role: .user)
         XCTAssertNotNil(auth.getUser(username: "u1"))
         
         // Login
@@ -15,7 +15,7 @@ final class UserCRUDTests: XCTestCase {
         XCTAssertEqual(auth.getActiveSessionsCount(), 1)
         
         // Update role
-        try auth.updateUserRole(username: "u1", newRole: .admin)
+        try await auth.updateUserRole(username: "u1", newRole: .admin)
         XCTAssertEqual(auth.getUser(username: "u1")?.role, .admin)
         
         // Change password

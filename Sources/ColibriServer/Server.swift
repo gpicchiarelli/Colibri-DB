@@ -388,7 +388,7 @@ public actor RequestHandler {
         if request.path == "/api/users" {
             switch request.method {
             case "GET":
-                let users = auth.getAllUsers().map(PublicUser.from(_:))
+                let users = await auth.getAllUsers().map(PublicUser.from(_:))
                 let data = try JSONEncoder().encode(users)
                 return HTTPResponse.ok(body: data)
             case "POST":
@@ -397,7 +397,7 @@ public actor RequestHandler {
                 // transactional boundary
                 let tx = try await database.beginTransaction()
                 do {
-                    try auth.createUser(username: createReq.username, email: createReq.email, password: createReq.password, role: createReq.role)
+                    try await auth.createUser(username: createReq.username, email: createReq.email, password: createReq.password, role: createReq.role)
                     try await database.commit(txId: tx)
                     return HTTPResponse.ok()
                 } catch {
@@ -417,7 +417,7 @@ public actor RequestHandler {
             if parts.count == 1 {
                 switch request.method {
                 case "GET":
-                    if let user = auth.getUser(username: username) {
+                    if let user = await auth.getUser(username: username) {
                         let data = try JSONEncoder().encode(PublicUser.from(user))
                         return HTTPResponse.ok(body: data)
                     } else {
@@ -441,7 +441,7 @@ public actor RequestHandler {
                 let req = try JSONDecoder().decode(UpdateUserRoleRequest.self, from: body)
                 let tx = try await database.beginTransaction()
                 do {
-                    try auth.updateUserRole(username: username, newRole: req.role)
+                    try await auth.updateUserRole(username: username, newRole: req.role)
                     try await database.commit(txId: tx)
                     return HTTPResponse.ok()
                 } catch {
@@ -571,7 +571,7 @@ public actor ColibriServer {
         Task { try? await bootstrap.initialize(on: database) }
         let userStore = SQLUserStore(database: database)
         Task { try? await userStore.initializeSchema() }
-        self.authManager = AuthenticationManager()
+        self.authManager = AuthenticationManager(store: userStore)
         self.requestHandler = RequestHandler(database: database, auth: authManager)
     }
     
