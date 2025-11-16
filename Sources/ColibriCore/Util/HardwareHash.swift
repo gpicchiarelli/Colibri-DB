@@ -7,14 +7,14 @@ import Foundation
 import CryptoKit
 
 public enum HardwareHash {
-    public enum Backend {
+    public enum Backend: Sendable {
         case sha256
         case xxhash64
     }
     
     /// Default backend used when not specified explicitly.
     /// - For compatibility, we keep SHA-256 as default.
-    public static var defaultBackend: Backend = .sha256
+    public static let defaultBackend: Backend = .sha256
     
     /// Hash arbitrary `Value` into a 64-bit integer using SHA256 (hardware-accelerated on Apple Silicon).
     /// The result is deterministic across runs and platforms for the same serialized value and seed.

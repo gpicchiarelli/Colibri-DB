@@ -15,7 +15,7 @@
 //
 
 import Foundation
-import CRC32Accelerator
+// CRC32 handled via Utilities/CRC32Accelerator.swift wrapper
 
 /// File-based Write-Ahead Log implementation
 /// Corresponds to TLA+ module: WAL.tla
@@ -527,35 +527,5 @@ public actor FileWAL {
     }
 }
 
-// MARK: - CRC32 Helper
-
-private enum CRC32 {
-    static func checksum(data: Data) -> UInt32 {
-        // Try hardware-accelerated CRC32 first; fallback to software IEEE CRC32
-        return data.withUnsafeBytes { rawBuffer in
-            guard let base = rawBuffer.bindMemory(to: UInt8.self).baseAddress else {
-                return CRC32.softwareIEEE(data)
-            }
-            var usedHW: Int32 = 0
-            let hw = crc32_accelerated(0xFFFFFFFF, base, data.count, &usedHW)
-            if usedHW == 1 && hw != 0 {
-                return hw
-            }
-            return CRC32.softwareIEEE(data)
-        }
-    }
-    
-    private static func softwareIEEE(_ data: Data) -> UInt32 {
-        var crc: UInt32 = 0xFFFFFFFF
-        for byte in data {
-            var x = (crc ^ UInt32(byte)) & 0xFF
-            for _ in 0..<8 {
-                let mask = (x & 1) * 0xEDB88320
-                x = (x >> 1) ^ UInt32(mask)
-            }
-            crc = (crc >> 8) ^ x
-        }
-        return ~crc
-    }
-}
+// CRC32 helper unified in CRC32Accelerator.calculate(_:)
 

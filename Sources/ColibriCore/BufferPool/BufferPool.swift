@@ -20,7 +20,7 @@
 //
 
 import Foundation
-import CRC32Accelerator
+// CRC32 handled via Utilities/CRC32Accelerator.swift wrapper
 
 /// Buffer Pool for page caching with Clock-Sweep eviction
 /// Corresponds to TLA+ module: BufferPool.tla
@@ -438,12 +438,7 @@ public actor FileDiskManager: DiskManager {
             var mutable = data
             let storedCRC: UInt32 = mutable.prefix(4).withUnsafeBytes { $0.load(as: UInt32.self) }
             let body = mutable.advanced(by: 4)
-            let computed = body.withUnsafeBytes { raw -> UInt32 in
-                guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { return 0 }
-                var usedHW: Int32 = 0
-                let crc = crc32_accelerated(0xFFFFFFFF, base, body.count, &usedHW)
-                return ~crc
-            }
+            let computed = CRC32Accelerator.calculate(body)
             if storedCRC != 0 && storedCRC != computed {
                 throw DBError.corruption
             }
@@ -474,12 +469,7 @@ public actor FileDiskManager: DiskManager {
         }
         // compute CRC over bytes [4..PAGE_SIZE)
         let body = pageBuffer.advanced(by: 4)
-        let crc = body.withUnsafeBytes { raw -> UInt32 in
-            guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { return 0 }
-            var usedHW: Int32 = 0
-            let v = crc32_accelerated(0xFFFFFFFF, base, body.count, &usedHW)
-            return ~v
-        }
+        let crc = CRC32Accelerator.calculate(body)
         // write CRC32 little-endian into first 4 bytes
         var crcLE = crc.littleEndian
         withUnsafeBytes(of: &crcLE) { bytes in
