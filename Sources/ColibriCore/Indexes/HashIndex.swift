@@ -15,7 +15,6 @@
 //
 
 import Foundation
-import CryptoKit
 
 // MARK: - Hash Index Types
 
@@ -195,7 +194,7 @@ public actor HashIndex {
     
     /// Hash function (deterministic, hardware-accelerated)
     private func hash(_ key: Value) -> Int {
-        let h = HardwareHash.hash64(key, seed: 0)
+        let h = HardwareHash.hash64(key, seed: 0, backend: .xxhash64)
         // Ensure non-negative Int to avoid negative modulo behavior
         return Int(truncatingIfNeeded: h & 0x7fffffffffffffff)
     }
