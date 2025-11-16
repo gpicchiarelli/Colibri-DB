@@ -15,6 +15,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 // MARK: - Hash Index Types
 
@@ -192,27 +193,11 @@ public actor HashIndex {
         }
     }
     
-    /// Hash function
+    /// Hash function (deterministic, hardware-accelerated)
     private func hash(_ key: Value) -> Int {
-        // TLA+: Hash function
-        switch key {
-        case .int(let value):
-            return abs(value.hashValue)
-        case .string(let value):
-            return abs(value.hashValue)
-        case .bool(let value):
-            return value ? 1 : 0
-        case .double(let value):
-            return abs(value.hashValue)
-        case .decimal(let value):
-            return abs(value.hashValue)
-        case .date(let value):
-            return abs(value.hashValue)
-        case .bytes(let value):
-            return abs(value.hashValue)
-        case .null:
-            return 0
-        }
+        let h = HardwareHash.hash64(key, seed: 0)
+        // Ensure non-negative Int to avoid negative modulo behavior
+        return Int(truncatingIfNeeded: h & 0x7fffffffffffffff)
     }
     
     /// Find insertion position
