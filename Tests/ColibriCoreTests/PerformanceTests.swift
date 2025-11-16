@@ -389,7 +389,7 @@ final class PerformanceTests {
         let authManager = AuthenticationManager()
         
         // Create user
-        try authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
+        try await authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
         
         let authCount = 10000
         let startTime = Date()
@@ -399,7 +399,7 @@ final class PerformanceTests {
             let token = try await authManager.authenticate(username: "alice", password: "password123")
             XCTAssertNotNil(token, "Authentication should succeed")
             
-            let validatedSession = try authManager.validateSession(sessionId: token)
+            let validatedSession = try await authManager.validateSession(sessionId: token)
             XCTAssertNotNil(validatedSession, "Session validation should succeed")
         }
         
