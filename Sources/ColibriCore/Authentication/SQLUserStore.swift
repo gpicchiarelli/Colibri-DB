@@ -83,19 +83,19 @@ public actor SQLUserStore: UserStore {
         let sql = "SELECT username,email,role,status,created_at,last_login,password_hash,salt FROM \(schema).users WHERE username = '\(escape(username))' LIMIT 1;"
         let result = try await db.executeQuery(sql, txId: try await db.beginTransaction())
         guard let row = result.rows.first else { return nil }
-        let role = UserRole(rawValue: row["role"]?.stringValue ?? "user") ?? .user
-        let status = UserStatus(rawValue: row["status"]?.stringValue ?? "active") ?? .active
-        let createdAt = Date(timeIntervalSince1970: row["created_at"]?.doubleValue ?? 0)
-        let lastLogin: Date? = row["last_login"]?.doubleValue != nil ? Date(timeIntervalSince1970: row["last_login"]!.doubleValue!) : nil
+        let role = UserRole(rawValue: str(row["role"]) ?? "user") ?? .user
+        let status = UserStatus(rawValue: str(row["status"]) ?? "active") ?? .active
+        let createdAt = Date(timeIntervalSince1970: dbl(row["created_at"]) ?? 0)
+        let lastLogin: Date? = dbl(row["last_login"]).map { Date(timeIntervalSince1970: $0) }
         return UserMetadata(
-            username: row["username"]?.stringValue ?? username,
-            email: row["email"]?.stringValue ?? "",
+            username: str(row["username"]) ?? username,
+            email: str(row["email"]) ?? "",
             role: role,
             status: status,
             createdAt: createdAt,
             lastLogin: lastLogin,
-            passwordHash: row["password_hash"]?.stringValue ?? "",
-            salt: row["salt"]?.stringValue ?? ""
+            passwordHash: str(row["password_hash"]) ?? "",
+            salt: str(row["salt"]) ?? ""
         )
     }
     
@@ -103,19 +103,19 @@ public actor SQLUserStore: UserStore {
         let sql = "SELECT username,email,role,status,created_at,last_login,password_hash,salt FROM \(schema).users;"
         let result = try await db.executeQuery(sql, txId: try await db.beginTransaction())
         return result.rows.map { row in
-            let role = UserRole(rawValue: row["role"]?.stringValue ?? "user") ?? .user
-            let status = UserStatus(rawValue: row["status"]?.stringValue ?? "active") ?? .active
-            let createdAt = Date(timeIntervalSince1970: row["created_at"]?.doubleValue ?? 0)
-            let lastLogin: Date? = row["last_login"]?.doubleValue != nil ? Date(timeIntervalSince1970: row["last_login"]!.doubleValue!) : nil
+            let role = UserRole(rawValue: str(row["role"]) ?? "user") ?? .user
+            let status = UserStatus(rawValue: str(row["status"]) ?? "active") ?? .active
+            let createdAt = Date(timeIntervalSince1970: dbl(row["created_at"]) ?? 0)
+            let lastLogin: Date? = dbl(row["last_login"]).map { Date(timeIntervalSince1970: $0) }
             return UserMetadata(
-                username: row["username"]?.stringValue ?? "",
-                email: row["email"]?.stringValue ?? "",
+                username: str(row["username"]) ?? "",
+                email: str(row["email"]) ?? "",
                 role: role,
                 status: status,
                 createdAt: createdAt,
                 lastLogin: lastLogin,
-                passwordHash: row["password_hash"]?.stringValue ?? "",
-                salt: row["salt"]?.stringValue ?? ""
+                passwordHash: str(row["password_hash"]) ?? "",
+                salt: str(row["salt"]) ?? ""
             )
         }
     }
@@ -158,11 +158,11 @@ public actor SQLUserStore: UserStore {
         let sql = "SELECT session_id,username,role,created_at,expires_at,is_active FROM \(schema).sessions WHERE session_id = '\(escape(sessionId))' LIMIT 1;"
         let result = try await db.executeQuery(sql, txId: try await db.beginTransaction())
         guard let row = result.rows.first else { return nil }
-        let role = UserRole(rawValue: row["role"]?.stringValue ?? "user") ?? .user
-        let createdAt = Date(timeIntervalSince1970: row["created_at"]?.doubleValue ?? 0)
-        let expiresAt = Date(timeIntervalSince1970: row["expires_at"]?.doubleValue ?? 0)
-        let isActive = (row["is_active"]?.intValue ?? 0) != 0
-        return Session(sessionId: row["session_id"]?.stringValue ?? sessionId, username: row["username"]?.stringValue ?? "", role: role, createdAt: createdAt, expiresAt: expiresAt, isActive: isActive)
+        let role = UserRole(rawValue: str(row["role"]) ?? "user") ?? .user
+        let createdAt = Date(timeIntervalSince1970: dbl(row["created_at"]) ?? 0)
+        let expiresAt = Date(timeIntervalSince1970: dbl(row["expires_at"]) ?? 0)
+        let isActive = (int(row["is_active"]) ?? 0) != 0
+        return Session(sessionId: str(row["session_id"]) ?? sessionId, username: str(row["username"]) ?? "", role: role, createdAt: createdAt, expiresAt: expiresAt, isActive: isActive)
     }
     
     public func deleteSession(sessionId: String) async throws {
@@ -179,6 +179,39 @@ public actor SQLUserStore: UserStore {
     // MARK: - Helpers
     private func escape(_ s: String) -> String {
         return s.replacingOccurrences(of: "'", with: "''")
+    }
+    
+    // Value extractors
+    private func str(_ v: Value?) -> String? {
+        guard let v else { return nil }
+        switch v {
+        case .string(let s): return s
+        case .int(let i): return String(i)
+        case .double(let d): return String(d)
+        case .bool(let b): return b ? "1" : "0"
+        case .decimal(let dec): return "\(dec)"
+        case .date(let date): return String(date.timeIntervalSince1970)
+        case .bytes(let data): return data.base64EncodedString()
+        case .null: return nil
+        }
+    }
+    private func dbl(_ v: Value?) -> Double? {
+        guard let v else { return nil }
+        switch v {
+        case .double(let d): return d
+        case .int(let i): return Double(i)
+        case .string(let s): return Double(s)
+        default: return nil
+        }
+    }
+    private func int(_ v: Value?) -> Int? {
+        guard let v else { return nil }
+        switch v {
+        case .int(let i): return Int(i)
+        case .bool(let b): return b ? 1 : 0
+        case .string(let s): return Int(s)
+        default: return nil
+        }
     }
 }
 
