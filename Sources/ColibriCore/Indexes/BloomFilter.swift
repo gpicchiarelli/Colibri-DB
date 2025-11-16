@@ -19,7 +19,7 @@ public struct BloomFilter {
     
     private func hash(_ value: Value, seed: Int) -> Int {
         // Double hashing: h_i = (h1 + i * h2) % m
-        let (h1, h2) = HardwareHash.hash64x2(value, seed: UInt64(seed))
+        let (h1, h2) = HardwareHash.hash64x2(value, seed: UInt64(seed), backend: .xxhash64)
         let combined = (h1 &+ UInt64(seed) &* h2) % UInt64(size)
         return Int(combined)
     }
