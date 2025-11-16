@@ -133,7 +133,7 @@ struct BenchmarksMain {
         var acc1: UInt64 = 0
         for i in 0..<numItems {
             let (h1, h2) = HardwareHash.hash64x2(values[i], seed: UInt64(i), backend: .sha256)
-            acc1 &+= h1 &^ h2
+            acc1 &+= (h1 ^ h2)
         }
         let shaElapsed = Date().timeIntervalSince(t0)
         
@@ -142,13 +142,13 @@ struct BenchmarksMain {
         var acc2: UInt64 = 0
         for i in 0..<numItems {
             let (h1, h2) = HardwareHash.hash64x2(values[i], seed: UInt64(i), backend: .xxhash64)
-            acc2 &+= h1 &^ h2
+            acc2 &+= (h1 ^ h2)
         }
         let xxElapsed = Date().timeIntervalSince(t0)
         
         print("  Items: \(numItems)")
         print("  SHA-256: \(String(format: "%.2f", shaElapsed))s (\(String(format: "%.0f", Double(numItems)/shaElapsed)) ops/s) acc=\(acc1)")
-        print("  XXHash64: \(String(format: \"%.2f\", xxElapsed))s (\(String(format: \"%.0f\", Double(numItems)/xxElapsed)) ops/s) acc=\(acc2)\n")
+        print("  XXHash64: \(String(format: "%.2f", xxElapsed))s (\(String(format: "%.0f", Double(numItems)/xxElapsed)) ops/s) acc=\(acc2)\n")
     }
     
     // MARK: - CRC32 Benchmarks
@@ -173,7 +173,7 @@ struct BenchmarksMain {
             let elapsed = Date().timeIntervalSince(start)
             let totalBytes = Double(itersPerSize * sz)
             let mbps = (totalBytes / elapsed) / (1024.0 * 1024.0)
-            print("  Size \(sz)B: \(String(format: \"%.2f\", elapsed))s, \(String(format: \"%.1f\", mbps)) MB/s, acc=\(acc)")
+            print("  Size \(sz)B: \(String(format: "%.2f", elapsed))s, \(String(format: "%.1f", mbps)) MB/s, acc=\(acc)")
         }
         print("")
     }
