@@ -25,6 +25,32 @@ final class BloomFilterHashTests: XCTestCase {
             XCTAssertTrue(bf.contains(v))
         }
     }
+    
+    func testObservedFPRWithinReasonableBound() {
+        // Parameters
+        let m = 10_000
+        let k = 3
+        let n = 1_000
+        var bf = BloomFilter(size: m, hashCount: k)
+        let inserted: [Value] = (0..<n).map { .string("v-\($0)") }
+        for v in inserted { bf.insert(v) }
+        
+        // Estimate theoretical FPR
+        let mD = Double(m), kD = Double(k), nD = Double(n)
+        let expectedFPR = pow(1.0 - exp(-kD * nD / mD), kD)
+        
+        // Measure observed FPR over a disjoint set
+        let testN = 10_000
+        var falsePositives = 0
+        for i in n..<(n + testN) {
+            let v: Value = .string("v-\(i)")
+            if bf.contains(v) { falsePositives += 1 }
+        }
+        let observed = Double(falsePositives) / Double(testN)
+        
+        // Allow generous tolerance to avoid flakiness in CI
+        XCTAssertLessThanOrEqual(observed, expectedFPR * 1.8 + 0.01, "Observed FPR \(observed) too high vs expected \(expectedFPR)")
+    }
 }
 
 
