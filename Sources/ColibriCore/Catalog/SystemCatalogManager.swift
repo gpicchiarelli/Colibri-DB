@@ -434,7 +434,10 @@ public actor SystemCatalogManager {
         
         // Combine into descriptors
         for (constId, def) in constraintDefs {
-            let cols = constraintCols[constId]?.filter { $0 != 0 } ?? []
+            let cols: [Int64] = {
+                guard let arr = constraintCols[constId] else { return [] }
+                return arr.filter { $0 != 0 }
+            }()
             let refCols: [Int64]? = {
                 guard let arr = constraintRefCols[constId] else { return nil }
                 let filtered = arr.filter { $0 != 0 }
@@ -459,7 +462,7 @@ public actor SystemCatalogManager {
     // MARK: - Name Resolution
     
     /// Resolve database.schema.table to table_id
-    public func resolveTable(database: String?, schema: String?, table: String) throws -> Int64? {
+    public func resolveTable(database: String?, schema: String?, table: String) async throws -> Int64? {
         var dbId: Int64?
         if let dbName = database {
             dbId = databaseByName[dbName]

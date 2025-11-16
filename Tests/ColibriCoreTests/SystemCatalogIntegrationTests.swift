@@ -45,7 +45,7 @@ final class SystemCatalogIntegrationTests: XCTestCase {
         try await manager.loadAll()
         
         // Should have at least colibri_sys database
-        let tableId = try manager.resolveTable(database: "colibri_sys", schema: "sys", table: "sys_users")
+        let tableId = try await manager.resolveTable(database: "colibri_sys", schema: "sys", table: "sys_users")
         XCTAssertNotNil(tableId, "Should resolve sys_users table")
     }
     
@@ -67,7 +67,7 @@ final class SystemCatalogIntegrationTests: XCTestCase {
         try await manager.loadAll()
         
         // Resolve the table
-        let tableId = try manager.resolveTable(database: nil, schema: "test_schema", table: "test_table")
+        let tableId = try await manager.resolveTable(database: nil, schema: "test_schema", table: "test_table")
         XCTAssertNotNil(tableId, "Should resolve test_table")
         
         if let tableId = tableId {

@@ -7,7 +7,8 @@ final class UserCRUDTests: XCTestCase {
         
         // Create
         try await auth.createUser(username: "u1", email: "u1@example.com", password: "Passw0rd!", role: .user)
-        XCTAssertNotNil(auth.getUser(username: "u1"))
+        let user1 = await auth.getUser(username: "u1")
+        XCTAssertNotNil(user1)
         
         // Login
         let sessionId = try await auth.authenticate(username: "u1", password: "Passw0rd!")
@@ -16,7 +17,8 @@ final class UserCRUDTests: XCTestCase {
         
         // Update role
         try await auth.updateUserRole(username: "u1", newRole: .admin)
-        XCTAssertEqual(auth.getUser(username: "u1")?.role, .admin)
+        let user1After = await auth.getUser(username: "u1")
+        XCTAssertEqual(user1After?.role, .admin)
         
         // Change password
         try await auth.changePassword(username: "u1", oldPassword: "Passw0rd!", newPassword: "N3wPassw0rd!")
@@ -28,7 +30,8 @@ final class UserCRUDTests: XCTestCase {
         
         // Delete
         try await auth.deleteUser(username: "u1")
-        XCTAssertNil(auth.getUser(username: "u1"))
+        let user1Deleted = await auth.getUser(username: "u1")
+        XCTAssertNil(user1Deleted)
     }
 }
 
