@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import CryptoKit
 
 public struct BloomFilter {
     private var bits: [Bool]
