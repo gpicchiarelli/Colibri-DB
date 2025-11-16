@@ -566,7 +566,9 @@ public actor ColibriServer {
     public init(config: ServerConfig = .default, database: ColibrìDB) {
         self.config = config
         self.database = database
-        self.authManager = AuthenticationManager()
+        // Initialize SQL-backed user store in private schema
+        let userStore = SQLUserStore(database: database)
+        self.authManager = AuthenticationManager(store: userStore)
         self.requestHandler = RequestHandler(database: database, auth: authManager)
     }
     
