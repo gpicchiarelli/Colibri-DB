@@ -15,6 +15,7 @@
 //
 
 import Foundation
+import CRC32Accelerator
 
 /// File-based Write-Ahead Log implementation
 /// Corresponds to TLA+ module: WAL.tla
@@ -72,6 +73,12 @@ public actor FileWAL {
     private let fileHandle: FileHandle
     private let fsyncEnabled: Bool
     
+    /// Background task for timed group commit flush
+    private var flushTimerTask: Task<Void, Never>?
+    
+    /// Last time we enqueued a pending record (ms since epoch)
+    private var lastEnqueueTimestampMs: UInt64 = 0
+    
     // MARK: - Initialization
     
     public init(
@@ -113,6 +120,8 @@ public actor FileWAL {
         self.dirtyPageTable = [:]
         self.groupCommitTimer = 0
         self.crashed = false
+        self.flushTimerTask = nil
+        self.lastEnqueueTimestampMs = 0
 
         if FileManager.default.fileExists(atPath: walFilePath.path) {
             let data = try Data(contentsOf: walFilePath)
@@ -130,10 +139,19 @@ public actor FileWAL {
         }
 
         try fileHandle.seekToEnd()
+        
+        // Start timed flush if enabled
+        if config.enabled && config.maxWaitTimeMs > 0 {
+            Task { [weak self] in
+                await self?.startFlushTimer()
+            }
+        }
     }
     
     deinit {
         try? fileHandle.close()
+        flushTimerTask?.cancel()
+        flushTimerTask = nil
     }
     
     // MARK: - Core WAL Operations
@@ -170,6 +188,8 @@ public actor FileWAL {
         
         // TLA+: pendingRecords' = Append(pendingRecords, newRecord)
         pendingRecords.append(newRecord)
+        // Track enqueue time for timed flush
+        lastEnqueueTimestampMs = currentTimeMs()
         
         // TLA+: txLastLSN' = [txLastLSN EXCEPT ![tid] = nextLSN]
         txLastLSN[txID] = nextLSN
@@ -180,7 +200,7 @@ public actor FileWAL {
         nextLSN += 1
         
         // Check if we need group commit flush (size-based)
-        if pendingRecords.count >= config.maxBatchSize {
+        if config.enabled && pendingRecords.count >= config.maxBatchSize {
             try flush()
         }
         
@@ -424,6 +444,52 @@ public actor FileWAL {
         }
     }
     
+    // MARK: - Timed Group Commit
+    
+    private func startFlushTimer() {
+        flushTimerTask?.cancel()
+        flushTimerTask = Task { [config] in
+            // Tick every 1ms
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 1_000_000)
+                await self.timerTick(maxWaitTimeMs: config.maxWaitTimeMs)
+            }
+        }
+    }
+    
+    private func timerTick(maxWaitTimeMs: Int) async {
+        // Only act if there are pending records
+        guard !pendingRecords.isEmpty else {
+            groupCommitTimer = 0
+            return
+        }
+        // Increment logical timer (bounded)
+        if groupCommitTimer < maxWaitTimeMs {
+            groupCommitTimer += 1
+        }
+        // Check elapsed real time too to be robust against actor scheduling
+        let elapsed = elapsedSinceLastEnqueueMs()
+        if groupCommitTimer >= maxWaitTimeMs || elapsed >= UInt64(maxWaitTimeMs) {
+            do {
+                try await flush()
+            } catch {
+                // Swallow flush errors here; higher layers will handle on next attempts
+            }
+        }
+    }
+    
+    private func currentTimeMs() -> UInt64 {
+        return UInt64(Date().timeIntervalSince1970 * 1000.0)
+    }
+    
+    private func elapsedSinceLastEnqueueMs() -> UInt64 {
+        let now = currentTimeMs()
+        if lastEnqueueTimestampMs == 0 || now < lastEnqueueTimestampMs {
+            return 0
+        }
+        return now - lastEnqueueTimestampMs
+    }
+    
     // MARK: - Invariant Checking (for testing)
     
     /// Check Log-Before-Data invariant
@@ -465,10 +531,31 @@ public actor FileWAL {
 
 private enum CRC32 {
     static func checksum(data: Data) -> UInt32 {
-        // Use CRC32Accelerator if available, otherwise fallback to simple checksum
-        return data.reduce(UInt32(0)) { acc, byte in
-            acc &+ UInt32(byte)
+        // Try hardware-accelerated CRC32 first; fallback to software IEEE CRC32
+        return data.withUnsafeBytes { rawBuffer in
+            guard let base = rawBuffer.bindMemory(to: UInt8.self).baseAddress else {
+                return CRC32.softwareIEEE(data)
+            }
+            var usedHW: Int32 = 0
+            let hw = crc32_accelerated(0xFFFFFFFF, base, data.count, &usedHW)
+            if usedHW == 1 && hw != 0 {
+                return hw
+            }
+            return CRC32.softwareIEEE(data)
         }
+    }
+    
+    private static func softwareIEEE(_ data: Data) -> UInt32 {
+        var crc: UInt32 = 0xFFFFFFFF
+        for byte in data {
+            var x = (crc ^ UInt32(byte)) & 0xFF
+            for _ in 0..<8 {
+                let mask = (x & 1) * 0xEDB88320
+                x = (x >> 1) ^ UInt32(mask)
+            }
+            crc = (crc >> 8) ^ x
+        }
+        return ~crc
     }
 }
 

@@ -30,10 +30,15 @@ let package = Package(
     ],
     targets: [
         .target(
+            name: "CRC32Accelerator",
+            publicHeadersPath: "include"
+        ),
+        .target(
             name: "ColibriCore",
             dependencies: [
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "Crypto", package: "swift-crypto")
+                .product(name: "Crypto", package: "swift-crypto"),
+                "CRC32Accelerator"
             ]
         ),
         .target(
