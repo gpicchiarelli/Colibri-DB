@@ -252,7 +252,7 @@ enum Main {
                 timeoutSeconds: 30,
                 enableSSL: false
             )
-            let server = ColibriServer(config: serverConfig, database: db)
+            let server = try await ColibriServer(config: serverConfig, database: db)
             
             print("Starting HTTP server...")
             try await server.start()

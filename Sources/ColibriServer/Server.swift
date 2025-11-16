@@ -561,17 +561,35 @@ public actor ColibriServer {
     /// Database instance
     private let database: ColibrìDB
     
+    /// System catalog manager (loads descriptors from sys_* tables)
+    public let catalogManager: SystemCatalogManager
+    
+    /// Privilege manager (handles GRANT/REVOKE)
+    public let privilegeManager: PrivilegeManager
+    
     // MARK: - Initialization
     
-    public init(config: ServerConfig = .default, database: ColibrìDB) {
+    public init(config: ServerConfig = .default, database: ColibrìDB) async throws {
         self.config = config
         self.database = database
+        
         // Initialize SQL-backed private schema (colibri_sys)
         let bootstrap = SystemCatalogBootstrap()
-        Task { try? await bootstrap.initialize(on: database) }
+        try await bootstrap.initialize(on: database)
+        
+        // Initialize user store and auth
         let userStore = SQLUserStore(database: database)
-        Task { try? await userStore.initializeSchema() }
+        try await userStore.initializeSchema()
         self.authManager = AuthenticationManager(store: userStore)
+        
+        // Initialize catalog and privilege managers
+        self.catalogManager = SystemCatalogManager(database: database)
+        self.privilegeManager = PrivilegeManager(database: database)
+        
+        // Load catalog descriptors and privileges from sys_* tables
+        try await catalogManager.loadAll()
+        try await privilegeManager.loadAll()
+        
         self.requestHandler = RequestHandler(database: database, auth: authManager)
     }
     
