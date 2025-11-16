@@ -567,6 +567,8 @@ public actor ColibriServer {
         self.config = config
         self.database = database
         // Initialize SQL-backed private schema (colibri_sys)
+        let bootstrap = SystemCatalogBootstrap()
+        Task { try? await bootstrap.initialize(on: database) }
         let userStore = SQLUserStore(database: database)
         Task { try? await userStore.initializeSchema() }
         self.authManager = AuthenticationManager()
