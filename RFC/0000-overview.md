@@ -74,7 +74,7 @@ ColibrìDB is designed as an Apple-first database system, leveraging Swift's mod
 - **RFC 0009**: Disk Format and On-Disk Layout
 
 ### Index Layer
-- **RFC 0010**: Index Manager
+- **[RFC 0010: Index Manager](0010-index-manager.md)** - Index creation, management, and querying
 - **RFC 0011**: B+Tree Index Implementation
 - **RFC 0012**: Hash Index Implementation
 - **RFC 0013**: Adaptive Radix Tree (ART) Index
@@ -85,8 +85,8 @@ ColibrìDB is designed as an Apple-first database system, leveraging Swift's mod
 - **RFC 0018**: Bloom Filter
 
 ### Transaction Layer
-- **RFC 0019**: Transaction Manager
-- **RFC 0020**: Multi-Version Concurrency Control (MVCC)
+- **[RFC 0019: Transaction Manager](0019-transaction-manager.md)** - Transaction lifecycle and ACID guarantees
+- **[RFC 0020: Multi-Version Concurrency Control (MVCC)](0020-mvcc-manager.md)** - Snapshot isolation and version management
 - **RFC 0021**: Lock Manager
 - **RFC 0022**: Serializable Snapshot Isolation
 - **RFC 0023**: Two-Phase Commit (2PC)
@@ -189,6 +189,8 @@ All implementations are verified to match their TLA+ specifications.
 |--------|-----|--------|-----------|
 | Buffer Manager | RFC 0004 | Complete | BufferPool.tla |
 | WAL | RFC 0005 | Complete | WAL.tla |
+| Storage Manager | RFC 0006 | Complete | Storage.tla |
+| Index Manager | RFC 0010 | Complete | Index.tla |
 | Transaction Manager | RFC 0019 | Complete | TransactionManager.tla |
 | MVCC | RFC 0020 | Complete | MVCC.tla |
 | Query Optimizer | RFC 0025 | Complete | QueryOptimizer.tla |
