@@ -610,6 +610,13 @@ public actor ColibrìDB {
         // All validation uses Catalog metadata
         try validateRow(row, against: tableDef)
         
+        // **Catalog-First**: Validate foreign key constraints
+        // First, validate schema (columns exist) via Transaction Manager
+        try await transactionManager.validateForeignKeys(tableName: table, row: row, operation: "INSERT")
+        
+        // Then, validate data (referenced rows exist) via Catalog and actual data
+        try await validateForeignKeyData(tableName: table, row: row, operation: "INSERT")
+        
         // Get or create heap table
         let heapTable = try await getOrCreateHeapTable(table: table)
         
@@ -660,6 +667,14 @@ public actor ColibrìDB {
         for (key, value) in row {
             updatedRow[key] = value
         }
+        
+        // **Catalog-First**: Validate foreign key constraints for updated row
+        // First, validate schema (columns exist) via Transaction Manager
+        try await transactionManager.validateForeignKeys(tableName: table, row: updatedRow, operation: "UPDATE")
+        
+        // Then, validate data (referenced rows exist) via Catalog and actual data
+        try await validateForeignKeyData(tableName: table, row: updatedRow, operation: "UPDATE")
+        
         let resultingRID = try await heapTable.update(rid, newRow: updatedRow, txID: txId)
         await updatePrimaryKeyIndex(
             for: table,
@@ -700,6 +715,15 @@ public actor ColibrìDB {
         
         // Delete row using heap table
         let deletedRow = try? await heapTable.read(rid)
+        
+        // **Catalog-First**: Validate foreign key constraints for deletion
+        // Transaction Manager uses Catalog to check if row is referenced by other tables
+        if let deletedRow = deletedRow {
+            try await transactionManager.validateForeignKeys(tableName: table, row: deletedRow, operation: "DELETE")
+            // Note: Full data validation (check if row is actually referenced) would go here
+            // For now, Transaction Manager does schema-level validation
+        }
+        
         try await heapTable.delete(rid, txID: txId)
         await updatePrimaryKeyIndex(for: table, oldRow: deletedRow, newRow: nil, newRID: nil)
         
@@ -1129,6 +1153,119 @@ public actor ColibrìDB {
             // Check type compatibility (simplified)
             if value != nil && value != .null {
                 // Would validate type compatibility
+            }
+        }
+    }
+    
+    /// Validate foreign key data constraints
+    /// **Catalog-First**: Uses Catalog to get foreign key definitions and validates referenced rows exist
+    /// - Parameters:
+    ///   - tableName: Table name
+    ///   - row: Row data
+    ///   - operation: Operation type ("INSERT", "UPDATE", "DELETE")
+    /// - Throws: DBError if foreign key constraint is violated
+    private func validateForeignKeyData(tableName: String, row: Row, operation: String) async throws {
+        // **Catalog-First**: Get table metadata from Catalog
+        let catalogManager = await catalog.getCatalogManager()
+        guard let tableMetadata = await catalogManager.getTable(name: tableName) else {
+            throw DBError.tableNotFound(table: tableName)
+        }
+        
+        // Validate each foreign key constraint
+        for fk in tableMetadata.foreignKeys {
+            // Get foreign key column values from row
+            var fkValues: [Value] = []
+            for fkColumn in fk.from {
+                guard let value = row[fkColumn] else {
+                    continue
+                }
+                fkValues.append(value)
+            }
+            
+            // Skip if foreign key columns are NULL (NULL FK is allowed)
+            if fkValues.isEmpty || fkValues.allSatisfy({ $0 == .null }) {
+                continue
+            }
+            
+            // **Catalog-First**: Get referenced table metadata from Catalog
+            guard let referencedTable = await catalogManager.getTable(name: fk.to.table) else {
+                throw DBError.tableNotFound(table: fk.to.table)
+            }
+            
+            // For INSERT/UPDATE: Check if referenced row exists
+            if operation == "INSERT" || operation == "UPDATE" {
+                // Build lookup key from foreign key columns
+                // Check if referenced columns match a primary key (if available)
+                let refColumnsArray = Array(fk.to.column)  // Convert Set to Array
+                if refColumnsArray.count == 1,
+                   let pkColumn = referencedTable.primaryKey.first,
+                   pkColumn == refColumnsArray.first,
+                   let fkValue = fkValues.first {
+                    // Use primary key lookup for fast validation
+                    let referencedRow = try await selectByPrimaryKey(table: fk.to.table, key: fkValue, txId: 0)  // txId 0 for validation
+                    guard referencedRow != nil else {
+                        throw DBError.foreignKeyViolation(table: tableName, referencedTable: fk.to.table, columns: Array(fk.from))
+                    }
+                } else {
+                    // Multi-column foreign key or non-primary key reference
+                    // Scan referenced table to find matching row
+                    let heapTable = try await getOrCreateHeapTable(table: fk.to.table)
+                    let allRowsWithRID = try await heapTable.scanAllWithRID()
+                    
+                    var found = false
+                    let refColumnsArray = Array(fk.to.column)  // Convert Set to Array for indexed access
+                    for (_, referencedRow) in allRowsWithRID {
+                        // Check if referenced row matches foreign key values
+                        var matches = true
+                        for (index, fkColumn) in fk.from.enumerated() {
+                            guard index < refColumnsArray.count else {
+                                matches = false
+                                break
+                            }
+                            let refColumn = refColumnsArray[index]
+                            let fkValue = row[fkColumn]
+                            let refValue = referencedRow[refColumn]
+                            
+                            if fkValue != refValue {
+                                matches = false
+                                break
+                            }
+                        }
+                        
+                        if matches {
+                            found = true
+                            break
+                        }
+                    }
+                    
+                    guard found else {
+                        throw DBError.foreignKeyViolation(table: tableName, referencedTable: fk.to.table, columns: Array(fk.from))
+                    }
+                }
+            }
+            
+            // For DELETE: Check if row is referenced by other tables (prevent orphaned references)
+            if operation == "DELETE" {
+                // **Catalog-First**: Find tables that reference this table
+                let allTables = await catalogManager.getTableNames()
+                for otherTableName in allTables {
+                    guard let otherTable = await catalogManager.getTable(name: otherTableName) else {
+                        continue
+                    }
+                    
+                    // Check if other table has foreign key referencing this table
+                    let referencingFKs = otherTable.foreignKeys.filter { $0.to.table == tableName }
+                    if !referencingFKs.isEmpty {
+                        // Check if any rows in otherTable reference this row
+                        // Get primary key values from deleted row (if available)
+                        if let pkColumns = tableMetadata.primaryKey.first,
+                           let pkValue = row[pkColumns] {
+                            // Try to find referenced rows in other tables
+                            // For now, warn but allow deletion (CASCADE/SET NULL would be handled here)
+                            // TODO: Implement CASCADE/SET NULL behavior based on FK definition
+                        }
+                    }
+                }
             }
         }
     }

@@ -100,8 +100,16 @@ public actor Catalog {
             ColumnMetadata(name: col.name, type: col.type, nullable: col.nullable, defaultValue: col.defaultValue)
         }
         let primaryKey = Set(table.primaryKey ?? [])
-        let foreignKeys: [ForeignKeyMetadata] = []  // TODO: Add foreign key support
-        let constraints: [ConstraintMetadata] = []  // TODO: Add constraint support
+        
+        // **Catalog-First**: Extract foreign keys from TableDefinition if available
+        // Note: TableDefinition doesn't currently expose foreign keys in the public API
+        // For now, use empty array (foreign keys can be added via ALTER TABLE in future)
+        let foreignKeys: [ForeignKeyMetadata] = []
+        
+        // **Catalog-First**: Extract constraints from TableDefinition if available
+        // Note: TableDefinition doesn't currently expose constraints in the public API
+        // For now, use empty array (constraints can be added via ALTER TABLE in future)
+        let constraints: [ConstraintMetadata] = []
         
         // Delegate to CatalogManager
         try await catalogManager.createTable(
@@ -133,7 +141,17 @@ public actor Catalog {
             ColumnDefinition(name: col.name, type: col.type, nullable: col.nullable, defaultValue: col.defaultValue)
         }
         let primaryKey = Array(tableMetadata.primaryKey)
-        let indexes: [CatalogIndexDefinition] = []  // TODO: Get indexes from CatalogManager
+        
+        // **Catalog-First**: Get indexes from CatalogManager for this table
+        let indexesMetadata = await catalogManager.getIndexes(for: tableMetadata.name)
+        let indexes = indexesMetadata.map { indexMeta in
+            CatalogIndexDefinition(
+                name: indexMeta.name,
+                columns: indexMeta.columns,
+                unique: indexMeta.unique,
+                type: indexMeta.indexType == .btree ? .btree : .hash
+            )
+        }
         
         return TableDefinition(
             name: tableMetadata.name,

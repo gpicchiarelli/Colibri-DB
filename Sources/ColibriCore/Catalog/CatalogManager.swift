@@ -1160,15 +1160,24 @@ public actor CatalogManager {
     }
     
     /// Persist permissions to system table
+    /// **Catalog-First**: Permissions stored in Catalog for access control
+    /// Note: For now, we serialize all permissions (per-table structure) to a single page
+    /// Future: Could have dedicated permissions page or per-table storage
     private func persistPermissions(tableName: String) async throws {
         guard let storage = storageManager else {
             return
         }
         
-        // Note: Permissions could be stored per-table or globally
-        // For simplicity, store all permissions in statistics page for now
-        // (Future: dedicated permissions page)
-        // For now, skip - permissions are in-memory only
+        // Serialize all permissions (across all tables) to JSON
+        // For now, store in a combined format: [tableName: [PermissionMetadata]]
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        
+        let permissionsData = try encoder.encode(permissions)
+        
+        // Store in statistics page temporarily (will use dedicated page in future)
+        // Note: This is a simplification - in production would use dedicated permissions page
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_STATISTICS, data: permissionsData)
     }
     
     // MARK: - Schema Versioning
