@@ -4,16 +4,15 @@ import XCTest
 
 final class AuthenticationTests {
     
-    func testPasswordHashingPBKDF2() async throws {
+    func testPasswordHashingPBKDF2() throws {
         let manager = AuthenticationManager()
         let username = "pbkdf2_user"
         let password = "SecurePass1"
         let email = "pbkdf2_user@example.com"
         
-        try await manager.createUser(username: username, email: email, password: password, role: .user)
+        try manager.createUser(username: username, email: email, password: password, role: .user)
         
-        let metadataOpt = await manager.getUser(username: username)
-        let metadata = try XCTUnwrap(metadataOpt)
+        let metadata = try XCTUnwrap(manager.getUser(username: username))
         
         XCTAssert(metadata.passwordHash != password)
         XCTAssert(metadata.passwordHash.count > 0)
@@ -32,7 +31,7 @@ final class AuthenticationTests {
         let password = "ValidPass1"
         let email = "auth_success_user@example.com"
         
-        try await manager.createUser(username: username, email: email, password: password, role: .user)
+        try manager.createUser(username: username, email: email, password: password, role: .user)
         
         let session = try await manager.authenticateUser(username: username, password: password)
         
@@ -46,7 +45,7 @@ final class AuthenticationTests {
         let password = "ValidPass1"
         let email = "auth_failure_user@example.com"
         
-        try await manager.createUser(username: username, email: email, password: password, role: .user)
+        try manager.createUser(username: username, email: email, password: password, role: .user)
         
         do {
             try await manager.authenticateUser(username: username, password: "WrongPass1")

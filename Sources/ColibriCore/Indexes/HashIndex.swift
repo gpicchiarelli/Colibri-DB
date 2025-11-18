@@ -192,11 +192,27 @@ public actor HashIndex {
         }
     }
     
-    /// Hash function (deterministic, hardware-accelerated)
+    /// Hash function
     private func hash(_ key: Value) -> Int {
-        let h = HardwareHash.hash64(key, seed: 0, backend: .xxhash64)
-        // Ensure non-negative Int to avoid negative modulo behavior
-        return Int(truncatingIfNeeded: h & 0x7fffffffffffffff)
+        // TLA+: Hash function
+        switch key {
+        case .int(let value):
+            return abs(value.hashValue)
+        case .string(let value):
+            return abs(value.hashValue)
+        case .bool(let value):
+            return value ? 1 : 0
+        case .double(let value):
+            return abs(value.hashValue)
+        case .decimal(let value):
+            return abs(value.hashValue)
+        case .date(let value):
+            return abs(value.hashValue)
+        case .bytes(let value):
+            return abs(value.hashValue)
+        case .null:
+            return 0
+        }
     }
     
     /// Find insertion position

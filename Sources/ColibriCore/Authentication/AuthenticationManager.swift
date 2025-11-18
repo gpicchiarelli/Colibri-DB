@@ -93,7 +93,6 @@ public final class AuthenticationManager: @unchecked Sendable {
     
     // MARK: - State
     private let lock = NSLock()
-    private let store: UserStore?
     
     // MARK: - Password hashing parameters (PBKDF2-HMAC-SHA256)
     /// Salt length in bytes (randomly generated per user)
@@ -131,13 +130,12 @@ public final class AuthenticationManager: @unchecked Sendable {
     
     // MARK: - Initialization
     
-    public init(store: UserStore? = nil) {
+    public init() {
         // TLA+ Init
         self.users = [:]
         self.sessions = [:]
         self.failedAttempts = [:]
         self.lockoutTimestamps = [:]
-        self.store = store
         
         // Create default admin user
         Task {
@@ -149,14 +147,10 @@ public final class AuthenticationManager: @unchecked Sendable {
     
     /// Create a new user
     /// TLA+ Action: CreateUser(username, email, password, role)
-    public func createUser(username: String, email: String, password: String, role: UserRole) async throws {
+    public func createUser(username: String, email: String, password: String, role: UserRole) throws {
         // TLA+: Check if user already exists
-        if store == nil {
-            guard users[username] == nil else { throw AuthenticationError.userAlreadyExists }
-        } else {
-            if let existing = try? await store?.getUser(username: username), existing != nil {
-                throw AuthenticationError.userAlreadyExists
-            }
+        guard users[username] == nil else {
+            throw AuthenticationError.userAlreadyExists
         }
         
         // TLA+: Validate password strength
@@ -175,58 +169,47 @@ public final class AuthenticationManager: @unchecked Sendable {
             salt: salt
         )
         
-        if let store {
-            try await store.createUser(userMetadata)
-        } else {
-            users[username] = userMetadata
-        }
+        users[username] = userMetadata
     }
     
     /// Update user role
     /// TLA+ Action: UpdateUserRole(username, newRole)
-    public func updateUserRole(username: String, newRole: UserRole) async throws {
+    public func updateUserRole(username: String, newRole: UserRole) throws {
         // TLA+: Check if user exists
-        let user: UserMetadata? = if let store { try? await store.getUser(username: username) } else { users[username] }
-        guard let existing = user else { throw AuthenticationError.userNotFound }
+        guard var user = users[username] else {
+            throw AuthenticationError.userNotFound
+        }
         
         // TLA+: Update user role
         let updatedUser = UserMetadata(
-            username: existing.username,
-            email: existing.email,
+            username: user.username,
+            email: user.email,
             role: newRole,
-            status: existing.status,
-            createdAt: existing.createdAt,
-            lastLogin: existing.lastLogin,
-            passwordHash: existing.passwordHash,
-            salt: existing.salt
+            status: user.status,
+            createdAt: user.createdAt,
+            lastLogin: user.lastLogin,
+            passwordHash: user.passwordHash,
+            salt: user.salt
         )
-        if let store {
-            try await store.updateUserRole(username: username, newRole: newRole)
-        } else {
-            users[username] = updatedUser
-        }
+        
+        users[username] = updatedUser
     }
     
     /// Delete user
     /// TLA+ Action: DeleteUser(username)
     public func deleteUser(username: String) async throws {
         // TLA+: Check if user exists
-        if store == nil {
-            guard users[username] != nil else { throw AuthenticationError.userNotFound }
-        } else {
-            guard let _ = try await store?.getUser(username: username) else { throw AuthenticationError.userNotFound }
+        guard users[username] != nil else {
+            throw AuthenticationError.userNotFound
         }
         
         // TLA+: Remove user and related data
-        if let store {
-            try await store.deleteUser(username: username)
-        } else {
-            users.removeValue(forKey: username)
-            failedAttempts.removeValue(forKey: username)
-            lockoutTimestamps.removeValue(forKey: username)
-            // Remove user's sessions
-            sessions = sessions.filter { $0.value.username != username }
-        }
+        users.removeValue(forKey: username)
+        failedAttempts.removeValue(forKey: username)
+        lockoutTimestamps.removeValue(forKey: username)
+        
+        // Remove user's sessions
+        sessions = sessions.filter { $0.value.username != username }
     }
     
     // MARK: - Authentication
@@ -235,8 +218,9 @@ public final class AuthenticationManager: @unchecked Sendable {
     /// TLA+ Action: AuthenticateUser(username, password)
     public func authenticateUser(username: String, password: String) async throws -> Session {
         // TLA+: Check if user exists
-        let user: UserMetadata? = if let store { try? await store.getUser(username: username) } else { users[username] }
-        guard let user else { throw AuthenticationError.invalidCredentials }
+        guard let user = users[username] else {
+            throw AuthenticationError.invalidCredentials
+        }
         
         // TLA+: Check if user is locked out
         if let lockoutTime = lockoutTimestamps[username] {
@@ -284,11 +268,7 @@ public final class AuthenticationManager: @unchecked Sendable {
             passwordHash: user.passwordHash,
             salt: user.salt
         )
-        if let store {
-            try await store.updateLastLogin(username: username, at: Date())
-        } else {
-            users[username] = updatedUser
-        }
+        users[username] = updatedUser
         
         // TLA+: Create session
         let sessionId = generateSessionId()
@@ -301,11 +281,7 @@ public final class AuthenticationManager: @unchecked Sendable {
             expiresAt: expiresAt
         )
         
-        if let store {
-            try await store.createSession(session)
-        } else {
-            sessions[sessionId] = session
-        }
+        sessions[sessionId] = session
         
         return session
     }
@@ -321,8 +297,9 @@ public final class AuthenticationManager: @unchecked Sendable {
     /// TLA+ Action: ChangePassword(username, oldPassword, newPassword)
     public func changePassword(username: String, oldPassword: String, newPassword: String) async throws {
         // TLA+: Check if user exists
-        let user: UserMetadata? = if let store { try? await store.getUser(username: username) } else { users[username] }
-        guard let user else { throw AuthenticationError.userNotFound }
+        guard let user = users[username] else {
+            throw AuthenticationError.userNotFound
+        }
         
         // TLA+: Verify old password
         let isOldPasswordValid = try verifyPassword(oldPassword, storedHash: user.passwordHash, salt: user.salt)
@@ -349,19 +326,16 @@ public final class AuthenticationManager: @unchecked Sendable {
             salt: newSalt
         )
         
-        if let store {
-            try await store.updatePassword(username: username, passwordHash: newPasswordHash, salt: newSalt)
-        } else {
-            users[username] = updatedUser
-        }
+        users[username] = updatedUser
     }
     
     /// Validate session
     /// TLA+ Action: ValidateSession(sessionId)
-    public func validateSession(sessionId: String) async throws -> Session {
+    public func validateSession(sessionId: String) throws -> Session {
         // TLA+: Check if session exists
-        let session: Session? = if let store { try? await store.getSession(sessionId: sessionId) } else { sessions[sessionId] }
-        guard let session else { throw AuthenticationError.invalidSession }
+        guard let session = sessions[sessionId] else {
+            throw AuthenticationError.invalidSession
+        }
         
         // TLA+: Check if session is active
         guard session.isActive else {
@@ -371,11 +345,7 @@ public final class AuthenticationManager: @unchecked Sendable {
         // TLA+: Check if session has expired
         guard Date() < session.expiresAt else {
             // Remove expired session
-            if let store {
-                try? await store.deleteSession(sessionId: sessionId)
-            } else {
-                sessions.removeValue(forKey: sessionId)
-            }
+            sessions.removeValue(forKey: sessionId)
             throw AuthenticationError.sessionExpired
         }
         
@@ -384,25 +354,23 @@ public final class AuthenticationManager: @unchecked Sendable {
     
     /// Logout user
     /// TLA+ Action: LogoutUser(sessionId)
-    public func logoutUser(sessionId: String) async throws {
+    public func logoutUser(sessionId: String) throws {
         // TLA+: Check if session exists
-        let exists: Bool = if let store { (try? await store.getSession(sessionId: sessionId)) != nil } else { sessions[sessionId] != nil }
-        guard exists else { throw AuthenticationError.invalidSession }
+        guard sessions[sessionId] != nil else {
+            throw AuthenticationError.invalidSession
+        }
         
         // TLA+: Remove session
-        if let store {
-            try await store.deleteSession(sessionId: sessionId)
-        } else {
-            sessions.removeValue(forKey: sessionId)
-        }
+        sessions.removeValue(forKey: sessionId)
     }
     
     /// Extend session
     /// TLA+ Action: ExtendSession(sessionId)
-    public func extendSession(sessionId: String) async throws {
+    public func extendSession(sessionId: String) throws {
         // TLA+: Check if session exists
-        let sessionOpt: Session? = if let store { try? await store.getSession(sessionId: sessionId) } else { sessions[sessionId] }
-        guard let session = sessionOpt else { throw AuthenticationError.invalidSession }
+        guard var session = sessions[sessionId] else {
+            throw AuthenticationError.invalidSession
+        }
         
         // TLA+: Extend session expiration
         let newExpiresAt = Date().addingTimeInterval(TimeInterval(sessionTimeout))
@@ -415,12 +383,7 @@ public final class AuthenticationManager: @unchecked Sendable {
             isActive: session.isActive
         )
         
-        if let store {
-            try await store.deleteSession(sessionId: sessionId)
-            try await store.createSession(extendedSession)
-        } else {
-            sessions[sessionId] = extendedSession
-        }
+        sessions[sessionId] = extendedSession
     }
     
     // MARK: - Authorization
@@ -567,27 +530,17 @@ public final class AuthenticationManager: @unchecked Sendable {
     // MARK: - Query Operations
     
     /// Get user by username
-    public func getUser(username: String) async -> UserMetadata? {
-        if let store {
-            return try? await store.getUser(username: username)
-        }
+    public func getUser(username: String) -> UserMetadata? {
         return users[username]
     }
     
     /// Get all users
-    public func getAllUsers() async -> [UserMetadata] {
-        if let store {
-            return (try? await store.getAllUsers()) ?? []
-        }
+    public func getAllUsers() -> [UserMetadata] {
         return Array(users.values)
     }
     
     /// Get active sessions count
     public func getActiveSessionsCount() -> Int {
-        if store != nil {
-            // Not tracked without a COUNT query; return 0 for now.
-            return 0
-        }
         return sessions.count
     }
     

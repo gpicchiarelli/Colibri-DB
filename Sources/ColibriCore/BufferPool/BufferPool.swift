@@ -20,7 +20,6 @@
 //
 
 import Foundation
-// CRC32 handled via Utilities/CRC32Accelerator.swift wrapper
 
 /// Buffer Pool for page caching with Clock-Sweep eviction
 /// Corresponds to TLA+ module: BufferPool.tla
@@ -434,15 +433,7 @@ public actor FileDiskManager: DiskManager {
         
         let data = handle.readData(ofLength: PAGE_SIZE)
         if data.count == PAGE_SIZE {
-            // Verify CRC32 if present in first 4 bytes
-            var mutable = data
-            let storedCRC: UInt32 = mutable.prefix(4).withUnsafeBytes { $0.load(as: UInt32.self) }
-            let body = mutable.advanced(by: 4)
-            let computed = CRC32Accelerator.calculate(body)
-            if storedCRC != 0 && storedCRC != computed {
-                throw DBError.corruption
-            }
-            return mutable
+            return data
         }
         
         // If the page hasn't been written yet, return a zeroed page
@@ -461,21 +452,14 @@ public actor FileDiskManager: DiskManager {
         try handle.seek(toOffset: UInt64(offset))
         
         // Ensure we always write exactly PAGE_SIZE bytes
-        var pageBuffer = Data(count: PAGE_SIZE)
-        let copyCount = min(max(data.count, 4), PAGE_SIZE)
-        // leave first 4 bytes for CRC32
-        if copyCount > 4 {
-            pageBuffer.replaceSubrange(4..<copyCount, with: data.prefix(copyCount - 4))
+        if data.count == PAGE_SIZE {
+            try handle.write(contentsOf: data)
+        } else {
+            var padded = Data(count: PAGE_SIZE)
+            let copyCount = min(data.count, PAGE_SIZE)
+            padded.replaceSubrange(0..<copyCount, with: data.prefix(copyCount))
+            try handle.write(contentsOf: padded)
         }
-        // compute CRC over bytes [4..PAGE_SIZE)
-        let body = pageBuffer.advanced(by: 4)
-        let crc = CRC32Accelerator.calculate(body)
-        // write CRC32 little-endian into first 4 bytes
-        var crcLE = crc.littleEndian
-        withUnsafeBytes(of: &crcLE) { bytes in
-            pageBuffer.replaceSubrange(0..<4, with: bytes)
-        }
-        try handle.write(contentsOf: pageBuffer)
         
         // Force fsync for durability
         try handle.synchronize()

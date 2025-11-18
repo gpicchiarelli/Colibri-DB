@@ -17,10 +17,21 @@ public struct BloomFilter {
     }
     
     private func hash(_ value: Value, seed: Int) -> Int {
-        // Double hashing: h_i = (h1 + i * h2) % m
-        let (h1, h2) = HardwareHash.hash64x2(value, seed: UInt64(seed), backend: .xxhash64)
-        let combined = (h1 &+ UInt64(seed) &* h2) % UInt64(size)
-        return Int(combined)
+        var hasher = Hasher()
+        hasher.combine(seed)
+        
+        switch value {
+        case .int(let v): hasher.combine(v)
+        case .double(let v): hasher.combine(v)
+        case .string(let v): hasher.combine(v)
+        case .bool(let v): hasher.combine(v)
+        case .date(let v): hasher.combine(v)
+        case .null: hasher.combine(0)
+        case .decimal(let v): hasher.combine(v)
+        case .bytes(let v): hasher.combine(v)
+        }
+        
+        return abs(hasher.finalize()) % size
     }
     
     public mutating func insert(_ value: Value) {

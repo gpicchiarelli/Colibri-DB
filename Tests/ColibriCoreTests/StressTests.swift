@@ -446,7 +446,7 @@ final class StressTests {
         // Create many users
         let userCount = 1000
         for i in 0..<userCount {
-            try await authManager.createUser(username: "user\(i)", email: "user\(i)@test.com", password: "password\(i)", role: .user)
+            try authManager.createUser(username: "user\(i)", email: "user\(i)@test.com", password: "password\(i)", role: .user)
         }
         
         let authCount = 10000
