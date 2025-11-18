@@ -16,6 +16,70 @@
 
 import Foundation
 
+// MARK: - DDL Operation Record (for WAL)
+
+/// DDL operation record for WAL logging
+/// Used to log Catalog DDL operations for crash recovery
+private struct DDLOperationRecord: Codable, Sendable {
+    let operation: String  // "CREATE_TABLE", "DROP_TABLE", "ALTER_TABLE_ADD_COLUMN", "CREATE_INDEX", "DROP_INDEX"
+    let tableName: String?
+    let indexName: String?
+    let metadata: TableMetadata?
+    let indexMetadata: IndexMetadata?
+    
+    init(operation: String, tableName: String?, metadata: TableMetadata?, indexName: String? = nil, indexMetadata: IndexMetadata? = nil) {
+        self.operation = operation
+        self.tableName = tableName
+        self.indexName = indexName
+        self.metadata = metadata
+        self.indexMetadata = indexMetadata
+    }
+    
+    init(operation: String, tableName: String?, indexMetadata: IndexMetadata?) {
+        self.operation = operation
+        self.tableName = tableName
+        self.indexName = nil
+        self.metadata = nil
+        self.indexMetadata = indexMetadata
+    }
+    
+    init(operation: String, tableName: String?, indexName: String) {
+        self.operation = operation
+        self.tableName = tableName
+        self.indexName = indexName
+        self.metadata = nil
+        self.indexMetadata = nil
+    }
+}
+
+// MARK: - User and Role Types (for Catalog)
+
+/// Role metadata
+/// **Catalog-First**: Roles stored in Catalog
+public struct RoleMetadata: Codable, Sendable, Equatable {
+    public let name: String
+    public let permissions: [String]  // List of permission strings (e.g., "SELECT:users", "INSERT:orders")
+    
+    public init(name: String, permissions: [String] = []) {
+        self.name = name
+        self.permissions = permissions
+    }
+}
+
+/// Permission metadata
+/// **Catalog-First**: Permissions stored in Catalog
+public struct PermissionMetadata: Codable, Sendable, Equatable {
+    public let username: String
+    public let tableName: String
+    public let permission: String  // "SELECT", "INSERT", "UPDATE", "DELETE"
+    
+    public init(username: String, tableName: String, permission: String) {
+        self.username = username
+        self.tableName = tableName
+        self.permission = permission
+    }
+}
+
 // MARK: - Column Metadata
 
 /// Column metadata
@@ -170,12 +234,34 @@ public actor CatalogManager {
     /// **Catalog-First**: ALL statistics come from Catalog
     private var statistics: [String: Statistics] = [:]
     
+    /// Users (Catalog-First: user metadata stored in Catalog)
+    /// **Catalog-First**: Authentication Manager uses Catalog for user metadata
+    private var users: [String: UserMetadata] = [:]
+    
+    /// Roles (Catalog-First: role definitions stored in Catalog)
+    /// **Catalog-First**: Role-based access control uses Catalog
+    private var roles: [String: RoleMetadata] = [:]
+    
+    /// Permissions (Catalog-First: permission grants stored in Catalog)
+    /// **Catalog-First**: Permission checks use Catalog
+    private var permissions: [String: [PermissionMetadata]] = [:]  // [tableName: [PermissionMetadata]]
+    
     /// Current schema version number
     /// TLA+: schemaVersion \in Nat
     private var schemaVersion: Int = 0
     
     /// Bootstrap flag - indicates if system tables have been created
     private var isBootstrapped: Bool = false
+    
+    // MARK: - System Table Page IDs
+    
+    /// System table page IDs (fixed for consistency)
+    /// These pages store Catalog metadata in JSON format
+    private static let SYSTEM_PAGE_TABLES: PageID = 1       // colibri_tables: [TableMetadata]
+    private static let SYSTEM_PAGE_INDEXES: PageID = 2      // colibri_indexes: [IndexMetadata]
+    private static let SYSTEM_PAGE_STATISTICS: PageID = 3   // colibri_statistics: [String: Statistics]
+    private static let SYSTEM_PAGE_USERS: PageID = 4        // colibri_users: [UserMetadata] (future)
+    private static let SYSTEM_PAGE_ROLES: PageID = 5        // colibri_roles: [RoleMetadata] (future)
     
     // MARK: - Dependencies
     
@@ -205,6 +291,9 @@ public actor CatalogManager {
         self.tables = [:]
         self.indexes = [:]
         self.statistics = [:]
+        self.users = [:]
+        self.roles = [:]
+        self.permissions = [:]
         self.schemaVersion = 0
         self.isBootstrapped = false
         
@@ -248,53 +337,194 @@ public actor CatalogManager {
     }
     
     /// Check if system tables exist
+    /// Checks if system table pages exist by attempting to read them
     private func checkSystemTablesExist(storage: StorageManager) async throws -> Bool {
-        // TODO: Implement system table existence check
-        // For now, assume system tables don't exist (bootstrap)
-        return false
+        // Try to read the first system page (tables)
+        // If it exists and has data, system tables are bootstrapped
+        do {
+            let data = try await storage.readPage(pageId: Self.SYSTEM_PAGE_TABLES)
+            return !data.isEmpty
+        } catch {
+            // Page doesn't exist or can't be read - system tables not bootstrapped
+            return false
+        }
     }
     
     /// Create system tables (Catalog's own tables)
+    /// Initializes system table pages with empty JSON arrays/dictionaries
     private func createSystemTables(storage: StorageManager) async throws {
-        // System tables will be created in-memory first
-        // Then persisted when storage integration is complete
-        // For now, this is a placeholder for future implementation
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        
+        // Initialize colibri_tables with empty array
+        let emptyTablesArray: [TableMetadata] = []
+        let tablesData = try encoder.encode(emptyTablesArray)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_TABLES, data: tablesData)
+        
+        // Initialize colibri_indexes with empty array
+        let emptyIndexesArray: [IndexMetadata] = []
+        let indexesData = try encoder.encode(emptyIndexesArray)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_INDEXES, data: indexesData)
+        
+        // Initialize colibri_statistics with empty dictionary
+        let emptyStatisticsDict: [String: Statistics] = [:]
+        let statisticsData = try encoder.encode(emptyStatisticsDict)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_STATISTICS, data: statisticsData)
+        
+        // Initialize colibri_users with empty array
+        let emptyUsersArray: [UserMetadata] = []
+        let usersData = try encoder.encode(emptyUsersArray)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_USERS, data: usersData)
+        
+        // Initialize colibri_roles with empty array
+        let emptyRolesArray: [RoleMetadata] = []
+        let rolesData = try encoder.encode(emptyRolesArray)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_ROLES, data: rolesData)
     }
     
     /// Load Catalog from system tables (on restart)
+    /// Deserializes Catalog metadata from system table pages
     private func loadCatalogFromSystemTables(storage: StorageManager) async throws {
+        let decoder = JSONDecoder()
+        
         // Load tables from colibri_tables system table
+        do {
+            let tablesData = try await storage.readPage(pageId: Self.SYSTEM_PAGE_TABLES)
+            if !tablesData.isEmpty {
+                let loadedTables: [TableMetadata] = try decoder.decode([TableMetadata].self, from: tablesData)
+                for table in loadedTables {
+                    tables[table.name] = table
+                }
+            }
+        } catch {
+            // If reading fails, start with empty tables (bootstrap will create pages)
+            tables = [:]
+        }
+        
         // Load indexes from colibri_indexes system table
+        do {
+            let indexesData = try await storage.readPage(pageId: Self.SYSTEM_PAGE_INDEXES)
+            if !indexesData.isEmpty {
+                let loadedIndexes: [IndexMetadata] = try decoder.decode([IndexMetadata].self, from: indexesData)
+                for index in loadedIndexes {
+                    indexes[index.name] = index
+                }
+            }
+        } catch {
+            // If reading fails, start with empty indexes (bootstrap will create pages)
+            indexes = [:]
+        }
+        
         // Load statistics from colibri_statistics system table
-        // TODO: Implement system table loading
+        do {
+            let statisticsData = try await storage.readPage(pageId: Self.SYSTEM_PAGE_STATISTICS)
+            if !statisticsData.isEmpty {
+                let loadedStatistics: [String: Statistics] = try decoder.decode([String: Statistics].self, from: statisticsData)
+                statistics = loadedStatistics
+            }
+        } catch {
+            // If reading fails, start with empty statistics (bootstrap will create pages)
+            statistics = [:]
+        }
+        
+        // Load users from colibri_users system table
+        do {
+            let usersData = try await storage.readPage(pageId: Self.SYSTEM_PAGE_USERS)
+            if !usersData.isEmpty {
+                let loadedUsers: [UserMetadata] = try decoder.decode([UserMetadata].self, from: usersData)
+                for user in loadedUsers {
+                    users[user.username] = user
+                }
+            }
+        } catch {
+            // If reading fails, start with empty users (bootstrap will create pages)
+            users = [:]
+        }
+        
+        // Load roles from colibri_roles system table
+        do {
+            let rolesData = try await storage.readPage(pageId: Self.SYSTEM_PAGE_ROLES)
+            if !rolesData.isEmpty {
+                let loadedRoles: [RoleMetadata] = try decoder.decode([RoleMetadata].self, from: rolesData)
+                for role in loadedRoles {
+                    roles[role.name] = role
+                }
+            }
+        } catch {
+            // If reading fails, start with empty roles (bootstrap will create pages)
+            roles = [:]
+        }
     }
     
     /// Persist table metadata to system table
+    /// Serializes all tables to JSON and writes to system page
     private func persistTableMetadata(name: String, metadata: TableMetadata) async throws {
-        guard storageManager != nil else {
+        guard let storage = storageManager else {
             return  // No persistence available
         }
         
-        // TODO: Implement persistence to colibri_tables system table
-        // For now, metadata is only in-memory
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        
+        // Serialize all tables (including the new one)
+        let allTables = Array(tables.values)
+        let tablesData = try encoder.encode(allTables)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_TABLES, data: tablesData)
     }
     
     /// Persist index metadata to system table
+    /// Serializes all indexes to JSON and writes to system page
     private func persistIndexMetadata(name: String, metadata: IndexMetadata) async throws {
-        guard storageManager != nil else {
+        guard let storage = storageManager else {
             return  // No persistence available
         }
         
-        // TODO: Implement persistence to colibri_indexes system table
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        
+        // Serialize all indexes (including the new one)
+        let allIndexes = Array(indexes.values)
+        let indexesData = try encoder.encode(allIndexes)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_INDEXES, data: indexesData)
     }
     
     /// Persist statistics to system table
+    /// Serializes all statistics to JSON and writes to system page
     private func persistStatistics(tableName: String, stats: Statistics) async throws {
-        guard storageManager != nil else {
+        guard let storage = storageManager else {
             return  // No persistence available
         }
         
-        // TODO: Implement persistence to colibri_statistics system table
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        
+        // Serialize all statistics (including the updated one)
+        let statisticsData = try encoder.encode(statistics)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_STATISTICS, data: statisticsData)
+    }
+    
+    /// Delete table metadata from system table
+    /// Re-serializes all remaining tables to JSON and writes to system page
+    private func deleteTableMetadata(name: String, storage: StorageManager) async throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        
+        // Serialize all remaining tables (excluding the deleted one)
+        let allTables = Array(tables.values)
+        let tablesData = try encoder.encode(allTables)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_TABLES, data: tablesData)
+    }
+    
+    /// Delete index metadata from system table
+    /// Re-serializes all remaining indexes to JSON and writes to system page
+    private func deleteIndexMetadata(name: String, storage: StorageManager) async throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        
+        // Serialize all remaining indexes (excluding the deleted one)
+        let allIndexes = Array(indexes.values)
+        let indexesData = try encoder.encode(allIndexes)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_INDEXES, data: indexesData)
     }
     
     // MARK: - Table Operations
@@ -380,9 +610,18 @@ public actor CatalogManager {
         // Persist to system table (if storage available)
         try await persistTableMetadata(name: name, metadata: tableMetadata)
         
-        // Log to WAL (if available)
-        if walManager != nil {
-            // TODO: Log DDL operation to WAL
+        // Log to WAL (if available) for durability
+        // **Catalog-First**: DDL operations are logged to WAL for crash recovery
+        if let wal = walManager {
+            let ddlRecord = DDLOperationRecord(
+                operation: "CREATE_TABLE",
+                tableName: name,
+                metadata: tableMetadata
+            )
+            let encoder = JSONEncoder()
+            let payload = try encoder.encode(ddlRecord)
+            _ = try await wal.appendRecord(txId: 0, kind: "ddl", data: payload)  // txId 0 for DDL operations
+            try await wal.flushLog()  // Flush immediately for DDL durability
         }
         
         // Increment schema version
@@ -433,18 +672,22 @@ public actor CatalogManager {
             try await deleteTableMetadata(name: name, storage: storage)
         }
         
-        // Log to WAL (if available)
-        if walManager != nil {
-            // TODO: Log DDL operation to WAL
+        // Log to WAL (if available) for durability
+        // **Catalog-First**: DDL operations are logged to WAL for crash recovery
+        if let wal = walManager {
+            let ddlRecord = DDLOperationRecord(
+                operation: "DROP_TABLE",
+                tableName: name,
+                metadata: nil
+            )
+            let encoder = JSONEncoder()
+            let payload = try encoder.encode(ddlRecord)
+            _ = try await wal.appendRecord(txId: 0, kind: "ddl", data: payload)  // txId 0 for DDL operations
+            try await wal.flushLog()  // Flush immediately for DDL durability
         }
         
         // Increment schema version
         schemaVersion += 1
-    }
-    
-    /// Delete table metadata from system table
-    private func deleteTableMetadata(name: String, storage: StorageManager) async throws {
-        // TODO: Implement deletion from colibri_tables system table
     }
     
     /// Alter table (add column)
@@ -478,9 +721,18 @@ public actor CatalogManager {
         // Persist to system table (if storage available)
         try await persistTableMetadata(name: tableName, metadata: updatedTable)
         
-        // Log to WAL (if available)
-        if walManager != nil {
-            // TODO: Log DDL operation to WAL
+        // Log to WAL (if available) for durability
+        // **Catalog-First**: DDL operations are logged to WAL for crash recovery
+        if let wal = walManager {
+            let ddlRecord = DDLOperationRecord(
+                operation: "ALTER_TABLE_ADD_COLUMN",
+                tableName: tableName,
+                metadata: updatedTable
+            )
+            let encoder = JSONEncoder()
+            let payload = try encoder.encode(ddlRecord)
+            _ = try await wal.appendRecord(txId: 0, kind: "ddl", data: payload)  // txId 0 for DDL operations
+            try await wal.flushLog()  // Flush immediately for DDL durability
         }
         
         schemaVersion += 1
@@ -568,9 +820,18 @@ public actor CatalogManager {
         // Persist to system table (if storage available)
         try await persistIndexMetadata(name: name, metadata: indexMetadata)
         
-        // Log to WAL (if available)
-        if walManager != nil {
-            // TODO: Log DDL operation to WAL
+        // Log to WAL (if available) for durability
+        // **Catalog-First**: DDL operations are logged to WAL for crash recovery
+        if let wal = walManager {
+            let ddlRecord = DDLOperationRecord(
+                operation: "CREATE_INDEX",
+                tableName: tableName,
+                indexMetadata: indexMetadata
+            )
+            let encoder = JSONEncoder()
+            let payload = try encoder.encode(ddlRecord)
+            _ = try await wal.appendRecord(txId: 0, kind: "ddl", data: payload)  // txId 0 for DDL operations
+            try await wal.flushLog()  // Flush immediately for DDL durability
         }
         
         schemaVersion += 1
@@ -594,17 +855,21 @@ public actor CatalogManager {
             try await deleteIndexMetadata(name: name, storage: storage)
         }
         
-        // Log to WAL (if available)
-        if walManager != nil {
-            // TODO: Log DDL operation to WAL
+        // Log to WAL (if available) for durability
+        // **Catalog-First**: DDL operations are logged to WAL for crash recovery
+        if let wal = walManager {
+            let ddlRecord = DDLOperationRecord(
+                operation: "DROP_INDEX",
+                tableName: nil,
+                indexName: name
+            )
+            let encoder = JSONEncoder()
+            let payload = try encoder.encode(ddlRecord)
+            _ = try await wal.appendRecord(txId: 0, kind: "ddl", data: payload)  // txId 0 for DDL operations
+            try await wal.flushLog()  // Flush immediately for DDL durability
         }
         
         schemaVersion += 1
-    }
-    
-    /// Delete index metadata from system table
-    private func deleteIndexMetadata(name: String, storage: StorageManager) async throws {
-        // TODO: Implement deletion from colibri_indexes system table
     }
     
     /// Get index metadata
@@ -670,6 +935,240 @@ public actor CatalogManager {
     /// Get all statistics
     public func getAllStatistics() -> [String: Statistics] {
         return statistics
+    }
+    
+    // MARK: - Schema Versioning
+    
+    // MARK: - User Management (Catalog-First)
+    
+    /// Create a user
+    /// **Catalog-First**: User metadata stored in Catalog's colibri_users system table
+    public func createUser(username: String, email: String, role: UserRole, status: UserStatus = .active, passwordHash: String, salt: String) async throws {
+        // Validate username
+        guard !username.isEmpty else {
+            throw CatalogError.invalidTableName("Username cannot be empty")
+        }
+        
+        // Check if user already exists
+        guard users[username] == nil else {
+            throw CatalogError.tableAlreadyExists(username)  // Reuse error for user already exists
+        }
+        
+        // Create user metadata
+        let userMetadata = UserMetadata(
+            username: username,
+            email: email,
+            role: role,
+            status: status,
+            passwordHash: passwordHash,
+            salt: salt
+        )
+        
+        // Store in memory (Catalog-First: single source of truth)
+        users[username] = userMetadata
+        
+        // Persist to system table (if storage available)
+        try await persistUserMetadata(username: username, metadata: userMetadata)
+        
+        // Log to WAL (if available) for durability
+        if let wal = walManager {
+            let ddlRecord = DDLOperationRecord(
+                operation: "CREATE_USER",
+                tableName: username,
+                metadata: nil
+            )
+            let encoder = JSONEncoder()
+            let payload = try encoder.encode(ddlRecord)
+            _ = try await wal.appendRecord(txId: 0, kind: "ddl", data: payload)
+            try await wal.flushLog()
+        }
+    }
+    
+    /// Get user metadata
+    /// **Catalog-First**: This is THE ONLY source of user metadata
+    public func getUser(username: String) -> UserMetadata? {
+        return users[username]
+    }
+    
+    /// Get user metadata (async version)
+    public func getUser(username: String) async -> UserMetadata? {
+        return users[username]
+    }
+    
+    /// Delete a user
+    /// **Catalog-First**: User deletion from Catalog
+    public func deleteUser(username: String) async throws {
+        guard users[username] != nil else {
+            throw CatalogError.tableNotFound(username)  // Reuse error for user not found
+        }
+        
+        // Remove user
+        users.removeValue(forKey: username)
+        
+        // Persist to system table (if storage available)
+        if let storage = storageManager {
+            try await deleteUserMetadata(username: username, storage: storage)
+        }
+        
+        // Log to WAL (if available)
+        if let wal = walManager {
+            let ddlRecord = DDLOperationRecord(
+                operation: "DELETE_USER",
+                tableName: username,
+                metadata: nil
+            )
+            let encoder = JSONEncoder()
+            let payload = try encoder.encode(ddlRecord)
+            _ = try await wal.appendRecord(txId: 0, kind: "ddl", data: payload)
+            try await wal.flushLog()
+        }
+    }
+    
+    /// Persist user metadata to system table
+    private func persistUserMetadata(username: String, metadata: UserMetadata) async throws {
+        guard let storage = storageManager else {
+            return
+        }
+        
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        
+        // Serialize all users
+        let allUsers = Array(users.values)
+        let usersData = try encoder.encode(allUsers)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_USERS, data: usersData)
+    }
+    
+    /// Delete user metadata from system table
+    private func deleteUserMetadata(username: String, storage: StorageManager) async throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        
+        // Serialize all remaining users
+        let allUsers = Array(users.values)
+        let usersData = try encoder.encode(allUsers)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_USERS, data: usersData)
+    }
+    
+    // MARK: - Role Management (Catalog-First)
+    
+    /// Create a role
+    /// **Catalog-First**: Role definitions stored in Catalog
+    public func createRole(name: String, permissions: [String] = []) async throws {
+        guard !name.isEmpty else {
+            throw CatalogError.invalidTableName("Role name cannot be empty")
+        }
+        
+        guard roles[name] == nil else {
+            throw CatalogError.tableAlreadyExists(name)
+        }
+        
+        let roleMetadata = RoleMetadata(name: name, permissions: permissions)
+        roles[name] = roleMetadata
+        
+        // Persist to system table (if storage available)
+        try await persistRoleMetadata(name: name, metadata: roleMetadata)
+        
+        // Log to WAL (if available)
+        if let wal = walManager {
+            let ddlRecord = DDLOperationRecord(
+                operation: "CREATE_ROLE",
+                tableName: name,
+                metadata: nil
+            )
+            let encoder = JSONEncoder()
+            let payload = try encoder.encode(ddlRecord)
+            _ = try await wal.appendRecord(txId: 0, kind: "ddl", data: payload)
+            try await wal.flushLog()
+        }
+    }
+    
+    /// Get role metadata
+    /// **Catalog-First**: This is THE ONLY source of role metadata
+    public func getRole(name: String) -> RoleMetadata? {
+        return roles[name]
+    }
+    
+    /// Persist role metadata to system table
+    private func persistRoleMetadata(name: String, metadata: RoleMetadata) async throws {
+        guard let storage = storageManager else {
+            return
+        }
+        
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        
+        // Serialize all roles
+        let allRoles = Array(roles.values)
+        let rolesData = try encoder.encode(allRoles)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_ROLES, data: rolesData)
+    }
+    
+    // MARK: - Permission Management (Catalog-First)
+    
+    /// Grant permission to user for table
+    /// **Catalog-First**: Permissions stored in Catalog
+    public func grantPermission(username: String, tableName: String, permission: String) async throws {
+        // Validate user exists
+        guard users[username] != nil else {
+            throw CatalogError.tableNotFound(username)
+        }
+        
+        // Validate table exists
+        guard tables[tableName] != nil else {
+            throw CatalogError.tableNotFound(tableName)
+        }
+        
+        // Create permission metadata
+        let permissionMetadata = PermissionMetadata(
+            username: username,
+            tableName: tableName,
+            permission: permission
+        )
+        
+        // Add permission
+        if permissions[tableName] == nil {
+            permissions[tableName] = []
+        }
+        permissions[tableName]?.append(permissionMetadata)
+        
+        // Persist to system table (if storage available)
+        try await persistPermissions(tableName: tableName)
+    }
+    
+    /// Check if user has permission for table
+    /// **Catalog-First**: Permission checks use Catalog
+    public func hasPermission(username: String, tableName: String, permission: String) -> Bool {
+        // Get user role
+        guard let user = users[username] else {
+            return false
+        }
+        
+        // Check role permissions first
+        if let role = roles[user.role.rawValue] {
+            if role.permissions.contains("\(permission):\(tableName)") {
+                return true
+            }
+        }
+        
+        // Check explicit table permissions
+        guard let tablePermissions = permissions[tableName] else {
+            return false
+        }
+        
+        return tablePermissions.contains { $0.username == username && $0.permission == permission }
+    }
+    
+    /// Persist permissions to system table
+    private func persistPermissions(tableName: String) async throws {
+        guard let storage = storageManager else {
+            return
+        }
+        
+        // Note: Permissions could be stored per-table or globally
+        // For simplicity, store all permissions in statistics page for now
+        // (Future: dedicated permissions page)
+        // For now, skip - permissions are in-memory only
     }
     
     // MARK: - Schema Versioning
