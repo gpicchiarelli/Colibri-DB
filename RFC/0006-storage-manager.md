@@ -13,6 +13,87 @@ This RFC defines the Storage Manager component, responsible for managing disk I/
 
 The Storage Manager provides high-level storage operations, coordinating with the Buffer Manager for page caching and with the Disk Manager for physical I/O. It manages storage areas (data, index, log, temp, system) and tracks free space.
 
+### 1.1 Purpose and Goals
+
+The primary goals of the Storage Manager are:
+
+1. **Abstraction Layer**: Provide high-level storage operations above raw disk I/O
+2. **Buffer Integration**: Seamlessly integrate with Buffer Manager for efficient caching
+3. **Space Management**: Track and manage free space efficiently across storage areas
+4. **Data Organization**: Organize data into logical storage areas (data, index, log, temp, system)
+5. **Performance Optimization**: Minimize disk I/O through intelligent caching and space management
+
+### 1.2 Problem Statement
+
+Database systems need to:
+
+- **Manage Disk Space**: Allocate and deallocate pages efficiently
+- **Organize Data**: Separate data types (user data, indexes, logs, temp, system)
+- **Track Free Space**: Know where free space exists for allocation
+- **Coordinate Caching**: Work with Buffer Manager without duplication
+- **Handle I/O Efficiently**: Minimize disk operations through caching
+
+The Storage Manager solves these challenges by:
+
+- Providing high-level page allocation/deallocation APIs
+- Organizing pages into logical storage areas
+- Maintaining free space maps for efficient allocation
+- Integrating with Buffer Manager for automatic caching
+- Falling back to direct disk I/O when Buffer Manager unavailable
+
+### 1.3 Key Concepts
+
+**Storage Area**: Logical organization of pages by type:
+- **Data**: User table data pages
+- **Index**: Index structure pages
+- **Log**: Transaction log pages (separate from WAL)
+- **Temp**: Temporary pages (queries, sorts)
+- **System**: System catalog and metadata pages
+
+**Free Space Map**: Efficient data structure tracking available space per page:
+- `[PageID -> FreeSpace]`: Maps page IDs to available bytes
+- Enables fast allocation (find page with sufficient space)
+- Updated on allocation/deallocation operations
+
+**Page**: Fixed-size unit of storage (typically 4KB-16KB):
+- Contains data or metadata
+- Managed by Storage Manager
+- Cached by Buffer Manager (if available)
+
+**Record**: Variable-size data unit stored within pages:
+- May span multiple pages (large records)
+- Tracked by Storage Manager
+- Referenced by RecordID
+
+**Buffer Manager Integration**: Optional but recommended:
+- When available: Uses buffer cache for reads/writes
+- When unavailable: Falls back to direct disk I/O
+- Benefits: Reduced disk I/O, better performance
+
+### 1.4 Relationship to Other Components
+
+```
+Storage Manager
+    ↓ uses
+Buffer Manager (optional)
+    ↓ uses
+Disk Manager
+    ↓ performs
+Physical I/O
+```
+
+**With Buffer Manager** (recommended):
+```
+Read: StorageManager → BufferManager → DiskManager
+Write: StorageManager → BufferManager (dirty) → later → DiskManager
+```
+
+**Without Buffer Manager** (fallback):
+```
+Read: StorageManager → DiskManager
+Write: StorageManager → DiskManager
+```
+
 ## 2. Design Principles
 
 ### 2.1 Buffer Manager Integration
