@@ -575,12 +575,14 @@ public actor ColibrìDB {
             throw DBError.transactionNotFound(txId: txId)
         }
         
-        // Get table definition
+        // **Catalog-First**: Get table definition from Catalog
+        // Catalog is the single source of truth for table metadata
         guard let tableDef = await catalog.getTable(table) else {
             throw DBError.tableNotFound(table: table)
         }
         
-        // Validate row against schema
+        // **Catalog-First**: Validate row against schema from Catalog
+        // All validation uses Catalog metadata
         try validateRow(row, against: tableDef)
         
         // Get or create heap table

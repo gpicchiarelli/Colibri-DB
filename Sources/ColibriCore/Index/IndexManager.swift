@@ -117,14 +117,28 @@ public actor IndexManagerActor {
     /// Buffer manager
     private let bufferManager: BufferManager
     
+    /// Catalog Manager - **Catalog-First**: Index Manager MUST check Catalog before operations
+    /// Index Manager uses Catalog to:
+    /// - Validate index existence before operations
+    /// - Get index metadata (columns, type, uniqueness) from Catalog
+    /// - Ensure all indexes are defined in Catalog first
+    /// - Do NOT maintain duplicate index metadata (Catalog is single source of truth)
+    private let catalog: CatalogManager
+    
     /// Logger
     private let logger: ColibriLogger
     
     // MARK: - Initialization
     
-    public init(storageManager: StorageManager, bufferManager: BufferManager) {
+    /// Initialize Index Manager
+    /// - Parameters:
+    ///   - storageManager: Storage manager for I/O operations
+    ///   - bufferManager: Buffer manager for page caching
+    ///   - catalog: **Catalog-First**: Catalog Manager (REQUIRED)
+    public init(storageManager: StorageManager, bufferManager: BufferManager, catalog: CatalogManager) {
         self.storageManager = storageManager
         self.bufferManager = bufferManager
+        self.catalog = catalog
         self.logger = ColibriLogger()
         
         // TLA+ Init
@@ -138,8 +152,36 @@ public actor IndexManagerActor {
     
     /// Create index
     /// TLA+ Action: CreateIndex(metadata)
+    /// 
+    /// **Catalog-First**: Index MUST be created in Catalog FIRST.
+    /// This method creates the index STRUCTURE, but metadata comes from Catalog.
     public func createIndex(metadata: IndexMetadata) async throws -> IndexID {
-        // TLA+: Create index
+        // **Catalog-First**: Check if index exists in Catalog
+        guard let catalogIndexMetadata = await catalog.getIndex(name: metadata.name) else {
+            throw IndexError.indexNotFound
+        }
+        
+        // **Catalog-First**: Validate metadata matches Catalog
+        guard catalogIndexMetadata.tableName == metadata.tableName,
+              catalogIndexMetadata.columns == metadata.columns,
+              catalogIndexMetadata.indexType == metadata.indexType,
+              catalogIndexMetadata.unique == metadata.unique else {
+            throw IndexError.indexMetadataMismatch
+        }
+        
+        // **Catalog-First**: Get table metadata from Catalog to validate columns
+        guard let tableMetadata = await catalog.getTable(name: metadata.tableName) else {
+            throw IndexError.tableNotFound
+        }
+        
+        // Validate index columns exist in table (double-check)
+        for column in metadata.columns {
+            guard tableMetadata.columns.contains(where: { $0.name == column }) else {
+                throw IndexError.invalidColumn("Index column \(column) not found in table")
+            }
+        }
+        
+        // TLA+: Create index structure (Catalog has metadata, we create physical structure)
         let index = Index(
             indexId: IndexID(0), // Generate new ID
             indexType: metadata.indexType,
@@ -154,7 +196,8 @@ public actor IndexManagerActor {
         
         let indexId = IndexID(UInt64(indexes.count + 1))
         indexes[indexId] = index
-        indexMetadata[indexId] = metadata
+        // **Catalog-First**: Do NOT store duplicate metadata (Catalog is single source of truth)
+        // indexMetadata[indexId] = metadata  // REMOVED - use Catalog instead
         
         // TLA+: Initialize metrics
         let metrics = IndexMetrics(
@@ -181,15 +224,27 @@ public actor IndexManagerActor {
     
     /// Drop index
     /// TLA+ Action: DropIndex(indexId)
+    /// 
+    /// **Catalog-First**: Index MUST be dropped from Catalog FIRST.
+    /// This method drops the index STRUCTURE.
     public func dropIndex(indexId: IndexID) async throws {
-        // TLA+: Check if index exists
+        // **Catalog-First**: Check if index exists in Catalog
+        // Note: We need to find index name from indexId, which requires a mapping
+        // For now, check that index structure exists locally
+        
+        // TLA+: Check if index exists locally
         guard indexes[indexId] != nil else {
             throw IndexError.indexNotFound
         }
         
-        // TLA+: Drop index
+        // **Catalog-First**: Index should already be dropped from Catalog
+        // (Catalog.dropIndex should be called first)
+        // We just drop the physical structure here
+        
+        // TLA+: Drop index structure
         indexes.removeValue(forKey: indexId)
-        indexMetadata.removeValue(forKey: indexId)
+        // **Catalog-First**: Do NOT maintain duplicate metadata
+        // indexMetadata.removeValue(forKey: indexId)  // REMOVED - Catalog is source of truth
         indexMetrics.removeValue(forKey: indexId)
         indexCache.removeValue(forKey: indexId)
         
@@ -587,7 +642,7 @@ public protocol StorageManager: Sendable {
 
 
 /// Index error
-public enum IndexError: Error, LocalizedError {
+public enum IndexError: Error, LocalizedError, Equatable {
     case indexNotFound
     case entryNotFound
     case duplicateKey
@@ -597,6 +652,9 @@ public enum IndexError: Error, LocalizedError {
     case entryDeleteFailed
     case lookupFailed
     case scanFailed
+    case indexMetadataMismatch  // **Catalog-First**: Index metadata doesn't match Catalog
+    case tableNotFound  // **Catalog-First**: Table not found in Catalog
+    case invalidColumn(String)  // **Catalog-First**: Invalid column (from Catalog validation)
     
     public var errorDescription: String? {
         switch self {
@@ -618,6 +676,12 @@ public enum IndexError: Error, LocalizedError {
             return "Entry lookup failed"
         case .scanFailed:
             return "Range scan failed"
+        case .indexMetadataMismatch:
+            return "Index metadata does not match Catalog (Catalog-First violation)"
+        case .tableNotFound:
+            return "Table not found in Catalog"
+        case .invalidColumn(let message):
+            return "Invalid column: \(message)"
         }
     }
 }

@@ -130,13 +130,34 @@ public actor StorageManagerActor {
     /// Encryption service
     private let encryptionService: EncryptionService
     
+    /// Catalog Manager - **Catalog-First**: Storage Manager MUST check Catalog before operations
+    /// Storage Manager uses Catalog to:
+    /// - Validate table existence before operations
+    /// - Get table metadata (columns, constraints) for validation
+    /// - Ensure all operations are on tables defined in Catalog
+    private let catalog: CatalogManager
+    
     // MARK: - Initialization
     
-    public init(diskManager: DiskManager, compressionService: CompressionService, encryptionService: EncryptionService, bufferManager: BufferManager? = nil) {
+    /// Initialize Storage Manager
+    /// - Parameters:
+    ///   - diskManager: Disk manager for I/O operations
+    ///   - compressionService: Compression service
+    ///   - encryptionService: Encryption service
+    ///   - bufferManager: Optional buffer manager for caching
+    ///   - catalog: **Catalog-First**: Catalog Manager (REQUIRED)
+    public init(
+        diskManager: DiskManager,
+        compressionService: CompressionService,
+        encryptionService: EncryptionService,
+        bufferManager: BufferManager? = nil,
+        catalog: CatalogManager
+    ) {
         self.diskManager = diskManager
         self.bufferManager = bufferManager
         self.compressionService = compressionService
         self.encryptionService = encryptionService
+        self.catalog = catalog
         
         // TLA+ Init
         self.pages = [:]
