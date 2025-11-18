@@ -25,7 +25,7 @@ final class AdditionalModulesTests: XCTestCase {
     }
     
     override func setUpWithError() throws {
-        throw XCTSkip("Additional modules suite pending buffer manager stabilization")
+        // Buffer manager is now stabilized
     }
     
     // MARK: - Helper Types
@@ -189,10 +189,7 @@ final class AdditionalModulesTests: XCTestCase {
         let pageId = PageID(1)
         let page = try await bufferManager.getPage(pageId: pageId)
         
-        XCTAssertNotNil(page, "Page should be retrieved")
-        if let page = page {
-            XCTAssertEqual(page.pageId, pageId, "Page ID should match")
-        }
+        XCTAssertEqual(page.pageId, pageId, "Page ID should match")
     }
     
     // MARK: - Buffer Pool Manager Tests
