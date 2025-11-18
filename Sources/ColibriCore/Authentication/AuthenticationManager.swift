@@ -128,9 +128,20 @@ public final class AuthenticationManager: @unchecked Sendable {
     /// User lockout timestamps
     private var lockoutTimestamps: [String: Date] = [:]
     
+    /// Catalog Manager - **Catalog-First**: Authentication Manager uses Catalog for:
+    /// - User metadata storage (future: in Catalog's colibri_users system table)
+    /// - Role definitions (future: in Catalog's colibri_roles system table)
+    /// - Permission checks (future: in Catalog's colibri_permissions system table)
+    /// - All user/role/permission metadata comes from Catalog (single source of truth)
+    private let catalog: CatalogManager?
+    
     // MARK: - Initialization
     
-    public init() {
+    /// Initialize Authentication Manager
+    /// - Parameter catalog: **Catalog-First**: Catalog Manager for user/role/permission metadata (optional, but recommended)
+    public init(catalog: CatalogManager? = nil) {
+        self.catalog = catalog
+        
         // TLA+ Init
         self.users = [:]
         self.sessions = [:]

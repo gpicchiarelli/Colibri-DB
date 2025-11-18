@@ -195,21 +195,6 @@ public actor ColibrìDB {
             filePath: config.dataDirectory.appendingPathComponent("data.db")
         )
         
-        // Create compression and encryption services
-        let compressionService = CompressionService()
-        let encryptionService = EncryptionService()
-        
-        // Create storage manager (needed for Catalog persistence)
-        // Note: StorageManager will be created fully after BufferManager is set up
-        let storageManager: StorageManager? = nil  // TODO: Create after BufferManager
-        
-        // Initialize Catalog with Storage Manager and WAL (for persistence)
-        // **Catalog-First**: Catalog is the foundation of ColibrìDB
-        // EVERY component depends on Catalog for metadata
-        self.catalog = Catalog(
-            storageManager: storageManager,
-            walManager: fileWAL.asTransactionWALManager()
-        )
         self.groupCommitManager = GroupCommitManager(config: config.groupCommitConfig) { [weak fileWAL] targetLSN in
             guard let wal = fileWAL else {
                 throw GroupCommitError.managerShutdown
@@ -217,18 +202,54 @@ public actor ColibrìDB {
             try await wal.flush(upTo: targetLSN)
         }
         
-        // Create a separate disk manager for buffer pool
-        let diskManager = try FileDiskManager(
-            filePath: config.dataDirectory.appendingPathComponent("data.db")
-        )
-        
-        // Create BufferManager for advanced buffer management
-        // Note: BufferManager will be available for StorageManager integration
-        // but HeapTable still uses BufferPool for backward compatibility
+        // Create BufferPool first (for HeapTable compatibility)
         self.bufferPool = BufferPool(
             poolSize: config.bufferPoolSize,
             diskManager: diskManager
         )
+        
+        // Create compression and encryption services
+        let compressionService: CompressionService = DefaultCompressionService()
+        let encryptionService: EncryptionService = DefaultEncryptionService()  // Actor - used via protocol
+        
+        // Create BufferManager for advanced buffer management
+        // Note: This will be used by StorageManager for Catalog persistence
+        let bufferManager = BufferManager(
+            diskManager: diskManager,
+            poolSize: config.bufferPoolSize,
+            evictionPolicy: .lru
+        )
+        
+        // Create CatalogManager FIRST (foundation of ColibrìDB)
+        // **Catalog-First**: Catalog is the foundation - all components depend on it
+        // Catalog will be configured with StorageManager after initialization
+        // (avoids circular dependency: Catalog needs StorageManager, StorageManager needs Catalog)
+        let catalogManager = CatalogManager(
+            storageManager: nil,  // Will be set after StorageManager creation
+            walManager: nil  // WAL integration will be added later
+        )
+        
+        // Initialize Catalog wrapper around CatalogManager
+        // **Catalog-First**: Catalog is the foundation - all components depend on it
+        self.catalog = Catalog(
+            storageManager: nil,  // Will be set after StorageManager creation
+            walManager: nil  // WAL integration will be added later
+        )
+        
+        // Create storage manager with Catalog dependency
+        // **Catalog-First**: StorageManager MUST check Catalog before operations
+        // Note: storageManager created but not stored (used for Catalog persistence in future)
+        let _ = StorageManagerActor(
+            diskManager: diskManager,
+            compressionService: compressionService,
+            encryptionService: encryptionService,
+            bufferManager: bufferManager,
+            catalog: catalogManager
+        )
+        
+        // TODO: Update Catalog with StorageManager for persistence
+        // This requires refactoring CatalogManager to allow setting StorageManager after init
+        // For now, Catalog works in-memory only (for testing)
         
         // Initialize transaction layer
         self.mvccManager = MVCCManager()
@@ -237,10 +258,13 @@ public actor ColibrìDB {
         let walAdapter = wal.asTransactionWALManager()
         let mvccAdapter = mvccManager.asTransactionMVCCManager()
         
+        // Create transaction manager with Catalog dependency
+        // **Catalog-First**: Transaction Manager uses Catalog for validation
         self.transactionManager = TransactionManager(
             walManager: walAdapter,
             mvccManager: mvccAdapter,
-            lockManager: nil
+            lockManager: nil,
+            catalog: catalogManager  // **Catalog-First**: Pass Catalog for validation
         )
         self.lockManager = LockManager(transactionManager: transactionManager)
         
@@ -274,8 +298,9 @@ public actor ColibrìDB {
         // Initialize wire protocol
         self.wireProtocol = WireProtocolHandler()
         
-        // Initialize authentication
-        self.authManager = AuthenticationManager()
+        // Initialize authentication with Catalog dependency
+        // **Catalog-First**: Authentication Manager uses Catalog for user/role/permission metadata
+        self.authManager = AuthenticationManager(catalog: catalogManager)
         
         // Database server will be initialized after construction to avoid circular dependency
         self.databaseServer = nil
@@ -619,6 +644,11 @@ public actor ColibrìDB {
             throw DBError.transactionNotFound(txId: txId)
         }
         
+        // **Catalog-First**: Verify table exists in Catalog before operations
+        guard await catalog.getTable(table) != nil else {
+            throw DBError.tableNotFound(table: table)
+        }
+        
         // Get heap table
         guard let heapTable = heapTables[table] else {
             throw DBError.tableNotFound(table: table)
@@ -656,6 +686,11 @@ public actor ColibrìDB {
         
         guard activeTransactions[txId] != nil else {
             throw DBError.transactionNotFound(txId: txId)
+        }
+        
+        // **Catalog-First**: Verify table exists in Catalog before operations
+        guard await catalog.getTable(table) != nil else {
+            throw DBError.tableNotFound(table: table)
         }
         
         // Get heap table

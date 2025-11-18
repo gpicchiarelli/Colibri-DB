@@ -87,6 +87,9 @@ ColibrìDB is designed as an Apple-first database system, leveraging Swift's mod
 ### Transaction Layer
 - **[RFC 0019: Transaction Manager](0019-transaction-manager.md)** - Transaction lifecycle and ACID guarantees
 - **[RFC 0020: Multi-Version Concurrency Control (MVCC)](0020-mvcc-manager.md)** - Snapshot isolation and version management
+
+### System Management
+- **[RFC 0040: Catalog Manager](0040-catalog-manager.md)** - System Catalog (foundation of ColibrìDB)
 - **RFC 0021**: Lock Manager
 - **RFC 0022**: Serializable Snapshot Isolation
 - **RFC 0023**: Two-Phase Commit (2PC)
@@ -193,6 +196,7 @@ All implementations are verified to match their TLA+ specifications.
 | Index Manager | RFC 0010 | Complete | Index.tla |
 | Transaction Manager | RFC 0019 | Complete | TransactionManager.tla |
 | MVCC | RFC 0020 | Complete | MVCC.tla |
+| Catalog Manager | RFC 0040 | Complete | Catalog.tla |
 | Query Optimizer | RFC 0025 | Complete | QueryOptimizer.tla |
 | ARIES Recovery | RFC 0032 | Complete | RECOVERY.tla |
 

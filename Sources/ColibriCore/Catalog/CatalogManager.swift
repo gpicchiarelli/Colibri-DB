@@ -271,7 +271,7 @@ public actor CatalogManager {
     
     /// Persist table metadata to system table
     private func persistTableMetadata(name: String, metadata: TableMetadata) async throws {
-        guard let storage = storageManager else {
+        guard storageManager != nil else {
             return  // No persistence available
         }
         
@@ -281,7 +281,7 @@ public actor CatalogManager {
     
     /// Persist index metadata to system table
     private func persistIndexMetadata(name: String, metadata: IndexMetadata) async throws {
-        guard let storage = storageManager else {
+        guard storageManager != nil else {
             return  // No persistence available
         }
         
@@ -290,7 +290,7 @@ public actor CatalogManager {
     
     /// Persist statistics to system table
     private func persistStatistics(tableName: String, stats: Statistics) async throws {
-        guard let storage = storageManager else {
+        guard storageManager != nil else {
             return  // No persistence available
         }
         
@@ -381,7 +381,7 @@ public actor CatalogManager {
         try await persistTableMetadata(name: name, metadata: tableMetadata)
         
         // Log to WAL (if available)
-        if let wal = walManager {
+        if walManager != nil {
             // TODO: Log DDL operation to WAL
         }
         
@@ -434,7 +434,7 @@ public actor CatalogManager {
         }
         
         // Log to WAL (if available)
-        if let wal = walManager {
+        if walManager != nil {
             // TODO: Log DDL operation to WAL
         }
         
@@ -453,7 +453,7 @@ public actor CatalogManager {
     /// **Catalog-First**: Schema changes MUST go through Catalog.
     public func alterTableAddColumn(tableName: String, column: ColumnMetadata) async throws {
         // TLA+: Check if table exists
-        guard var tableMetadata = tables[tableName] else {
+        guard let tableMetadata = tables[tableName] else {
             throw CatalogError.tableNotFound(tableName)
         }
         
@@ -463,8 +463,7 @@ public actor CatalogManager {
         }
         
         // TLA+: Add column to table
-        var newColumns = tableMetadata.columns
-        newColumns.append(column)
+        let newColumns = tableMetadata.columns + [column]
         
         let updatedTable = TableMetadata(
             name: tableName,
@@ -480,7 +479,7 @@ public actor CatalogManager {
         try await persistTableMetadata(name: tableName, metadata: updatedTable)
         
         // Log to WAL (if available)
-        if let wal = walManager {
+        if walManager != nil {
             // TODO: Log DDL operation to WAL
         }
         
@@ -570,7 +569,7 @@ public actor CatalogManager {
         try await persistIndexMetadata(name: name, metadata: indexMetadata)
         
         // Log to WAL (if available)
-        if let wal = walManager {
+        if walManager != nil {
             // TODO: Log DDL operation to WAL
         }
         
@@ -596,7 +595,7 @@ public actor CatalogManager {
         }
         
         // Log to WAL (if available)
-        if let wal = walManager {
+        if walManager != nil {
             // TODO: Log DDL operation to WAL
         }
         

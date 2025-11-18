@@ -196,12 +196,31 @@ public actor TransactionManager {
     /// Lock manager
     private let lockManager: LockManager?
     
+    /// Catalog Manager - **Catalog-First**: Transaction Manager uses Catalog for:
+    /// - Foreign key constraint validation
+    /// - Table/column existence validation
+    /// - Schema consistency checks
+    /// - Permission checks (future)
+    private let catalog: CatalogManager?
+    
     // MARK: - Initialization
     
-    public init(walManager: TransactionWALManager, mvccManager: TransactionMVCCManager, lockManager: LockManager?) {
+    /// Initialize Transaction Manager
+    /// - Parameters:
+    ///   - walManager: WAL Manager for durability
+    ///   - mvccManager: MVCC Manager for isolation
+    ///   - lockManager: Lock Manager for deadlock prevention (optional)
+    ///   - catalog: **Catalog-First**: Catalog Manager for validation (optional, but recommended)
+    public init(
+        walManager: TransactionWALManager,
+        mvccManager: TransactionMVCCManager,
+        lockManager: LockManager? = nil,
+        catalog: CatalogManager? = nil
+    ) {
         self.walManager = walManager
         self.mvccManager = mvccManager
         self.lockManager = lockManager
+        self.catalog = catalog
         
         // TLA+ Init
         self.nextTID = 1
