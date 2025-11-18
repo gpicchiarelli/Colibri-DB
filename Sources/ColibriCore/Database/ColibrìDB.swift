@@ -204,6 +204,9 @@ public actor ColibrìDB {
             filePath: config.dataDirectory.appendingPathComponent("data.db")
         )
         
+        // Create BufferManager for advanced buffer management
+        // Note: BufferManager will be available for StorageManager integration
+        // but HeapTable still uses BufferPool for backward compatibility
         self.bufferPool = BufferPool(
             poolSize: config.bufferPoolSize,
             diskManager: diskManager

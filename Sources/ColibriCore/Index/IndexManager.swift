@@ -223,6 +223,12 @@ public actor IndexManagerActor {
         }
         indexCache[indexId]?.append(entry)
         
+        // If entry has pageId, ensure page is in buffer (for persistence)
+        if entry.pageId > 0 {
+            // Touch the page to ensure it's in buffer cache
+            _ = await bufferManager.getPageQuery(pageId: PageID(entry.pageId))
+        }
+        
         // TLA+: Update metrics
         updateMetrics(indexId: indexId)
         
@@ -268,6 +274,13 @@ public actor IndexManagerActor {
         // TLA+: Lookup entries
         let entries = index.entries.filter { $0.key == key && !$0.isDeleted }
         
+        // Prefetch pages for found entries
+        let pageIds = Set(entries.map { PageID($0.pageId) })
+        for pageId in pageIds {
+            // Prefetch page into buffer cache
+                _ = await bufferManager.getPageQuery(pageId: pageId)
+        }
+        
         // TLA+: Update metrics
         updateMetrics(indexId: indexId)
         
@@ -286,6 +299,13 @@ public actor IndexManagerActor {
         // TLA+: Range scan
         let entries = index.entries.filter { entry in
             !entry.isDeleted && entry.key >= startKey && entry.key <= endKey
+        }
+        
+        // Prefetch pages for found entries
+        let pageIds = Set(entries.map { PageID($0.pageId) })
+        for pageId in pageIds {
+            // Prefetch page into buffer cache
+                _ = await bufferManager.getPageQuery(pageId: pageId)
         }
         
         // TLA+: Update metrics
@@ -453,21 +473,70 @@ public actor IndexManagerActor {
     /// TLA+ Inv_Index_IndexConsistency
     public func checkIndexConsistencyInvariant() -> Bool {
         // Check that indexes are consistent
-        return true // Simplified
+        // Verify that all indexes have valid metadata
+        for (indexId, index) in indexes {
+            guard indexMetadata[indexId] != nil else {
+                return false
+            }
+            // Check that index entries match metadata
+            if let metadata = indexMetadata[indexId] {
+                if index.indexType != metadata.indexType {
+                    return false
+                }
+                if index.isUnique != metadata.unique {
+                    return false
+                }
+            }
+        }
+        return true
     }
     
     /// Check data integrity invariant
     /// TLA+ Inv_Index_DataIntegrity
     public func checkDataIntegrityInvariant() -> Bool {
         // Check that data integrity is maintained
-        return true // Simplified
+        // Verify that unique indexes have no duplicate keys
+        for (_, index) in indexes where index.isUnique {
+            let activeEntries = index.entries.filter { !$0.isDeleted }
+            let keys = Set(activeEntries.map { $0.key })
+            if keys.count != activeEntries.count {
+                return false // Duplicate keys found
+            }
+        }
+        // Verify that entries match their metadata
+        for (indexId, index) in indexes {
+            for entry in index.entries {
+                if entry.indexId != indexId {
+                    return false
+                }
+            }
+        }
+        return true
     }
     
     /// Check performance metrics invariant
     /// TLA+ Inv_Index_PerformanceMetrics
     public func checkPerformanceMetricsInvariant() -> Bool {
         // Check that performance metrics are tracked
-        return true // Simplified
+        // Verify that metrics exist for all indexes
+        for indexId in indexes.keys {
+            guard indexMetrics[indexId] != nil else {
+                return false
+            }
+        }
+        // Verify that metrics values are non-negative
+        for metrics in indexMetrics.values {
+            if metrics.entryCount < 0 || metrics.size < 0 || metrics.height < 0 {
+                return false
+            }
+            if metrics.hitRate < 0.0 || metrics.hitRate > 1.0 {
+                return false
+            }
+            if metrics.missRate < 0.0 || metrics.missRate > 1.0 {
+                return false
+            }
+        }
+        return true
     }
     
     /// Check all invariants

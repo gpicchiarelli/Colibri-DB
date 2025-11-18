@@ -494,7 +494,7 @@ public actor BufferManager {
         
         let maxScans = max(lruList.count * 2, poolSize) // Scan at most twice or pool size
         
-        for scanCount in 0..<maxScans {
+        for _ in 0..<maxScans {
             // Wrap clock hand
             if clockHand >= lruList.count || lruList.isEmpty {
                 clockHand = 0
