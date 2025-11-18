@@ -183,15 +183,33 @@ public actor ColibrìDB {
     public init(config: ColibrìDBConfiguration) throws {
         self.config = config
         
-        // Initialize core subsystems
-        self.catalog = Catalog()
-        
-        // Initialize storage layer
+        // Initialize storage layer first (needed for Catalog persistence)
         let fileWAL = try FileWAL(
             walFilePath: config.dataDirectory.appendingPathComponent("wal.log"),
             fsyncOnFlush: !config.disableWALFsyncForBenchmarks
         )
         self.wal = fileWAL
+        
+        // Create disk manager for storage
+        let diskManager = try FileDiskManager(
+            filePath: config.dataDirectory.appendingPathComponent("data.db")
+        )
+        
+        // Create compression and encryption services
+        let compressionService = CompressionService()
+        let encryptionService = EncryptionService()
+        
+        // Create storage manager (needed for Catalog persistence)
+        // Note: StorageManager will be created fully after BufferManager is set up
+        let storageManager: StorageManager? = nil  // TODO: Create after BufferManager
+        
+        // Initialize Catalog with Storage Manager and WAL (for persistence)
+        // **Catalog-First**: Catalog is the foundation of ColibrìDB
+        // EVERY component depends on Catalog for metadata
+        self.catalog = Catalog(
+            storageManager: storageManager,
+            walManager: fileWAL.asTransactionWALManager()
+        )
         self.groupCommitManager = GroupCommitManager(config: config.groupCommitConfig) { [weak fileWAL] targetLSN in
             guard let wal = fileWAL else {
                 throw GroupCommitError.managerShutdown

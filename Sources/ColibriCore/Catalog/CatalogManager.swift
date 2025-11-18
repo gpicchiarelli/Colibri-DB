@@ -140,56 +140,204 @@ public struct Statistics: Codable, Sendable, Equatable {
 
 /// System Catalog Manager for database metadata
 /// Corresponds to TLA+ module: Catalog.tla
+/// 
+/// **CRITICAL**: The Catalog Manager is the FOUNDATION of ColibrìDB.
+/// EVERY component MUST depend on the Catalog for metadata.
+/// NOTHING operates without consulting the Catalog first.
+///
+/// The Catalog Manager serves as the single source of truth for:
+/// - Table schemas and column definitions
+/// - Index definitions and metadata
+/// - Statistics for query optimization
+/// - User and role management (future)
+/// - System configuration (future)
 public actor CatalogManager {
     
     // MARK: - State Variables (TLA+ vars)
     
     /// Table metadata
     /// TLA+: tables \in [TableName -> TableMetadata]
+    /// **Catalog-First**: ALL table metadata comes from Catalog
     private var tables: [String: TableMetadata] = [:]
     
     /// Index metadata
     /// TLA+: indexes \in [IndexName -> IndexMetadata]
+    /// **Catalog-First**: ALL index metadata comes from Catalog
     private var indexes: [String: IndexMetadata] = [:]
     
     /// Table statistics
     /// TLA+: statistics \in [TableName -> Statistics]
+    /// **Catalog-First**: ALL statistics come from Catalog
     private var statistics: [String: Statistics] = [:]
     
     /// Current schema version number
     /// TLA+: schemaVersion \in Nat
     private var schemaVersion: Int = 0
     
+    /// Bootstrap flag - indicates if system tables have been created
+    private var isBootstrapped: Bool = false
+    
+    // MARK: - Dependencies
+    
+    /// Storage Manager for Catalog persistence
+    /// Used to persist Catalog to system tables
+    private let storageManager: StorageManager?
+    
+    /// WAL Manager for Catalog durability (optional)
+    /// Used to log Catalog changes for recovery
+    private let walManager: WALManagerProtocol?
+    
     // MARK: - Initialization
     
-    public init() {
+    /// Initialize Catalog Manager
+    /// - Parameter storageManager: Optional storage manager for Catalog persistence
+    /// - Parameter walManager: Optional WAL manager for Catalog durability
+    /// 
+    /// **Bootstrap Process**:
+    /// 1. If storageManager provided: Loads Catalog from system tables
+    /// 2. If system tables don't exist: Bootstraps system tables
+    /// 3. If storageManager nil: In-memory only (for testing)
+    public init(storageManager: StorageManager? = nil, walManager: WALManagerProtocol? = nil) {
+        self.storageManager = storageManager
+        self.walManager = walManager
+        
         // TLA+ Init
         self.tables = [:]
         self.indexes = [:]
         self.statistics = [:]
         self.schemaVersion = 0
+        self.isBootstrapped = false
+        
+        // Bootstrap if storage manager available
+        if storageManager != nil {
+            Task {
+                try? await bootstrap()
+            }
+        }
+    }
+    
+    // MARK: - Bootstrap Process
+    
+    /// Bootstrap system tables (create Catalog's own tables)
+    /// **CRITICAL**: Catalog must bootstrap itself before use
+    /// 
+    /// **Bootstrap Sequence**:
+    /// 1. Check if system tables exist
+    /// 2. If not: Create system tables (colibri_tables, colibri_columns, etc.)
+    /// 3. If yes: Load Catalog from system tables
+    /// 4. Mark as bootstrapped
+    public func bootstrap() async throws {
+        guard let storage = storageManager else {
+            // No storage manager - in-memory only (for testing)
+            isBootstrapped = true
+            return
+        }
+        
+        // Check if system tables exist
+        let systemTablesExist = try await checkSystemTablesExist(storage: storage)
+        
+        if !systemTablesExist {
+            // Bootstrap: Create system tables
+            try await createSystemTables(storage: storage)
+        } else {
+            // Load Catalog from system tables
+            try await loadCatalogFromSystemTables(storage: storage)
+        }
+        
+        isBootstrapped = true
+    }
+    
+    /// Check if system tables exist
+    private func checkSystemTablesExist(storage: StorageManager) async throws -> Bool {
+        // TODO: Implement system table existence check
+        // For now, assume system tables don't exist (bootstrap)
+        return false
+    }
+    
+    /// Create system tables (Catalog's own tables)
+    private func createSystemTables(storage: StorageManager) async throws {
+        // System tables will be created in-memory first
+        // Then persisted when storage integration is complete
+        // For now, this is a placeholder for future implementation
+    }
+    
+    /// Load Catalog from system tables (on restart)
+    private func loadCatalogFromSystemTables(storage: StorageManager) async throws {
+        // Load tables from colibri_tables system table
+        // Load indexes from colibri_indexes system table
+        // Load statistics from colibri_statistics system table
+        // TODO: Implement system table loading
+    }
+    
+    /// Persist table metadata to system table
+    private func persistTableMetadata(name: String, metadata: TableMetadata) async throws {
+        guard let storage = storageManager else {
+            return  // No persistence available
+        }
+        
+        // TODO: Implement persistence to colibri_tables system table
+        // For now, metadata is only in-memory
+    }
+    
+    /// Persist index metadata to system table
+    private func persistIndexMetadata(name: String, metadata: IndexMetadata) async throws {
+        guard let storage = storageManager else {
+            return  // No persistence available
+        }
+        
+        // TODO: Implement persistence to colibri_indexes system table
+    }
+    
+    /// Persist statistics to system table
+    private func persistStatistics(tableName: String, stats: Statistics) async throws {
+        guard let storage = storageManager else {
+            return  // No persistence available
+        }
+        
+        // TODO: Implement persistence to colibri_statistics system table
     }
     
     // MARK: - Table Operations
     
     /// Create a table
     /// TLA+ Action: CreateTable(tableName, columns, primaryKey, foreignKeys, constraints)
+    /// 
+    /// **Catalog-First**: This is THE ONLY place where tables are created.
+    /// Storage Manager, Index Manager, and all other components MUST check
+    /// Catalog before operating on tables.
     public func createTable(
         name: String,
         columns: [ColumnMetadata],
         primaryKey: Set<String> = [],
         foreignKeys: [ForeignKeyMetadata] = [],
         constraints: [ConstraintMetadata] = []
-    ) throws {
+    ) async throws {
+        // Validate table name
+        guard !name.isEmpty else {
+            throw CatalogError.invalidTableName("Table name cannot be empty")
+        }
+        guard !name.hasPrefix("colibri_") else {
+            throw CatalogError.invalidTableName("Cannot create table with colibri_ prefix (reserved for system tables)")
+        }
+        
         // TLA+: Check if table already exists
         guard tables[name] == nil else {
-            throw DBError.tableAlreadyExists
+            throw CatalogError.tableAlreadyExists(name)
+        }
+        
+        // TLA+: Validate columns are non-empty and unique
+        guard !columns.isEmpty else {
+            throw CatalogError.invalidTableName("Table must have at least one column")
+        }
+        let columnNames = Set(columns.map { $0.name })
+        guard columnNames.count == columns.count else {
+            throw CatalogError.invalidColumn("Duplicate column names found")
         }
         
         // TLA+: Validate primary key columns exist
         for pkColumn in primaryKey {
             guard columns.contains(where: { $0.name == pkColumn }) else {
-                throw DBError.invalidColumn("Primary key column \(pkColumn) not found")
+                throw CatalogError.invalidColumn("Primary key column \(pkColumn) not found")
             }
         }
         
@@ -197,7 +345,22 @@ public actor CatalogManager {
         for fk in foreignKeys {
             for fkColumn in fk.from {
                 guard columns.contains(where: { $0.name == fkColumn }) else {
-                    throw DBError.invalidColumn("Foreign key column \(fkColumn) not found")
+                    throw CatalogError.invalidColumn("Foreign key column \(fkColumn) not found")
+                }
+            }
+            
+            // Validate referenced table exists
+            guard tables[fk.to.table] != nil else {
+                throw CatalogError.tableNotFound(fk.to.table)
+            }
+            
+            // Validate referenced columns exist in referenced table
+            guard let referencedTable = tables[fk.to.table] else {
+                throw CatalogError.tableNotFound(fk.to.table)
+            }
+            for refColumn in fk.to.column {
+                guard referencedTable.columns.contains(where: { $0.name == refColumn }) else {
+                    throw CatalogError.invalidColumn("Referenced column \(refColumn) not found in table \(fk.to.table)")
                 }
             }
         }
@@ -211,7 +374,18 @@ public actor CatalogManager {
             constraints: constraints
         )
         
+        // Store in memory (Catalog-First: single source of truth)
         tables[name] = tableMetadata
+        
+        // Persist to system table (if storage available)
+        try await persistTableMetadata(name: name, metadata: tableMetadata)
+        
+        // Log to WAL (if available)
+        if let wal = walManager {
+            // TODO: Log DDL operation to WAL
+        }
+        
+        // Increment schema version
         schemaVersion += 1
         
         // Initialize statistics
@@ -220,35 +394,72 @@ public actor CatalogManager {
     
     /// Drop a table
     /// TLA+ Action: DropTable(tableName)
-    public func dropTable(name: String) throws {
+    /// 
+    /// **Catalog-First**: This is THE ONLY place where tables are dropped.
+    /// All components MUST check Catalog before operating on tables.
+    public func dropTable(name: String) async throws {
+        // Validate table name
+        guard !name.hasPrefix("colibri_") else {
+            throw CatalogError.invalidTableName("Cannot drop system table \(name)")
+        }
+        
         // TLA+: Check if table exists
         guard tables[name] != nil else {
-            throw DBError.tableNotFound
+            throw CatalogError.tableNotFound(name)
         }
         
         // TLA+: Check for dependent indexes
         let dependentIndexes = indexes.values.filter { $0.tableName == name }
         if !dependentIndexes.isEmpty {
-            throw DBError.custom("Table has dependent indexes")
+            let indexNames = dependentIndexes.map { $0.name }.joined(separator: ", ")
+            throw CatalogError.tableHasDependencies("Table \(name) has dependent indexes: \(indexNames)")
+        }
+        
+        // TLA+: Check for foreign key references
+        let referencingTables = tables.values.filter { table in
+            table.foreignKeys.contains { $0.to.table == name }
+        }
+        if !referencingTables.isEmpty {
+            let tableNames = referencingTables.map { $0.name }.joined(separator: ", ")
+            throw CatalogError.tableHasDependencies("Table \(name) is referenced by foreign keys in tables: \(tableNames)")
         }
         
         // TLA+: Remove table and related metadata
         tables.removeValue(forKey: name)
         statistics.removeValue(forKey: name)
+        
+        // Persist to system table (if storage available)
+        if let storage = storageManager {
+            try await deleteTableMetadata(name: name, storage: storage)
+        }
+        
+        // Log to WAL (if available)
+        if let wal = walManager {
+            // TODO: Log DDL operation to WAL
+        }
+        
+        // Increment schema version
         schemaVersion += 1
+    }
+    
+    /// Delete table metadata from system table
+    private func deleteTableMetadata(name: String, storage: StorageManager) async throws {
+        // TODO: Implement deletion from colibri_tables system table
     }
     
     /// Alter table (add column)
     /// TLA+ Action: AlterTable(tableName, newColumn)
-    public func alterTableAddColumn(tableName: String, column: ColumnMetadata) throws {
+    /// 
+    /// **Catalog-First**: Schema changes MUST go through Catalog.
+    public func alterTableAddColumn(tableName: String, column: ColumnMetadata) async throws {
         // TLA+: Check if table exists
         guard var tableMetadata = tables[tableName] else {
-            throw DBError.tableNotFound
+            throw CatalogError.tableNotFound(tableName)
         }
         
         // TLA+: Check if column already exists
         guard !tableMetadata.columns.contains(where: { $0.name == column.name }) else {
-            throw DBError.columnAlreadyExists
+            throw CatalogError.columnAlreadyExists(tableName: tableName, column: column.name)
         }
         
         // TLA+: Add column to table
@@ -264,11 +475,41 @@ public actor CatalogManager {
         )
         
         tables[tableName] = updatedTable
+        
+        // Persist to system table (if storage available)
+        try await persistTableMetadata(name: tableName, metadata: updatedTable)
+        
+        // Log to WAL (if available)
+        if let wal = walManager {
+            // TODO: Log DDL operation to WAL
+        }
+        
         schemaVersion += 1
     }
     
     /// Get table metadata
+    /// 
+    /// **Catalog-First**: This is THE ONLY source of table metadata.
+    /// Components MUST use this method to get table information.
+    /// 
+    /// - Parameter name: Table name
+    /// - Returns: Table metadata if exists, nil otherwise
+    /// 
+    /// **Performance**: O(1) hash table lookup
     public func getTable(name: String) -> TableMetadata? {
+        // Catalog-First: Return from Catalog (single source of truth)
+        return tables[name]
+    }
+    
+    /// Get table metadata (async version for future persistence loading)
+    public func getTable(name: String) async -> TableMetadata? {
+        // Check memory cache first
+        if let table = tables[name] {
+            return table  // Cache hit
+        }
+        
+        // TODO: Load from system table if storage available
+        // For now, return from memory only
         return tables[name]
     }
     
@@ -281,31 +522,35 @@ public actor CatalogManager {
     
     /// Create an index
     /// TLA+ Action: CreateIndex(indexName, tableName, columns, indexType, unique)
+    /// 
+    /// **Catalog-First**: This is THE ONLY place where indexes are created.
+    /// Index Manager MUST check Catalog before creating index structures.
     public func createIndex(
         name: String,
         tableName: String,
         columns: [String],
         indexType: IndexType = .btree,
         unique: Bool = false
-    ) throws {
+    ) async throws {
+        // Validate index name
+        guard !name.isEmpty else {
+            throw CatalogError.invalidIndexName("Index name cannot be empty")
+        }
+        
         // TLA+: Check if table exists
-        guard tables[tableName] != nil else {
-            throw DBError.tableNotFound
+        guard let tableMetadata = tables[tableName] else {
+            throw CatalogError.tableNotFound(tableName)
         }
         
         // TLA+: Check if index already exists
         guard indexes[name] == nil else {
-            throw DBError.indexAlreadyExists
+            throw CatalogError.indexAlreadyExists(name)
         }
         
         // TLA+: Validate index columns exist in table
-        guard let tableMetadata = tables[tableName] else {
-            throw DBError.tableNotFound
-        }
-        
         for column in columns {
             guard tableMetadata.columns.contains(where: { $0.name == column }) else {
-                throw DBError.invalidColumn("Index column \(column) not found in table")
+                throw CatalogError.invalidColumn("Index column \(column) not found in table \(tableName)")
             }
         }
         
@@ -318,30 +563,75 @@ public actor CatalogManager {
             unique: unique
         )
         
+        // Store in memory (Catalog-First: single source of truth)
         indexes[name] = indexMetadata
+        
+        // Persist to system table (if storage available)
+        try await persistIndexMetadata(name: name, metadata: indexMetadata)
+        
+        // Log to WAL (if available)
+        if let wal = walManager {
+            // TODO: Log DDL operation to WAL
+        }
+        
         schemaVersion += 1
     }
     
     /// Drop an index
     /// TLA+ Action: DropIndex(indexName)
-    public func dropIndex(name: String) throws {
+    /// 
+    /// **Catalog-First**: This is THE ONLY place where indexes are dropped.
+    public func dropIndex(name: String) async throws {
         // TLA+: Check if index exists
         guard indexes[name] != nil else {
-            throw DBError.indexNotFound
+            throw CatalogError.indexNotFound(name)
         }
         
         // TLA+: Remove index
         indexes.removeValue(forKey: name)
+        
+        // Persist to system table (if storage available)
+        if let storage = storageManager {
+            try await deleteIndexMetadata(name: name, storage: storage)
+        }
+        
+        // Log to WAL (if available)
+        if let wal = walManager {
+            // TODO: Log DDL operation to WAL
+        }
+        
         schemaVersion += 1
     }
     
+    /// Delete index metadata from system table
+    private func deleteIndexMetadata(name: String, storage: StorageManager) async throws {
+        // TODO: Implement deletion from colibri_indexes system table
+    }
+    
     /// Get index metadata
+    /// 
+    /// **Catalog-First**: This is THE ONLY source of index metadata.
+    /// Index Manager MUST use this method to get index information.
     public func getIndex(name: String) -> IndexMetadata? {
+        // Catalog-First: Return from Catalog (single source of truth)
+        return indexes[name]
+    }
+    
+    /// Get index metadata (async version)
+    public func getIndex(name: String) async -> IndexMetadata? {
         return indexes[name]
     }
     
     /// Get indexes for a table
+    /// 
+    /// **Catalog-First**: Query Optimizer MUST use this for index selection.
     public func getIndexes(for tableName: String) -> [IndexMetadata] {
+        // Catalog-First: Return from Catalog
+        return indexes.values.filter { $0.tableName == tableName }
+    }
+    
+    /// Get indexes for a table (async version)
+    public func getIndexes(for tableName: String) async -> [IndexMetadata] {
         return indexes.values.filter { $0.tableName == tableName }
     }
     
@@ -349,18 +639,32 @@ public actor CatalogManager {
     
     /// Update table statistics
     /// TLA+ Action: UpdateStatistics(tableName, stats)
-    public func updateStatistics(tableName: String, stats: Statistics) throws {
+    /// 
+    /// **Catalog-First**: Statistics Manager MUST update Catalog.
+    /// Query Optimizer MUST read statistics from Catalog.
+    public func updateStatistics(tableName: String, stats: Statistics) async throws {
         // TLA+: Check if table exists
         guard tables[tableName] != nil else {
-            throw DBError.tableNotFound
+            throw CatalogError.tableNotFound(tableName)
         }
         
         // TLA+: Update statistics
         statistics[tableName] = stats
+        
+        // Persist to system table (if storage available)
+        try await persistStatistics(tableName: tableName, stats: stats)
     }
     
     /// Get table statistics
+    /// 
+    /// **Catalog-First**: Query Optimizer MUST use this for cost estimation.
     public func getStatistics(tableName: String) -> Statistics? {
+        // Catalog-First: Return from Catalog
+        return statistics[tableName]
+    }
+    
+    /// Get table statistics (async version)
+    public func getStatistics(tableName: String) async -> Statistics? {
         return statistics[tableName]
     }
     
@@ -407,18 +711,61 @@ public actor CatalogManager {
     
     /// Check consistency invariant
     /// TLA+ Inv_Catalog_Consistency
+    /// 
+    /// Verifies that all Catalog metadata is consistent:
+    /// - Indexes reference existing tables
+    /// - Statistics reference existing tables
+    /// - Primary keys reference existing columns
+    /// - Foreign keys reference existing tables and columns
     public func checkConsistencyInvariant() -> Bool {
         // Check that all indexes reference existing tables
         for (_, index) in indexes {
-            if !tables.keys.contains(index.tableName) {
+            guard let table = tables[index.tableName] else {
                 return false
+            }
+            
+            // Check that index columns exist in table
+            for column in index.columns {
+                guard table.columns.contains(where: { $0.name == column }) else {
+                    return false
+                }
             }
         }
         
         // Check that all statistics reference existing tables
         for tableName in statistics.keys {
-            if !tables.keys.contains(tableName) {
+            guard tables[tableName] != nil else {
                 return false
+            }
+        }
+        
+        // Check that primary keys reference existing columns
+        for (_, table) in tables {
+            for pkColumn in table.primaryKey {
+                guard table.columns.contains(where: { $0.name == pkColumn }) else {
+                    return false
+                }
+            }
+        }
+        
+        // Check that foreign keys reference existing tables and columns
+        for (_, table) in tables {
+            for fk in table.foreignKeys {
+                guard let refTable = tables[fk.to.table] else {
+                    return false
+                }
+                
+                for fkColumn in fk.from {
+                    guard table.columns.contains(where: { $0.name == fkColumn }) else {
+                        return false
+                    }
+                }
+                
+                for refColumn in fk.to.column {
+                    guard refTable.columns.contains(where: { $0.name == refColumn }) else {
+                        return false
+                    }
+                }
             }
         }
         
@@ -456,6 +803,23 @@ public actor CatalogManager {
         
         return consistency && durability && isolation && versioning
     }
+}
+
+// MARK: - Catalog Errors
+
+/// Catalog-specific errors
+public enum CatalogError: Error, Equatable {
+    case tableNotFound(String)
+    case tableAlreadyExists(String)
+    case indexNotFound(String)
+    case indexAlreadyExists(String)
+    case invalidTableName(String)
+    case invalidIndexName(String)
+    case invalidColumn(String)
+    case tableHasDependencies(String)
+    case columnAlreadyExists(tableName: String, column: String)
+    case bootstrapFailed(String)
+    case persistenceFailed(String)
 }
 
 // MARK: - Extensions
