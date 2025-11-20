@@ -82,7 +82,8 @@ public struct StorageMetrics: Codable, Sendable, Equatable {
 
 /// Storage Manager for database storage management
 /// Corresponds to TLA+ module: Storage.tla
-public actor StorageManagerActor {
+/// Implements CatalogStorageProtocol for Catalog persistence
+public actor StorageManagerActor: CatalogStorageProtocol {
     
     // MARK: - State Variables (TLA+ vars)
     
@@ -121,18 +122,43 @@ public actor StorageManagerActor {
     /// Disk manager
     private let diskManager: DiskManager
     
+    /// Buffer manager (optional - if provided, uses buffer cache)
+    private let bufferManager: BufferManager?
+    
     /// Compression service
     private let compressionService: CompressionService
     
     /// Encryption service
     private let encryptionService: EncryptionService
     
+    /// Catalog Manager - **Catalog-First**: Storage Manager MUST check Catalog before operations
+    /// Storage Manager uses Catalog to:
+    /// - Validate table existence before operations
+    /// - Get table metadata (columns, constraints) for validation
+    /// - Ensure all operations are on tables defined in Catalog
+    private let catalog: CatalogManager
+    
     // MARK: - Initialization
     
-    public init(diskManager: DiskManager, compressionService: CompressionService, encryptionService: EncryptionService) {
+    /// Initialize Storage Manager
+    /// - Parameters:
+    ///   - diskManager: Disk manager for I/O operations
+    ///   - compressionService: Compression service
+    ///   - encryptionService: Encryption service
+    ///   - bufferManager: Optional buffer manager for caching
+    ///   - catalog: **Catalog-First**: Catalog Manager (REQUIRED)
+    public init(
+        diskManager: DiskManager,
+        compressionService: CompressionService,
+        encryptionService: EncryptionService,
+        bufferManager: BufferManager? = nil,
+        catalog: CatalogManager
+    ) {
         self.diskManager = diskManager
+        self.bufferManager = bufferManager
         self.compressionService = compressionService
         self.encryptionService = encryptionService
+        self.catalog = catalog
         
         // TLA+ Init
         self.pages = [:]
@@ -175,7 +201,6 @@ public actor StorageManagerActor {
         // TLA+: Update metrics
         updateMetrics()
         
-        logInfo("Allocated page: \(pageId) in area: \(area.rawValue)")
         return pageId
     }
     
@@ -183,7 +208,7 @@ public actor StorageManagerActor {
     /// TLA+ Action: DeallocatePage(pageId)
     public func deallocatePage(pageId: PageID) async throws {
         // TLA+: Check if page exists
-        guard let page = pages[pageId] else {
+        guard pages[pageId] != nil else {
             throw StorageError.pageNotFound
         }
         
@@ -197,8 +222,6 @@ public actor StorageManagerActor {
         
         // TLA+: Update metrics
         updateMetrics()
-        
-        logInfo("Deallocated page: \(pageId)")
     }
     
     /// Read record
@@ -212,7 +235,6 @@ public actor StorageManagerActor {
         // TLA+: Update metrics
         metrics.ioOperations += 1
         
-        logInfo("Read record: \(recordId)")
         return record
     }
     
@@ -235,8 +257,6 @@ public actor StorageManagerActor {
         // TLA+: Update metrics
         metrics.ioOperations += 1
         updateMetrics()
-        
-        logInfo("Wrote record: \(recordId)")
     }
     
     /// Update record
@@ -263,8 +283,6 @@ public actor StorageManagerActor {
         // TLA+: Update metrics
         metrics.ioOperations += 1
         updateMetrics()
-        
-        logInfo("Updated record: \(recordId)")
     }
     
     /// Delete record
@@ -281,17 +299,83 @@ public actor StorageManagerActor {
         
         // TLA+: Update metrics
         updateMetrics()
+    }
+    
+    /// Read page from storage (uses BufferManager if available)
+    /// TLA+ Action: ReadPage(pageId)
+    /// Read page from storage
+    /// TLA+ Action: ReadPage(pageId)
+    public func readPage(pageId: PageID) async throws -> Data {
+        let startTime = Date()
+        defer {
+            let latency = Date().timeIntervalSince(startTime) * 1000
+            metrics.ioOperations += 1
+            updateAverageLatency(latency)
+        }
         
-        logInfo("Deleted record: \(recordId)")
+        // If BufferManager is available, use it for caching
+        if let bufferManager = bufferManager {
+            let bufferPage = try await bufferManager.getPage(pageId: pageId)
+            // Unpin immediately after reading (StorageManager doesn't pin pages long-term)
+            try await bufferManager.unpinPage(pageId: pageId)
+            return bufferPage.data
+        }
+        
+        // Fallback to direct disk read
+        return try await diskManager.readPage(pageId: pageId)
+    }
+    
+    /// Write page to storage (uses BufferManager if available)
+    /// TLA+ Action: WritePage(pageId, data)
+    public func writePage(pageId: PageID, data: Data) async throws {
+        let startTime = Date()
+        defer {
+            let latency = Date().timeIntervalSince(startTime) * 1000
+            metrics.ioOperations += 1
+            updateAverageLatency(latency)
+        }
+        
+        // If BufferManager is available, use it for caching
+        if let bufferManager = bufferManager {
+            // Check if page exists in buffer
+            if await bufferManager.isPageInCache(pageId: pageId) {
+                // Get existing page and update it
+                let bufferPage = try await bufferManager.getPage(pageId: pageId)
+                // Create new buffer page with updated data
+                let updatedPage = BufferPage(
+                    pageId: pageId,
+                    data: data,
+                    lsn: bufferPage.lsn + 1, // Increment LSN for modification
+                    isDirty: true,
+                    isPinned: false, // Will be pinned by putPage
+                    timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+                )
+                try await bufferManager.putPage(pageId: pageId, page: updatedPage, isDirty: true)
+                try await bufferManager.unpinPage(pageId: pageId)
+            } else {
+                // Create new buffer page
+                let bufferPage = BufferPage(
+                    pageId: pageId,
+                    data: data,
+                    lsn: 0, // Will be updated by WAL
+                    isDirty: true,
+                    isPinned: false, // Will be pinned by putPage
+                    timestamp: UInt64(Date().timeIntervalSince1970 * 1000)
+                )
+                try await bufferManager.putPage(pageId: pageId, page: bufferPage, isDirty: true)
+                try await bufferManager.unpinPage(pageId: pageId)
+            }
+            return
+        }
+        
+        // Fallback to direct disk write
+        try await diskManager.writePage(pageId: pageId, data: data)
     }
     
     /// Manage free space
     /// TLA+ Action: ManageFreeSpace()
     public func manageFreeSpace() async throws {
         // TLA+: Manage free space
-        let freePages = pages.values.filter { $0.data.isEmpty }
-        let usedPages = pages.values.filter { !$0.data.isEmpty }
-        
         // TLA+: Update free space map
         for (pageId, page) in pages {
             if page.data.isEmpty {
@@ -301,8 +385,6 @@ public actor StorageManagerActor {
         
         // TLA+: Update metrics
         updateMetrics()
-        
-        logInfo("Managed free space: \(freePages.count) free pages, \(usedPages.count) used pages")
     }
     
     // MARK: - Helper Methods
@@ -343,6 +425,23 @@ public actor StorageManagerActor {
             compressionRatio: metrics.compressionRatio,
             ioOperations: metrics.ioOperations,
             averageLatency: metrics.averageLatency
+        )
+    }
+    
+    /// Update average latency
+    private func updateAverageLatency(_ latency: Double) {
+        // Simple exponential moving average
+        let alpha = 0.1 // Smoothing factor
+        metrics = StorageMetrics(
+            totalPages: metrics.totalPages,
+            usedPages: metrics.usedPages,
+            freePages: metrics.freePages,
+            totalRecords: metrics.totalRecords,
+            usedSpace: metrics.usedSpace,
+            freeSpace: metrics.freeSpace,
+            compressionRatio: metrics.compressionRatio,
+            ioOperations: metrics.ioOperations,
+            averageLatency: metrics.averageLatency * (1 - alpha) + latency * alpha
         )
     }
     
@@ -436,21 +535,70 @@ public actor StorageManagerActor {
     /// TLA+ Inv_Storage_DataIntegrity
     public func checkDataIntegrityInvariant() -> Bool {
         // Check that data is consistent and correct
-        return true // Simplified
+        // Verify that all records reference valid pages (if pageId is set)
+        for (_, record) in records where !record.isDeleted {
+            if let pageId = record.pageId {
+                guard pages[pageId] != nil else {
+                    return false
+                }
+            }
+        }
+        // Verify that pages contain valid data
+        for (pageId, page) in pages {
+            // Check that page has valid header
+            guard page.header.pageID == pageId else {
+                return false
+            }
+        }
+        return true
     }
     
     /// Check space management invariant
     /// TLA+ Inv_Storage_SpaceManagement
     public func checkSpaceManagementInvariant() -> Bool {
         // Check that free space is managed efficiently
-        return true // Simplified
+        // Verify that freeSpaceMap is consistent with pages
+        for (pageId, freeSpace) in freeSpaceMap {
+            guard let page = pages[pageId] else {
+                return false
+            }
+            // Free space should be <= page size
+            let pageSize = UInt64(page.data.count)
+            guard freeSpace <= pageSize else {
+                return false
+            }
+        }
+        // Verify that storage areas contain valid page IDs
+        for (_, areaPages) in storageAreas {
+            for pageId in areaPages {
+                guard pages[pageId] != nil else {
+                    return false
+                }
+            }
+        }
+        return true
     }
     
     /// Check performance metrics invariant
     /// TLA+ Inv_Storage_PerformanceMetrics
     public func checkPerformanceMetricsInvariant() -> Bool {
         // Check that storage performance is tracked
-        return true // Simplified
+        // Verify that metrics are non-negative
+        guard metrics.totalPages >= 0,
+              metrics.usedPages >= 0,
+              metrics.freePages >= 0,
+              metrics.totalRecords >= 0,
+              metrics.ioOperations >= 0,
+              metrics.averageLatency >= 0.0 else {
+            return false
+        }
+        // Verify that usedPages + freePages = totalPages
+        guard metrics.usedPages + metrics.freePages == metrics.totalPages else {
+            return false
+        }
+        // Verify that usedSpace + freeSpace <= total space (approximate)
+        // Note: total space is approximate, so we just check consistency
+        return true
     }
     
     /// Check all invariants
