@@ -82,7 +82,7 @@ public actor Catalog {
     /// 
     /// **Catalog-First**: Catalog is a thin wrapper around CatalogManager.
     /// All metadata comes from CatalogManager.
-    public init(storageManager: StorageManager? = nil, walManager: WALManagerProtocol? = nil) {
+    public init(storageManager: (any CatalogStorageProtocol)? = nil, walManager: (any WALManagerProtocol)? = nil) {
         // Create CatalogManager (the real implementation)
         self.catalogManager = CatalogManager(
             storageManager: storageManager,
@@ -194,6 +194,26 @@ public actor Catalog {
     /// **Catalog-First**: Use this for direct access to CatalogManager
     public func getCatalogManager() -> CatalogManager {
         return catalogManager
+    }
+    
+    // MARK: - Post-Init Configuration (Delegated to CatalogManager)
+    
+    /// Set Storage Manager after initialization
+    /// **Catalog-First**: Allows setting StorageManager after Catalog init to avoid circular dependencies
+    public func setStorageManager(_ storageManager: any CatalogStorageProtocol) async throws {
+        try await catalogManager.setStorageManager(storageManager)
+    }
+    
+    /// Set WAL Manager after initialization
+    /// **Catalog-First**: Allows setting WALManager after Catalog init to avoid circular dependencies
+    public func setWALManager(_ walManager: any WALManagerProtocol) async {
+        await catalogManager.setWALManager(walManager)
+    }
+    
+    /// Set both Storage Manager and WAL Manager after initialization
+    /// **Catalog-First**: Convenience method to set both dependencies at once
+    public func setDependencies(storageManager: any CatalogStorageProtocol, walManager: (any WALManagerProtocol)? = nil) async throws {
+        try await catalogManager.setDependencies(storageManager: storageManager, walManager: walManager)
     }
 }
 

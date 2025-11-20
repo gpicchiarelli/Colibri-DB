@@ -82,7 +82,8 @@ public struct StorageMetrics: Codable, Sendable, Equatable {
 
 /// Storage Manager for database storage management
 /// Corresponds to TLA+ module: Storage.tla
-public actor StorageManagerActor {
+/// Implements CatalogStorageProtocol for Catalog persistence
+public actor StorageManagerActor: CatalogStorageProtocol {
     
     // MARK: - State Variables (TLA+ vars)
     
@@ -301,6 +302,8 @@ public actor StorageManagerActor {
     }
     
     /// Read page from storage (uses BufferManager if available)
+    /// TLA+ Action: ReadPage(pageId)
+    /// Read page from storage
     /// TLA+ Action: ReadPage(pageId)
     public func readPage(pageId: PageID) async throws -> Data {
         let startTime = Date()

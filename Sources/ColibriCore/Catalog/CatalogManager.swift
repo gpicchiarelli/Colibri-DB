@@ -16,6 +16,16 @@
 
 import Foundation
 
+// MARK: - Catalog Storage Protocol
+
+/// Protocol for Catalog storage operations
+/// Allows Catalog to persist to system tables
+/// **Catalog-First**: Storage operations for Catalog persistence
+public protocol CatalogStorageProtocol: Sendable {
+    func readPage(pageId: PageID) async throws -> Data
+    func writePage(pageId: PageID, data: Data) async throws
+}
+
 // MARK: - DDL Operation Record (for WAL)
 
 /// DDL operation record for WAL logging
@@ -282,12 +292,12 @@ public actor CatalogManager {
     /// Storage Manager for Catalog persistence
     /// Used to persist Catalog to system tables
     /// Can be set after init to avoid circular dependencies
-    private var storageManager: StorageManager?
+    private var storageManager: (any CatalogStorageProtocol)?
     
     /// WAL Manager for Catalog durability (optional)
     /// Used to log Catalog changes for recovery
     /// Can be set after init to avoid circular dependencies
-    private var walManager: WALManagerProtocol?
+    private var walManager: (any WALManagerProtocol)?
     
     // MARK: - Initialization
     
@@ -299,7 +309,7 @@ public actor CatalogManager {
     /// 1. If storageManager provided: Loads Catalog from system tables
     /// 2. If system tables don't exist: Bootstraps system tables
     /// 3. If storageManager nil: In-memory only (for testing)
-    public init(storageManager: StorageManager? = nil, walManager: WALManagerProtocol? = nil) {
+    public init(storageManager: (any CatalogStorageProtocol)? = nil, walManager: (any WALManagerProtocol)? = nil) {
         self.storageManager = storageManager
         self.walManager = walManager
         
@@ -318,6 +328,46 @@ public actor CatalogManager {
             Task {
                 try? await bootstrap()
             }
+        }
+    }
+    
+    // MARK: - Post-Init Configuration
+    
+    /// Set Storage Manager after initialization
+    /// **Catalog-First**: Allows setting StorageManager after Catalog init to avoid circular dependencies
+    /// - Parameter storageManager: Storage Manager instance
+    /// - Note: If Catalog is not yet bootstrapped, bootstrap() will be called automatically
+    public func setStorageManager(_ storageManager: any CatalogStorageProtocol) async throws {
+        self.storageManager = storageManager
+        
+        // Bootstrap if not already bootstrapped
+        if !isBootstrapped {
+            try await bootstrap()
+        }
+    }
+    
+    /// Set WAL Manager after initialization
+    /// **Catalog-First**: Allows setting WALManager after Catalog init to avoid circular dependencies
+    /// - Parameter walManager: WAL Manager instance
+    public func setWALManager(_ walManager: any WALManagerProtocol) {
+        self.walManager = walManager
+    }
+    
+    /// Set both Storage Manager and WAL Manager after initialization
+    /// **Catalog-First**: Convenience method to set both dependencies at once
+    /// - Parameters:
+    ///   - storageManager: Storage Manager instance
+    ///   - walManager: WAL Manager instance (optional)
+    /// - Note: If Catalog is not yet bootstrapped, bootstrap() will be called automatically
+    public func setDependencies(storageManager: any CatalogStorageProtocol, walManager: (any WALManagerProtocol)? = nil) async throws {
+        self.storageManager = storageManager
+        if let walManager = walManager {
+            self.walManager = walManager
+        }
+        
+        // Bootstrap if not already bootstrapped
+        if !isBootstrapped {
+            try await bootstrap()
         }
     }
     
@@ -354,7 +404,7 @@ public actor CatalogManager {
     
     /// Check if system tables exist
     /// Checks if system table pages exist by attempting to read them
-    private func checkSystemTablesExist(storage: StorageManager) async throws -> Bool {
+    private func checkSystemTablesExist(storage: any CatalogStorageProtocol) async throws -> Bool {
         // Try to read the first system page (tables)
         // If it exists and has data, system tables are bootstrapped
         do {
@@ -368,7 +418,7 @@ public actor CatalogManager {
     
     /// Create system tables (Catalog's own tables)
     /// Initializes system table pages with empty JSON arrays/dictionaries
-    private func createSystemTables(storage: StorageManager) async throws {
+    private func createSystemTables(storage: any CatalogStorageProtocol) async throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         
@@ -405,7 +455,7 @@ public actor CatalogManager {
     
     /// Load Catalog from system tables (on restart)
     /// Deserializes Catalog metadata from system table pages
-    private func loadCatalogFromSystemTables(storage: StorageManager) async throws {
+    private func loadCatalogFromSystemTables(storage: any CatalogStorageProtocol) async throws {
         let decoder = JSONDecoder()
         
         // Load tables from colibri_tables system table
@@ -538,7 +588,7 @@ public actor CatalogManager {
     
     /// Delete table metadata from system table
     /// Re-serializes all remaining tables to JSON and writes to system page
-    private func deleteTableMetadata(name: String, storage: StorageManager) async throws {
+    private func deleteTableMetadata(name: String, storage: any CatalogStorageProtocol) async throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         
@@ -550,7 +600,7 @@ public actor CatalogManager {
     
     /// Delete index metadata from system table
     /// Re-serializes all remaining indexes to JSON and writes to system page
-    private func deleteIndexMetadata(name: String, storage: StorageManager) async throws {
+    private func deleteIndexMetadata(name: String, storage: any CatalogStorageProtocol) async throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         
@@ -1073,7 +1123,7 @@ public actor CatalogManager {
     }
     
     /// Delete user metadata from system table
-    private func deleteUserMetadata(username: String, storage: StorageManager) async throws {
+    private func deleteUserMetadata(username: String, storage: any CatalogStorageProtocol) async throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         

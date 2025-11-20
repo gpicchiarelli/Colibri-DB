@@ -236,26 +236,33 @@ public actor ColibrìDB {
             walManager: nil  // WAL integration will be added later
         )
         
-        // Create storage manager with Catalog dependency
-        // **Catalog-First**: StorageManager MUST check Catalog before operations
-        // Note: storageManager created but not stored (used for Catalog persistence in future)
-        let _ = StorageManagerActor(
-            diskManager: diskManager,
-            compressionService: compressionService,
-            encryptionService: encryptionService,
-            bufferManager: bufferManager,
-            catalog: catalogManager
-        )
+            // Create storage manager with Catalog dependency
+            // **Catalog-First**: StorageManager MUST check Catalog before operations
+            let storageManager = StorageManagerActor(
+                diskManager: diskManager,
+                compressionService: compressionService,
+                encryptionService: encryptionService,
+                bufferManager: bufferManager,
+                catalog: catalogManager
+            )
+            
+            // Initialize transaction layer (needed for walAdapter)
+            self.mvccManager = MVCCManager()
+            
+            // Create transaction manager adapters (needed for Catalog persistence)
+            let walAdapter = wal.asTransactionWALManager()
+            
+            // **Catalog-First**: Configure Catalog with StorageManager and WAL for persistence
+            // This enables full Catalog persistence to system tables
+            // Note: Using Task to avoid blocking init (bootstrap is async)
+            Task {
+                try? await catalogManager.setDependencies(
+                    storageManager: storageManager,
+                    walManager: walAdapter
+                )
+            }
         
-        // TODO: Update Catalog with StorageManager for persistence
-        // This requires refactoring CatalogManager to allow setting StorageManager after init
-        // For now, Catalog works in-memory only (for testing)
-        
-        // Initialize transaction layer
-        self.mvccManager = MVCCManager()
-        
-        // Create transaction manager with proper adapters
-        let walAdapter = wal.asTransactionWALManager()
+        // Create transaction manager with proper adapters (reuse walAdapter)
         let mvccAdapter = mvccManager.asTransactionMVCCManager()
         
         // Create transaction manager with Catalog dependency
