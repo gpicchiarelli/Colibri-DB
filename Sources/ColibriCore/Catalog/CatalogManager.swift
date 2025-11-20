@@ -118,14 +118,27 @@ public struct TableMetadata: Codable, Sendable, Equatable {
     }
 }
 
+/// Foreign key action (for CASCADE/SET NULL)
+public enum ForeignKeyAction: String, Codable, Sendable {
+    case restrict = "RESTRICT"    // Prevent deletion/update (default)
+    case cascade = "CASCADE"      // Delete/update referencing rows
+    case setNull = "SET NULL"     // Set foreign key columns to NULL
+    case setDefault = "SET DEFAULT"  // Set foreign key columns to default value
+    case noAction = "NO ACTION"   // Similar to RESTRICT (SQL standard)
+}
+
 /// Foreign key metadata
 public struct ForeignKeyMetadata: Codable, Sendable, Equatable {
     public let from: Set<String>
     public let to: ForeignKeyReference
+    public let onDelete: ForeignKeyAction  // Action on DELETE
+    public let onUpdate: ForeignKeyAction  // Action on UPDATE
     
-    public init(from: Set<String>, to: ForeignKeyReference) {
+    public init(from: Set<String>, to: ForeignKeyReference, onDelete: ForeignKeyAction = .restrict, onUpdate: ForeignKeyAction = .restrict) {
         self.from = from
         self.to = to
+        self.onDelete = onDelete
+        self.onUpdate = onUpdate
     }
 }
 
@@ -260,18 +273,21 @@ public actor CatalogManager {
     private static let SYSTEM_PAGE_TABLES: PageID = 1       // colibri_tables: [TableMetadata]
     private static let SYSTEM_PAGE_INDEXES: PageID = 2      // colibri_indexes: [IndexMetadata]
     private static let SYSTEM_PAGE_STATISTICS: PageID = 3   // colibri_statistics: [String: Statistics]
-    private static let SYSTEM_PAGE_USERS: PageID = 4        // colibri_users: [UserMetadata] (future)
-    private static let SYSTEM_PAGE_ROLES: PageID = 5        // colibri_roles: [RoleMetadata] (future)
+    private static let SYSTEM_PAGE_USERS: PageID = 4        // colibri_users: [UserMetadata]
+    private static let SYSTEM_PAGE_ROLES: PageID = 5        // colibri_roles: [RoleMetadata]
+    private static let SYSTEM_PAGE_PERMISSIONS: PageID = 6  // colibri_permissions: [String: [PermissionMetadata]]
     
     // MARK: - Dependencies
     
     /// Storage Manager for Catalog persistence
     /// Used to persist Catalog to system tables
-    private let storageManager: StorageManager?
+    /// Can be set after init to avoid circular dependencies
+    private var storageManager: StorageManager?
     
     /// WAL Manager for Catalog durability (optional)
     /// Used to log Catalog changes for recovery
-    private let walManager: WALManagerProtocol?
+    /// Can be set after init to avoid circular dependencies
+    private var walManager: WALManagerProtocol?
     
     // MARK: - Initialization
     
@@ -380,6 +396,11 @@ public actor CatalogManager {
         let emptyRolesArray: [RoleMetadata] = []
         let rolesData = try encoder.encode(emptyRolesArray)
         try await storage.writePage(pageId: Self.SYSTEM_PAGE_ROLES, data: rolesData)
+        
+        // Initialize colibri_permissions with empty dictionary
+        let emptyPermissionsDict: [String: [PermissionMetadata]] = [:]
+        let permissionsData = try encoder.encode(emptyPermissionsDict)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_PERMISSIONS, data: permissionsData)
     }
     
     /// Load Catalog from system tables (on restart)
@@ -453,6 +474,18 @@ public actor CatalogManager {
         } catch {
             // If reading fails, start with empty roles (bootstrap will create pages)
             roles = [:]
+        }
+        
+        // Load permissions from colibri_permissions system table
+        do {
+            let permissionsData = try await storage.readPage(pageId: Self.SYSTEM_PAGE_PERMISSIONS)
+            if !permissionsData.isEmpty {
+                let loadedPermissions: [String: [PermissionMetadata]] = try decoder.decode([String: [PermissionMetadata]].self, from: permissionsData)
+                permissions = loadedPermissions
+            }
+        } catch {
+            // If reading fails, start with empty permissions (bootstrap will create pages)
+            permissions = [:]
         }
     }
     
@@ -1169,15 +1202,14 @@ public actor CatalogManager {
         }
         
         // Serialize all permissions (across all tables) to JSON
-        // For now, store in a combined format: [tableName: [PermissionMetadata]]
+        // **Catalog-First**: Store permissions in dedicated system page
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         
         let permissionsData = try encoder.encode(permissions)
         
-        // Store in statistics page temporarily (will use dedicated page in future)
-        // Note: This is a simplification - in production would use dedicated permissions page
-        try await storage.writePage(pageId: Self.SYSTEM_PAGE_STATISTICS, data: permissionsData)
+        // Store in dedicated permissions page (separate from statistics)
+        try await storage.writePage(pageId: Self.SYSTEM_PAGE_PERMISSIONS, data: permissionsData)
     }
     
     // MARK: - Schema Versioning

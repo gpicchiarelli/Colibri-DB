@@ -615,7 +615,7 @@ public actor ColibrìDB {
         try await transactionManager.validateForeignKeys(tableName: table, row: row, operation: "INSERT")
         
         // Then, validate data (referenced rows exist) via Catalog and actual data
-        try await validateForeignKeyData(tableName: table, row: row, operation: "INSERT")
+        try await validateForeignKeyData(tableName: table, row: row, operation: "INSERT", txId: txId)
         
         // Get or create heap table
         let heapTable = try await getOrCreateHeapTable(table: table)
@@ -673,7 +673,7 @@ public actor ColibrìDB {
         try await transactionManager.validateForeignKeys(tableName: table, row: updatedRow, operation: "UPDATE")
         
         // Then, validate data (referenced rows exist) via Catalog and actual data
-        try await validateForeignKeyData(tableName: table, row: updatedRow, operation: "UPDATE")
+        try await validateForeignKeyData(tableName: table, row: updatedRow, operation: "UPDATE", txId: txId)
         
         let resultingRID = try await heapTable.update(rid, newRow: updatedRow, txID: txId)
         await updatePrimaryKeyIndex(
@@ -717,11 +717,12 @@ public actor ColibrìDB {
         let deletedRow = try? await heapTable.read(rid)
         
         // **Catalog-First**: Validate foreign key constraints for deletion
-        // Transaction Manager uses Catalog to check if row is referenced by other tables
+        // Transaction Manager uses Catalog to check if row is referenced by other tables (schema-level)
         if let deletedRow = deletedRow {
             try await transactionManager.validateForeignKeys(tableName: table, row: deletedRow, operation: "DELETE")
-            // Note: Full data validation (check if row is actually referenced) would go here
-            // For now, Transaction Manager does schema-level validation
+            // Validate foreign key data constraints and handle CASCADE/SET NULL
+            // This performs full data validation and handles referencing rows
+            try await validateForeignKeyData(tableName: table, row: deletedRow, operation: "DELETE", txId: txId)
         }
         
         try await heapTable.delete(rid, txID: txId)
@@ -1159,12 +1160,14 @@ public actor ColibrìDB {
     
     /// Validate foreign key data constraints
     /// **Catalog-First**: Uses Catalog to get foreign key definitions and validates referenced rows exist
+    /// For DELETE operations, handles CASCADE/SET NULL based on foreign key onDelete action
     /// - Parameters:
     ///   - tableName: Table name
     ///   - row: Row data
     ///   - operation: Operation type ("INSERT", "UPDATE", "DELETE")
+    ///   - txId: Transaction ID (needed for CASCADE/SET NULL operations)
     /// - Throws: DBError if foreign key constraint is violated
-    private func validateForeignKeyData(tableName: String, row: Row, operation: String) async throws {
+    private func validateForeignKeyData(tableName: String, row: Row, operation: String, txId: TxID) async throws {
         // **Catalog-First**: Get table metadata from Catalog
         let catalogManager = await catalog.getCatalogManager()
         guard let tableMetadata = await catalogManager.getTable(name: tableName) else {
@@ -1202,7 +1205,8 @@ public actor ColibrìDB {
                    pkColumn == refColumnsArray.first,
                    let fkValue = fkValues.first {
                     // Use primary key lookup for fast validation
-                    let referencedRow = try await selectByPrimaryKey(table: fk.to.table, key: fkValue, txId: 0)  // txId 0 for validation
+                    // Note: Using provided txId for consistency (even though it's read-only validation)
+                    let referencedRow = try await selectByPrimaryKey(table: fk.to.table, key: fkValue, txId: txId)
                     guard referencedRow != nil else {
                         throw DBError.foreignKeyViolation(table: tableName, referencedTable: fk.to.table, columns: Array(fk.from))
                     }
@@ -1244,7 +1248,7 @@ public actor ColibrìDB {
                 }
             }
             
-            // For DELETE: Check if row is referenced by other tables (prevent orphaned references)
+            // For DELETE: Check if row is referenced by other tables and handle CASCADE/SET NULL
             if operation == "DELETE" {
                 // **Catalog-First**: Find tables that reference this table
                 let allTables = await catalogManager.getTableNames()
@@ -1256,13 +1260,109 @@ public actor ColibrìDB {
                     // Check if other table has foreign key referencing this table
                     let referencingFKs = otherTable.foreignKeys.filter { $0.to.table == tableName }
                     if !referencingFKs.isEmpty {
-                        // Check if any rows in otherTable reference this row
-                        // Get primary key values from deleted row (if available)
-                        if let pkColumns = tableMetadata.primaryKey.first,
-                           let pkValue = row[pkColumns] {
-                            // Try to find referenced rows in other tables
-                            // For now, warn but allow deletion (CASCADE/SET NULL would be handled here)
-                            // TODO: Implement CASCADE/SET NULL behavior based on FK definition
+                        // Get heap table for referencing table
+                        let referencingHeapTable = try await getOrCreateHeapTable(table: otherTableName)
+                        let allReferencingRows = try await referencingHeapTable.scanAllWithRID()
+                        
+                        // Build primary key values from deleted row for matching
+                        var pkValues: [String: Value] = [:]
+                        for pkColumn in tableMetadata.primaryKey {
+                            if let pkValue = row[pkColumn] {
+                                pkValues[pkColumn] = pkValue
+                            }
+                        }
+                        
+                        // Process each referencing foreign key
+                        for fk in referencingFKs {
+                            // Find rows in otherTable that reference this row
+                            var referencingRowsToUpdate: [(RID, Row)] = []
+                            
+                            for (rid, referencingRow) in allReferencingRows {
+                                // Check if referencing row matches deleted row's primary key
+                                var matches = true
+                                let refColumnsArray = Array(fk.to.column)
+                                let fromColumnsArray = Array(fk.from)
+                                
+                                for (index, refColumn) in refColumnsArray.enumerated() {
+                                    guard index < fromColumnsArray.count else {
+                                        matches = false
+                                        break
+                                    }
+                                    let fromColumn = fromColumnsArray[index]
+                                    
+                                    // Get value from deleted row (primary key column)
+                                    guard let deletedValue = pkValues[refColumn] else {
+                                        matches = false
+                                        break
+                                    }
+                                    
+                                    // Get value from referencing row (foreign key column)
+                                    guard let referencingValue = referencingRow[fromColumn] else {
+                                        matches = false
+                                        break
+                                    }
+                                    
+                                    // Check if values match
+                                    if deletedValue != referencingValue {
+                                        matches = false
+                                        break
+                                    }
+                                }
+                                
+                                if matches {
+                                    referencingRowsToUpdate.append((rid, referencingRow))
+                                }
+                            }
+                            
+                            // Handle CASCADE/SET NULL based on onDelete action
+                            if !referencingRowsToUpdate.isEmpty {
+                                switch fk.onDelete {
+                                case .restrict, .noAction:
+                                    // **RESTRICT/NO ACTION**: Prevent deletion
+                                    throw DBError.foreignKeyViolation(
+                                        table: tableName,
+                                        referencedTable: otherTableName,
+                                        columns: Array(fk.from)
+                                    )
+                                    
+                                case .cascade:
+                                    // **CASCADE**: Delete referencing rows recursively
+                                    // Note: This could trigger recursive deletes if there are chains
+                                    // For now, delete directly (full recursive handling would require transaction context)
+                                    for (rid, _) in referencingRowsToUpdate {
+                                        // Recursive delete - this will validate foreign keys again
+                                        // Note: In production, would need to handle cycles and transaction isolation
+                                        try await delete(table: otherTableName, rid: rid, txId: txId)
+                                    }
+                                    
+                                case .setNull:
+                                    // **SET NULL**: Set foreign key columns to NULL
+                                    for (rid, referencingRow) in referencingRowsToUpdate {
+                                        var updatedRow = referencingRow
+                                        for fromColumn in fk.from {
+                                            updatedRow[fromColumn] = .null
+                                        }
+                                        // Update row with NULL foreign key values
+                                        try await update(table: otherTableName, rid: rid, row: updatedRow, txId: txId)
+                                    }
+                                    
+                                case .setDefault:
+                                    // **SET DEFAULT**: Set foreign key columns to default values
+                                    for (rid, referencingRow) in referencingRowsToUpdate {
+                                        var updatedRow = referencingRow
+                                        for fromColumn in fk.from {
+                                            // Get default value from column definition
+                                            if let columnDef = otherTable.columns.first(where: { $0.name == fromColumn }) {
+                                                updatedRow[fromColumn] = columnDef.defaultValue ?? .null
+                                            } else {
+                                                updatedRow[fromColumn] = .null
+                                            }
+                                        }
+                                        // Update row with default foreign key values
+                                        try await update(table: otherTableName, rid: rid, row: updatedRow, txId: txId)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
