@@ -336,7 +336,7 @@ public enum DBError: Error, Sendable {
     case invalidData
     case lockTimeout
     case serializationFailure
-    case foreignKeyViolation(table: String, referencedTable: String, columns: [String])  // Foreign key constraint violation
+    case foreignKeyViolation
     case checkConstraintViolation
     case uniqueViolation
     case notNullViolation

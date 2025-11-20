@@ -64,6 +64,13 @@ data/
 *.tmp
 *.temp
 
+## Backup files (macOS/editor automatic backups)
+* 2.swift
+* 2.c
+* 2.h
+* 2.m
+.backup_duplicates/
+
 ## Local configs
 colibridb.local*.json
 

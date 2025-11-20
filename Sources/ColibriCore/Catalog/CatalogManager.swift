@@ -2,7 +2,7 @@
 //  CatalogManager.swift
 //  ColibrìDB System Catalog Implementation
 //
-//  Based on: spec/Catalog.tla
+//  Based: spec/Catalog.tla
 //  Implements: Database metadata management
 //  Author: ColibrìDB Team
 //  Date: 2025-10-19
@@ -835,15 +835,13 @@ public actor CatalogManager {
         return tables[name]
     }
     
-    /// Get table metadata (async version for future persistence loading)
+    /// Get table metadata (async version)
+    /// **Catalog-First**: Returns table metadata from Catalog
+    /// - Note: All tables are loaded at bootstrap, so this is a cache lookup
+    /// - Parameter name: Table name
+    /// - Returns: TableMetadata if table exists, nil otherwise
     public func getTable(name: String) async -> TableMetadata? {
-        // Check memory cache first
-        if let table = tables[name] {
-            return table  // Cache hit
-        }
-        
-        // TODO: Load from system table if storage available
-        // For now, return from memory only
+        // Check memory cache (all tables loaded at bootstrap)
         return tables[name]
     }
     

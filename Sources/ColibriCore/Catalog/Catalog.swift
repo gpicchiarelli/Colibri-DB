@@ -61,159 +61,93 @@ public struct TableDefinition: Codable, Sendable {
 }
 
 
-/// System Catalog (Compatibility Wrapper)
+/// System Catalog
 /// Corresponds to TLA+ module: Catalog.tla
-/// 
-/// **DEPRECATED**: This is a compatibility wrapper for CatalogManager.
-/// New code should use CatalogManager directly.
-/// 
-/// This wrapper delegates all operations to CatalogManager to maintain
-/// backward compatibility with existing code while migrating to CatalogManager.
 public actor Catalog {
-    // MARK: - Internal Catalog Manager
+    // MARK: - State
     
-    /// Internal Catalog Manager (the real implementation)
-    /// **Catalog-First**: All operations delegate to CatalogManager
-    private let catalogManager: CatalogManager
+    private var tables: [String: TableDefinition] = [:]
+    private var schemaVersion: Int = 1
     
     // MARK: - Initialization
     
-    /// Initialize Catalog with CatalogManager
-    /// 
-    /// **Catalog-First**: Catalog is a thin wrapper around CatalogManager.
-    /// All metadata comes from CatalogManager.
-    public init(storageManager: (any CatalogStorageProtocol)? = nil, walManager: (any WALManagerProtocol)? = nil) {
-        // Create CatalogManager (the real implementation)
-        self.catalogManager = CatalogManager(
-            storageManager: storageManager,
-            walManager: walManager
-        )
+    public init() {
+        // Initialize with system tables
+        Task {
+            await initializeSystemTables()
+        }
     }
     
-    // MARK: - DDL Operations (Delegated to CatalogManager)
+    /// Initialize system tables
+    private func initializeSystemTables() {
+        // System catalog table
+        let catalogTable = TableDefinition(
+            name: "colibri_tables",
+            columns: [
+                ColumnDefinition(name: "table_name", type: .string, nullable: false),
+                ColumnDefinition(name: "schema_version", type: .int, nullable: false),
+                ColumnDefinition(name: "created_at", type: .date, nullable: false)
+            ],
+            primaryKey: ["table_name"]
+        )
+        
+        tables["colibri_tables"] = catalogTable
+    }
+    
+    // MARK: - DDL Operations
     
     /// Create table
-    /// **Catalog-First**: Delegates to CatalogManager
-    public func createTable(_ table: TableDefinition) async throws {
-        // Convert TableDefinition to TableMetadata
-        let columns = table.columns.map { col in
-            ColumnMetadata(name: col.name, type: col.type, nullable: col.nullable, defaultValue: col.defaultValue)
+    public func createTable(_ table: TableDefinition) throws {
+        guard tables[table.name] == nil else {
+            throw DBError.duplicate
         }
-        let primaryKey = Set(table.primaryKey ?? [])
         
-        // **Catalog-First**: Extract foreign keys from TableDefinition if available
-        // Note: TableDefinition doesn't currently expose foreign keys in the public API
-        // For now, use empty array (foreign keys can be added via ALTER TABLE in future)
-        let foreignKeys: [ForeignKeyMetadata] = []
-        
-        // **Catalog-First**: Extract constraints from TableDefinition if available
-        // Note: TableDefinition doesn't currently expose constraints in the public API
-        // For now, use empty array (constraints can be added via ALTER TABLE in future)
-        let constraints: [ConstraintMetadata] = []
-        
-        // Delegate to CatalogManager
-        try await catalogManager.createTable(
-            name: table.name,
-            columns: columns,
-            primaryKey: primaryKey,
-            foreignKeys: foreignKeys,
-            constraints: constraints
-        )
+        tables[table.name] = table
+        schemaVersion += 1
     }
     
     /// Drop table
-    /// **Catalog-First**: Delegates to CatalogManager
-    public func dropTable(_ tableName: String) async throws {
-        // Delegate to CatalogManager
-        try await catalogManager.dropTable(name: tableName)
+    public func dropTable(_ tableName: String) throws {
+        guard tables[tableName] != nil else {
+            throw DBError.notFound
+        }
+        
+        tables[tableName] = nil
+        schemaVersion += 1
     }
     
     /// Get table definition
-    /// **Catalog-First**: Delegates to CatalogManager
-    public func getTable(_ tableName: String) async -> TableDefinition? {
-        // Get from CatalogManager
-        guard let tableMetadata = await catalogManager.getTable(name: tableName) else {
-            return nil
-        }
-        
-        // Convert TableMetadata to TableDefinition (for backward compatibility)
-        let columns = tableMetadata.columns.map { col in
-            ColumnDefinition(name: col.name, type: col.type, nullable: col.nullable, defaultValue: col.defaultValue)
-        }
-        let primaryKey = Array(tableMetadata.primaryKey)
-        
-        // **Catalog-First**: Get indexes from CatalogManager for this table
-        let indexesMetadata = await catalogManager.getIndexes(for: tableMetadata.name)
-        let indexes = indexesMetadata.map { indexMeta in
-            CatalogIndexDefinition(
-                name: indexMeta.name,
-                columns: indexMeta.columns,
-                unique: indexMeta.unique,
-                type: indexMeta.indexType == .btree ? .btree : .hash
-            )
-        }
-        
-        return TableDefinition(
-            name: tableMetadata.name,
-            columns: columns,
-            primaryKey: primaryKey.isEmpty ? nil : primaryKey,
-            indexes: indexes
-        )
+    public func getTable(_ tableName: String) -> TableDefinition? {
+        return tables[tableName]
     }
     
     /// List all tables
-    /// **Catalog-First**: Delegates to CatalogManager
-    public func listTables() async -> [String] {
-        // Delegate to CatalogManager
-        return await catalogManager.getTableNames()
+    public func listTables() -> [String] {
+        return Array(tables.keys)
     }
     
     /// Add index to table
-    /// **Catalog-First**: Delegates to CatalogManager
-    public func addIndex(tableName: String, index: CatalogIndexDefinition) async throws {
-        // Delegate to CatalogManager
-        try await catalogManager.createIndex(
-            name: index.name,
-            tableName: tableName,
-            columns: index.columns,
-            indexType: index.type == .btree ? .btree : .hash,
-            unique: index.unique
+    public func addIndex(tableName: String, index: CatalogIndexDefinition) throws {
+        guard var table = tables[tableName] else {
+            throw DBError.notFound
+        }
+        
+        var indexes = table.indexes
+        indexes.append(index)
+        
+        tables[tableName] = TableDefinition(
+            name: table.name,
+            columns: table.columns,
+            primaryKey: table.primaryKey,
+            indexes: indexes
         )
+        
+        schemaVersion += 1
     }
     
     /// Get schema version
-    /// **Catalog-First**: Delegates to CatalogManager
-    public func getSchemaVersion() async -> Int {
-        // Delegate to CatalogManager
-        return await catalogManager.getSchemaVersion()
-    }
-    
-    // MARK: - Direct Access to CatalogManager (for new code)
-    
-    /// Get the underlying CatalogManager
-    /// **Catalog-First**: Use this for direct access to CatalogManager
-    public func getCatalogManager() -> CatalogManager {
-        return catalogManager
-    }
-    
-    // MARK: - Post-Init Configuration (Delegated to CatalogManager)
-    
-    /// Set Storage Manager after initialization
-    /// **Catalog-First**: Allows setting StorageManager after Catalog init to avoid circular dependencies
-    public func setStorageManager(_ storageManager: any CatalogStorageProtocol) async throws {
-        try await catalogManager.setStorageManager(storageManager)
-    }
-    
-    /// Set WAL Manager after initialization
-    /// **Catalog-First**: Allows setting WALManager after Catalog init to avoid circular dependencies
-    public func setWALManager(_ walManager: any WALManagerProtocol) async {
-        await catalogManager.setWALManager(walManager)
-    }
-    
-    /// Set both Storage Manager and WAL Manager after initialization
-    /// **Catalog-First**: Convenience method to set both dependencies at once
-    public func setDependencies(storageManager: any CatalogStorageProtocol, walManager: (any WALManagerProtocol)? = nil) async throws {
-        try await catalogManager.setDependencies(storageManager: storageManager, walManager: walManager)
+    public func getSchemaVersion() -> Int {
+        return schemaVersion
     }
 }
 

@@ -17,7 +17,7 @@ final class SecurityTests {
         let authManager = AuthenticationManager()
         
         // Verify initial state
-        let users = authManager.getAllUsers()
+        let users = await authManager.getAllUsers()
         let activeSessionsCount = authManager.getActiveSessionsCount()
         
         XCTAssertEqual(users.count, 0, "Should start with no users")
@@ -29,10 +29,10 @@ final class SecurityTests {
         let authManager = AuthenticationManager()
         
         // Create user
-        try authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
+        try await authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
         
         // Verify user was created
-        let users = authManager.getAllUsers()
+        let users = await authManager.getAllUsers()
         XCTAssertEqual(users.count, 1, "Should have 1 user")
         XCTAssertTrue(users.contains(where: { $0.username == "alice" }), "Should contain created user")
     }
@@ -42,7 +42,7 @@ final class SecurityTests {
         let authManager = AuthenticationManager()
         
         // Create user
-        try authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
+        try await authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
         
         // Authenticate user
         let token = try await authManager.authenticate(username: "alice", password: "password123")
@@ -58,7 +58,7 @@ final class SecurityTests {
         let authManager = AuthenticationManager()
         
         // Create user
-        try authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
+        try await authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
         
         // Test invalid password
         do {
@@ -82,18 +82,18 @@ final class SecurityTests {
         let authManager = AuthenticationManager()
         
         // Create user and authenticate
-        try authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
+        try await authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
         let token = try await authManager.authenticate(username: "alice", password: "password123")
         
         // Validate session
-        let validatedSession = try authManager.validateSession(sessionId: token)
+        let validatedSession = try await authManager.validateSession(sessionId: token)
         XCTAssertNotNil(validatedSession, "Session should be valid")
         XCTAssertEqual(validatedSession.username, "alice", "Validated user should match")
         
         // Test invalid session
         let invalidToken = "invalid_token"
         do {
-            _ = try authManager.validateSession(sessionId: invalidToken)
+            _ = try await authManager.validateSession(sessionId: invalidToken)
             XCTFail("Should throw error for invalid session")
         } catch {
             // Expected
@@ -105,13 +105,13 @@ final class SecurityTests {
         let authManager = AuthenticationManager()
         
         // Create user and authenticate
-        try authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
+        try await authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
         let token = try await authManager.authenticate(username: "alice", password: "password123")
         
         // Expire session - not available in API, skip this test
         // TODO: Implement expireSession or use alternative method
         // For now, just verify session exists
-        let validatedSession = try authManager.validateSession(sessionId: token)
+        let validatedSession = try await authManager.validateSession(sessionId: token)
         XCTAssertNotNil(validatedSession, "Session should be valid")
     }
     
@@ -120,17 +120,17 @@ final class SecurityTests {
         let authManager = AuthenticationManager()
         
         // Create user
-        try authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
+        try await authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
         
         // Verify user exists
-        let usersBefore = authManager.getAllUsers()
+        let usersBefore = await authManager.getAllUsers()
         XCTAssertTrue(usersBefore.contains(where: { $0.username == "alice" }), "User should exist before deletion")
         
         // Delete user
         try await authManager.deleteUser(username: "alice")
         
         // Verify user was deleted
-        let usersAfter = authManager.getAllUsers()
+        let usersAfter = await authManager.getAllUsers()
         XCTAssertFalse(usersAfter.contains(where: { $0.username == "alice" }), "User should not exist after deletion")
     }
     
@@ -139,7 +139,7 @@ final class SecurityTests {
         let authManager = AuthenticationManager()
         
         // Create user
-        try authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
+        try await authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
         
         // Change password
         try await authManager.changePassword(username: "alice", oldPassword: "password123", newPassword: "newpassword456")
@@ -297,13 +297,13 @@ final class SecurityTests {
             let task = Task {
                 do {
                     // Create user
-                    try authManager.createUser(username: "user\(i)", email: "user\(i)@test.com", password: "password\(i)", role: .user)
+                    try await authManager.createUser(username: "user\(i)", email: "user\(i)@test.com", password: "password\(i)", role: .user)
                     
                     // Authenticate user
                     let token = try await authManager.authenticate(username: "user\(i)", password: "password\(i)")
                     
                     // Validate session
-                    let validatedSession = try authManager.validateSession(sessionId: token)
+                    let validatedSession = try await authManager.validateSession(sessionId: token)
                     XCTAssertNotNil(validatedSession, "Session should be valid")
                 } catch {
                     // Handle errors silently for this test
@@ -318,7 +318,7 @@ final class SecurityTests {
         }
         
         // Verify all users were created
-        let users = authManager.getAllUsers()
+        let users = await authManager.getAllUsers()
         XCTAssertEqual(users.count, taskCount, "Should have all users")
     }
     
@@ -327,7 +327,7 @@ final class SecurityTests {
         let authManager = AuthenticationManager()
         
         // Create user
-        try authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
+        try await authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
         
         let operationCount = 1000
         let startTime = Date()
@@ -335,7 +335,7 @@ final class SecurityTests {
         // Perform many authentication operations
         for _ in 0..<operationCount {
             let token = try await authManager.authenticate(username: "alice", password: "password123")
-            _ = try authManager.validateSession(sessionId: token)
+            _ = try await authManager.validateSession(sessionId: token)
         }
         
         let endTime = Date()
@@ -365,7 +365,7 @@ final class SecurityTests {
         }
         
         // Test invalid password change
-        try authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
+        try await authManager.createUser(username: "alice", email: "alice@test.com", password: "password123", role: .user)
         
         do {
             try await authManager.changePassword(username: "alice", oldPassword: "wrong", newPassword: "new")

@@ -31,11 +31,6 @@ public indirect enum QueryPlanNode: Sendable {
 public actor QueryOptimizer {
     // MARK: - Dependencies
     
-    /// Catalog Manager - **Catalog-First**: Query Optimizer MUST use Catalog for:
-    /// - Table metadata (columns, constraints) for validation
-    /// - Index metadata for index selection
-    /// - Statistics for cost estimation
-    /// - All metadata comes from Catalog (single source of truth)
     private let catalog: Catalog
     private let statistics: StatisticsMaintenanceManager
     
@@ -52,10 +47,6 @@ public actor QueryOptimizer {
     
     // MARK: - Initialization
     
-    /// Initialize Query Optimizer
-    /// - Parameters:
-    ///   - catalog: **Catalog-First**: Catalog Manager (REQUIRED)
-    ///   - statistics: Statistics Maintenance Manager
     public init(catalog: Catalog, statistics: StatisticsMaintenanceManager) {
         self.catalog = catalog
         self.statistics = statistics
@@ -93,21 +84,18 @@ public actor QueryOptimizer {
         // Generate scan plans
         candidates.append(.scan(table: plan.table))
         
-        // **Catalog-First**: Get indexes from Catalog for index selection
-        // Note: Catalog wrapper returns TableDefinition, we need to get indexes from CatalogManager
-        let catalogManager = await catalog.getCatalogManager()
-        let indexes = await catalogManager.getIndexes(for: plan.table)
-        
         // Generate index scan plans if applicable
-        for index in indexes {
-            if let key = plan.filterKey,
-               let filterColumn = plan.filterColumn,
-               index.columns.contains(filterColumn) {
-                candidates.append(.indexScan(
-                    table: plan.table,
-                    index: index.name,
-                    key: encodeFilterValue(key)
-                ))
+        if let indexes = await catalog.getTable(plan.table)?.indexes {
+            for index in indexes {
+                if let key = plan.filterKey,
+                   let filterColumn = plan.filterColumn,
+                   index.columns.contains(filterColumn) {
+                    candidates.append(.indexScan(
+                        table: plan.table,
+                        index: index.name,
+                        key: encodeFilterValue(key)
+                    ))
+                }
             }
         }
         

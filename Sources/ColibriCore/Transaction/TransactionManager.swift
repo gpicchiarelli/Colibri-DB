@@ -196,31 +196,12 @@ public actor TransactionManager {
     /// Lock manager
     private let lockManager: LockManager?
     
-    /// Catalog Manager - **Catalog-First**: Transaction Manager uses Catalog for:
-    /// - Foreign key constraint validation
-    /// - Table/column existence validation
-    /// - Schema consistency checks
-    /// - Permission checks (future)
-    private let catalog: CatalogManager?
-    
     // MARK: - Initialization
     
-    /// Initialize Transaction Manager
-    /// - Parameters:
-    ///   - walManager: WAL Manager for durability
-    ///   - mvccManager: MVCC Manager for isolation
-    ///   - lockManager: Lock Manager for deadlock prevention (optional)
-    ///   - catalog: **Catalog-First**: Catalog Manager for validation (optional, but recommended)
-    public init(
-        walManager: TransactionWALManager,
-        mvccManager: TransactionMVCCManager,
-        lockManager: LockManager? = nil,
-        catalog: CatalogManager? = nil
-    ) {
+    public init(walManager: TransactionWALManager, mvccManager: TransactionMVCCManager, lockManager: LockManager?) {
         self.walManager = walManager
         self.mvccManager = mvccManager
         self.lockManager = lockManager
-        self.catalog = catalog
         
         // TLA+ Init
         self.nextTID = 1
@@ -467,102 +448,6 @@ public actor TransactionManager {
         
         logInfo("Made decision: \(decision) for transaction: \(txId)")
         return decision
-    }
-    
-    // MARK: - Foreign Key Validation (Catalog-First)
-    
-    /// Validate foreign key constraints for a row operation
-    /// **Catalog-First**: Uses Catalog to get foreign key definitions and validate constraints
-    /// - Parameters:
-    ///   - tableName: Table name
-    ///   - row: Row data
-    ///   - operation: Operation type ("INSERT", "UPDATE", "DELETE")
-    /// - Throws: TransactionManagerError if foreign key constraint is violated
-    public func validateForeignKeys(tableName: String, row: Row, operation: String) async throws {
-        // **Catalog-First**: Get table metadata from Catalog
-        guard let catalog = catalog else {
-            // No Catalog available - skip validation (backward compatibility)
-            return
-        }
-        
-        guard let tableMetadata = await catalog.getTable(name: tableName) else {
-            throw TransactionManagerError.transactionNotFound  // Table not found
-        }
-        
-        // Validate each foreign key constraint
-        for fk in tableMetadata.foreignKeys {
-            // Get foreign key column values from row
-            let fkValues: [Value] = fk.from.compactMap { row[$0] }
-            
-            // Skip if foreign key columns are NULL (NULL FK is allowed)
-            if fkValues.isEmpty || fkValues.allSatisfy({ $0 == .null }) {
-                continue
-            }
-            
-            // **Catalog-First**: Get referenced table metadata from Catalog
-            guard let referencedTable = await catalog.getTable(name: fk.to.table) else {
-                throw TransactionManagerError.transactionNotFound  // Referenced table not found
-            }
-            
-            // For INSERT/UPDATE: Check if referenced row exists
-            if operation == "INSERT" || operation == "UPDATE" {
-                // Build lookup key from foreign key columns
-                // Note: This is a simplified validation - full validation would require
-                // checking actual row existence in the referenced table
-                // For now, we validate that referenced columns exist in referenced table
-                for refColumn in fk.to.column {
-                    guard referencedTable.columns.contains(where: { $0.name == refColumn }) else {
-                        throw TransactionManagerError.invalidLockMode  // Referenced column not found
-                    }
-                }
-                
-                // TODO: Full validation would check if a row with matching values exists
-                // This requires access to the actual table data, which Transaction Manager doesn't have
-                // This validation should be done at a higher level (e.g., in ColibrìDB.insert)
-            }
-            
-            // For DELETE: Check if row is referenced by other tables (CASCADE/SET NULL handling)
-            if operation == "DELETE" {
-                // Find tables that reference this table
-                let allTables = await catalog.getTableNames()
-                for otherTableName in allTables {
-                    guard let otherTable = await catalog.getTable(name: otherTableName) else {
-                        continue
-                    }
-                    
-                    // Check if other table has foreign key referencing this table
-                    let referencingFKs = otherTable.foreignKeys.filter { $0.to.table == tableName }
-                    if !referencingFKs.isEmpty {
-                        // TODO: Check if any rows in otherTable reference this row
-                        // This requires access to actual table data
-                        // For now, skip - CASCADE/SET NULL handling would be implemented here
-                    }
-                }
-            }
-        }
-    }
-    
-    /// Validate foreign key constraints for a transaction
-    /// **Catalog-First**: Validates all foreign key constraints before commit
-    /// - Parameter txId: Transaction ID
-    /// - Throws: TransactionManagerError if foreign key constraint is violated
-    public func validateTransactionForeignKeys(txId: TxID) async throws {
-        // **Catalog-First**: Get transaction operations and validate foreign keys
-        guard let operations = txOperations[txId] else {
-            // No operations - nothing to validate
-            return
-        }
-        
-        // Validate each operation
-        for operation in operations {
-            // Parse operation data to get table and row
-            // Note: This is simplified - full implementation would parse operation.data
-            // For now, skip detailed validation - would be implemented based on operation.type
-            if operation.type == "INSERT" || operation.type == "UPDATE" {
-                // TODO: Parse operation.data to get table name and row
-                // Then call validateForeignKeys(tableName:row:operation:)
-            }
-        }
     }
     
     /// Send commit/abort

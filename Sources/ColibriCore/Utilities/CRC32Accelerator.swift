@@ -15,6 +15,9 @@
 //
 
 import Foundation
+#if canImport(CRC32Accelerator)
+import CRC32Accelerator // C module providing crc32_accelerated
+#endif
 
 /// CRC32 Accelerator for fast checksum calculation
 /// Uses hardware acceleration when available (CRC32C instruction)
@@ -38,8 +41,20 @@ public struct CRC32Accelerator {
     /// - Parameter data: Data to checksum
     /// - Returns: CRC32 checksum value
     private static func calculate(data: Data) -> UInt32 {
-        return data.withUnsafeBytes { bytes in
-            return calculateCRC32(bytes: bytes.bindMemory(to: UInt8.self), length: data.count)
+        return data.withUnsafeBytes { rawBuffer in
+            guard let base = rawBuffer.bindMemory(to: UInt8.self).baseAddress else {
+                return 0
+            }
+            #if canImport(CRC32Accelerator)
+            var usedHW: Int32 = 0
+            let hw = crc32_accelerated(0xFFFFFFFF, base, data.count, &usedHW)
+            if usedHW == 1 && hw != 0 {
+                // C path already returns the finalized CRC (bitwise complemented)
+                return hw
+            }
+            #endif
+            // Fallback: software IEEE CRC32 (finalized)
+            return calculateCRC32(bytes: rawBuffer.bindMemory(to: UInt8.self), length: data.count)
         }
     }
     
@@ -122,4 +137,4 @@ public struct CRC32Accelerator {
     }
 }
 
-// Hardware intrinsics removed - using software implementation only
+// Hardware intrinsics used when available; software fallback otherwise.

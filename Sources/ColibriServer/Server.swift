@@ -209,10 +209,12 @@ public actor ConnectionHandler {
 /// Request handler for processing HTTP requests
 public actor RequestHandler {
     private let database: ColibrìDB
+    private let auth: AuthenticationManager
     private var activeTransactions: [String: TxID] = [:]  // sessionId -> txID
     
-    public init(database: ColibrìDB) {
+    public init(database: ColibrìDB, auth: AuthenticationManager) {
         self.database = database
+        self.auth = auth
     }
     
     /// Get or create transaction for session
@@ -237,7 +239,12 @@ public actor RequestHandler {
         case "/api/health":
             return handleHealthRequest(request)
         default:
-            return HTTPResponse.notFound()
+            // Users endpoints (prefix-based)
+            if request.path == "/api/users" || request.path.hasPrefix("/api/users/") || request.path == "/api/users/login" {
+                return try await handleUsersRequest(request)
+            } else {
+                return HTTPResponse.notFound()
+            }
         }
     }
     
@@ -360,6 +367,104 @@ public actor RequestHandler {
             return HTTPResponse.internalServerError()
         }
     }
+    
+    // MARK: - Users API
+    private func handleUsersRequest(_ request: HTTPRequest) async throws -> HTTPResponse {
+        // POST /api/users/login
+        if request.path == "/api/users/login", request.method == "POST" {
+            guard let body = request.body else { return HTTPResponse.badRequest() }
+            let login = try JSONDecoder().decode(LoginRequest.self, from: body)
+            do {
+                let sessionId = try await auth.authenticate(username: login.username, password: login.password)
+                let resp = LoginResponse(sessionId: sessionId, username: login.username)
+                let data = try JSONEncoder().encode(resp)
+                return HTTPResponse.ok(body: data)
+            } catch {
+                return HTTPResponse.badRequest()
+            }
+        }
+        
+        // /api/users
+        if request.path == "/api/users" {
+            switch request.method {
+            case "GET":
+                let users = await auth.getAllUsers().map(PublicUser.from(_:))
+                let data = try JSONEncoder().encode(users)
+                return HTTPResponse.ok(body: data)
+            case "POST":
+                guard let body = request.body else { return HTTPResponse.badRequest() }
+                let createReq = try JSONDecoder().decode(CreateUserRequest.self, from: body)
+                // transactional boundary
+                let tx = try await database.beginTransaction()
+                do {
+                    try await auth.createUser(username: createReq.username, email: createReq.email, password: createReq.password, role: createReq.role)
+                    try await database.commit(txId: tx)
+                    return HTTPResponse.ok()
+                } catch {
+                    try? await database.abort(txId: tx)
+                    return HTTPResponse.badRequest()
+                }
+            default:
+                return HTTPResponse.badRequest()
+            }
+        }
+        
+        // /api/users/{username} and subresources
+        if request.path.hasPrefix("/api/users/") {
+            let rest = String(request.path.dropFirst("/api/users/".count))
+            let parts = rest.split(separator: "/").map(String.init)
+            guard let username = parts.first, !username.isEmpty else { return HTTPResponse.badRequest() }
+            if parts.count == 1 {
+                switch request.method {
+                case "GET":
+                    if let user = await auth.getUser(username: username) {
+                        let data = try JSONEncoder().encode(PublicUser.from(user))
+                        return HTTPResponse.ok(body: data)
+                    } else {
+                        return HTTPResponse.notFound()
+                    }
+                case "DELETE":
+                    let tx = try await database.beginTransaction()
+                    do {
+                        try await auth.deleteUser(username: username)
+                        try await database.commit(txId: tx)
+                        return HTTPResponse.ok()
+                    } catch {
+                        try? await database.abort(txId: tx)
+                        return HTTPResponse.notFound()
+                    }
+                default:
+                    return HTTPResponse.badRequest()
+                }
+            } else if parts.count == 2, parts[1] == "role", request.method == "PUT" {
+                guard let body = request.body else { return HTTPResponse.badRequest() }
+                let req = try JSONDecoder().decode(UpdateUserRoleRequest.self, from: body)
+                let tx = try await database.beginTransaction()
+                do {
+                    try await auth.updateUserRole(username: username, newRole: req.role)
+                    try await database.commit(txId: tx)
+                    return HTTPResponse.ok()
+                } catch {
+                    try? await database.abort(txId: tx)
+                    return HTTPResponse.notFound()
+                }
+            } else if parts.count == 2, parts[1] == "password", request.method == "PUT" {
+                guard let body = request.body else { return HTTPResponse.badRequest() }
+                let req = try JSONDecoder().decode(ChangePasswordRequest.self, from: body)
+                let tx = try await database.beginTransaction()
+                do {
+                    try await auth.changePassword(username: username, oldPassword: req.oldPassword, newPassword: req.newPassword)
+                    try await database.commit(txId: tx)
+                    return HTTPResponse.ok()
+                } catch {
+                    try? await database.abort(txId: tx)
+                    return HTTPResponse.badRequest()
+                }
+            }
+        }
+        
+        return HTTPResponse.notFound()
+    }
 }
 
 // MARK: - Supporting Types
@@ -387,6 +492,46 @@ public struct HealthStatus: Codable, Sendable {
     public let version: String
 }
 
+// MARK: - Users DTOs
+public struct CreateUserRequest: Codable, Sendable {
+    public let username: String
+    public let email: String
+    public let password: String
+    public let role: UserRole
+}
+
+public struct UpdateUserRoleRequest: Codable, Sendable {
+    public let role: UserRole
+}
+
+public struct ChangePasswordRequest: Codable, Sendable {
+    public let oldPassword: String
+    public let newPassword: String
+}
+
+public struct LoginRequest: Codable, Sendable {
+    public let username: String
+    public let password: String
+}
+
+public struct LoginResponse: Codable, Sendable {
+    public let sessionId: String
+    public let username: String
+}
+
+public struct PublicUser: Codable, Sendable {
+    public let username: String
+    public let email: String
+    public let role: UserRole
+    public let status: UserStatus
+    public let createdAt: Date
+    public let lastLogin: Date?
+    
+    public static func from(_ u: UserMetadata) -> PublicUser {
+        return PublicUser(username: u.username, email: u.email, role: u.role, status: u.status, createdAt: u.createdAt, lastLogin: u.lastLogin)
+    }
+}
+
 // MARK: - Colibri Server
 
 /// Main ColibrìDB Server
@@ -409,18 +554,43 @@ public actor ColibriServer {
     
     /// Request handler
     private let requestHandler: RequestHandler
+    private let authManager: AuthenticationManager
     
     // MARK: - Dependencies
     
     /// Database instance
     private let database: ColibrìDB
     
+    /// System catalog manager (loads descriptors from sys_* tables)
+    public let catalogManager: SystemCatalogManager
+    
+    /// Privilege manager (handles GRANT/REVOKE)
+    public let privilegeManager: PrivilegeManager
+    
     // MARK: - Initialization
     
-    public init(config: ServerConfig = .default, database: ColibrìDB) {
+    public init(config: ServerConfig = .default, database: ColibrìDB) async throws {
         self.config = config
         self.database = database
-        self.requestHandler = RequestHandler(database: database)
+        
+        // Initialize SQL-backed private schema (colibri_sys)
+        let bootstrap = SystemCatalogBootstrap()
+        try await bootstrap.initialize(on: database)
+        
+        // Initialize user store and auth
+        let userStore = SQLUserStore(database: database)
+        try await userStore.initializeSchema()
+        self.authManager = AuthenticationManager(store: userStore)
+        
+        // Initialize catalog and privilege managers
+        self.catalogManager = SystemCatalogManager(database: database)
+        self.privilegeManager = PrivilegeManager(database: database)
+        
+        // Load catalog descriptors and privileges from sys_* tables
+        try await catalogManager.loadAll()
+        try await privilegeManager.loadAll()
+        
+        self.requestHandler = RequestHandler(database: database, auth: authManager)
     }
     
     // MARK: - Server Operations
@@ -455,7 +625,7 @@ public actor ColibriServer {
         listener = nil
         
         // Close all active connections
-        for (_, _) in activeConnections {
+        for (_, connection) in activeConnections {
             // Connection will be removed when it closes
         }
         
