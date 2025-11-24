@@ -42,7 +42,7 @@ jobs:
           disable-sudo: true
       
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
       
@@ -113,7 +113,7 @@ jobs:
           egress-policy: audit
       
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       
       - name: Run Trivy Security Scanner
         uses: aquasecurity/trivy-action@master
@@ -161,7 +161,7 @@ jobs:
           egress-policy: audit
       
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       
       - name: Check Swift Version
         run: |
@@ -194,7 +194,7 @@ jobs:
           egress-policy: audit
       
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       
       - name: Validate Workflows
         run: |
