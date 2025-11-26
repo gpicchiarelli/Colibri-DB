@@ -50,7 +50,8 @@ final class VACUUMTests {
         let storageManager = createMockStorageManager(tempDir: tempDir)
         let diskManager = try FileDiskManager(filePath: tempDir.appendingPathComponent("buffer.db"))
         let bufferManager = BufferManager(diskManager: diskManager)
-        return IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager)
+        let catalog = CatalogManager()
+        return IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager, catalog: catalog)
     }
     
     // MARK: - Setup
@@ -604,7 +605,8 @@ final class VACUUMTests {
         let storageManager = createMockStorageManager(tempDir: tempDir)
         let diskManager = try FileDiskManager(filePath: tempDir.appendingPathComponent("buffer.db"))
         let bufferManager = BufferManager(diskManager: diskManager)
-        let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager)
+        let catalog = CatalogManager()
+        let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager, catalog: catalog)
         let vacuumManager = VacuumManager(mvcc: mvcc, heapTable: heapTable, indexManager: indexManager)
         
         // Act

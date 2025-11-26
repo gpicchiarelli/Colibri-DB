@@ -224,7 +224,8 @@ final class DistributedTests: XCTestCase {
         let diskManager = try FileDiskManager(filePath: dataPath)
         let compressionService = CompressionServiceImpl()
         let encryptionService = EncryptionServiceImpl()
-        let storageManager = StorageManagerActor(diskManager: diskManager, compressionService: compressionService, encryptionService: encryptionService)
+        let catalog = CatalogManager()
+        let storageManager = StorageManagerActor(diskManager: diskManager, compressionService: compressionService, encryptionService: encryptionService, catalog: catalog)
         
         let shardingManager = ShardingManager(storageManager: storageManager, strategy: .hash)
         XCTAssertNotNil(shardingManager, "ShardingManager should be created")
@@ -239,7 +240,8 @@ final class DistributedTests: XCTestCase {
         let diskManager = try FileDiskManager(filePath: dataPath)
         let compressionService = CompressionServiceImpl()
         let encryptionService = EncryptionServiceImpl()
-        let storageManager = StorageManagerActor(diskManager: diskManager, compressionService: compressionService, encryptionService: encryptionService)
+        let catalog = CatalogManager()
+        let storageManager = StorageManagerActor(diskManager: diskManager, compressionService: compressionService, encryptionService: encryptionService, catalog: catalog)
         
         let shardingManager = ShardingManager(storageManager: storageManager, strategy: .hash)
         
@@ -247,8 +249,8 @@ final class DistributedTests: XCTestCase {
         let shardCount = await shardingManager.getShardCount()
         XCTAssertGreaterThanOrEqual(shardCount, 0, "Shard count should be non-negative")
         
-        let strategy = await shardingManager.getShardStrategy()
-        XCTAssertEqual(strategy, .hash, "Shard strategy should be hash")
+        let strategy: ShardStrategy = await shardingManager.getShardStrategy()
+        XCTAssertEqual(strategy, ShardStrategy.hash, "Shard strategy should be hash")
     }
     
     /// Test shard deletion
@@ -260,7 +262,8 @@ final class DistributedTests: XCTestCase {
         let diskManager = try FileDiskManager(filePath: dataPath)
         let compressionService = CompressionServiceImpl()
         let encryptionService = EncryptionServiceImpl()
-        let storageManager = StorageManagerActor(diskManager: diskManager, compressionService: compressionService, encryptionService: encryptionService)
+        let catalog = CatalogManager()
+        let storageManager = StorageManagerActor(diskManager: diskManager, compressionService: compressionService, encryptionService: encryptionService, catalog: catalog)
         
         let shardingManager = ShardingManager(storageManager: storageManager, strategy: .hash)
         
@@ -283,7 +286,8 @@ final class DistributedTests: XCTestCase {
         let diskManager = try FileDiskManager(filePath: dataPath)
         let compressionService = CompressionServiceImpl()
         let encryptionService = EncryptionServiceImpl()
-        let storageManager = StorageManagerActor(diskManager: diskManager, compressionService: compressionService, encryptionService: encryptionService)
+        let catalog = CatalogManager()
+        let storageManager = StorageManagerActor(diskManager: diskManager, compressionService: compressionService, encryptionService: encryptionService, catalog: catalog)
         
         let shardingManager = ShardingManager(storageManager: storageManager, strategy: .hash)
         

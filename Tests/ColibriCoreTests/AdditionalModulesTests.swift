@@ -190,9 +190,7 @@ final class AdditionalModulesTests: XCTestCase {
         let page = try await bufferManager.getPage(pageId: pageId)
         
         XCTAssertNotNil(page, "Page should be retrieved")
-        if let page = page {
-            XCTAssertEqual(page.pageId, pageId, "Page ID should match")
-        }
+        XCTAssertEqual(page.pageId, pageId, "Page ID should match")
     }
     
     // MARK: - Buffer Pool Manager Tests
@@ -358,8 +356,9 @@ final class AdditionalModulesTests: XCTestCase {
         let diskManager = try FileDiskManager(filePath: dataPath)
         let bufferManager = BufferManager(diskManager: diskManager)
         let storageManager = MockStorageManager()
+        let catalog = CatalogManager()
         
-        let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager)
+        let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager, catalog: catalog)
         XCTAssertNotNil(indexManager, "IndexManagerActor should be created")
     }
     
@@ -371,8 +370,9 @@ final class AdditionalModulesTests: XCTestCase {
         let diskManager = try FileDiskManager(filePath: dataPath)
         let bufferManager = BufferManager(diskManager: diskManager)
         let storageManager = MockStorageManager()
+        let catalog = CatalogManager()
         
-        let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager)
+        let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager, catalog: catalog)
         let metadata = IndexMetadata(
             name: "test_index",
             tableName: "users",
@@ -748,7 +748,8 @@ final class AdditionalModulesTests: XCTestCase {
         let diskManager2 = try FileDiskManager(filePath: tempDir.appendingPathComponent("data2.db"))
         let bufferManager = BufferManager(diskManager: diskManager2)
         let storageManager = MockStorageManager()
-        let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager)
+        let catalog = CatalogManager()
+        let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager, catalog: catalog)
         
         let mvcc = MVCCManager()
         let vacuumManager = VacuumManager(mvcc: mvcc, heapTable: heapTable, indexManager: indexManager)
@@ -839,7 +840,8 @@ final class AdditionalModulesTests: XCTestCase {
         let diskManager = try FileDiskManager(filePath: dataPath)
         let storageManager = MockStorageManager()
         let bufferManager = BufferManager(diskManager: diskManager)
-        let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager)
+        let catalog = CatalogManager()
+        let indexManager = IndexManagerActor(storageManager: storageManager, bufferManager: bufferManager, catalog: catalog)
         XCTAssertNotNil(indexManager, "IndexManagerActor should be created")
     }
     
