@@ -41,8 +41,8 @@ let package = Package(
                 "CRC32Accelerator"
             ],
             exclude: [
-                // Exclude duplicate files (backups with " 2" suffix)
-                "**/* 2.swift"
+                "README.md",
+                "Indexes/IndexProtocol.swift.bak"
             ]
         ),
         .target(
@@ -51,6 +51,9 @@ let package = Package(
                 "ColibriCore",
                 .product(name: "NIO", package: "swift-nio"),
                 .product(name: "NIOHTTP1", package: "swift-nio")
+            ],
+            exclude: [
+                "README.md"
             ]
         ),
         .executableTarget(
@@ -67,7 +70,10 @@ let package = Package(
         ),
         .testTarget(
             name: "ColibriCoreTests",
-            dependencies: ["ColibriCore"]
+            dependencies: ["ColibriCore"],
+            exclude: [
+                "README.md"
+            ]
         )
     ]
 )
