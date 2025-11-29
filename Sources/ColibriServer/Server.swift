@@ -625,7 +625,7 @@ public actor ColibriServer {
         listener = nil
         
         // Close all active connections
-        for (_, connection) in activeConnections {
+        for (_, _) in activeConnections {
             // Connection will be removed when it closes
         }
         

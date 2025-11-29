@@ -1,0 +1,338 @@
+# ColibrìDB - Cursor AI Rules
+
+## Project Overview
+ColibrìDB is a production-ready relational database management system (RDBMS) implemented in Swift 6.0 with formal verification using TLA+ specifications. This is a high-performance, enterprise-grade database with ACID compliance, MVCC, and distributed capabilities.
+
+## Core Principles
+
+### 1. Type Safety & Swift Best Practices
+- Always use Swift 6.0 strict concurrency features (actors, Sendable, async/await)
+- Prefer `let` over `var` unless mutation is required
+- Use explicit types when clarity is needed, otherwise rely on type inference
+- Mark all public APIs with appropriate access control (`public`, `internal`, `private`)
+- Use `nonisolated` for methods that don't require actor isolation
+- Always use `Sendable` for types passed across concurrency boundaries
+
+### 2. Code Style & Formatting
+- Follow Swift API Design Guidelines
+- Use `MARK:` comments to organize code sections:
+  ```swift
+  // MARK: - Properties
+  // MARK: - Initialization
+  // MARK: - Public Methods
+  // MARK: - Private Methods
+  ```
+- Maximum line length: 120 characters (warning), 140 (error)
+- Function body length: 80 lines (warning), 120 (error)
+- Type body length: 300 lines (warning), 400 (error)
+- File length: 600 lines (warning), 800 (error)
+
+### 3. Naming Conventions
+- **Classes/Structs/Enums**: PascalCase (`BufferPool`, `WALManager`, `IsolationLevel`)
+- **Functions/Methods**: camelCase (`pinPage`, `flushToDisk`, `beginTransaction`)
+- **Variables/Properties**: camelCase (`pageID`, `transactionID`, `lastLSN`)
+- **Constants**: camelCase (`maxPageSize`, `defaultBufferSize`)
+- **Type Aliases**: PascalCase (`PageID`, `TxID`, `LSN`)
+- **Protocols**: PascalCase with descriptive suffix (`WALManagerProtocol`, `IndexStrategy`)
+
+### 4. File Header Template
+Every Swift file must start with:
+```swift
+//
+//  FileName.swift
+//  ColibrìDB
+//
+//  Created by [Author] on [Date].
+//
+//  [Brief description of the module/component]
+//
+```
+
+### 5. Error Handling
+- Use `throws` for synchronous operations that can fail
+- Use `async throws` for asynchronous operations that can fail
+- Prefer specific error types over generic `Error`
+- Always document error conditions in doc comments
+- Use `Result<T, Error>` for operations where errors are expected and handled explicitly
+- Never use force unwrapping (`!`) unless absolutely necessary and documented
+- Use `guard` statements for early returns and precondition checks
+
+### 6. Concurrency & Actors
+- Use Swift actors for stateful components that require isolation
+- Mark actor methods as `nonisolated` when they don't access isolated state
+- Use `@MainActor` for UI-related code (if applicable)
+- Prefer structured concurrency (`async/await`) over callbacks
+- Use `Task` for fire-and-forget operations
+- Always handle cancellation properly in long-running operations
+- Use `Sendable` protocol for types passed between actors
+
+### 7. Documentation
+- Document all public APIs with Swift doc comments (`///`)
+- Include TLA+ action references when applicable: `/// TLA+ Action: ActionName(params)`
+- Document preconditions and postconditions for critical operations
+- Include examples for complex APIs
+- Document thread-safety and concurrency guarantees
+- Mark deprecated APIs with `@available(*, deprecated)`
+
+### 8. Testing
+- Write unit tests for all public APIs
+- Use descriptive test names: `testFunctionName_WhenCondition_ShouldReturnExpectedResult`
+- Test both success and failure paths
+- Test edge cases and boundary conditions
+- Use property-based testing for complex algorithms
+- Include integration tests for critical workflows
+- Test concurrency scenarios (race conditions, deadlocks)
+
+### 9. Performance
+- Profile before optimizing
+- Use `inout` parameters for large structs to avoid copying
+- Prefer value types (structs) over reference types (classes) when possible
+- Use `@inline(__always)` or `@inline(never)` sparingly and only with evidence
+- Avoid premature optimization
+- Use `UnsafeMutablePointer` only when absolutely necessary and document why
+- Prefer `withUnsafeBytes` over direct pointer manipulation
+
+### 10. Memory Management
+- Use weak references for delegate patterns
+- Avoid retain cycles in closures
+- Use `defer` for cleanup operations
+- Prefer `autoreleasepool` for tight loops with temporary objects
+- Be mindful of actor isolation when capturing values in closures
+
+### 11. Database-Specific Patterns
+
+#### WAL (Write-Ahead Log)
+- Always write to WAL before modifying data pages
+- Use LSN (Log Sequence Number) for ordering
+- Implement ARIES recovery algorithm correctly
+- Document checkpoint procedures
+
+#### MVCC (Multi-Version Concurrency Control)
+- Use snapshot isolation for reads
+- Implement proper version chains
+- Clean up old versions with VACUUM
+- Handle transaction visibility correctly
+
+#### Transactions
+- Always use transactions for multi-step operations
+- Implement proper rollback on errors
+- Use appropriate isolation levels
+- Handle deadlocks and timeouts
+
+#### Buffer Pool
+- Implement LRU eviction policy
+- Pin pages during critical operations
+- Flush dirty pages before eviction
+- Track page usage statistics
+
+### 12. TLA+ Integration
+- Reference TLA+ specifications in code comments
+- Use TLA+ action names in method documentation
+- Maintain consistency between TLA+ specs and implementation
+- Update TLA+ specs when changing algorithms
+- Document invariants from TLA+ specifications
+
+### 13. Security
+- Never log sensitive data (passwords, tokens, keys)
+- Use secure random number generators for cryptographic operations
+- Validate all user inputs
+- Use parameterized queries to prevent SQL injection
+- Implement proper authentication and authorization
+- Follow principle of least privilege
+
+### 14. Code Organization
+- Group related functionality into modules
+- Use protocols for abstraction and testability
+- Keep files focused on a single responsibility
+- Use extensions to organize protocol conformances
+- Separate public API from internal implementation
+
+### 15. Git & Version Control
+- Write clear, descriptive commit messages
+- Use conventional commits format when possible
+- Keep commits atomic and focused
+- Reference issue numbers in commit messages
+- Don't commit generated files or build artifacts
+
+### 16. Dependencies
+- Minimize external dependencies
+- Prefer Swift Package Manager over other dependency managers
+- Pin dependency versions for stability
+- Document why each dependency is needed
+- Keep dependencies up to date for security
+
+### 17. Build & Compilation
+- Ensure code compiles without warnings
+- Fix all compiler warnings before committing
+- Use `#warning` for TODO items that need attention
+- Use `#error` for build-time configuration errors
+- Maintain compatibility with Swift 6.0+
+
+### 18. Specific Patterns to Follow
+
+#### Actor Pattern
+```swift
+public actor ComponentName {
+    // MARK: - State Variables (TLA+ vars)
+    private var state: StateType
+    
+    // MARK: - Public Methods
+    public func publicMethod() async throws {
+        // Implementation
+    }
+}
+```
+
+#### Protocol-Oriented Design
+```swift
+public protocol ComponentProtocol: Sendable {
+    func method() async throws -> Result
+}
+
+public struct ComponentImplementation: ComponentProtocol {
+    // Implementation
+}
+```
+
+#### Error Types
+```swift
+public enum ComponentError: Error, Sendable {
+    case invalidInput(String)
+    case operationFailed(reason: String)
+    case resourceUnavailable
+}
+```
+
+### 19. Code Review Checklist
+- [ ] Code compiles without warnings
+- [ ] All public APIs are documented
+- [ ] Tests are included and passing
+- [ ] TLA+ specs are updated if algorithm changed
+- [ ] Performance impact is considered
+- [ ] Security implications are reviewed
+- [ ] Concurrency safety is verified
+- [ ] Error handling is comprehensive
+- [ ] Code follows style guidelines
+
+### 20. Common Pitfalls to Avoid
+- ❌ Don't use `var` when `let` is sufficient
+- ❌ Don't ignore compiler warnings
+- ❌ Don't use force unwrapping without justification
+- ❌ Don't access actor-isolated state from outside
+- ❌ Don't create retain cycles
+- ❌ Don't ignore errors silently
+- ❌ Don't use `DispatchQueue` when actors are available
+- ❌ Don't mix sync and async code incorrectly
+- ❌ Don't forget to handle cancellation
+- ❌ Don't use `Any` or `AnyObject` without good reason
+
+### 21. Performance Critical Sections
+When working on performance-critical code:
+- Profile first, optimize second
+- Document performance characteristics
+- Include benchmarks for optimizations
+- Consider cache locality
+- Minimize allocations in hot paths
+- Use `@inlinable` judiciously
+- Consider SIMD for vector operations
+
+### 22. Testing Strategy
+- Unit tests for individual components
+- Integration tests for component interactions
+- Property-based tests for algorithms
+- Stress tests for concurrency
+- Performance benchmarks
+- Chaos engineering tests for resilience
+
+### 23. Documentation Standards
+- README files for major modules
+- API documentation for all public interfaces
+- Architecture decision records (ADRs) for significant changes
+- TLA+ specifications for critical algorithms
+- Inline comments for complex logic
+- Examples for common use cases
+
+### 24. When Adding New Features
+1. Check if TLA+ specification exists or needs to be created
+2. Design the API following Swift conventions
+3. Implement with proper error handling
+4. Write comprehensive tests
+5. Update documentation
+6. Consider performance implications
+7. Review security aspects
+8. Ensure thread-safety
+
+### 25. When Fixing Bugs
+1. Reproduce the bug with a test
+2. Identify root cause
+3. Fix the issue
+4. Ensure the test passes
+5. Check for similar issues
+6. Update documentation if behavior changed
+7. Consider if TLA+ spec needs update
+
+## Quick Reference
+
+### Swift 6.0 Features to Use
+- ✅ Actors for state isolation
+- ✅ `async/await` for concurrency
+- ✅ `Sendable` for cross-boundary types
+- ✅ Structured concurrency
+- ✅ `nonisolated` for actor methods
+- ✅ `@MainActor` for UI code
+
+### Swift 6.0 Features to Avoid
+- ❌ `DispatchQueue` (use actors instead)
+- ❌ Manual thread management
+- ❌ Unsafe concurrency patterns
+- ❌ Global mutable state
+
+### Code Quality Tools
+- SwiftLint (see `Configuration/swiftlint.yml`)
+- SwiftFormat (see `Configuration/swiftformat.yml`)
+- TLA+ Toolbox for formal verification
+- Xcode Instruments for profiling
+
+## AI Assistant Guidelines
+
+When helping with this codebase:
+1. Always respect Swift 6.0 concurrency model
+2. Reference TLA+ specifications when relevant
+3. Consider performance implications
+4. Ensure thread-safety
+5. Follow the established patterns
+6. Write comprehensive tests
+7. Update documentation
+8. Fix all warnings before suggesting code
+
+## Project-Specific Context
+
+### Key Components
+- **WAL**: Write-Ahead Logging (ARIES algorithm)
+- **MVCC**: Multi-Version Concurrency Control
+- **Buffer Pool**: Page caching with LRU eviction
+- **Transaction Manager**: ACID transaction processing
+- **Query Engine**: SQL parser, optimizer, executor
+- **Storage**: Heap tables, 9 index types
+- **Replication**: Raft consensus, primary-replica
+- **Security**: Authentication, authorization, encryption
+
+### Critical Paths
+- Transaction commit/abort
+- WAL flush operations
+- Buffer pool eviction
+- Query execution
+- Recovery procedures
+- Replication synchronization
+
+### Testing Requirements
+- All critical paths must have tests
+- Concurrency tests for race conditions
+- Recovery tests for crash scenarios
+- Performance benchmarks for hot paths
+- Property-based tests for algorithms
+
+---
+
+**Remember**: This is a production database system. Code quality, correctness, and performance are paramount. When in doubt, prefer safety and clarity over cleverness.
+

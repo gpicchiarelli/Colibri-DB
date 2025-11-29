@@ -196,7 +196,7 @@ public actor ReplicationManager {
     /// TLA+ Action: PromoteToPrimary(replicaId)
     public func promoteToPrimary(replicaId: String) throws {
         // TLA+: Check if replica exists
-        guard var replica = replicas[replicaId] else {
+        guard let replica = replicas[replicaId] else {
             throw ReplicationError.replicaNotFound
         }
         
@@ -220,7 +220,7 @@ public actor ReplicationManager {
         primaryReplica = replicaId
         
         // TLA+: Demote old primary
-        for (id, var otherReplica) in replicas {
+        for (id, otherReplica) in replicas {
             if id != replicaId && otherReplica.role == .primary {
                 let demotedReplica = ReplicaMetadata(
                     replicaId: otherReplica.replicaId,
@@ -337,7 +337,7 @@ public actor ReplicationManager {
     /// Send log entry to replica
     private func sendToReplica(_ replicaId: String, _ logEntry: ReplicationLogEntry) async throws {
         // TLA+: Update replica metadata
-        guard var replica = replicas[replicaId] else {
+        guard let replica = replicas[replicaId] else {
             throw ReplicationError.replicaNotFound
         }
         
@@ -411,7 +411,7 @@ public actor ReplicationManager {
     /// TLA+ Action: RepairReplica(replicaId)
     public func repairReplica(replicaId: String) async throws {
         // TLA+: Check if replica exists
-        guard var replica = replicas[replicaId] else {
+        guard let replica = replicas[replicaId] else {
             throw ReplicationError.replicaNotFound
         }
         
@@ -453,7 +453,7 @@ public actor ReplicationManager {
     
     /// Update replica health
     public func updateReplicaHealth(replicaId: String, isHealthy: Bool) {
-        if var replica = replicas[replicaId] {
+        if let replica = replicas[replicaId] {
             let updatedReplica = ReplicaMetadata(
                 replicaId: replica.replicaId,
                 role: replica.role,

@@ -358,7 +358,7 @@ public actor BufferPool {
     /// TLA+: Inv_BufferPool_CacheConsistency
     public func checkCacheConsistencyInvariant() -> Bool {
         // Clean pages in cache must match disk
-        for (pageID, page) in cache {
+        for (pageID, _) in cache {
             if !dirty.contains(pageID) {
                 // This would require reading from disk to verify
                 // In practice, we trust the implementation
@@ -435,14 +435,14 @@ public actor FileDiskManager: DiskManager {
         let data = handle.readData(ofLength: PAGE_SIZE)
         if data.count == PAGE_SIZE {
             // Verify CRC32 if present in first 4 bytes
-            var mutable = data
-            let storedCRC: UInt32 = mutable.prefix(4).withUnsafeBytes { $0.load(as: UInt32.self) }
-            let body = mutable.advanced(by: 4)
+            var mutableData = data
+            let storedCRC: UInt32 = mutableData.prefix(4).withUnsafeBytes { $0.load(as: UInt32.self) }
+            let body = mutableData.advanced(by: 4)
             let computed = CRC32Accelerator.calculate(body)
             if storedCRC != 0 && storedCRC != computed {
                 throw DBError.corruption
             }
-            return mutable
+            return mutableData
         }
         
         // If the page hasn't been written yet, return a zeroed page

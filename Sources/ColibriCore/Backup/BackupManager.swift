@@ -223,7 +223,7 @@ public actor BackupManager {
         let restorePoint = RestorePoint(
             pointId: backupId,
             timestamp: timestamp,
-            lsn: try await wal.getCurrentLSN(),
+            lsn: await wal.getCurrentLSN(),
             description: "Point-in-time backup"
         )
         
@@ -255,7 +255,7 @@ public actor BackupManager {
         
         do {
             // TLA+: Get current LSN
-            let startLSN = try await wal.getCurrentLSN()
+            let startLSN = await wal.getCurrentLSN()
             
             // TLA+: Backup all tables
             let tablesToBackup = tables.isEmpty ? await getAllTables() : tables
@@ -270,7 +270,7 @@ public actor BackupManager {
             }
             
             // TLA+: Get end LSN
-            let endLSN = try await wal.getCurrentLSN()
+            let endLSN = await wal.getCurrentLSN()
             
             // TLA+: Update backup metadata
             let updatedBackup = BackupMetadata(
@@ -321,7 +321,7 @@ public actor BackupManager {
             }
             
             // TLA+: Get end LSN
-            let endLSN = try await wal.getCurrentLSN()
+            let endLSN = await wal.getCurrentLSN()
             
             // TLA+: Update backup metadata
             let updatedBackup = BackupMetadata(
@@ -507,7 +507,7 @@ public actor BackupManager {
     
     /// Update backup status
     private func updateBackupStatus(backupId: String, status: BackupStatus) {
-        if var backup = backups[backupId] {
+        if let backup = backups[backupId] {
             let updatedBackup = BackupMetadata(
                 backupId: backup.backupId,
                 type: backup.type,

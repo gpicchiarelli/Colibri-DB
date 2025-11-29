@@ -14,10 +14,10 @@ public actor SystemCatalogBootstrap {
         let tx = try await db.beginTransaction()
         do {
             // Private schema
-            try await db.executeQuery("CREATE SCHEMA IF NOT EXISTS \(schema);", txId: tx)
+            _ = try await db.executeQuery("CREATE SCHEMA IF NOT EXISTS \(schema);", txId: tx)
             
             // Core system tables (minimal viable set; extend as engine evolves)
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_users (
               user_id BIGINT PRIMARY KEY,
               username TEXT NOT NULL UNIQUE,
@@ -30,7 +30,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_roles (
               role_id BIGINT PRIMARY KEY,
               name TEXT NOT NULL UNIQUE,
@@ -39,7 +39,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_role_members (
               role_id BIGINT NOT NULL,
               member_role_id BIGINT NOT NULL,
@@ -47,7 +47,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_databases (
               database_id BIGINT PRIMARY KEY,
               name TEXT NOT NULL UNIQUE,
@@ -58,7 +58,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_schemas (
               schema_id BIGINT PRIMARY KEY,
               database_id BIGINT NOT NULL,
@@ -69,7 +69,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_tables (
               table_id BIGINT PRIMARY KEY,
               schema_id BIGINT NOT NULL,
@@ -82,7 +82,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_columns (
               column_id BIGINT PRIMARY KEY,
               table_id BIGINT NOT NULL,
@@ -98,7 +98,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_indexes (
               index_id BIGINT PRIMARY KEY,
               table_id BIGINT NOT NULL,
@@ -112,7 +112,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_index_columns (
               index_id BIGINT NOT NULL,
               column_id BIGINT NOT NULL,
@@ -123,7 +123,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_constraints (
               constraint_id BIGINT PRIMARY KEY,
               table_id BIGINT NOT NULL,
@@ -138,7 +138,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_constraint_columns (
               constraint_id BIGINT NOT NULL,
               column_id BIGINT NOT NULL,
@@ -148,7 +148,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_privileges (
               privilege_id BIGINT PRIMARY KEY,
               grantee_kind TEXT NOT NULL,
@@ -162,7 +162,7 @@ public actor SystemCatalogBootstrap {
             );
             """, txId: tx)
             
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             CREATE TABLE IF NOT EXISTS \(schema).sys_settings (
               key TEXT PRIMARY KEY,
               value TEXT NOT NULL,
@@ -189,28 +189,28 @@ public actor SystemCatalogBootstrap {
             // Reserve user_id 1 as built-in sys_dba if missing
             let uq = try await db.executeQuery("SELECT 1 FROM \(schema).sys_users WHERE user_id=1;", txId: tx)
             if uq.rows.isEmpty {
-                try await db.executeQuery("""
+                _ = try await db.executeQuery("""
                 INSERT INTO \(schema).sys_users (user_id, username, email, password_hash, password_salt, status, created_at, last_login)
                 VALUES (1, 'sys_dba', NULL, '', '', 'ACTIVE', \(now), NULL);
                 """, txId: tx)
             }
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             INSERT INTO \(schema).sys_databases (database_id, name, owner_user_id, tablespace_id, is_system, created_at)
             VALUES (1, 'colibri_sys', 1, NULL, 1, \(now));
             """, txId: tx)
             // Create sys and information_schema logical entries
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             INSERT INTO \(schema).sys_schemas (schema_id, database_id, name, owner_user_id, created_at)
             VALUES (1, 1, 'sys', 1, \(now))
             ON CONFLICT (database_id, name) DO NOTHING;
             """, txId: tx)
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             INSERT INTO \(schema).sys_schemas (schema_id, database_id, name, owner_user_id, created_at)
             VALUES (2, 1, 'information_schema', 1, \(now))
             ON CONFLICT (database_id, name) DO NOTHING;
             """, txId: tx)
             // Settings baseline
-            try await db.executeQuery("""
+            _ = try await db.executeQuery("""
             INSERT INTO \(schema).sys_settings (key, value, scope, database_id)
             VALUES ('catalog_version','1','GLOBAL',NULL)
             ON CONFLICT (key) DO NOTHING;

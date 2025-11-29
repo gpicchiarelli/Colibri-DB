@@ -88,7 +88,7 @@ public struct CLICommands {
         defer { Task { try? await db.shutdown() } }
         
         // Create table if needed
-        let tableDef = TableDefinition(
+        _ = TableDefinition(
             name: "kv_store",
             columns: [
                 ColumnDefinition(name: "key", type: .string, nullable: false),
