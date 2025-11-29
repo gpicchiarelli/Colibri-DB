@@ -327,9 +327,13 @@ public actor ARIESRecoveryManager {
                 }
             } else if record.kind == .checkpoint {
                 // TLA+: Initialize DPT
-                if let checkpointRecord = record as? CheckpointRecord {
-                    for (pageId, _) in checkpointRecord.dirtyPageTable {
-                        dpt[pageId] = DPTEntry(pageId: pageId, recLSN: lsn)
+                // Checkpoint data is stored in the payload of ConcreteWALRecord
+                if let concreteRecord = record as? ConcreteWALRecord, let payload = concreteRecord.payload {
+                    let decoder = JSONDecoder()
+                    if let checkpointRecord = try? decoder.decode(CheckpointRecord.self, from: payload) {
+                        for (pageId, _) in checkpointRecord.dirtyPageTable {
+                            dpt[pageId] = DPTEntry(pageId: pageId, recLSN: lsn)
+                        }
                     }
                 }
             } else if record.kind == .heapUpdate {

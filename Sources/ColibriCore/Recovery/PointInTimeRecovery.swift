@@ -533,10 +533,19 @@ public actor PointInTimeRecoveryManager {
             if case .transactionId(let targetId) = target.value {
                 return record.txnId == targetId
             }
+        case .name:
+            // Named restore points need to be resolved to LSN/timestamp elsewhere
+            // For this helper, we can't determine without restore point lookup
+            if case .name(let restorePointName) = target.value {
+                // This should be handled by resolving the restore point name first
+                // For now, return false as we can't determine without lookup
+                return false
+            }
+        case .immediate:
+            // Immediate recovery to earliest consistent point - all records are before
+            return true
         case .latest:
             return true
-        @unknown default:
-            return false
         }
         return false
     }

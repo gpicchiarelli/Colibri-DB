@@ -154,7 +154,8 @@ public final class AuthenticationManager: @unchecked Sendable {
         if store == nil {
             guard users[username] == nil else { throw AuthenticationError.userAlreadyExists }
         } else {
-            if let existing = try? await store?.getUser(username: username), existing != nil {
+            if let existing = try? await store?.getUser(username: username) {
+                // User exists, throw error
                 throw AuthenticationError.userAlreadyExists
             }
         }
