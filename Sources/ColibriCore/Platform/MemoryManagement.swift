@@ -5,6 +5,9 @@
 
 import Foundation
 
+// MARK: - Types
+
+/// Memory pool for efficient memory allocation
 public struct MemoryPool {
     private var blocks: [Data]
     private let blockSize: Int
@@ -51,6 +54,7 @@ public struct MemoryPool {
     }
 }
 
+/// Memory pool statistics
 public struct MemoryPoolStatistics {
     public let totalBlocks: Int
     public let freeBlocks: Int
@@ -63,16 +67,30 @@ public struct MemoryPoolStatistics {
     }
 }
 
+// MARK: - Arena Allocator
+
+/// Arena allocator for efficient memory allocation
 public actor ArenaAllocator {
+    // MARK: - Properties
+    
     private var arena: Data
     private var offset: Int = 0
     private let size: Int
     
+    // MARK: - Initialization
+    
+    /// Initialize arena allocator
+    /// - Parameter size: Size of the arena in bytes
     public init(size: Int) {
         self.size = size
         self.arena = Data(count: size)
     }
     
+    // MARK: - Public Methods
+    
+    /// Allocate memory from arena
+    /// - Parameter size: Size to allocate
+    /// - Returns: Offset of allocated memory, or nil if insufficient space
     public func allocate(size: Int) -> Int? {
         guard offset + size <= self.size else {
             return nil
@@ -84,10 +102,13 @@ public actor ArenaAllocator {
         return allocatedOffset
     }
     
+    /// Reset arena to beginning
     public func reset() {
         offset = 0
     }
     
+    /// Get current usage of arena
+    /// - Returns: Number of bytes used
     public func getUsage() -> Int {
         return offset
     }

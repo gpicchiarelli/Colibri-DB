@@ -7,6 +7,8 @@
 
 import Foundation
 
+// MARK: - Input Limits
+
 /// Input size limits
 public enum InputLimits {
     public static let maxQuerySize: Int = 1_048_576  // 1MB
@@ -16,6 +18,8 @@ public enum InputLimits {
     public static let maxColumnNameLength: Int = 128
     public static let maxBatchSize: Int = 10_000
 }
+
+// MARK: - Input Validator
 
 /// Input validator
 public enum InputValidator {
@@ -78,15 +82,23 @@ public enum InputValidator {
     }
 }
 
-/// Rate limiter
+// MARK: - Rate Limiter
+
+/// Rate limiter for request throttling
 public actor RateLimiter {
     private var requests: [Date] = []
     private let maxRequestsPerSecond: Int
     private let windowSize: TimeInterval = 1.0
     
+    // MARK: - Initialization
+    
+    /// Initialize rate limiter
+    /// - Parameter maxRequestsPerSecond: Maximum requests per second
     public init(maxRequestsPerSecond: Int = 1000) {
         self.maxRequestsPerSecond = maxRequestsPerSecond
     }
+    
+    // MARK: - Public Methods
     
     /// Check if request is allowed
     public func checkLimit() async throws {
@@ -104,11 +116,14 @@ public actor RateLimiter {
         requests.append(now)
     }
     
-    /// Get current request count
+    /// Get current request count in the window
+    /// - Returns: Number of requests in current window
     public func getCurrentCount() -> Int {
         return requests.count
     }
 }
+
+// MARK: - Error Types
 
 /// Typed validation errors
 public enum ValidationError: Error, LocalizedError {

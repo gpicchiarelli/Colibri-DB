@@ -6,6 +6,9 @@
 
 import Foundation
 
+// MARK: - Types
+
+/// TOAST pointer for oversized attributes
 public struct TOASTPointer {
     public let chunkID: UUID
     public let size: Int
@@ -18,12 +21,25 @@ public struct TOASTPointer {
     }
 }
 
+// MARK: - TOAST Manager
+
+/// Manager for TOAST (The Oversized-Attribute Storage Technique)
 public actor TOASTManager {
+    // MARK: - Properties
+    
     private let threshold: Int = 2048
     private var chunks: [UUID: Data] = [:]
     
+    // MARK: - Initialization
+    
+    /// Initialize TOAST manager
     public init() {}
     
+    // MARK: - Public Methods
+    
+    /// Store data using TOAST
+    /// - Parameter data: Data to store
+    /// - Returns: TOAST pointer to stored data
     public func store(_ data: Data) async throws -> TOASTPointer {
         if data.count <= threshold {
             let chunkID = UUID()
@@ -38,6 +54,9 @@ public actor TOASTManager {
         return TOASTPointer(chunkID: chunkID, size: data.count, compressionType: .lz4)
     }
     
+    /// Retrieve data from TOAST
+    /// - Parameter pointer: TOAST pointer
+    /// - Returns: Retrieved data
     public func retrieve(_ pointer: TOASTPointer) async throws -> Data {
         guard let compressedData = chunks[pointer.chunkID] else {
             throw DBError.notFound
@@ -54,6 +73,8 @@ public actor TOASTManager {
         )
     }
     
+    /// Delete data from TOAST
+    /// - Parameter pointer: TOAST pointer to delete
     public func delete(_ pointer: TOASTPointer) {
         chunks[pointer.chunkID] = nil
     }

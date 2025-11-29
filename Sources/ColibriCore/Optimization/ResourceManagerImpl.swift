@@ -11,9 +11,15 @@ import Foundation
 
 /// Concrete implementation of OptimizationResourceManager protocol
 public actor OptimizationResourceManagerImpl: OptimizationResourceManager {
+    // MARK: - Properties
+    
     private var allocations: [String: Double] = [:]
     private var limits: [String: Double] = [:]
     
+    // MARK: - Initialization
+    
+    /// Initialize resource manager
+    /// - Parameter limits: Resource limits dictionary
     public init(limits: [String: Double] = [:]) {
         self.limits = limits
         if limits.isEmpty {
@@ -27,6 +33,12 @@ public actor OptimizationResourceManagerImpl: OptimizationResourceManager {
         }
     }
     
+    // MARK: - Protocol Implementation
+    
+    /// Allocate a resource
+    /// - Parameters:
+    ///   - resourceType: Type of resource to allocate
+    ///   - amount: Amount to allocate
     public func allocateResource(resourceType: String, amount: Double) async throws {
         let current = allocations[resourceType] ?? 0.0
         let limit = limits[resourceType] ?? Double.infinity
@@ -38,11 +50,18 @@ public actor OptimizationResourceManagerImpl: OptimizationResourceManager {
         allocations[resourceType] = current + amount
     }
     
+    /// Deallocate a resource
+    /// - Parameters:
+    ///   - resourceType: Type of resource to deallocate
+    ///   - amount: Amount to deallocate
     public func deallocateResource(resourceType: String, amount: Double) async throws {
         let current = allocations[resourceType] ?? 0.0
         allocations[resourceType] = max(0.0, current - amount)
     }
     
+    /// Get current resource usage
+    /// - Parameter resourceType: Type of resource to check
+    /// - Returns: Current usage amount
     public func getResourceUsage(resourceType: String) async throws -> Double {
         return allocations[resourceType] ?? 0.0
     }

@@ -5,6 +5,9 @@
 
 import Foundation
 
+// MARK: - Types
+
+/// Load balancing strategy
 public enum LoadBalancingStrategy {
     case roundRobin
     case leastConnections
@@ -30,16 +33,31 @@ public struct BackendNode {
     }
 }
 
+// MARK: - Load Balancer
+
+/// Load balancer for distributing requests across backend nodes
 public actor LoadBalancer {
+    // MARK: - Properties
+    
     private var nodes: [BackendNode]
     private let strategy: LoadBalancingStrategy
     private var currentIndex: Int = 0
     
+    // MARK: - Initialization
+    
+    /// Initialize load balancer
+    /// - Parameters:
+    ///   - nodes: List of backend nodes
+    ///   - strategy: Load balancing strategy to use
     public init(nodes: [BackendNode], strategy: LoadBalancingStrategy = .roundRobin) {
         self.nodes = nodes
         self.strategy = strategy
     }
     
+    // MARK: - Public Methods
+    
+    /// Select a node based on the configured strategy
+    /// - Returns: Selected backend node, or nil if no healthy nodes available
     public func selectNode() -> BackendNode? {
         let healthyNodes = nodes.filter { $0.isHealthy }
         
@@ -74,30 +92,40 @@ public actor LoadBalancer {
         }
     }
     
+    /// Increment connection count for a node
+    /// - Parameter nodeId: ID of the node
     public func incrementConnections(nodeId: String) {
         if let index = nodes.firstIndex(where: { $0.id == nodeId }) {
             nodes[index].activeConnections += 1
         }
     }
     
+    /// Decrement connection count for a node
+    /// - Parameter nodeId: ID of the node
     public func decrementConnections(nodeId: String) {
         if let index = nodes.firstIndex(where: { $0.id == nodeId }) {
             nodes[index].activeConnections = max(0, nodes[index].activeConnections - 1)
         }
     }
     
+    /// Mark a node as unhealthy
+    /// - Parameter nodeId: ID of the node
     public func markUnhealthy(nodeId: String) {
         if let index = nodes.firstIndex(where: { $0.id == nodeId }) {
             nodes[index].isHealthy = false
         }
     }
     
+    /// Mark a node as healthy
+    /// - Parameter nodeId: ID of the node
     public func markHealthy(nodeId: String) {
         if let index = nodes.firstIndex(where: { $0.id == nodeId }) {
             nodes[index].isHealthy = true
         }
     }
     
+    /// Get all backend nodes
+    /// - Returns: Array of all backend nodes
     public func getNodes() -> [BackendNode] {
         return nodes
     }

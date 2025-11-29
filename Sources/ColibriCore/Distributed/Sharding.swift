@@ -5,6 +5,9 @@
 
 import Foundation
 
+// MARK: - Types
+
+/// Sharding strategy
 public enum ShardingStrategy {
     case hash
     case range
@@ -25,20 +28,38 @@ public struct Shard {
     }
 }
 
+// MARK: - Shard Manager
+
+/// Manager for database sharding
 public actor ShardManager {
+    // MARK: - Properties
+    
     private let strategy: ShardingStrategy
     private var shards: [Shard] = []
     private let shardCount: Int
     
+    // MARK: - Initialization
+    
+    /// Initialize shard manager
+    /// - Parameters:
+    ///   - strategy: Sharding strategy to use
+    ///   - shardCount: Number of shards
     public init(strategy: ShardingStrategy, shardCount: Int) {
         self.strategy = strategy
         self.shardCount = shardCount
     }
     
+    // MARK: - Public Methods
+    
+    /// Register a shard
+    /// - Parameter shard: Shard to register
     public func registerShard(_ shard: Shard) {
         shards.append(shard)
     }
     
+    /// Get shard for a given key
+    /// - Parameter key: Key to find shard for
+    /// - Returns: Shard that should handle this key, or nil if not found
     public func getShardForKey(_ key: Value) -> Shard? {
         switch strategy {
         case .hash:
@@ -61,6 +82,16 @@ public actor ShardManager {
         }
     }
     
+    /// Rebalance shards across nodes
+    public func rebalance() async {
+        logInfo("Rebalancing shards...")
+    }
+    
+    // MARK: - Private Methods
+    
+    /// Hash a value for shard distribution
+    /// - Parameter value: Value to hash
+    /// - Returns: Hash value
     private func hashValue(_ value: Value) -> Int {
         var hasher = Hasher()
         switch value {
@@ -74,10 +105,6 @@ public actor ShardManager {
         case .bytes(let v): hasher.combine(v)
         }
         return abs(hasher.finalize())
-    }
-    
-    public func rebalance() async {
-        logInfo("Rebalancing shards...")
     }
 }
 

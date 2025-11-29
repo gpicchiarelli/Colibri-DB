@@ -11,12 +11,26 @@ import Foundation
 
 /// Concrete implementation of HeapWALManager protocol
 public actor HeapWALManagerImpl: HeapWALManager {
+    // MARK: - Properties
+    
     private let wal: FileWAL
     
+    // MARK: - Initialization
+    
+    /// Initialize heap WAL manager implementation
+    /// - Parameter wal: WAL instance to use
     public init(wal: FileWAL) {
         self.wal = wal
     }
     
+    // MARK: - Protocol Implementation
+    
+    /// Append a record to the WAL
+    /// - Parameters:
+    ///   - txId: Transaction ID
+    ///   - kind: Record kind (insert, update, delete)
+    ///   - data: Record data
+    /// - Returns: Log sequence number (LSN)
     public func appendRecord(txId: TxID, kind: String, data: Data) async throws -> LSN {
         // Convert string kind to WALRecordKind
         let walKind: WALRecordKind
@@ -39,6 +53,7 @@ public actor HeapWALManagerImpl: HeapWALManager {
         )
     }
     
+    /// Flush the WAL to disk
     public func flushLog() async throws {
         try await wal.flush()
     }

@@ -11,9 +11,14 @@ import Foundation
 
 /// Concrete implementation of OptimizationPerformanceMonitor protocol
 public actor OptimizationPerformanceMonitorImpl: OptimizationPerformanceMonitor {
+    // MARK: - Properties
+    
     private var metrics: [String: Double] = [:]
     private var resourceUsage: [String: Double] = [:]
     
+    // MARK: - Initialization
+    
+    /// Initialize performance monitor
     public init() {
         metrics = [
             "queryLatency": 0.0,
@@ -29,10 +34,16 @@ public actor OptimizationPerformanceMonitorImpl: OptimizationPerformanceMonitor 
         ]
     }
     
+    // MARK: - Protocol Implementation
+    
+    /// Get performance metrics
+    /// - Returns: Dictionary of performance metrics
     public func getPerformanceMetrics() async throws -> [String: Double] {
         return metrics
     }
     
+    /// Get resource usage metrics
+    /// - Returns: Dictionary of resource usage metrics
     public func getResourceUsage() async throws -> [String: Double] {
         return resourceUsage
     }

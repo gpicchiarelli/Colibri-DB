@@ -11,17 +11,30 @@ import Foundation
 
 /// Adapter to use RBACManager's audit log as AuditManager
 public actor RBACAuditManagerAdapter: AuditManager {
+    // MARK: - Properties
+    
     private let rbacManager: RBACManager
     
+    // MARK: - Initialization
+    
+    /// Initialize RBAC audit manager adapter
+    /// - Parameter rbacManager: RBAC manager to adapt
     public init(rbacManager: RBACManager) {
         self.rbacManager = rbacManager
     }
     
+    // MARK: - Protocol Implementation
+    
+    /// Log an audit event
+    /// - Parameter event: Audit event to log
     public func log(_ event: AuditEvent) async {
         // RBACManager already logs events, so we just need to access them
         // The event is already logged by RBACManager operations
     }
     
+    /// Get audit log entries from RBAC manager
+    /// - Parameter limit: Maximum number of events to return
+    /// - Returns: Array of audit events
     public func getAuditLog(limit: Int = 100) async -> [AuditEvent] {
         let rbacEvents = await rbacManager.getAuditLog()
         let sliced = rbacEvents.suffix(limit)
@@ -47,6 +60,11 @@ public actor RBACAuditManagerAdapter: AuditManager {
         }
     }
     
+    // MARK: - Private Helpers
+    
+    /// Map RBAC event name to audit event type
+    /// - Parameter eventName: RBAC event name
+    /// - Returns: Corresponding audit event type
     private func mapEventType(_ eventName: String) -> AuditEventType {
         switch eventName {
         case "LOGIN", "SESSION_STARTED":

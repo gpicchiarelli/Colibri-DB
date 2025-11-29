@@ -4,6 +4,8 @@
 
 import Foundation
 
+// MARK: - Extension Value
+
 extension Value: Comparable {
     public static func < (lhs: Value, rhs: Value) -> Bool {
         switch (lhs, rhs) {
@@ -26,6 +28,8 @@ extension Value: Comparable {
         }
     }
 }
+
+// MARK: - Extension Data
 
 extension Data {
     func hexString() -> String {
@@ -55,6 +59,8 @@ extension Data {
     }
 }
 
+// MARK: - Extension Array
+
 extension Array {
     func chunked(into size: Int) -> [[Element]] {
         return stride(from: 0, to: count, by: size).map {
@@ -63,6 +69,8 @@ extension Array {
     }
 }
 
+// MARK: - Extension Dictionary
+
 extension Dictionary {
     mutating func merge(_ other: [Key: Value]) {
         for (key, value) in other {
@@ -70,6 +78,8 @@ extension Dictionary {
         }
     }
 }
+
+// MARK: - Extension Date
 
 extension Date {
     var millisecondsSince1970: Int64 {
