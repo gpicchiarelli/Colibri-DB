@@ -9,6 +9,8 @@
 
 import Foundation
 
+// MARK: - Types
+
 /// Performance metrics
 public struct PerformanceMetrics: Codable, Sendable {
     public var queryLatency: TimeInterval
@@ -26,6 +28,8 @@ public struct PerformanceMetrics: Codable, Sendable {
     }
 }
 
+// MARK: - Protocol
+
 /// Performance monitor protocol
 public protocol PerformanceMonitor: Sendable {
     func recordQueryLatency(_ latency: TimeInterval) async
@@ -35,8 +39,12 @@ public protocol PerformanceMonitor: Sendable {
     func getMetrics() async -> PerformanceMetrics
 }
 
+// MARK: - Default Implementation
+
 /// Default performance monitor implementation
 public actor DefaultPerformanceMonitor: PerformanceMonitor {
+    // MARK: - Properties
+    
     private var metrics: PerformanceMetrics = PerformanceMetrics()
     private var queryCount: Int = 0
     private var transactionCount: Int = 0
@@ -47,6 +55,9 @@ public actor DefaultPerformanceMonitor: PerformanceMonitor {
     private var totalDiskIOLatency: TimeInterval = 0
     private var diskIOCount: Int = 0
     
+    // MARK: - Initialization
+    
+    /// Initialize default performance monitor
     public init() {}
     
     public func recordQueryLatency(_ latency: TimeInterval) async {
@@ -55,12 +66,16 @@ public actor DefaultPerformanceMonitor: PerformanceMonitor {
         metrics.queryLatency = totalQueryLatency / Double(queryCount)
     }
     
+    /// Record transaction duration
+    /// - Parameter duration: Transaction duration in seconds
     public func recordTransaction(_ duration: TimeInterval) async {
         transactionCount += 1
         totalTransactionTime += duration
         metrics.transactionThroughput = Double(transactionCount) / totalTransactionTime
     }
     
+    /// Record cache hit or miss
+    /// - Parameter hit: True if cache hit, false if miss
     public func recordCacheHit(_ hit: Bool) async {
         if hit {
             cacheHits += 1
@@ -73,12 +88,16 @@ public actor DefaultPerformanceMonitor: PerformanceMonitor {
         }
     }
     
+    /// Record disk I/O latency
+    /// - Parameter latency: Disk I/O latency in seconds
     public func recordDiskIO(_ latency: TimeInterval) async {
         diskIOCount += 1
         totalDiskIOLatency += latency
         metrics.diskIOLatency = totalDiskIOLatency / Double(diskIOCount)
     }
     
+    /// Get current performance metrics
+    /// - Returns: Current performance metrics
     public func getMetrics() async -> PerformanceMetrics {
         return metrics
     }

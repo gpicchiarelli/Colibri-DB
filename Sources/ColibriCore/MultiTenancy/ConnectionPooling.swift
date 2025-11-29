@@ -5,6 +5,9 @@
 
 import Foundation
 
+// MARK: - Types
+
+/// Pooled connection metadata
 public struct PooledConnection: Sendable {
     public let id: UUID
     public let createdAt: Date
@@ -19,7 +22,12 @@ public struct PooledConnection: Sendable {
     }
 }
 
+// MARK: - Connection Pool
+
+/// Connection pool for managing database connections
 public actor ConnectionPool {
+    // MARK: - Properties
+    
     private let minConnections: Int
     private let maxConnections: Int
     private let idleTimeout: TimeInterval
@@ -27,18 +35,30 @@ public actor ConnectionPool {
     private var connections: [PooledConnection] = []
     private var waitQueue: [CheckedContinuation<PooledConnection, Error>] = []
     
+    // MARK: - Initialization
+    
+    /// Initialize connection pool
+    /// - Parameters:
+    ///   - minConnections: Minimum number of connections
+    ///   - maxConnections: Maximum number of connections
+    ///   - idleTimeout: Idle timeout in seconds
     public init(minConnections: Int = 5, maxConnections: Int = 100, idleTimeout: TimeInterval = 300) {
         self.minConnections = minConnections
         self.maxConnections = maxConnections
         self.idleTimeout = idleTimeout
     }
     
+    // MARK: - Public Methods
+    
+    /// Initialize the connection pool with minimum connections
     public func initialize() async {
         for _ in 0..<minConnections {
             connections.append(PooledConnection())
         }
     }
     
+    /// Acquire a connection from the pool
+    /// - Returns: Pooled connection
     public func acquire() async throws -> PooledConnection {
         if let index = connections.firstIndex(where: { !$0.inUse }) {
             connections[index].inUse = true
@@ -58,6 +78,8 @@ public actor ConnectionPool {
         }
     }
     
+    /// Release a connection back to the pool
+    /// - Parameter connection: Connection to release
     public func release(_ connection: PooledConnection) {
         if let index = connections.firstIndex(where: { $0.id == connection.id }) {
             connections[index].inUse = false
@@ -71,6 +93,7 @@ public actor ConnectionPool {
         }
     }
     
+    /// Evict idle connections
     public func evictIdle() {
         let now = Date()
         
@@ -81,6 +104,8 @@ public actor ConnectionPool {
         }
     }
     
+    /// Get connection pool statistics
+    /// - Returns: Connection pool statistics
     public func getStatistics() -> ConnectionPoolStatistics {
         return ConnectionPoolStatistics(
             totalConnections: connections.count,
@@ -91,6 +116,7 @@ public actor ConnectionPool {
     }
 }
 
+/// Connection pool statistics
 public struct ConnectionPoolStatistics {
     public let totalConnections: Int
     public let activeConnections: Int

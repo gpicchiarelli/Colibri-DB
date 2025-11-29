@@ -8,6 +8,8 @@
 import Foundation
 import Logging
 
+// MARK: - Types
+
 /// Correlation ID for distributed tracing
 public struct CorrelationID: Codable, Hashable, Sendable, CustomStringConvertible {
     public let value: String
@@ -56,6 +58,8 @@ public struct StructuredLogEntry: Codable {
         return "{}"
     }
 }
+
+// MARK: - PII Filter
 
 /// PII (Personally Identifiable Information) filter
 public enum PIIFilter {
@@ -107,6 +111,8 @@ public enum PIIFilter {
     }
 }
 
+// MARK: - Database Metrics
+
 /// Observable database metrics
 public struct DatabaseMetrics: Codable {
     public var totalTransactions: Int = 0
@@ -147,16 +153,30 @@ public struct DatabaseMetrics: Codable {
     }
 }
 
+// MARK: - Observability Manager
+
 /// Observability manager
 public actor ObservabilityManager {
+    // MARK: - Properties
+    
     private var metrics = DatabaseMetrics()
     private let logger: ColibriLogger
     
+    // MARK: - Initialization
+    
+    /// Initialize observability manager
     public init() {
         self.logger = ColibriLogger()
     }
     
+    // MARK: - Public Methods
+    
     /// Log structured entry
+    /// - Parameters:
+    ///   - level: Log level
+    ///   - message: Log message
+    ///   - correlationID: Optional correlation ID
+    ///   - metadata: Additional metadata
     public func log(
         level: LogLevel,
         message: String,
@@ -208,29 +228,50 @@ public actor ObservabilityManager {
     }
 }
 
+// MARK: - Metric Collector
+
 /// Metric collector for monitoring
 public actor MetricCollector {
+    // MARK: - Properties
+    
     private var counters: [String: Int] = [:]
     private var histograms: [String: [Double]] = [:]
     
+    // MARK: - Initialization
+    
+    /// Initialize metric collector
     public init() {}
     
+    // MARK: - Public Methods
+    
     /// Increment counter
+    /// - Parameters:
+    ///   - metric: Metric name
+    ///   - value: Value to increment by
     public func increment(metric: String, by value: Int = 1) {
         counters[metric, default: 0] += value
     }
     
     /// Record histogram value
+    /// - Parameters:
+    ///   - metric: Metric name
+    ///   - value: Value to record
     public func record(metric: String, value: Double) {
         histograms[metric, default: []].append(value)
     }
     
     /// Get counter value
+    /// - Parameter metric: Metric name
+    /// - Returns: Counter value
     public func getCounter(_ metric: String) -> Int {
         return counters[metric, default: 0]
     }
     
     /// Get histogram percentile
+    /// - Parameters:
+    ///   - metric: Metric name
+    ///   - percentile: Percentile value (0-100)
+    /// - Returns: Percentile value
     public func getPercentile(_ metric: String, percentile: Double) -> Double {
         guard var values = histograms[metric], !values.isEmpty else {
             return 0.0
@@ -242,6 +283,7 @@ public actor MetricCollector {
     }
     
     /// Export all metrics
+    /// - Returns: Dictionary of all metrics
     public func export() -> [String: Any] {
         var result: [String: Any] = [:]
         

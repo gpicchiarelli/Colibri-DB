@@ -4,11 +4,17 @@
 
 import Foundation
 
+// MARK: - Protocol Definition
+
+/// Protocol for testable components
 public protocol Testable {
     func checkInvariants() -> Bool
     func getState() -> [String: Any]
 }
 
+// MARK: - Types
+
+/// Test case definition
 public struct TestCase {
     public let name: String
     public let setup: () async throws -> Void
@@ -31,11 +37,24 @@ public struct TestCase {
     }
 }
 
+// MARK: - Test Runner
+
+/// Test runner for executing test cases
 public actor TestRunner {
+    // MARK: - Properties
+    
     private var results: [TestResult] = []
     
+    // MARK: - Initialization
+    
+    /// Initialize test runner
     public init() {}
     
+    // MARK: - Public Methods
+    
+    /// Run a test case
+    /// - Parameter testCase: Test case to run
+    /// - Returns: Test result
     public func run(_ testCase: TestCase) async -> TestResult {
         let startTime = Date()
         
@@ -67,10 +86,14 @@ public actor TestRunner {
         }
     }
     
+    /// Get all test results
+    /// - Returns: Array of test results
     public func getResults() -> [TestResult] {
         return results
     }
     
+    /// Get test summary
+    /// - Returns: Test summary with statistics
     public func getSummary() -> TestSummary {
         let passed = results.filter { $0.passed }.count
         let failed = results.count - passed
@@ -85,6 +108,7 @@ public actor TestRunner {
     }
 }
 
+/// Test result
 public struct TestResult {
     public let name: String
     public let passed: Bool
@@ -92,6 +116,7 @@ public struct TestResult {
     public let error: Error?
 }
 
+/// Test summary statistics
 public struct TestSummary {
     public let total: Int
     public let passed: Int

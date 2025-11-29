@@ -22,6 +22,7 @@ import CRC32Accelerator // C module providing crc32_accelerated
 /// CRC32 Accelerator for fast checksum calculation
 /// Uses hardware acceleration when available (CRC32C instruction)
 public struct CRC32Accelerator {
+    // MARK: - Public Methods
     
     /// Calculate CRC32 checksum for data
     /// - Parameter data: Data to checksum
@@ -36,6 +37,8 @@ public struct CRC32Accelerator {
     public static func calculate(bytes: UnsafeRawPointer, length: Int) -> UInt32 {
         return calculate(data: Data(bytes: bytes, count: length))
     }
+    
+    // MARK: - Private Methods
     
     /// Calculate CRC32 checksum for Data
     /// - Parameter data: Data to checksum

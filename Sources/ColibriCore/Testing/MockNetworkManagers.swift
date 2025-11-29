@@ -9,6 +9,8 @@
 
 import Foundation
 
+// MARK: - Mock Raft Network Manager
+
 /// Mock Raft Network Manager
 public actor MockRaftNetworkManager: RaftNetworkManager {
     private var appendEntriesSent: [(ServerID, Term, [LogEntry])] = []
@@ -36,6 +38,8 @@ public actor MockRaftNetworkManager: RaftNetworkManager {
     }
 }
 
+// MARK: - Mock State Machine
+
 /// Mock State Machine
 public actor MockStateMachine: StateMachine {
     private var state: [String: String] = [:]
@@ -50,6 +54,8 @@ public actor MockStateMachine: StateMachine {
         return state
     }
 }
+
+// MARK: - Mock Network Manager
 
 /// Mock Network Manager for DistributedQueryManager
 public actor MockNetworkManager: NetworkManager {
@@ -74,6 +80,9 @@ public actor MockNetworkManager: NetworkManager {
     }
 }
 
+// MARK: - Error Types
+
+/// Network-related errors
 public enum NetworkError: Error, LocalizedError {
     case noMessageAvailable
     
