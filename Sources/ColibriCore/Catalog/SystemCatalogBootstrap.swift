@@ -1,15 +1,31 @@
 //
 //  SystemCatalogBootstrap.swift
+//  ColibrìDB
+//
+//  Created by ColibrìDB Team on 2025-10-19.
+//
 //  Initializes the private system catalog schema and core sys_* tables.
 //
 
 import Foundation
 
+/// System catalog bootstrap actor
+/// Initializes the private system catalog schema and core sys_* tables
 public actor SystemCatalogBootstrap {
+    // MARK: - Properties
+    
     private let schema: String = "colibri_sys" // private, DBA-only
     
+    // MARK: - Initialization
+    
+    /// Initialize system catalog bootstrap
     public init() {}
     
+    // MARK: - Public Methods
+    
+    /// Initialize system catalog on database
+    /// Creates all necessary system tables and schemas
+    /// - Parameter db: Database instance to initialize
     public func initialize(on db: ColibrìDB) async throws {
         let tx = try await db.beginTransaction()
         do {

@@ -10,7 +10,6 @@
 
 import Foundation
 import Logging
-@preconcurrency import ColibriCore
 
 /// Database configuration
 public struct DatabaseConfiguration: Codable, Sendable {

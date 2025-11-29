@@ -24,7 +24,6 @@
  */
 
 import Foundation
-@preconcurrency import ColibriCore
 
 // MARK: - Database Configuration
 

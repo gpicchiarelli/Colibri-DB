@@ -1,10 +1,16 @@
 //
 //  SQLUserStore.swift
+//  ColibrìDB
+//
+//  Created by ColibrìDB Team on 2025-10-19.
+//
 //  SQL-backed persistence for users and sessions
 //
 
 import Foundation
 
+/// Protocol for user and session storage
+/// Provides persistence for authentication data
 public protocol UserStore: Sendable {
     func initializeSchema() async throws
     // Users
@@ -22,14 +28,26 @@ public protocol UserStore: Sendable {
     func cleanupExpiredSessions(now: Date) async throws
 }
 
+/// SQL-backed implementation of UserStore
+/// Stores user and session data in database tables
 public actor SQLUserStore: UserStore {
+    // MARK: - Properties
+    
     private let db: ColibrìDB
     private let schema: String = "colibri_sys"
     
+    // MARK: - Initialization
+    
+    /// Initialize SQL user store
+    /// - Parameter database: Database instance for storage
     public init(database: ColibrìDB) {
         self.db = database
     }
     
+    // MARK: - Schema Management
+    
+    /// Initialize database schema for users and sessions
+    /// Creates necessary tables if they don't exist
     public func initializeSchema() async throws {
         // Create private schema for server
         _ = try await db.executeQuery("CREATE SCHEMA IF NOT EXISTS \(schema);", txId: try await db.beginTransaction())
@@ -67,7 +85,10 @@ public actor SQLUserStore: UserStore {
         """, txId: try await db.beginTransaction())
     }
     
-    // MARK: - Users
+    // MARK: - User Management
+    
+    /// Create a new user
+    /// - Parameter user: User metadata to create
     public func createUser(_ user: UserMetadata) async throws {
         let ts = user.createdAt.timeIntervalSince1970
         let ll = user.lastLogin?.timeIntervalSince1970
@@ -79,6 +100,9 @@ public actor SQLUserStore: UserStore {
         _ = try await db.executeQuery(sql, txId: try await db.beginTransaction())
     }
     
+    /// Get user by username
+    /// - Parameter username: Username to lookup
+    /// - Returns: User metadata if found, nil otherwise
     public func getUser(username: String) async throws -> UserMetadata? {
         let sql = "SELECT username,email,role,status,created_at,last_login,password_hash,salt FROM \(schema).users WHERE username = '\(escape(username))' LIMIT 1;"
         let result = try await db.executeQuery(sql, txId: try await db.beginTransaction())
@@ -99,6 +123,8 @@ public actor SQLUserStore: UserStore {
         )
     }
     
+    /// Get all users
+    /// - Returns: Array of all user metadata
     public func getAllUsers() async throws -> [UserMetadata] {
         let sql = "SELECT username,email,role,status,created_at,last_login,password_hash,salt FROM \(schema).users;"
         let result = try await db.executeQuery(sql, txId: try await db.beginTransaction())
@@ -120,22 +146,37 @@ public actor SQLUserStore: UserStore {
         }
     }
     
+    /// Update user role
+    /// - Parameters:
+    ///   - username: Username to update
+    ///   - newRole: New role to assign
     public func updateUserRole(username: String, newRole: UserRole) async throws {
         let sql = "UPDATE \(schema).users SET role = '\(newRole.rawValue)' WHERE username = '\(escape(username))';"
         _ = try await db.executeQuery(sql, txId: try await db.beginTransaction())
     }
     
+    /// Update user password
+    /// - Parameters:
+    ///   - username: Username to update
+    ///   - passwordHash: New password hash
+    ///   - salt: Password salt
     public func updatePassword(username: String, passwordHash: String, salt: String) async throws {
         let sql = "UPDATE \(schema).users SET password_hash = '\(escape(passwordHash))', salt = '\(escape(salt))' WHERE username = '\(escape(username))';"
         _ = try await db.executeQuery(sql, txId: try await db.beginTransaction())
     }
     
+    /// Update last login timestamp
+    /// - Parameters:
+    ///   - username: Username to update
+    ///   - at: Login timestamp
     public func updateLastLogin(username: String, at: Date) async throws {
         let ts = at.timeIntervalSince1970
         let sql = "UPDATE \(schema).users SET last_login = \(ts) WHERE username = '\(escape(username))';"
         _ = try await db.executeQuery(sql, txId: try await db.beginTransaction())
     }
     
+    /// Delete user and associated sessions
+    /// - Parameter username: Username to delete
     public func deleteUser(username: String) async throws {
         let sql1 = "DELETE FROM \(schema).sessions WHERE username = '\(escape(username))';"
         let sql2 = "DELETE FROM \(schema).users WHERE username = '\(escape(username))';"
@@ -145,7 +186,10 @@ public actor SQLUserStore: UserStore {
         try await db.commit(txId: tx)
     }
     
-    // MARK: - Sessions
+    // MARK: - Session Management
+    
+    /// Create a new session
+    /// - Parameter session: Session data to create
     public func createSession(_ session: Session) async throws {
         let sql = """
             INSERT INTO \(schema).sessions (session_id,username,role,created_at,expires_at,is_active)
@@ -154,6 +198,9 @@ public actor SQLUserStore: UserStore {
         _ = try await db.executeQuery(sql, txId: try await db.beginTransaction())
     }
     
+    /// Get session by ID
+    /// - Parameter sessionId: Session ID to lookup
+    /// - Returns: Session if found, nil otherwise
     public func getSession(sessionId: String) async throws -> Session? {
         let sql = "SELECT session_id,username,role,created_at,expires_at,is_active FROM \(schema).sessions WHERE session_id = '\(escape(sessionId))' LIMIT 1;"
         let result = try await db.executeQuery(sql, txId: try await db.beginTransaction())
@@ -165,18 +212,26 @@ public actor SQLUserStore: UserStore {
         return Session(sessionId: str(row["session_id"]) ?? sessionId, username: str(row["username"]) ?? "", role: role, createdAt: createdAt, expiresAt: expiresAt, isActive: isActive)
     }
     
+    /// Delete session by ID
+    /// - Parameter sessionId: Session ID to delete
     public func deleteSession(sessionId: String) async throws {
         let sql = "DELETE FROM \(schema).sessions WHERE session_id = '\(escape(sessionId))';"
         _ = try await db.executeQuery(sql, txId: try await db.beginTransaction())
     }
     
+    /// Clean up expired sessions
+    /// - Parameter now: Current timestamp for expiration check
     public func cleanupExpiredSessions(now: Date) async throws {
         let ts = now.timeIntervalSince1970
         let sql = "DELETE FROM \(schema).sessions WHERE expires_at <= \(ts);"
         _ = try await db.executeQuery(sql, txId: try await db.beginTransaction())
     }
     
-    // MARK: - Helpers
+    // MARK: - Private Helpers
+    
+    /// Escape SQL string to prevent injection
+    /// - Parameter s: String to escape
+    /// - Returns: Escaped string
     private func escape(_ s: String) -> String {
         return s.replacingOccurrences(of: "'", with: "''")
     }
